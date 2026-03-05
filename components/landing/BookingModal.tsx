@@ -905,18 +905,24 @@ export function BookingModal({
         onClick={!isSubmittingAny ? onClose : undefined}
       />
 
-      {/* Modal */}
-      <div className="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-4">
+      {/* Modal — bottom sheet on mobile, centered dialog on desktop */}
+      <div className="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div
-          className={`relative w-[95%] md:max-w-2xl max-h-[90vh] bg-zinc-900/70 backdrop-blur-xl border border-[#D4AF37]/20 shadow-[0_0_50px_rgba(212,175,55,0.1)] rounded-3xl transition-all duration-300 flex flex-col overflow-hidden ${
-            isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-3"
-          }`}
+          className={`relative w-full sm:w-[95%] md:max-w-2xl max-h-[92vh] flex flex-col overflow-hidden
+            bg-zinc-950/80 backdrop-blur-xl border border-zinc-800
+            rounded-t-[24px] sm:rounded-3xl
+            transition-all duration-300 ease-out
+            ${isOpen ? "translate-y-0 opacity-100" : "translate-y-full sm:translate-y-4 sm:scale-95 sm:opacity-0"}`}
         >
+          {/* Drag handle (mobile PWA feel) */}
+          <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0" aria-hidden>
+            <div className="w-10 h-1 rounded-full bg-zinc-600" />
+          </div>
           {/* Close */}
           {!isSubmittingAny && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors z-10"
+              className="absolute top-3 right-4 sm:top-4 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors z-20 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
               aria-label="Close"
             >
               <X size={15} />
@@ -1131,7 +1137,7 @@ export function BookingModal({
           ) : (
             <>
               {/* ── HEADER ─────────────────────────────────────────────── */}
-              <div className="sticky top-0 z-10 px-4 sm:px-6 pt-6 pb-5 border-b border-white/10 shrink-0 bg-[#09090b]">
+              <div className="sticky top-0 z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-zinc-800/50 shrink-0 bg-inherit">
                 <h2 className="text-lg font-bold text-white">
                   {isSubscription ? "Maintenance Club Setup" : "Book Your Detail"}
                 </h2>
@@ -1196,7 +1202,7 @@ export function BookingModal({
               </div>
 
               {/* ── STEP CONTENT ───────────────────────────────────────── */}
-              <div className="px-4 sm:px-6 py-5 pb-8 flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scroll flex flex-col justify-start">
+              <div className="px-4 sm:px-6 py-6 sm:py-8 pb-8 flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar flex flex-col justify-start">
                 {/* Step 1: Vehicle Info — Year/Make/Model first, then size cards (auto-detect from make/model) */}
                 {step === 1 && (
                   <div className="space-y-6">
@@ -1212,7 +1218,7 @@ export function BookingModal({
                           onChange={(e) => setVehicleYear(e.target.value)}
                           placeholder="2022"
                           maxLength={4}
-                          className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                          className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
                         />
                       </div>
                       <div>
@@ -1316,7 +1322,7 @@ export function BookingModal({
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         min={todayStr}
-                        className="w-full max-w-full box-border bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
+                        className="w-full max-w-full min-h-[44px] box-border bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
                       />
                     </div>
 
@@ -1353,11 +1359,11 @@ export function BookingModal({
                               key={slot.time}
                               type="button"
                               onClick={() => setSelectedTime(slot.time)}
-                              className={`py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
-                                selectedTime === slot.time
-                                  ? "bg-zinc-900/90 border-[#D4AF37] text-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.2)] scale-[1.02]"
-                                  : "bg-zinc-900/30 border-white/5 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
-                              }`}
+className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
+                                  selectedTime === slot.time
+                                    ? "bg-zinc-900/90 border-[#D4AF37] text-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.2)] scale-[1.02]"
+                                    : "bg-zinc-900/30 border-white/5 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                                }`}
                             >
                               <span className="font-medium text-sm">{slot.time}</span>
                               <span className={`text-[10px] uppercase tracking-wider ${selectedTime === slot.time ? "text-[#D4AF37]/70" : "text-zinc-500"}`}>
@@ -1421,16 +1427,16 @@ export function BookingModal({
                             Due Today
                           </div>
                           <div className="space-y-2 text-sm">
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                               <span className="text-zinc-400">Initial Deep Clean & Setup Fee</span>
                               <span className="font-semibold text-white">$100.00</span>
                             </div>
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                               <span className="text-zinc-400">First Month (Based on Vehicle Size)</span>
                               <span className="font-semibold text-white">${(servicePrice ?? 0).toFixed(2)}</span>
                             </div>
                             {referralDiscountAmount > 0 && (
-                              <div className="flex justify-between items-center text-emerald-400">
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                                 <span className="flex items-center gap-1.5">
                                   🎉 Referral Welcome Discount
                                   <span className="text-[10px] text-emerald-500/80 font-normal">(10% off)</span>
@@ -1439,7 +1445,7 @@ export function BookingModal({
                               </div>
                             )}
                             {couponDiscount > 0 && (
-                              <div className="flex justify-between items-center text-emerald-400">
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                                 <span className="flex items-center gap-1.5">
                                   🏷️ Promo Code
                                   <span className="text-[10px] text-emerald-500/70 font-mono">
@@ -1450,13 +1456,13 @@ export function BookingModal({
                               </div>
                             )}
                             {travelFeeLoading && (
-                              <div className="flex justify-between items-center text-zinc-500 text-xs">
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-zinc-500 text-xs min-w-0">
                                 <span>Travel Fee (if applicable)</span>
                                 <span>Checking…</span>
                               </div>
                             )}
                             {!travelFeeLoading && (
-                              <div className="flex justify-between items-center">
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                                 <span className="text-zinc-400">Travel Fee</span>
                                 <span className="font-semibold text-white">
                                   {travelFee === 0 ? "FREE" : `$${travelFee.toFixed(2)}`}
@@ -1489,13 +1495,13 @@ export function BookingModal({
                               </div>
                             )}
                             {rewardsDiscount > 0 && (
-                              <div className="flex justify-between items-center text-amber-400/90">
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
                                 <span>Rewards Discount</span>
                                 <span className="font-semibold">−${rewardsDiscount.toFixed(2)}</span>
                               </div>
                             )}
                           </div>
-                          <div className="flex justify-between items-center pt-4 mt-3 border-t border-[#2a2a2a]">
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                             <span className="font-bold text-zinc-300">
                               {pointsToRedeem > 0 ? "New Total" : "Total Due Today"}
                             </span>
@@ -1511,7 +1517,7 @@ export function BookingModal({
                           Price Summary
                         </div>
                         <div className="space-y-2 text-sm">
-                          <div className="flex justify-between items-center">
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                             <span className="text-zinc-400">
                               {selectedService?.name ?? "—"}
                             </span>
@@ -1520,7 +1526,7 @@ export function BookingModal({
                             </span>
                           </div>
                           {referralDiscountAmount > 0 && (
-                            <div className="flex justify-between items-center text-emerald-400">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                               <span className="flex items-center gap-1.5">
                                 🎉 Referral Welcome Discount
                                 <span className="text-[10px] text-emerald-500/80 font-normal">(10% off)</span>
@@ -1529,7 +1535,7 @@ export function BookingModal({
                             </div>
                           )}
                           {couponDiscount > 0 && (
-                            <div className="flex justify-between items-center text-emerald-400">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                               <span className="flex items-center gap-1.5">
                                 🏷️ Promo Code
                                 <span className="text-[10px] text-emerald-500/70 font-mono">
@@ -1540,13 +1546,13 @@ export function BookingModal({
                             </div>
                           )}
                           {travelFeeLoading && (
-                            <div className="flex justify-between items-center text-zinc-500 text-xs">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-zinc-500 text-xs min-w-0">
                               <span>Travel Fee</span>
                               <span>Checking…</span>
                             </div>
                           )}
                           {!travelFeeLoading && (
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                               <span className="text-zinc-400">Travel Fee</span>
                               <span className="font-semibold text-white">
                                 {travelFee === 0 ? "FREE" : `$${travelFee.toFixed(2)}`}
@@ -1554,7 +1560,7 @@ export function BookingModal({
                             </div>
                           )}
                           {isMonthlyPlan && (
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                               <span className="text-zinc-400">
                                 Initial Setup & Reset Fee
                               </span>
@@ -1589,13 +1595,13 @@ export function BookingModal({
                             </div>
                           )}
                           {rewardsDiscount > 0 && (
-                            <div className="flex justify-between items-center text-amber-400/90">
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
                               <span>Rewards Discount</span>
                               <span className="font-semibold">−${rewardsDiscount.toFixed(2)}</span>
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between items-center pt-4 mt-3 border-t border-[#2a2a2a]">
+                        <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                           <span className="font-bold text-zinc-300">
                             {pointsToRedeem > 0 ? "New Total" : "Total"}
                           </span>
@@ -1680,7 +1686,7 @@ export function BookingModal({
                             }}
                             placeholder={field.placeholder}
                             maxLength={field.id === "phone" ? 14 : undefined}
-                            className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                            className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
                           />
                         </div>
                       ))}
@@ -1696,7 +1702,7 @@ export function BookingModal({
                           onChange={(e) => setNotes(e.target.value)}
                           placeholder="Any special requests or details about your vehicle…"
                           rows={3}
-                          className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm resize-none"
+                          className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm resize-none"
                         />
                       </div>
                     </div>
@@ -1797,10 +1803,10 @@ export function BookingModal({
 
               {/* ── FOOTER / NAVIGATION (Steps 1 & 2 only) ───────────────── */}
               {step < 3 && (
-                <div className="px-5 sm:px-6 py-4 border-t border-white/10 flex items-center justify-between shrink-0">
+                <div className="sticky bottom-0 z-10 px-4 sm:px-6 pt-4 pb-4 sm:pb-6 border-t border-zinc-800/50 flex items-center justify-between shrink-0 bg-inherit">
                   <button
                     onClick={step === 1 ? onClose : handleBack}
-                    className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors py-1"
+                    className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors py-2 min-h-[44px] sm:min-h-0"
                   >
                     <ChevronLeft size={15} />
                     {step === 1 ? "Cancel" : "Back"}
@@ -1808,7 +1814,7 @@ export function BookingModal({
                   <button
                     onClick={handleNext}
                     disabled={!canGoNext()}
-                    className={`flex items-center gap-1.5 font-bold px-8 py-3 rounded-xl text-sm transition-all duration-300 ${
+                    className={`flex items-center gap-1.5 font-bold px-8 min-h-[44px] py-3 rounded-xl text-sm transition-all duration-300 ${
                       canGoNext()
                         ? "bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]"
                         : "bg-zinc-900/50 text-zinc-600 cursor-not-allowed border border-white/10"
@@ -1841,9 +1847,9 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 function ReceiptRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-start gap-4">
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-start sm:gap-4 min-w-0">
       <span className="text-zinc-500 text-sm shrink-0">{label}</span>
-      <span className="text-white font-semibold text-right text-sm">{value}</span>
+      <span className="text-white font-semibold text-sm sm:text-right break-words">{value}</span>
     </div>
   );
 }

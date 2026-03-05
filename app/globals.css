@@ -46,6 +46,21 @@ html {
   background: #D4AF37;
 }
 
+/* ── Booking modal middle content scrollbar (PWA) ───────────────────────── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46; /* zinc-700 */
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
 /* ── Primary CTA hover shimmer sweep ───────────────────────────────────── */
 .btn-shimmer {
   position: relative;
