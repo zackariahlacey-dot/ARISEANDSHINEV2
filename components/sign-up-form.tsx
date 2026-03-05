@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { createProfileWithReferral } from "@/app/actions/createProfileWithReferral";
+import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -74,6 +75,12 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
           newReferralCode
         );
       }
+
+      // Notify admin of new sign-up (fire-and-forget; never block or break sign-up)
+      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || "New User";
+      sendAdminNewUserAlert(fullName, email).catch((err) =>
+        console.error("[sign-up] Admin new user email failed:", err)
+      );
 
       router.push("/auth/sign-up-success");
     } catch (err: unknown) {
