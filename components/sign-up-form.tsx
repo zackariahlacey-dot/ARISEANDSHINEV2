@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { createProfileWithReferral } from "@/app/actions/createProfileWithReferral";
-import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
+import { sendSignUpConfirmationEmails } from "@/app/actions/sendSignUpConfirmation";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -54,7 +54,7 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=/protected`,
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
@@ -76,10 +76,9 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
         );
       }
 
-      // Notify admin of new sign-up (fire-and-forget; never block or break sign-up)
-      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || "New User";
-      sendAdminNewUserAlert(fullName, email).catch((err) =>
-        console.error("[sign-up] Admin new user email failed:", err)
+      // Resend: custom confirmation email + admin alert (fire-and-forget; never block sign-up)
+      sendSignUpConfirmationEmails(email, password, firstName.trim(), lastName.trim()).catch(
+        (err) => console.error("[sign-up] Confirmation emails failed:", err)
       );
 
       router.push("/auth/sign-up-success");

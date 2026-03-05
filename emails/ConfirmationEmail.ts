@@ -5,9 +5,6 @@
 
 import { getEmailLayoutHtml } from "./Layout";
 
-const LOGO_URL =
-  "https://esgdlmvvjrduazdraewq.supabase.co/storage/v1/object/public/public-assets/e.png";
-
 export type ConfirmationEmailOptions = {
   /** Full URL for the Confirm button (e.g. Supabase verify link or /auth/confirm?token_hash=...&type=signup) */
   confirmUrl: string;
