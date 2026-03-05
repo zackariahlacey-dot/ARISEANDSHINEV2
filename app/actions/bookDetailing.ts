@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmails } from "@/lib/email";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 import Stripe from "stripe";
@@ -104,48 +105,16 @@ export async function bookDetailing(
   const firstName = parts[0] ?? "";
   const lastName = parts.slice(1).join(" ") || null;
 
-  // ── 1. Resolve profile: logged-in use existing by user.id (skip guest logic); else find/create by phone ─
+  // ── 1. Resolve profile: logged-in skip profile creation and use user.id; guest find/create by phone ─
   let profileId: string;
 
   if (user) {
-    // Logged-in: trust the auth session — use user.id for the booking
+    // Logged-in: skip profile creation/upsert; use auth user id as booking user_id
     profileId = user;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user)
-      .maybeSingle();
-
-    if (profile) {
-      // Profile exists: sync phone/name from form
-      await supabase
-        .from("profiles")
-        .update({
-          ...(phoneDigits.length >= 10 && { phone: phoneDigits }),
-          ...(firstName && { first_name: firstName }),
-          ...(lastName != null && lastName !== "" && { last_name: lastName }),
-        })
-        .eq("id", profileId);
-    } else {
-      // No profile row (e.g. testing or signup trigger missed): auto-create from form data
-      const { error: createErr } = await supabase.from("profiles").insert({
-        id: user,
-        first_name: firstName || null,
-        last_name: lastName || null,
-        phone: phoneDigits.length >= 10 ? phoneDigits : null,
-        reward_points: 0,
-        lifetime_points: 0,
-      });
-
-      if (createErr) {
-        console.warn("[bookDetailing] profile auto-create (logged-in):", createErr);
-        // Continue anyway — booking uses user_id; profile may exist with different shape or be created by trigger
-      }
-    }
   } else {
-    // Guest: find or create profile by phone (use raw 10-digit phone)
-    const { data: existing } = await supabase
+    // Guest: find or create profile by phone (use admin client to bypass RLS)
+    const adminSupabase = createAdminClient();
+    const { data: existing } = await adminSupabase
       .from("profiles")
       .select("id")
       .eq("phone", phoneDigits)
@@ -154,19 +123,25 @@ export async function bookDetailing(
     if (existing && existing.length > 0) {
       profileId = existing[0].id;
     } else {
-      const { data: created, error: profileErr } = await supabase
+      const guestId = crypto.randomUUID();
+      const { data: created, error: profileErr } = await adminSupabase
         .from("profiles")
-        .insert({
-          first_name: firstName,
-          last_name: lastName,
-          phone: phoneDigits,
-          reward_points: 0,
-        })
+        .upsert(
+          {
+            id: guestId,
+            first_name: firstName || null,
+            last_name: lastName || null,
+            phone: phoneDigits.length >= 10 ? phoneDigits : null,
+            reward_points: 0,
+            lifetime_points: 0,
+          },
+          { onConflict: "id" }
+        )
         .select("id")
         .single();
 
       if (profileErr || !created) {
-        console.error("[bookDetailing] profile insert:", profileErr);
+        console.error("Profile Error:", profileErr);
         return {
           success: false,
           error: "Could not create your profile. Please try again.",

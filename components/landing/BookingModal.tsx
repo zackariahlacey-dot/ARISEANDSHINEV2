@@ -754,6 +754,9 @@ export function BookingModal({
       paymentMethod: "pay_at_arrival",
     });
     setIsSubmitting(false);
+    if (!result.success) {
+      console.error("Profile Error:", result.error);
+    }
     setBookingResult(result);
   };
 
@@ -905,7 +908,7 @@ export function BookingModal({
       {/* Modal */}
       <div className="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-4">
         <div
-          className={`relative w-[95%] md:max-w-2xl max-h-[85vh] bg-zinc-900/70 backdrop-blur-xl border border-[#D4AF37]/20 shadow-[0_0_50px_rgba(212,175,55,0.1)] rounded-3xl transition-all duration-300 flex flex-col ${
+          className={`relative w-[95%] md:max-w-2xl max-h-[90vh] bg-zinc-900/70 backdrop-blur-xl border border-[#D4AF37]/20 shadow-[0_0_50px_rgba(212,175,55,0.1)] rounded-3xl transition-all duration-300 flex flex-col overflow-hidden ${
             isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-3"
           }`}
         >
@@ -1128,7 +1131,7 @@ export function BookingModal({
           ) : (
             <>
               {/* ── HEADER ─────────────────────────────────────────────── */}
-              <div className="px-5 sm:px-6 pt-6 pb-5 border-b border-white/10 shrink-0">
+              <div className="sticky top-0 z-10 px-4 sm:px-6 pt-6 pb-5 border-b border-white/10 shrink-0 bg-[#09090b]">
                 <h2 className="text-lg font-bold text-white">
                   {isSubscription ? "Maintenance Club Setup" : "Book Your Detail"}
                 </h2>
@@ -1193,7 +1196,7 @@ export function BookingModal({
               </div>
 
               {/* ── STEP CONTENT ───────────────────────────────────────── */}
-              <div className="px-5 sm:px-6 py-5 pb-8 flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scroll">
+              <div className="px-4 sm:px-6 py-5 pb-8 flex-1 min-h-0 overflow-y-auto overscroll-contain modal-scroll flex flex-col justify-start">
                 {/* Step 1: Vehicle Info — Year/Make/Model first, then size cards (auto-detect from make/model) */}
                 {step === 1 && (
                   <div className="space-y-6">
@@ -1304,7 +1307,7 @@ export function BookingModal({
                         </p>
                       </div>
                     )}
-                    <div>
+                    <div className="w-full max-w-[calc(100vw-40px)] min-w-0 overflow-x-auto">
                       <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
                         Select a Date
                       </label>
@@ -1313,7 +1316,7 @@ export function BookingModal({
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         min={todayStr}
-                        className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
+                        className="w-full max-w-full box-border bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
                       />
                     </div>
 
@@ -1370,7 +1373,7 @@ export function BookingModal({
 
                 {/* Step 3: Contact & Confirm */}
                 {step === 3 && (
-                  <div className="space-y-5">
+                  <div className="pt-8 space-y-5">
                     {/* Contact info for customers */}
                     <div className="rounded-xl border border-[#252525] bg-[#141414] px-4 py-3 text-center text-sm text-zinc-400">
                       Questions? Reach us at{" "}
