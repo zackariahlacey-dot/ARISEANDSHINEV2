@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { getAdminNewUserAlertHtml } from "@/emails/AdminNewUserAlert";
 
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <onboarding@resend.dev>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
 

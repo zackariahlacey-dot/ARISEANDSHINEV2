@@ -397,10 +397,21 @@ export function LandingPage({ services }: { services: Service[] }) {
 
         <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 w-full">
         <div className="max-w-4xl mx-auto w-full">
-          {/* Eyebrow pill */}
-          <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-10">
-            <MapPin size={10} className="shrink-0" />
-            Proudly Serving All of Vermont
+          {/* Proudly Serving — premium framed section */}
+          <div
+            className="flex flex-col items-center text-center border-t border-b border-[#D4AF37]/20 py-12 md:py-16 mb-10 rounded-sm overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(212,175,55,0.03) 0%, #09090b 20%, #09090b 80%, rgba(212,175,55,0.03) 100%)",
+              boxShadow: "0 0 60px rgba(212,175,55,0.04)",
+            }}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <MapPin size={14} className="text-[#D4AF37] shrink-0" />
+              <span className="font-medium tracking-[0.2em] md:tracking-widest text-[#D4AF37] text-sm uppercase">
+                Proudly Serving All of Vermont
+              </span>
+            </div>
           </div>
 
           {/* Headline */}

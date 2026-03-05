@@ -4,11 +4,8 @@ import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL("https://www.ariseandshinevt.com"),
   title: "Arise And Shine VT | Premium Mobile Detailing",
   description:
     "Vermont's premier mobile auto detailing service. We come to you.",
@@ -24,14 +21,7 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: "Arise And Shine VT",
-    images: [
-      {
-        url: "/aasbanner.png",
-        width: 1200,
-        height: 630,
-        alt: "Arise And Shine VT — Premium mobile auto detailing in Vermont",
-      },
-    ],
+    images: [{ url: "/aasbanner.png" }],
     locale: "en_US",
   },
   twitter: {

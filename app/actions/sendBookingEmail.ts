@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { getBookingConfirmationHtml, type BookingConfirmationDetails } from "@/emails/BookingConfirmation";
 
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <onboarding@resend.dev>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
 
 export type SendBookingEmailParams = {
   customerEmail: string;

@@ -6,7 +6,7 @@ import { getConfirmationEmailHtml } from "@/emails/ConfirmationEmail";
 import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <onboarding@resend.dev>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
 
 const CONFIRM_REDIRECT_BASE =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com";

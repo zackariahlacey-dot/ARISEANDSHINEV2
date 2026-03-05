@@ -7,7 +7,7 @@ const BUSINESS_EMAIL = "contact@ariseandshinevt.com";
 
 /** Verified "from" sender — update once your domain is verified in Resend */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <onboarding@resend.dev>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
 
 /** Your personal/admin inbox — set ADMIN_EMAIL in .env.local */
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
