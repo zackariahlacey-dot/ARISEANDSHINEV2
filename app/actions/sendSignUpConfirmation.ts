@@ -5,9 +5,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfirmationEmailHtml } from "@/emails/ConfirmationEmail";
 import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 
+/** Resend from address — must match verified sender in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
 
+/** Where Supabase redirects after email verification — never localhost in production */
 const CONFIRM_REDIRECT_BASE =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com";
 
@@ -38,7 +40,12 @@ export async function sendSignUpConfirmationEmails(
     });
 
     if (linkError || !linkData?.properties?.hashed_token) {
-      console.error("[sendSignUpConfirmationEmails] generateLink failed:", linkError ?? "no hashed_token");
+      console.error("[sendSignUpConfirmationEmails] generateLink failed:", {
+        message: linkError?.message,
+        status: linkError?.status,
+        name: linkError?.name,
+        hashed_token: linkData?.properties?.hashed_token ? "present" : "missing",
+      });
       sendAdminNewUserAlert(fullName, email).catch(() => {});
       return;
     }
@@ -55,13 +62,20 @@ export async function sendSignUpConfirmationEmails(
         confirmUrl,
         firstName: firstName.trim() || undefined,
       });
-      const { error: sendError } = await resend.emails.send({
+      const result = await resend.emails.send({
         from: FROM_ADDRESS,
         to: email.trim(),
         subject: "Confirm your email — Arise And Shine VT",
         html,
       });
-      if (sendError) console.error("[sendSignUpConfirmationEmails] Resend error:", sendError);
+      if (result.error) {
+        console.error("[sendSignUpConfirmationEmails] Resend error:", {
+          message: result.error.message,
+          name: result.error.name,
+          from: FROM_ADDRESS,
+          to: email.trim(),
+        });
+      }
     } else {
       console.warn("[sendSignUpConfirmationEmails] RESEND_API_KEY not set — skipping confirmation email.");
     }
@@ -71,7 +85,10 @@ export async function sendSignUpConfirmationEmails(
       console.error("[sendSignUpConfirmationEmails] Admin alert failed:", err)
     );
   } catch (err) {
-    console.error("[sendSignUpConfirmationEmails]", err);
+    console.error("[sendSignUpConfirmationEmails] unexpected error:", {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     sendAdminNewUserAlert(fullName, email).catch(() => {});
   }
 }

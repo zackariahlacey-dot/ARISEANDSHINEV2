@@ -8,7 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Ticket } from "lucide-react";
+import { Ticket, Eye, EyeOff } from "lucide-react";
 
 const inputCls =
   "w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-lg px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-center";
@@ -30,6 +30,8 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -50,11 +52,15 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
     const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/confirm?next=/protected`
+          : "https://www.ariseandshinevt.com/auth/confirm?next=/protected";
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm?next=/protected`,
+          emailRedirectTo: redirectTo,
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
@@ -62,7 +68,14 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
           },
         },
       });
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error("[sign-up] Supabase signUp error:", {
+          message: signUpError.message,
+          status: signUpError.status,
+          name: signUpError.name,
+        });
+        throw signUpError;
+      }
 
       // Create profile with pre-generated code, name, and referral linkage (referred_by from ?ref=)
       if (data.user) {
@@ -83,7 +96,9 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
 
       router.push("/auth/sign-up-success");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      console.error("[sign-up] error response:", { message, err });
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -173,30 +188,50 @@ export function SignUpForm({ className, refCode, ...props }: SignUpFormProps) {
             <label htmlFor="password" className="text-sm font-medium text-zinc-300 mb-1.5 block w-full text-center">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={inputCls}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputCls + " pr-12"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-zinc-400 hover:text-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/50 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <div>
             <label htmlFor="repeat-password" className="text-sm font-medium text-zinc-300 mb-1.5 block w-full text-center">
               Confirm Password
             </label>
-            <input
-              id="repeat-password"
-              type="password"
-              required
-              autoComplete="new-password"
-              value={repeatPassword}
-              onChange={(e) => setRepeatPassword(e.target.value)}
-              className={inputCls}
-            />
+            <div className="relative">
+              <input
+                id="repeat-password"
+                type={showRepeatPassword ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                value={repeatPassword}
+                onChange={(e) => setRepeatPassword(e.target.value)}
+                className={inputCls + " pr-12"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowRepeatPassword((p) => !p)}
+                aria-label={showRepeatPassword ? "Hide password" : "Show password"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-zinc-400 hover:text-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/50 transition-colors"
+              >
+                {showRepeatPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           {error && (
