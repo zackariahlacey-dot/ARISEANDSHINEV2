@@ -475,6 +475,32 @@ export function BookingModal({
     return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
   };
 
+  // Price/points derived values (declared early so useEffect below can reference maxRedeemablePoints)
+  const isMonthlyPlan = selectedService?.name === "Monthly Maintenance Plan";
+  const setupFee = isMonthlyPlan ? MAINTENANCE_SETUP_FEE : 0;
+  const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
+  const referralDiscountAmount = referralEligible
+    ? Math.round(servicePrice * 0.1 * 100) / 100
+    : 0;
+  const couponDiscount = appliedCoupon
+    ? appliedCoupon.discountPercentage != null
+      ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
+      : Math.min(appliedCoupon.discountAmount ?? 0, servicePrice)
+    : 0;
+  const totalWithTravel =
+    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee;
+  const availablePoints = rewardPoints ?? 0;
+  const tier = calculateLifetimeTier(lifetimePoints).tier;
+  const maxRedeemByTier = getMaxRedeemPoints(tier);
+  const maxRedeemablePoints = Math.min(
+    availablePoints,
+    maxRedeemByTier,
+    Math.floor(totalWithTravel * POINTS_PER_DOLLAR)
+  );
+  const pointsToRedeem = Math.min(pointsToRedeemInput, maxRedeemablePoints);
+  const rewardsDiscount = pointsToRedeem / POINTS_PER_DOLLAR;
+  const totalAfterDiscount = Math.max(0, totalWithTravel - rewardsDiscount);
+
   // Initialise today string client-side (avoids Next.js Cache Components error)
   useEffect(() => {
     setTodayStr(new Date().toISOString().split("T")[0]);
@@ -691,33 +717,6 @@ export function BookingModal({
   };
 
   // ── Submit helpers ───────────────────────────────────────────────────────
-  const isMonthlyPlan = selectedService?.name === "Monthly Maintenance Plan";
-  const setupFee = isMonthlyPlan ? MAINTENANCE_SETUP_FEE : 0;
-  const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
-  // 10% off service price for first-time referred customers
-  const referralDiscountAmount = referralEligible
-    ? Math.round(servicePrice * 0.1 * 100) / 100
-    : 0;
-  // Promo code discount (fixed $ amount or % of service price)
-  const couponDiscount = appliedCoupon
-    ? appliedCoupon.discountPercentage != null
-      ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
-      : Math.min(appliedCoupon.discountAmount ?? 0, servicePrice)
-    : 0;
-  const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee;
-  const availablePoints = rewardPoints ?? 0;
-  const tier = calculateLifetimeTier(lifetimePoints).tier;
-  const maxRedeemByTier = getMaxRedeemPoints(tier);
-  const maxRedeemablePoints = Math.min(
-    availablePoints,
-    maxRedeemByTier,
-    Math.floor(totalWithTravel * POINTS_PER_DOLLAR)
-  );
-  const pointsToRedeem = Math.min(pointsToRedeemInput, maxRedeemablePoints);
-  const rewardsDiscount = pointsToRedeem / POINTS_PER_DOLLAR;
-  const totalAfterDiscount = Math.max(0, totalWithTravel - rewardsDiscount);
-
   const buildPayload = () => ({
     serviceId: selectedService!.id,
     serviceName: selectedService!.name,
