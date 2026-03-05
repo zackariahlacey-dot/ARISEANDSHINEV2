@@ -10,6 +10,15 @@ export default function Page() {
 
   useEffect(() => {
     const supabase = createClient();
+
+    const redirectIfSignedIn = (session: { access_token?: string } | null) => {
+      if (session?.access_token) router.push("/protected");
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      redirectIfSignedIn(session);
+    });
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -17,6 +26,7 @@ export default function Page() {
         router.push("/protected");
       }
     });
+
     return () => {
       subscription.unsubscribe();
     };

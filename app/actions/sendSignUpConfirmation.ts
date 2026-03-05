@@ -2,7 +2,7 @@
 
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getConfirmationEmailHtml } from "@/emails/ConfirmationEmail";
+import { getConfirmEmailHtml } from "@/emails/ConfirmEmail";
 import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 
 /** Resend from address — must match verified sender in Resend dashboard */
@@ -54,18 +54,17 @@ export async function sendSignUpConfirmationEmails(
     const tokenHash = encodeURIComponent(linkData.properties.hashed_token);
     const confirmUrl = `${CONFIRM_REDIRECT_BASE}/auth/confirm?token_hash=${tokenHash}&type=signup&next=/protected`;
 
-    // Send custom confirmation email via Resend
+    // Send premium confirmation email via Resend
     const key = process.env.RESEND_API_KEY;
     if (key?.trim()) {
       const resend = new Resend(key);
-      const html = getConfirmationEmailHtml({
-        confirmUrl,
-        firstName: firstName.trim() || undefined,
+      const html = getConfirmEmailHtml({
+        confirmation_url: confirmUrl,
       });
       const result = await resend.emails.send({
         from: FROM_ADDRESS,
         to: email.trim(),
-        subject: "Confirm your email — Arise And Shine VT",
+        subject: "Confirm your account — Arise And Shine VT",
         html,
       });
       if (result.error) {
