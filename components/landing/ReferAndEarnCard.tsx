@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Copy, Check, Users, Gift, Sparkles } from "lucide-react";
 
-const SITE_URL = "https://ariseandshinevt.com";
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
 
 interface ReferAndEarnCardProps {
   /** From Supabase profiles.referral_code — not local state */
@@ -12,12 +13,11 @@ interface ReferAndEarnCardProps {
 
 export function ReferAndEarnCard({ referralCode }: ReferAndEarnCardProps) {
   const [copied, setCopied] = useState(false);
-  const linkRef = referralCode
-    ? `https://ariseandshinevt.com/auth/sign-up?ref=${referralCode}`
-    : "";
+  const signUpRefUrl = `${SITE_URL}/auth/sign-up?ref=${referralCode ?? ""}`;
+  const linkRef = referralCode ? signUpRefUrl : "";
 
   const handleCopy = async () => {
-    const textToCopy = `https://ariseandshinevt.com/auth/sign-up?ref=${referralCode ?? ""}`;
+    const textToCopy = signUpRefUrl;
     try {
       await navigator.clipboard.writeText(textToCopy);
     } catch {
@@ -88,7 +88,7 @@ export function ReferAndEarnCard({ referralCode }: ReferAndEarnCardProps) {
       <div className="flex items-stretch gap-2">
         <div className="flex-1 min-w-0 flex items-center bg-zinc-950/60 border border-zinc-800 rounded-lg px-3 py-2.5 overflow-hidden">
           <span className="text-xs text-zinc-400 truncate font-mono">
-            {linkRef || "https://ariseandshinevt.com/auth/sign-up?ref="}
+            {linkRef || `${SITE_URL}/auth/sign-up?ref=`}
           </span>
         </div>
         <button

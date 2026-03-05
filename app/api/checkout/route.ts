@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Derive the site origin from the request so the route works in both
-    // development (localhost:3000) and production without extra env vars.
+    // development and production. Production should use NEXT_PUBLIC_SITE_URL (https://ariseandshinevt.com).
     const origin =
       req.headers.get("origin") ??
       `${req.nextUrl.protocol}//${req.nextUrl.host}`;

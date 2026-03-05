@@ -295,7 +295,7 @@ export async function bookDetailing(
       console.error("[bookDetailing] STRIPE_SECRET_KEY missing");
       return { success: false, error: "Payment is not configured. Please try Pay at Arrival." };
     }
-    const origin = payload.successUrl ?? payload.cancelUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const origin = payload.successUrl ?? payload.cancelUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
     const stripe = new Stripe(stripeKey, { apiVersion: "2026-02-25.clover" });
     try {
       const session = await stripe.checkout.sessions.create({

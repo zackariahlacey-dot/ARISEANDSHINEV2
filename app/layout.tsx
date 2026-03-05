@@ -4,17 +4,19 @@ import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(defaultUrl),
+  metadataBase: new URL(siteUrl),
   title: "Arise And Shine VT | Premium Mobile Detailing",
   description:
     "Vermont's premier mobile auto detailing service. We come to you.",
   keywords:
     "mobile detailing, Vermont, Williston, Burlington, auto detailing, car wash, ceramic coating, paint correction",
+  icons: {
+    icon: "/favicon.ico",
+  },
   openGraph: {
     title: "Arise And Shine VT | Premium Mobile Detailing",
     description:
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "Arise And Shine VT",
     images: [
       {
-        url: "/opengraph-image",
+        url: "/aasbanner.png",
         width: 1200,
         height: 630,
         alt: "Arise And Shine VT — Premium mobile auto detailing in Vermont",
@@ -37,7 +39,7 @@ export const metadata: Metadata = {
     title: "Arise And Shine VT | Premium Mobile Detailing",
     description:
       "Vermont's premier mobile auto detailing service. We come to you.",
-    images: ["/opengraph-image"],
+    images: ["/aasbanner.png"],
   },
 };
 
