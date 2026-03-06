@@ -3,8 +3,9 @@
 import { Resend } from "resend";
 import { getAdminNewUserAlertHtml } from "@/emails/AdminNewUserAlert";
 
+/** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
 

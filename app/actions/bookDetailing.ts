@@ -243,7 +243,7 @@ export async function bookDetailing(
     };
   }
 
-  // ── 3b. Earn: add 1 point per $1 spent on service (excluding travel) ─────
+  // ── 3b. Earn: add 1 point per $1 spent on service (excluding travel); update both reward_points and lifetime_points ─────
   const serviceSubtotal =
     payload.totalPrice +
     (payload.pointsToRedeem ?? 0) / 10 -
@@ -252,13 +252,17 @@ export async function bookDetailing(
   if (earnedPoints > 0 && !isPayNow) {
     const { data: prof } = await supabase
       .from("profiles")
-      .select("reward_points")
+      .select("reward_points, lifetime_points")
       .eq("id", profileId)
       .single();
     if (prof && typeof prof.reward_points === "number") {
+      const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
       await supabase
         .from("profiles")
-        .update({ reward_points: prof.reward_points + earnedPoints })
+        .update({
+          reward_points: prof.reward_points + earnedPoints,
+          lifetime_points: currentLifetime + earnedPoints,
+        })
         .eq("id", profileId);
     }
   }

@@ -180,7 +180,7 @@ export function AddressAutocomplete({
           disabled={!isReady}
           autoComplete="off"
           spellCheck={false}
-          className={`w-full bg-[#1a1a1a] border rounded-xl pl-9 pr-9 py-3 text-[16px] md:text-sm text-white placeholder-zinc-700 focus:outline-none transition-colors disabled:opacity-40 ${
+          className={`w-full text-center bg-[#1a1a1a] border rounded-xl pl-9 pr-9 py-3 text-[16px] md:text-sm text-white placeholder-zinc-700 focus:outline-none transition-colors disabled:opacity-40 ${
             isConfirmed
               ? "border-emerald-500/50 focus:border-emerald-500/70"
               : "border-[#252525] focus:border-zinc-500"

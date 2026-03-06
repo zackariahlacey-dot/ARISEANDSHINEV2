@@ -1,15 +1,17 @@
-import { createClient } from "@/lib/supabase/server";
+
+
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   CalendarDays,
   DollarSign,
   TrendingUp,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Car,
   RefreshCw,
   Gift,
 } from "lucide-react";
+import { RecentBookingsTable } from "./RecentBookingsTable";
 
 // ── Shared UI helpers ─────────────────────────────────────────────────────────
 
@@ -66,28 +68,12 @@ function KpiCard({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    confirmed: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
-    pending: "bg-amber-500/15 text-amber-400 border-amber-500/20",
-    cancelled: "bg-red-500/15 text-red-400 border-red-500/20",
-    completed: "bg-blue-500/15 text-blue-400 border-blue-500/20",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border capitalize ${
-        map[status] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
+// StatusBadge moved to RecentBookingsTable (gold/metallic for Confirmed)
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const today = new Date().toISOString().split("T")[0];
   const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -95,30 +81,26 @@ export default async function DashboardPage() {
     .split("T")[0];
 
   const [
-    // KPI 1 — MRR: confirmed subscription bookings (current calendar month)
-    { data: subscriptionBookings },
-    // KPI 2 — Total Revenue: all completed bookings
-    { data: completedBookings },
-    // KPI 3 — Points Liability: sum of all reward_points
+    // MRR — sum of active subscriptions (subscriptions table)
+    { data: subscriptionRows },
+    // Total Revenue — bookings where status is confirmed OR completed
+    { data: revenueBookings },
+    // Points Liability — sum of reward_points from profiles
     { data: pointsRows },
-    // KPI 4 — Upcoming next 7 days
+    // Upcoming next 7 days (today through today+7, non-cancelled)
     { count: upcomingCount },
     // Dashboard tables
     { data: recentBookings },
     { data: upcomingToday },
   ] = await Promise.all([
-    // MRR — bookings this month where service is_subscription = true
-    supabase
-      .from("bookings")
-      .select("total_price, services(name, is_subscription)")
-      .eq("status", "confirmed")
-      .gte("booking_date", `${today.slice(0, 7)}-01`), // first day of current month
+    // MRR — sum price of all active records in subscriptions table
+    supabase.from("subscriptions").select("price").eq("status", "active"),
 
-    // Total Revenue — all completed bookings (lifetime)
+    // Total Revenue — confirmed or completed bookings, sum total_price
     supabase
       .from("bookings")
       .select("total_price")
-      .eq("status", "completed"),
+      .in("status", ["confirmed", "completed"]),
 
     // Points liability — all profiles
     supabase.from("profiles").select("reward_points"),
@@ -152,19 +134,18 @@ export default async function DashboardPage() {
 
   // ── KPI calculations ───────────────────────────────────────────────────────
 
-  // MRR — filter to subscription services only
-  const mrr = (subscriptionBookings ?? []).reduce((sum, b) => {
-    const svc = Array.isArray(b.services) ? b.services[0] : b.services;
-    return (svc as { is_subscription?: boolean } | null)?.is_subscription
-      ? sum + (b.total_price ?? 0)
-      : sum;
-  }, 0);
+  // MRR — sum of active subscription prices
+  const mrr = (subscriptionRows ?? []).reduce(
+    (sum, r) => sum + (Number((r as { price?: number }).price) ?? 0),
+    0
+  );
 
-  // Total Revenue (completed)
-  const totalRevenue = (completedBookings ?? []).reduce(
+  // Total Revenue — sum total_price for confirmed + completed bookings
+  const totalRevenue = (revenueBookings ?? []).reduce(
     (sum, r) => sum + (r.total_price ?? 0),
     0
   );
+  const revenueBookingCount = (revenueBookings ?? []).length;
 
   // Points liability — total unspent points across all users → dollar equivalent (10 pts = $1)
   const totalPoints = (pointsRows ?? []).reduce(
@@ -173,10 +154,10 @@ export default async function DashboardPage() {
   );
   const pointsLiabilityDollars = totalPoints / 10;
 
-  const fmt = (n: number) =>
+  const fmt = (n: number, decimals = 0) =>
     `$${n.toLocaleString("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     })}`;
 
   return (
@@ -185,7 +166,7 @@ export default async function DashboardPage() {
       <div>
         <h2 className="text-2xl font-black text-white">Overview</h2>
         <p className="text-sm text-zinc-500 mt-0.5">
-          {new Date().toLocaleDateString("en-US", {
+          Arise And Shine VT · {new Date().toLocaleDateString("en-US", {
             weekday: "long",
             month: "long",
             day: "numeric",
@@ -199,14 +180,14 @@ export default async function DashboardPage() {
         <KpiCard
           label="MRR"
           value={fmt(mrr)}
-          sub="Active subscriptions this month"
+          sub="Active subscriptions"
           icon={RefreshCw}
           accent
         />
         <KpiCard
           label="Total Revenue"
-          value={fmt(totalRevenue)}
-          sub="Lifetime completed bookings"
+          value={fmt(totalRevenue, 2)}
+          sub="Confirmed + completed bookings"
           icon={DollarSign}
         />
         <KpiCard
@@ -236,66 +217,7 @@ export default async function DashboardPage() {
             </div>
             <TrendingUp size={15} className="text-zinc-600" />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.04]">
-                  {["Customer", "Service", "Date", "Total", "Status"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(recentBookings ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-zinc-600 text-sm">
-                      No bookings yet
-                    </td>
-                  </tr>
-                ) : (
-                  (recentBookings ?? []).map((b) => {
-                    const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
-                    const service = Array.isArray(b.services) ? b.services[0] : b.services;
-                    const vehicle = Array.isArray(b.vehicles) ? b.vehicles[0] : b.vehicles;
-                    return (
-                      <tr
-                        key={b.id}
-                        className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
-                      >
-                        <td className="px-5 py-3">
-                          <p className="font-semibold text-zinc-200 text-xs">
-                            {profile?.first_name ?? "—"} {profile?.last_name ?? ""}
-                          </p>
-                          {vehicle && (
-                            <p className="text-[10px] text-zinc-600 mt-0.5">
-                              {vehicle.year} {vehicle.make} {vehicle.model}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-zinc-400 text-xs">
-                          {service?.name ?? "—"}
-                        </td>
-                        <td className="px-5 py-3 text-zinc-400 text-xs whitespace-nowrap">
-                          {b.booking_date}
-                        </td>
-                        <td className="px-5 py-3 text-zinc-200 text-xs font-semibold tabular-nums">
-                          ${(b.total_price ?? 0).toFixed(2)}
-                        </td>
-                        <td className="px-5 py-3">
-                          <StatusBadge status={b.status ?? "pending"} />
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <RecentBookingsTable initialBookings={(recentBookings ?? []) as import("./RecentBookingsTable").DashboardBookingRow[]} />
         </div>
 
         {/* Today's schedule */}
@@ -380,11 +302,11 @@ export default async function DashboardPage() {
             Avg Booking Value
           </p>
           <p className="text-lg font-black text-white tabular-nums">
-            {completedBookings && completedBookings.length > 0
-              ? fmt(totalRevenue / completedBookings.length)
+            {revenueBookingCount > 0
+              ? fmt(totalRevenue / revenueBookingCount, 2)
               : "—"}
           </p>
-          <p className="text-[10px] text-zinc-600 mt-0.5">Per completed booking</p>
+          <p className="text-[10px] text-zinc-600 mt-0.5">Per confirmed/completed booking</p>
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 100px; /* Programmatic scrolls respect sticky header */
 }
 
 /* ── Global text selection ─────────────────────────────────────────────── */
@@ -61,7 +62,7 @@ html {
   background: #D4AF37;
 }
 
-/* ── Primary CTA hover shimmer sweep ───────────────────────────────────── */
+/* ── Primary CTA hover shimmer sweep (legacy; prefer btn-primary-gold-shimmer) ── */
 .btn-shimmer {
   position: relative;
   overflow: hidden;
@@ -88,6 +89,205 @@ html {
 .btn-shimmer:hover::after {
   left: 130%;
   transition: left 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Primary gold buttons: continuous diagonal shimmer (no hover needed) ─────── */
+@keyframes primary-gold-shimmer-sweep {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+.btn-primary-gold-shimmer {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s ease-in-out;
+}
+.btn-primary-gold-shimmer:hover {
+  background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+  color: #000;
+}
+.btn-primary-gold-shimmer::before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 50%;
+  height: 120%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 245, 225, 0.5) 50%,
+    rgba(255, 255, 255, 0) 80%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  filter: blur(12px);
+  animation: primary-gold-shimmer-sweep 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.btn-primary-gold-shimmer > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tiltable primary: hide ::before shimmer (replaced by JS-controlled layer for tilt sync) */
+.btn-primary-gold-shimmer-tilt::before {
+  display: none;
+}
+
+/* Shimmer layer for tilt sync: outer applies offset from tilt, inner runs sweep */
+.btn-primary-gold-shimmer-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  transform: translate(
+    calc(var(--shimmer-tx, 0) * 1px),
+    calc(var(--shimmer-ty, 0) * 1px)
+  );
+}
+.btn-primary-gold-shimmer-layer-inner {
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 50%;
+  height: 120%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 245, 225, 0.5) 50%,
+    rgba(255, 255, 255, 0) 80%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  filter: blur(12px);
+  animation: primary-gold-shimmer-sweep 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* ── Secondary: outline that fills with gold on hover ──────────────────────────── */
+.btn-secondary-gold-hover {
+  transition: all 0.5s ease-in-out;
+}
+.btn-secondary-gold-hover:hover {
+  background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) !important;
+  color: #000 !important;
+  border-color: rgba(212, 175, 55, 0.6) !important;
+}
+
+/* ── Secondary / outline / ghost: premium shimmer on hover or active only ────── */
+.btn-interaction-shimmer {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s ease-in-out;
+}
+.btn-interaction-shimmer:active {
+  transform: scale(0.98);
+}
+.btn-interaction-shimmer::before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 50%;
+  height: 120%;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 70%,
+    transparent 100%
+  );
+  transform: translateX(-150%) skewX(-18deg);
+  pointer-events: none;
+  z-index: 0;
+}
+.btn-interaction-shimmer:hover::before,
+.btn-interaction-shimmer:active::before {
+  animation: primary-gold-shimmer-sweep 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+.btn-interaction-shimmer > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Shared shimmer sweep (Pay Now + Pay at Arrival); -100% → 200% ───────────── */
+@keyframes btn-shimmer-sweep {
+  0% { transform: translateX(-100%) skewX(-18deg); }
+  100% { transform: translateX(200%) skewX(-18deg); }
+}
+
+/* Pay Now: always-on glossy shimmer, 3s ease-in-out */
+.btn-pay-now-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-pay-now-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 45%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 100%
+  );
+  animation: btn-shimmer-sweep 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Pay at Arrival: shimmer on hover only, same timing; white → champagne gradient */
+.btn-pay-arrival-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-pay-arrival-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 40%,
+    rgba(247, 231, 206, 0.2) 55%,
+    rgba(255, 255, 255, 0.08) 70%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.btn-pay-arrival-shimmer:hover::after {
+  opacity: 1;
+  animation: btn-shimmer-sweep 3s ease-in-out infinite;
+}
+
+/* ── Most Popular badge: breathing + float (synced with Pay Now shimmer) ─────── */
+@keyframes most-popular-badge {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+  }
+  25% {
+    transform: scale(1.02) translateY(-2px);
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
+  }
+  50% {
+    transform: scale(1.05) translateY(0);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+  }
+  75% {
+    transform: scale(1.02) translateY(2px);
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
+  }
+}
+.badge-most-popular {
+  animation: most-popular-badge 3s ease-in-out infinite;
 }
 
 /* ── Skeleton loader shimmer (time-slot grid & similar placeholder UI) ─── */
@@ -163,6 +363,677 @@ html {
 .marquee-fade-edges {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* ── Loyalty tier: 3D bars (Bronze, Silver, Gold) + faceted Diamond ───────────── */
+@keyframes tier-shimmer-beam {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes tier-diamond-sparkle {
+  0%, 100% { opacity: 0.7; transform: translateX(-100%); }
+  50%      { opacity: 1;   transform: translateX(200%); }
+}
+
+/* Float: entire 3D object moves up/down together (apply to parent of bar or diamond) */
+@keyframes animate-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.tier-float-container {
+  animation: animate-float 3.5s ease-in-out infinite;
+}
+.tier-float-bronze  { animation-delay: 0s; }
+.tier-float-silver  { animation-delay: 0.5s; }
+.tier-float-gold    { animation-delay: 1s; }
+.tier-float-diamond { animation-delay: 1.5s; }
+
+/* Shared shimmer overlay: refractive light beam, 3s */
+.tier-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.tier-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 45%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 100%
+  );
+  animation: tier-shimmer-beam 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-shimmer > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 3D Bar: Bronze — no black; metallic edges only ── */
+.tier-badge-bronze,
+.tier-card-bronze {
+  background: linear-gradient(135deg, #4d2d00, #804A00, #d9a066, #804A00, #4d2d00);
+  border: 1px solid rgba(128, 74, 0, 0.55);
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.2),
+    2px 2px 6px rgba(77, 45, 0, 0.35),
+    0 0 12px rgba(128, 74, 0, 0.25);
+  color: #fff;
+}
+.tier-badge-bronze { border-radius: 9999px; }
+.tier-card-bronze { border-radius: 0.125rem; }
+
+/* ── 3D Bar: Silver — no black ── */
+.tier-badge-silver,
+.tier-card-silver {
+  background: linear-gradient(135deg, #3f3f46, #71717a, #f4f4f5, #71717a, #3f3f46);
+  border: 1px solid rgba(113, 113, 122, 0.55);
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.35),
+    2px 2px 6px rgba(63, 63, 70, 0.3),
+    0 0 12px rgba(113, 113, 122, 0.2);
+  color: #0a0a0a;
+}
+.tier-badge-silver { border-radius: 9999px; }
+.tier-card-silver { border-radius: 0.125rem; }
+
+/* ── 3D Bar: Gold — no black ── */
+.tier-badge-gold,
+.tier-card-gold {
+  background: linear-gradient(135deg, #78350f, #bf953f, #fcf6ba, #bf953f, #78350f);
+  border: 1px solid rgba(191, 149, 63, 0.55);
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.3),
+    2px 2px 6px rgba(120, 53, 15, 0.35),
+    0 0 14px rgba(212, 175, 55, 0.3);
+  color: #0a0a0a;
+}
+.tier-badge-gold { border-radius: 9999px; }
+.tier-card-gold { border-radius: 0.125rem; }
+
+/* ── Faceted Diamond: no black; cyan/blue edges only ── */
+.tier-badge-diamond,
+.tier-card-diamond {
+  background: linear-gradient(135deg, #0ea5e9, #e0f2fe, #ffffff, #e0f2fe, #0ea5e9);
+  border: 1px solid rgba(14, 165, 233, 0.5);
+  box-shadow:
+    inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+    2px 2px 6px rgba(14, 165, 233, 0.2),
+    0 0 20px rgba(14, 165, 233, 0.35);
+  color: #0a0a0a;
+}
+.tier-badge-diamond { border-radius: 9999px; }
+.tier-card-diamond {
+  border-radius: 0.375rem;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Badges: Solid object style (Dashboard + Admin) — sync with Landing 3D prism bars & Diamond */
+.tier-badge-bronze,
+.tier-badge-silver,
+.tier-badge-gold,
+.tier-badge-diamond {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Mini solid 3D: right rim (metal bars) so badge matches Landing solid prisms */
+.tier-badge-bronze {
+  border-right: 3px solid #3d2400;
+}
+.tier-badge-silver {
+  border-right: 3px solid #2d2d32;
+}
+.tier-badge-gold {
+  border-right: 3px solid #5c2a0a;
+}
+/* Solid object drop shadow + subtle float (sync with Landing floating 3D objects) */
+@keyframes tier-badge-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.tier-badge-3d {
+  filter: drop-shadow(0 2px 4px rgba(40, 40, 45, 0.2));
+  animation: tier-badge-float 4s ease-in-out infinite;
+}
+.tier-badge-diamond.tier-badge-3d {
+  filter: drop-shadow(0 2px 4px rgba(14, 165, 233, 0.15)) drop-shadow(0 0 10px rgba(14, 165, 233, 0.4));
+}
+.tier-badge-bronze::before,
+.tier-badge-silver::before,
+.tier-badge-gold::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 45%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 100%
+  );
+  animation: tier-shimmer-beam 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-badge-diamond::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 40%,
+    rgba(224, 242, 254, 0.7) 50%,
+    rgba(255, 255, 255, 0.5) 60%,
+    transparent 100%
+  );
+  animation: tier-diamond-sparkle 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-badge-bronze > *,
+.tier-badge-silver > *,
+.tier-badge-gold > *,
+.tier-badge-diamond > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Cards: 3D bars + Diamond (shimmer / sparkle, landing + anywhere) */
+.tier-card-bronze,
+.tier-card-silver,
+.tier-card-gold,
+.tier-card-diamond {
+  position: relative;
+  overflow: hidden;
+}
+.tier-card-bronze::before,
+.tier-card-silver::before,
+.tier-card-gold::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 45%,
+    rgba(255, 255, 255, 0.12) 55%,
+    transparent 100%
+  );
+  animation: tier-shimmer-beam 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-card-diamond::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 40%,
+    rgba(224, 242, 254, 0.6) 50%,
+    rgba(255, 255, 255, 0.4) 60%,
+    transparent 100%
+  );
+  animation: tier-diamond-sparkle 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-card-bronze > *,
+.tier-card-silver > *,
+.tier-card-gold > *,
+.tier-card-diamond > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Podium: 3D bar cards (same bevel + extra depth for landing) ── */
+.tier-podium-bar {
+  border-radius: 0.125rem; /* rounded-sm, bullion bar */
+  border-width: 1px;
+  border-style: solid;
+}
+.tier-podium-bar::before {
+  border-radius: inherit;
+}
+.tier-podium-bar-bronze {
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.2),
+    2px 2px 6px rgba(77, 45, 0, 0.35),
+    0 0 12px rgba(128, 74, 0, 0.25),
+    0 6px 16px rgba(77, 45, 0, 0.2);
+}
+.tier-podium-bar-silver {
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.35),
+    2px 2px 6px rgba(63, 63, 70, 0.3),
+    0 0 12px rgba(113, 113, 122, 0.2),
+    0 6px 16px rgba(63, 63, 70, 0.2);
+}
+.tier-podium-bar-gold {
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.3),
+    2px 2px 6px rgba(120, 53, 15, 0.35),
+    0 0 14px rgba(212, 175, 55, 0.3),
+    0 6px 16px rgba(120, 53, 15, 0.2);
+}
+
+/* ── Extreme 3D: Podium stage (perspective) ── */
+.tier-podium-stage {
+  perspective: 1000px;
+  perspective-origin: center 80%;
+}
+
+/* ── 3D Growth Lineup: bars + Diamond; unified perspective and tilt ── */
+.tier-lineup-stage {
+  perspective: 1500px;
+  perspective-origin: center 85%;
+  position: relative;
+}
+/* Tilt the entire lineup (3D stage) */
+.tier-lineup-tilted {
+  transform-style: preserve-3d;
+  transform: rotateX(15deg) rotateY(-10deg);
+}
+/* Contact shadow: starts where bottom face meets ground (bars have more offset so shadow is under physical bottom) */
+.tier-contact-shadow {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 82%;
+  height: 16px;
+  transform: translate(-50%, 4px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse 75% 50% at center, rgba(0, 0, 0, 0.52) 0%, rgba(0, 0, 0, 0.22) 50%, transparent 75%);
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-lineup-card .tier-contact-shadow {
+  transform: translate(-50%, 10px);
+}
+
+/* ── 6-sided 3D Bullion Bar: preserve-3d, 20px depth; unified tilt with Diamond ── */
+.tier-solid-bar-box {
+  --bar-depth: 20px;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(25deg) rotateY(-20deg);
+}
+.tier-solid-bar-front {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  transform-style: preserve-3d;
+  transform: translateZ(0);
+  border-radius: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+/* Side face: rotateY(90deg), 1px overlap so it touches front (mitered), 40% darker */
+.tier-solid-bar-side {
+  position: absolute;
+  top: 0;
+  left: calc(100% - 1px);
+  width: calc(var(--bar-depth) + 1px);
+  height: 100%;
+  transform-origin: 1px 50%;
+  transform: rotateY(90deg);
+  z-index: 1;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  border-radius: 0 0.2rem 0.2rem 0;
+  pointer-events: none;
+}
+/* Top face: rotateX(90deg), 1px overlap so it touches front (mitered), 20% brighter */
+.tier-solid-bar-top {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 1px);
+  width: 100%;
+  height: calc(var(--bar-depth) + 1px);
+  transform-origin: 50% 100%;
+  transform: rotateX(90deg);
+  z-index: 1;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  border-radius: 0.2rem 0.2rem 0 0;
+  pointer-events: none;
+}
+/* Bottom face: rotateX(-90deg), sits on 'floor', darkest metal (shadow side); 1px overlap to miter with front */
+.tier-solid-bar-bottom {
+  position: absolute;
+  left: 0;
+  top: calc(100% - 1px);
+  width: 100%;
+  height: calc(var(--bar-depth) + 1px);
+  transform-origin: 50% 0;
+  transform: rotateX(-90deg);
+  z-index: 0;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  border-radius: 0 0 0.2rem 0.2rem;
+  pointer-events: none;
+}
+
+/* Front: main metallic gradient; text engraved via .tier-front-engraved */
+.tier-solid-bar-front-bronze {
+  background: linear-gradient(90deg, #4d2d00 0%, #804A00 22%, #d9a066 48%, #fff 52%, #d9a066 78%, #804A00 100%);
+  color: #fff;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.35);
+}
+.tier-solid-bar-front-silver {
+  background: linear-gradient(90deg, #3f3f46 0%, #71717a 22%, #e5e7eb 48%, #fff 52%, #e5e7eb 78%, #3f3f46 100%);
+  color: #0a0a0a;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4);
+}
+.tier-solid-bar-front-gold {
+  background: linear-gradient(90deg, #78350f 0%, #bf953f 22%, #fcf6ba 48%, #fff 52%, #bf953f 78%, #78350f 100%);
+  color: #0a0a0a;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4);
+}
+.tier-solid-bar-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 48%, transparent 55%);
+  animation: tier-shimmer-beam 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-solid-bar-front > * { position: relative; z-index: 1; }
+/* Engraved look for tier name and points on front face */
+.tier-front-engraved {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35),
+    0 -1px 1px rgba(0, 0, 0, 0.25),
+    1px 0 0 rgba(0, 0, 0, 0.15);
+}
+.tier-solid-bar-front-silver .tier-front-engraved,
+.tier-solid-bar-front-gold .tier-front-engraved {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5),
+    0 -1px 1px rgba(0, 0, 0, 0.2),
+    1px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Side: 40% darker; 1px specular along bottom edge where side meets bottom face (miter highlight) */
+.tier-solid-bar-side-bronze {
+  background: linear-gradient(180deg, #1f1200 0%, #2d1a00 35%, #3d2400 70%, #1f1200 100%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+}
+.tier-solid-bar-side-silver {
+  background: linear-gradient(180deg, #18181b 0%, #27272a 35%, #3f3f46 70%, #18181b 100%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+}
+.tier-solid-bar-side-gold {
+  background: linear-gradient(180deg, #351a05 0%, #451f07 35%, #78350f 70%, #351a05 100%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Top: 20% brighter metallic cap (rotateX 90° only), no black */
+.tier-solid-bar-top-bronze {
+  background: linear-gradient(180deg, #f5e0b8 0%, #e8c48a 40%, #d9a066 100%);
+}
+.tier-solid-bar-top-silver {
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 50%, #e5e7eb 100%);
+}
+.tier-solid-bar-top-gold {
+  background: linear-gradient(180deg, #fffef0 0%, #fff9c4 50%, #fcf6ba 100%);
+}
+
+/* Bottom: darkest gradient (shadow side on floor); 1px specular on right edge where bottom meets side */
+.tier-solid-bar-bottom-bronze {
+  background: linear-gradient(90deg, #0f0900 0%, #1a0f00 30%, #2d1a00 70%, #0f0900 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1);
+}
+.tier-solid-bar-bottom-silver {
+  background: linear-gradient(90deg, #0c0c0e 0%, #18181b 30%, #27272a 70%, #0c0c0e 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12);
+}
+/* Gold bottom: fully closed, deep amber #78350f shadow side — solid floating brick */
+.tier-solid-bar-bottom-gold {
+  background: linear-gradient(90deg, #2d1505 0%, #78350f 30%, #78350f 70%, #2d1505 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ── 3D Diamond: rebuilt from scratch to match bars — same perspective(1500px), preserve-3d, rotateX(25deg) rotateY(-20deg); 8 triangular facets (4 crown, 4 pavilion) meeting at sharp bottom point; zero gaps; anisotropic shading; 1px specular ── */
+.tier-diamond-wrapper {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  clip-path: polygon(50% 0%, 100% 38%, 75% 100%, 50% 88%, 25% 100%, 0% 38%);
+  transform-style: preserve-3d;
+  transform: rotateX(25deg) rotateY(-20deg);
+  overflow: hidden;
+  border: none;
+  filter: drop-shadow(0 0 16px rgba(14, 165, 233, 0.2));
+  backface-visibility: hidden;
+}
+.tier-diamond-facet {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: none;
+  outline: none;
+  backface-visibility: hidden;
+}
+/* Crown (top 4): apex at 50% 0%; anisotropic bright & reflective */
+.tier-diamond-facet-t1 {
+  clip-path: polygon(50% 0%, 0% 38%, 100% 38%);
+  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6), inset 1px 0 0 0 rgba(255, 255, 255, 0.35), inset -1px 0 0 0 rgba(255, 255, 255, 0.35);
+}
+.tier-diamond-facet-t2 {
+  clip-path: polygon(50% 0%, 100% 38%, 75% 100%);
+  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
+  box-shadow: inset -1px 0 0 0 rgba(255, 255, 255, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+}
+.tier-diamond-facet-t3 {
+  clip-path: polygon(50% 0%, 75% 100%, 25% 100%);
+  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
+  box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.4), inset 1px 0 0 0 rgba(255, 255, 255, 0.35), inset -1px 0 0 0 rgba(255, 255, 255, 0.35);
+}
+.tier-diamond-facet-t4 {
+  clip-path: polygon(50% 0%, 25% 100%, 0% 38%);
+  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
+  box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+}
+/* Pavilion (bottom 4): apex at 50% 88% (sharp physical point); deep shadow */
+.tier-diamond-facet-b1 {
+  clip-path: polygon(50% 88%, 0% 38%, 25% 100%);
+  background: linear-gradient(135deg, #0c4a6e, #075985);
+  box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 0 rgba(255, 255, 255, 0.2);
+}
+.tier-diamond-facet-b2 {
+  clip-path: polygon(50% 88%, 25% 100%, 75% 100%);
+  background: linear-gradient(135deg, #0c4a6e, #075985);
+  box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.25), inset -1px 0 0 0 rgba(255, 255, 255, 0.2), inset 1px 0 0 0 rgba(255, 255, 255, 0.2);
+}
+.tier-diamond-facet-b3 {
+  clip-path: polygon(50% 88%, 75% 100%, 100% 38%);
+  background: linear-gradient(135deg, #0c4a6e, #075985);
+  box-shadow: inset -1px 0 0 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 0 rgba(255, 255, 255, 0.2);
+}
+.tier-diamond-facet-b4 {
+  clip-path: polygon(50% 88%, 100% 38%, 0% 38%);
+  background: linear-gradient(135deg, #0c4a6e, #075985);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2), inset 1px 0 0 0 rgba(255, 255, 255, 0.2), inset -1px 0 0 0 rgba(255, 255, 255, 0.2);
+}
+/* Content: engraved on front; same style as bar text */
+.tier-diamond-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+  padding: 1rem;
+  pointer-events: auto;
+  clip-path: polygon(50% 0%, 100% 38%, 75% 100%, 50% 88%, 25% 100%, 0% 38%);
+}
+.tier-diamond-content .tier-front-engraved {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5),
+    0 -1px 2px rgba(0, 0, 0, 0.35),
+    1px 0 0 rgba(0, 0, 0, 0.2),
+    -1px 0 0 rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Mobile staircase: step cards to the right */
+@media (max-width: 639px) {
+  .sm\:staircase-0 { margin-left: 0; }
+  .sm\:staircase-1 { margin-left: 1.5rem; }
+  .sm\:staircase-2 { margin-left: 3rem; }
+  .sm\:staircase-3 { margin-left: 4.5rem; }
+}
+
+/* ── Extreme 3D: Physical bar — metallic depth only (no black); side/bottom = matte metal ── */
+.tier-podium-bar-3d {
+  transform: rotateX(10deg) rotateY(-5deg);
+  transform-style: preserve-3d;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.3),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.06);
+}
+.tier-podium-bar-3d.tier-podium-bar-bronze {
+  border-right: 6px solid #3d2400;
+  border-bottom: 6px solid #4d2d00;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.3),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.06),
+    0 0 12px rgba(128, 74, 0, 0.25),
+    0 8px 24px rgba(77, 45, 0, 0.25);
+}
+.tier-podium-bar-3d.tier-podium-bar-silver {
+  border-right: 6px solid #2d2d32;
+  border-bottom: 6px solid #3f3f46;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.3),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.06),
+    0 0 12px rgba(113, 113, 122, 0.2),
+    0 8px 24px rgba(63, 63, 70, 0.25);
+}
+.tier-podium-bar-3d.tier-podium-bar-gold {
+  border-right: 6px solid #5c2a0a;
+  border-bottom: 6px solid #78350f;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.3),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.06),
+    0 0 14px rgba(212, 175, 55, 0.3),
+    0 8px 24px rgba(120, 53, 15, 0.25);
+}
+/* Brushed metal noise overlay (bar cards) */
+.tier-podium-bar-3d::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  pointer-events: none;
+  z-index: 0;
+}
+.tier-podium-bar-3d > * {
+  z-index: 1;
+}
+
+/* ── Extreme 3D: Faceted Diamond (clip-path + layered refraction + glow) ── */
+.tier-podium-diamond-3d {
+  clip-path: polygon(
+    10% 0%, 90% 0%, 100% 15%, 100% 85%, 90% 100%, 10% 100%, 0% 85%, 0% 15%
+  );
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  filter: drop-shadow(0 0 20px rgba(14, 165, 233, 0.4));
+  /* Layered gradients: Cyan, White, Deep Blue at different angles */
+  background:
+    linear-gradient(165deg, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+    linear-gradient(255deg, rgba(255, 255, 255, 0.4) 0%, transparent 45%),
+    linear-gradient(315deg, rgba(2, 132, 199, 0.5) 0%, transparent 55%),
+    linear-gradient(135deg, #0ea5e9, #e0f2fe, #ffffff, #e0f2fe, #0ea5e9);
+  box-shadow:
+    inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+    0 0 32px rgba(14, 165, 233, 0.35),
+    0 0 60px rgba(14, 165, 233, 0.2);
+}
+.tier-podium-diamond-3d::before {
+  border-radius: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 40%,
+    rgba(224, 242, 254, 0.6) 50%,
+    rgba(255, 255, 255, 0.4) 60%,
+    transparent 100%
+  );
+  animation: tier-diamond-sparkle 2.5s ease-in-out infinite;
+}
+@media (max-width: 1023px) {
+  .tier-podium-diamond-3d::before {
+    animation-duration: 1.8s;
+  }
+  .tier-podium-diamond-3d {
+    clip-path: polygon(
+      5% 0%, 95% 0%, 100% 8%, 100% 92%, 95% 100%, 5% 100%, 0% 92%, 0% 8%
+    );
+  }
+}
+
+/* ── Podium: Diamond (non-3d fallback / badges) ── */
+.tier-podium-diamond {
+  border-radius: 0.375rem;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+    2px 2px 6px rgba(14, 165, 233, 0.2),
+    0 0 32px rgba(14, 165, 233, 0.35),
+    0 0 60px rgba(14, 165, 233, 0.2);
+}
+.tier-podium-diamond::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 40%,
+    rgba(224, 242, 254, 0.6) 50%,
+    rgba(255, 255, 255, 0.4) 60%,
+    transparent 100%
+  );
+  animation: tier-diamond-sparkle 2.5s ease-in-out infinite;
+}
+@media (max-width: 1023px) {
+  .tier-podium-diamond::before {
+    animation-duration: 1.8s;
+  }
 }
 
 @layer base {

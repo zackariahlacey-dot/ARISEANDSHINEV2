@@ -83,7 +83,7 @@ export function AdminShell({ children, adminEmail }: AdminShellProps) {
             <span className="text-[10px] font-black text-zinc-950">A&S</span>
           </div>
           <div>
-            <p className="text-xs font-bold text-white leading-none">Arise & Shine VT</p>
+            <p className="text-xs font-bold text-white leading-none">Arise And Shine VT</p>
             <p className="text-[10px] text-zinc-500 mt-0.5 leading-none">Mission Control</p>
           </div>
         </div>

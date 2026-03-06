@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { updateCustomerProfile } from "@/app/actions/updateCustomerProfile";
+import { getTierBadgeDisplay } from "@/lib/calculateLifetimeTier";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,29 +21,16 @@ export interface CustomerRow {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  /** Combined display name from first_name + last_name */
+  customer_name: string | null;
   phone: string | null;
   email: string | null;
   reward_points: number | null;
   referral_code: string | null;
   created_at: string | null;
+  lifetime_points?: number | null;
   lifetimeValue: number;
   bookingCount: number;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function tierOf(pts: number) {
-  if (pts >= 1000)
-    return {
-      label: "Gold",
-      cls: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20",
-    };
-  if (pts >= 500)
-    return {
-      label: "Silver",
-      cls: "text-zinc-300 bg-zinc-700/30 border-zinc-600/30",
-    };
-  return { label: "Member", cls: "text-zinc-600 bg-zinc-900 border-zinc-800" };
 }
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
@@ -247,8 +235,9 @@ export function CustomersTable({
   const filtered = customers.filter((c) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
+    const customerName = c.customer_name ?? `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
     return (
-      `${c.first_name ?? ""} ${c.last_name ?? ""}`.toLowerCase().includes(q) ||
+      customerName.toLowerCase().includes(q) ||
       (c.email ?? "").toLowerCase().includes(q) ||
       (c.phone ?? "").includes(q) ||
       (c.referral_code ?? "").toLowerCase().includes(q)
@@ -397,9 +386,9 @@ export function CustomersTable({
                 </tr>
               ) : (
                 sorted.map((c) => {
-                  const { label, cls } = tierOf(c.reward_points ?? 0);
-                  const displayName =
-                    [c.first_name, c.last_name].filter(Boolean).join(" ") || "—";
+                  const { label, gradientClass } = getTierBadgeDisplay(c.lifetime_points ?? c.reward_points ?? 0);
+                  
+                  const displayName = c.customer_name ?? ([c.first_name, c.last_name].filter(Boolean).join(" ") || "—");
 
                   return (
                     <tr
@@ -411,13 +400,7 @@ export function CustomersTable({
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
                             <span className="text-[10px] font-bold text-zinc-400">
-                              {(
-                                c.first_name ??
-                                c.email ??
-                                "?"
-                              )
-                                .charAt(0)
-                                .toUpperCase()}
+                              {(displayName || c.email || "?").charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <p className="text-xs font-semibold text-zinc-200">
@@ -459,7 +442,7 @@ export function CustomersTable({
                       {/* Tier */}
                       <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold border ${cls}`}
+                          className={`inline-flex items-center justify-center px-2.5 py-0.5 text-[10px] font-semibold tier-badge-3d ${gradientClass}`}
                         >
                           {label}
                         </span>

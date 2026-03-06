@@ -23,9 +23,11 @@ import {
   Phone,
 } from "lucide-react";
 import type { Service } from "@/app/page";
-import { BookingModal } from "./BookingModal";
+import { BookingSection } from "./BookingModal";
+import { SuccessModal, type SuccessModalData } from "./SuccessModal";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 import { RecentActivityToast } from "./RecentActivityToast";
+import { Button } from "@/components/ui/button";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { LegalModal, LegalSection, LegalList } from "./LegalModal";
 
@@ -93,8 +95,11 @@ const REVIEWS = [
   },
 ] as const;
 
+type ExpandedBookingId = "hero" | "club" | "services" | null;
+
 export function LandingPage({ services }: { services: Service[] }) {
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [expandedBookingId, setExpandedBookingId] = useState<ExpandedBookingId>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPastHero, setIsPastHero] = useState(false);
@@ -102,6 +107,8 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [authRewardPoints, setAuthRewardPoints] = useState<number | null>(null);
   const [authLifetimePoints, setAuthLifetimePoints] = useState<number | null>(null);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const reviewIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -109,11 +116,15 @@ export function LandingPage({ services }: { services: Service[] }) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     getAuthProfile().then((p) => {
       setAuthRewardPoints(p?.rewardPoints ?? null);
       setAuthLifetimePoints(p?.lifetime_points ?? null);
     });
-  }, [isBookingModalOpen]);
+  }, [expandedBookingId]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -126,9 +137,16 @@ export function LandingPage({ services }: { services: Service[] }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const openModal = (service?: Service) => {
+  const openBooking = (service?: Service) => {
     setSelectedService(service ?? null);
-    setIsBookingModalOpen(true);
+    if (!service) {
+      setExpandedBookingId("hero");
+    } else if (service.is_subscription) {
+      setExpandedBookingId("club");
+    } else {
+      setExpandedBookingId("services");
+    }
+    // Scroll is handled by BookingSection’s onAnimationComplete so one silky scroll runs after expand
   };
 
   const scrollToServices = useCallback(() => {
@@ -137,6 +155,18 @@ export function LandingPage({ services }: { services: Service[] }) {
   }, []);
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  const handleBookingSuccess = useCallback((data: SuccessModalData) => {
+    setExpandedBookingId(null);
+    setSuccessModalData(data);
+    setShowSuccessModal(true);
+  }, []);
+
+  const handleCloseSuccessModal = useCallback(() => {
+    setShowSuccessModal(false);
+    setSuccessModalData(null);
+    setSelectedService(null);
+  }, []);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -238,10 +268,11 @@ export function LandingPage({ services }: { services: Service[] }) {
           </a>
           <LoyaltyHeaderButton />
           <button
-            onClick={() => openModal()}
-            className="hidden md:flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all active:scale-95"
+            type="button"
+            onClick={() => openBooking()}
+            className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden"
           >
-            Book Now
+            <span className="relative z-[1]">Book Now</span>
           </button>
 
           {/* Mobile: quick-call + hamburger (matching circular buttons) */}
@@ -316,10 +347,10 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           {/* Full-width Book Now CTA */}
           <button
-            onClick={() => { closeMobileMenu(); openModal(); }}
-            className="btn-shimmer w-full max-w-xs bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all active:scale-[0.98]"
+            onClick={() => { closeMobileMenu(); openBooking(); }}
+            className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
           >
-            Book Your Detail
+            <span className="relative z-[1]">Book Your Detail</span>
           </button>
 
           {/* Call us link */}
@@ -361,6 +392,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
       {/* ─── Hero ───────────────────────────────────────────────── */}
       <motion.section
+        id="hero"
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
@@ -420,22 +452,39 @@ export function LandingPage({ services }: { services: Service[] }) {
             the state.
           </p>
 
-          {/* CTAs */}
+          {/* CTAs — content-fit width, centered, side-by-side on desktop */}
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
             <button
-              onClick={() => openModal()}
-              className="btn-shimmer w-full md:w-auto bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-bold px-8 py-4 rounded-xl text-base hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              onClick={() => openBooking()}
+              className="btn-primary-gold-shimmer h-12 px-8 rounded-xl font-semibold tracking-wide w-fit min-w-[180px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
             >
-              Book Your Detail
+              <span className="relative z-[1]">Book Your Detail</span>
             </button>
-            <button
+            <Button
+              variant="secondary"
               onClick={scrollToServices}
-              className="w-full md:w-auto text-white border border-white/20 font-semibold px-8 py-4 rounded-xl text-base hover:bg-white/5 transition-all flex items-center justify-center gap-2"
+              className="w-fit min-w-[180px] flex items-center justify-center gap-2"
             >
               View Services
               <ChevronDown size={16} />
-            </button>
+            </Button>
           </div>
+
+          {/* Inline booking dropdown (Hero) — client-only to avoid hydration mismatch */}
+          {mounted && (
+            <div className="w-full max-w-4xl mx-auto mt-2">
+              <BookingSection
+                isVisible={expandedBookingId === "hero"}
+                onClose={() => setExpandedBookingId(null)}
+                selectedService={expandedBookingId === "hero" ? selectedService : null}
+                services={services}
+                onSelectService={setSelectedService}
+                onBookingSuccess={handleBookingSuccess}
+                initialRewardPoints={authRewardPoints}
+                initialLifetimePoints={authLifetimePoints}
+              />
+            </div>
+          )}
 
           <p className="mt-10 md:mt-12 mb-8 md:mb-12 text-zinc-500 text-sm text-center w-full">
             Prefer to speak with us?{" "}
@@ -579,6 +628,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
       {/* ─── Membership / Maintenance Club ────────────────────────── */}
       <motion.section
+        id="maintenance-club"
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
@@ -676,15 +726,137 @@ export function LandingPage({ services }: { services: Service[] }) {
               <div className="border-t border-white/[0.06] pt-5 flex flex-col items-center gap-1 w-full">
                 <button
                   type="button"
-                  onClick={() => monthlyPlanService && openModal(monthlyPlanService)}
+                  onClick={() => monthlyPlanService && openBooking(monthlyPlanService)}
                   disabled={!monthlyPlanService}
-                  className="btn-shimmer w-full md:w-auto justify-center inline-flex items-center gap-2 rounded-xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] px-8 py-3 text-sm font-bold transition-all duration-300 hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_28px_rgba(212,175,55,0.35)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary-gold-shimmer w-full md:w-auto justify-center inline-flex items-center gap-2 rounded-xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] px-8 py-3 text-sm font-bold hover:text-black hover:shadow-[0_0_28px_rgba(212,175,55,0.35)] hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out"
                 >
-                  <Crown size={16} className="shrink-0" />
-                  Join the Club
+                  <span className="relative z-[1] inline-flex items-center gap-2">
+                    <Crown size={16} className="shrink-0" />
+                    Join the Club
+                  </span>
                 </button>
                 <p className="text-[10px] text-zinc-600">No contracts · $100 setup applies</p>
               </div>
+              {/* Inline booking dropdown (Maintenance Club — starts with Maintenance Plan selected) — client-only */}
+              {mounted && (
+                <div className="w-full mt-4">
+                  <BookingSection
+                    isVisible={expandedBookingId === "club"}
+                    onClose={() => setExpandedBookingId(null)}
+                    selectedService={expandedBookingId === "club" ? selectedService : null}
+                    services={services}
+                    onSelectService={setSelectedService}
+                    onBookingSuccess={handleBookingSuccess}
+                    initialRewardPoints={authRewardPoints}
+                    initialLifetimePoints={authLifetimePoints}
+                  />
+                </div>
+              )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ─── Loyalty Tiers — 3D Growth Lineup: Bronze → Silver → Gold → Diamond (Arise And Shine VT) ───────── */}
+      <motion.section
+        id="loyalty-tiers"
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        variants={sectionVariants}
+        className="py-12 md:py-16 px-4 border-t border-white/[0.06]"
+      >
+        <div className="max-w-6xl mx-auto">
+          {/* Branding + title */}
+          <div className="text-center mb-6 md:mb-8">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
+              Arise And Shine VT
+            </p>
+            <h2
+              className="text-2xl md:text-4xl font-black tracking-tight text-white"
+              style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.3))" }}
+            >
+              Loyalty Tiers
+            </h2>
+            <p className="mt-3 text-sm text-zinc-400 max-w-xl mx-auto">
+              How it works: Earn 1 point for every $1 spent. Redeem for discounts on future details.
+            </p>
+          </div>
+
+          {/* Growth Lineup: 6-sided bullion bars (Tiny→Big) + volumetric Diamond; tilted stage; contact shadow per object; engraved text. */}
+          <div className="tier-lineup-stage relative flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 min-h-[320px] sm:min-h-0 pb-16 sm:pb-20 overflow-visible">
+            <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-5xl mx-auto px-1 sm:px-0">
+              {/* Bronze — Tiny (60px) 6-sided 3D box; float container so whole object moves together */}
+              <div className="tier-lineup-card relative w-full sm:w-[140px] md:w-[160px] flex flex-col items-center sm:staircase-0">
+                <div aria-hidden className="tier-contact-shadow" />
+                <div className="tier-float-container tier-float-bronze w-full">
+                <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "60px" }}>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-bronze px-3 py-2">
+                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase opacity-95 leading-tight">Bronze</p>
+                    <p className="tier-front-engraved text-[10px] opacity-90 mt-0.5">0–499 pts</p>
+                  </div>
+                  <div className="tier-solid-bar-side tier-solid-bar-side-bronze" aria-hidden />
+                  <div className="tier-solid-bar-top tier-solid-bar-top-bronze" aria-hidden />
+                  <div className="tier-solid-bar-bottom tier-solid-bar-bottom-bronze" aria-hidden />
+                </div>
+                </div>
+              </div>
+
+              {/* Silver — Small (90px) 6-sided 3D box */}
+              <div className="tier-lineup-card relative w-full sm:w-[160px] md:w-[180px] flex flex-col items-center sm:staircase-1">
+                <div aria-hidden className="tier-contact-shadow" />
+                <div className="tier-float-container tier-float-silver w-full">
+                <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "90px" }}>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-silver px-3 py-2">
+                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase opacity-90">Silver</p>
+                    <p className="tier-front-engraved text-[10px] opacity-85 mt-0.5">500–999 pts</p>
+                    <p className="tier-front-engraved text-[10px] opacity-85 mt-1">5% off · Priority</p>
+                  </div>
+                  <div className="tier-solid-bar-side tier-solid-bar-side-silver" aria-hidden />
+                  <div className="tier-solid-bar-top tier-solid-bar-top-silver" aria-hidden />
+                  <div className="tier-solid-bar-bottom tier-solid-bar-bottom-silver" aria-hidden />
+                </div>
+                </div>
+              </div>
+
+              {/* Gold — Medium (120px) 6-sided 3D box; closed bottom = solid floating brick */}
+              <div className="tier-lineup-card relative w-full sm:w-[180px] md:w-[200px] flex flex-col items-center sm:staircase-2">
+                <div aria-hidden className="tier-contact-shadow" />
+                <div className="tier-float-container tier-float-gold w-full">
+                <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "120px" }}>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-gold px-3 py-3">
+                    <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase opacity-90">Gold</p>
+                    <p className="tier-front-engraved text-[11px] opacity-85 mt-0.5">1,000–1,999 pts</p>
+                    <p className="tier-front-engraved text-[10px] opacity-85 mt-1.5">10% off · Ceramic · Support</p>
+                  </div>
+                  <div className="tier-solid-bar-side tier-solid-bar-side-gold" aria-hidden />
+                  <div className="tier-solid-bar-top tier-solid-bar-top-gold" aria-hidden />
+                  <div className="tier-solid-bar-bottom tier-solid-bar-bottom-gold" aria-hidden />
+                </div>
+                </div>
+              </div>
+
+              {/* Diamond — Largest, bottom-aligned; same 3D as bars: perspective 1500px, rotateX(25deg) rotateY(-20deg); 8 facets (4 crown, 4 pavilion) meeting at sharp bottom point; animate-float wrapper */}
+              <div className="tier-lineup-card relative w-full sm:w-[220px] md:w-[240px] flex flex-col items-center sm:staircase-3">
+                <div aria-hidden className="tier-contact-shadow" />
+                <div className="tier-float-container tier-float-diamond w-full flex flex-col items-center">
+                  <div className="tier-diamond-wrapper w-full relative z-[1]">
+                    <div className="tier-diamond-facet tier-diamond-facet-t1" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-t2" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-t3" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-t4" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-b1" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-b2" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-b3" aria-hidden />
+                    <div className="tier-diamond-facet tier-diamond-facet-b4" aria-hidden />
+                    <div className="tier-diamond-content text-center">
+                      <p className="tier-front-engraved text-[10px] font-black tracking-[0.2em] uppercase opacity-95">Diamond</p>
+                      <h3 className="tier-front-engraved text-lg font-black mt-1 tracking-tight">2,000+ pts</h3>
+                      <p className="tier-front-engraved text-xs opacity-90 mt-2">20% off · VIP · Platinum</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -773,10 +945,25 @@ export function LandingPage({ services }: { services: Service[] }) {
                 {activeService && (
                   <ServiceCard
                     service={activeService}
-                    onBook={() => openModal(activeService)}
+                    onBook={() => openBooking(activeService)}
                   />
                 )}
               </motion.div>
+              {/* Inline booking dropdown (Services — starts with selected service) — client-only */}
+              {mounted && (
+                <div className="w-full max-w-[450px] mx-auto mt-4">
+                  <BookingSection
+                    isVisible={expandedBookingId === "services"}
+                    onClose={() => setExpandedBookingId(null)}
+                    selectedService={expandedBookingId === "services" ? selectedService : null}
+                    services={services}
+                    onSelectService={setSelectedService}
+                    onBookingSuccess={handleBookingSuccess}
+                    initialRewardPoints={authRewardPoints}
+                    initialLifetimePoints={authLifetimePoints}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -953,10 +1140,10 @@ export function LandingPage({ services }: { services: Service[] }) {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 w-full">
               <button
                 type="button"
-                onClick={() => openModal()}
-                className="btn-shimmer w-full sm:w-auto bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all duration-300 px-8 py-3 rounded-lg font-semibold"
+                onClick={() => openBooking()}
+                className="btn-primary-gold-shimmer w-full sm:w-auto bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] px-8 py-3 rounded-lg font-semibold active:scale-[0.98] transition-all duration-500 ease-in-out"
               >
-                Book Now
+                <span className="relative z-[1]">Book Now</span>
               </button>
               <a
                 href="tel:8025855563"
@@ -1051,17 +1238,6 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </footer>
 
-      {/* ─── Booking Modal ──────────────────────────────────────── */}
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        selectedService={selectedService}
-        services={services}
-        onSelectService={setSelectedService}
-        initialRewardPoints={authRewardPoints}
-        initialLifetimePoints={authLifetimePoints}
-      />
-
       {/* ─── Sticky Mobile CTA (only after scrolling past hero) ──────── */}
       <div
         className={`md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-2 transition-all duration-300 ease-out ${
@@ -1073,11 +1249,13 @@ export function LandingPage({ services }: { services: Service[] }) {
       >
         <div className="rounded-2xl border border-[#D4AF37]/30 bg-zinc-900/80 shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-md">
           <button
-            onClick={() => openModal()}
-            className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-xl text-base font-semibold text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] active:scale-[0.99] transition-all duration-300"
+            onClick={() => openBooking()}
+            className="btn-primary-gold-shimmer w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-xl text-base font-semibold text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.99] transition-all duration-500 ease-in-out"
           >
-            <Sparkles size={18} className="shrink-0 text-current" />
-            Book Now
+            <span className="relative z-[1] flex items-center justify-center gap-2.5">
+              <Sparkles size={18} className="shrink-0 text-current" />
+              Book Now
+            </span>
           </button>
         </div>
       </div>
@@ -1209,6 +1387,13 @@ export function LandingPage({ services }: { services: Service[] }) {
           <p>Questions about these terms? Reach us at <span className="text-zinc-200">contact@ariseandshinevt.com</span> or <span className="text-zinc-200">802-585-5563</span>.</p>
         </LegalSection>
       </LegalModal>
+
+      {/* ─── Booking success modal (centered popup) ───────────────────────────── */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={handleCloseSuccessModal}
+        data={successModalData}
+      />
     </div>
   );
 }
@@ -1319,10 +1504,12 @@ function ServiceCard({
       {/* CTA — Obsidian & Gold */}
       <button
         onClick={onBook}
-        className="w-full bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] py-3 rounded-lg font-semibold transition-all duration-300 flex justify-center items-center gap-2 hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] active:scale-[0.98]"
+        className="btn-primary-gold-shimmer w-full bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] py-3 rounded-lg font-semibold flex justify-center items-center gap-2 hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
       >
-        Book This Service
-        <Sparkles size={13} className="shrink-0" />
+        <span className="relative z-[1] flex items-center justify-center gap-2">
+          Book This Service
+          <Sparkles size={13} className="shrink-0" />
+        </span>
       </button>
     </div>
   );

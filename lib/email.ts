@@ -5,12 +5,12 @@ import { getAdminBookingAlertHtml } from "@/emails/AdminBookingAlert";
 
 const BUSINESS_EMAIL = "contact@ariseandshinevt.com";
 
-/** Verified "from" sender — update once your domain is verified in Resend */
+/** Verified "from" sender — must use verified domain (ariseandshinevt.com) in Resend; production API key in RESEND_API_KEY */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notify@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
 
-/** Your personal/admin inbox — set ADMIN_EMAIL in .env.local */
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
+/** Owner inbox for new booking notifications (zackariahlacey@gmail.com). Override with ADMIN_EMAIL in .env.local. From is always notifications@ariseandshinevt.com. */
+const OWNER_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -485,6 +485,291 @@ function adminEmailHtml(
 </html>`;
 }
 
+// ─── Cancellation emails ─────────────────────────────────────────────────────
+
+export type CancellationEmailData = {
+  customerName: string;
+  customerEmail: string;
+  bookingDate: string; // YYYY-MM-DD
+  bookingTime: string;
+  serviceName: string;
+};
+
+function customerCancellationHtml(data: CancellationEmailData, formattedDate: string): string {
+  const firstName = (data.customerName.trim().split(/\s+/)[0] ?? "there").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Booking Cancelled — Arise And Shine VT</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+              ${logo}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+              <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">Booking Cancelled</h1>
+              <p style="color:#999999;font-size:14px;margin:0;">Your appointment for ${esc(formattedDate)} at ${esc(data.bookingTime)} has been cancelled.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
+              <p style="font-size:16px;font-weight:700;color:#111111;margin:0 0 6px;">Hi ${firstName},</p>
+              <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
+                This is to confirm that your <strong>${esc(data.serviceName)}</strong> appointment scheduled for
+                <strong>${esc(formattedDate)}</strong> at <strong>${esc(data.bookingTime)}</strong> has been cancelled.
+              </p>
+              <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
+                If you did not request this cancellation or have any questions, please contact us and we'll be happy to help.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f7f7;border-radius:12px;">
+                <tr>
+                  <td style="padding:24px;text-align:center;">
+                    <a href="mailto:${BUSINESS_EMAIL}" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:700;padding:11px 28px;border-radius:8px;text-decoration:none;">Contact Arise And Shine VT</a>
+                  </td>
+                </tr>
+              </table>
+              ${footer}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function adminCancellationHtml(customerName: string, formattedDate: string): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Booking Cancelled — Arise And Shine VT Admin</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">${logo}</td>
+          </tr>
+          <tr>
+            <td style="background-color:#27272a;padding:28px 40px;border-radius:0 0 16px 16px;">
+              <p style="color:#e4e4e7;font-size:16px;margin:0;line-height:1.6;">
+                Booking for <strong style="color:#fafafa;">${esc(customerName)}</strong> on <strong style="color:#fafafa;">${esc(formattedDate)}</strong> has been successfully cancelled and the slot is now open.
+              </p>
+              ${footer}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Sends customer cancellation email and admin notification.
+ * From: notifications@ariseandshinevt.com. Failures are logged but do not throw.
+ */
+export async function sendBookingCancellationEmails(data: CancellationEmailData): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY is not set — skipping cancellation emails.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const formattedDate = formatDate(data.bookingDate);
+
+  const [customerResult, adminResult] = await Promise.allSettled([
+    data.customerEmail
+      ? resend.emails.send({
+          from: FROM_ADDRESS,
+          to: data.customerEmail,
+          subject: `Your Arise And Shine VT Booking Has Been Cancelled — ${formattedDate}`,
+          html: customerCancellationHtml(data, formattedDate),
+        })
+      : Promise.resolve(null),
+    resend.emails.send({
+      from: FROM_ADDRESS,
+      to: OWNER_EMAIL,
+      subject: `Booking Cancelled — ${data.customerName} on ${formattedDate}`,
+      html: adminCancellationHtml(data.customerName, formattedDate),
+    }),
+  ]);
+
+  if (customerResult.status === "rejected") {
+    console.error("[email] customer cancellation send failed:", customerResult.reason);
+  }
+  if (adminResult.status === "rejected") {
+    console.error("[email] admin cancellation send failed:", adminResult.reason);
+  }
+}
+
+// ─── Updated booking (reschedule) email ────────────────────────────────────────
+
+export type UpdatedBookingEmailData = {
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  newDate: string; // YYYY-MM-DD
+  newTime: string; // e.g. "10:00 AM"
+};
+
+function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string): string {
+  const firstName = (data.customerName.trim().split(/\s+/)[0] ?? "there").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Booking Updated — Arise And Shine VT</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+              ${logo}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+              <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">Booking Updated</h1>
+              <p style="color:#999999;font-size:14px;margin:0;">Your appointment is now scheduled for ${esc(formattedDate)} at ${esc(data.newTime)}.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
+              <p style="font-size:16px;font-weight:700;color:#111111;margin:0 0 6px;">Hi ${firstName},</p>
+              <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
+                Your <strong>${esc(data.serviceName)}</strong> appointment has been rescheduled to
+                <strong>${esc(formattedDate)}</strong> at <strong>${esc(data.newTime)}</strong>.
+              </p>
+              <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
+                If you have any questions, reply to this email or contact us.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f7f7;border-radius:12px;">
+                <tr>
+                  <td style="padding:24px;text-align:center;">
+                    <a href="mailto:${BUSINESS_EMAIL}" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:700;padding:11px 28px;border-radius:8px;text-decoration:none;">Contact Arise And Shine VT</a>
+                  </td>
+                </tr>
+              </table>
+              ${footer}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Sends "Updated Booking" email to customer after reschedule.
+ * From: notifications@ariseandshinevt.com
+ */
+export async function sendUpdatedBookingEmail(data: UpdatedBookingEmailData): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY is not set — skipping updated booking email.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const formattedDate = formatDate(data.newDate);
+  const result = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.customerEmail,
+    subject: `Arise And Shine VT — Your booking has been updated: ${formattedDate} at ${data.newTime}`,
+    html: updatedBookingHtml(data, formattedDate),
+  });
+  if (result.error) {
+    console.error("[email] updated booking send failed:", result.error);
+  }
+}
+
+// ─── Permanent deletion audit (admin only) ─────────────────────────────────────
+
+export type DeletionAuditData = {
+  customerName: string;
+  bookingId: string;
+  bookingDate: string;
+};
+
+function adminDeletionAuditHtml(data: DeletionAuditData): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Booking Permanently Deleted — Arise And Shine VT</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">${logo}</td>
+          </tr>
+          <tr>
+            <td style="background-color:#27272a;padding:28px 40px;border-radius:0 0 16px 16px;">
+              <p style="color:#e4e4e7;font-size:14px;margin:0 0 12px;line-height:1.6;">
+                <strong style="color:#fafafa;">Arise And Shine VT</strong> — Security &amp; audit notification
+              </p>
+              <p style="color:#e4e4e7;font-size:16px;margin:0;line-height:1.6;">
+                The booking record for <strong style="color:#fafafa;">${esc(data.customerName)}</strong> (Ref: #${esc(data.bookingId.slice(0, 8))}, ${esc(data.bookingDate)}) has been permanently removed from the database. This action was taken from the admin dashboard. The record has been wiped for security and audit purposes.
+              </p>
+              ${footer}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Sends admin audit email after a booking is permanently deleted.
+ * To: zackariahlacey@gmail.com. From: Arise And Shine VT notifications.
+ */
+export async function sendBookingDeletionAuditEmail(data: DeletionAuditData): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY is not set — skipping deletion audit email.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const result = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: OWNER_EMAIL,
+    subject: `Arise And Shine VT — Booking permanently deleted: ${data.customerName}`,
+    html: adminDeletionAuditHtml(data),
+  });
+  if (result.error) {
+    console.error("[email] deletion audit send failed:", result.error);
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -517,21 +802,23 @@ export async function sendBookingEmails(
         })
       : Promise.resolve(null),
 
-    // Admin notification (layout-based template: phone + total)
-    ADMIN_EMAIL
-      ? resend.emails.send({
-          from: FROM_ADDRESS,
-          to: ADMIN_EMAIL,
-          subject: `🚗 New Booking: ${data.serviceName} — ${formattedDate} at ${data.bookingTime}`,
-          html: getAdminBookingAlertHtml({
-            customerPhone: data.customerPhone,
-            totalPrice: data.servicePrice,
-            serviceName: data.serviceName,
-            bookingDate: formattedDate,
-            bookingTime: data.bookingTime,
-          }),
-        })
-      : Promise.resolve(null),
+    // Owner notification: customer name, phone, car details, scheduled date
+    resend.emails.send({
+      from: FROM_ADDRESS,
+      to: OWNER_EMAIL,
+      subject: `New Booking Received: ${data.customerName} - ${data.serviceName}`,
+      html: getAdminBookingAlertHtml({
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        vehicleYear: data.vehicleYear,
+        vehicleMake: data.vehicleMake,
+        vehicleModel: data.vehicleModel,
+        serviceName: data.serviceName,
+        bookingDate: formattedDate,
+        bookingTime: data.bookingTime,
+        totalPrice: data.servicePrice,
+      }),
+    }),
   ]);
 
   for (const [label, result] of [

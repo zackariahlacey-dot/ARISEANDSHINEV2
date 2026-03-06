@@ -12,15 +12,8 @@ import { XpHistoryCard } from "@/components/dashboard/XpHistoryCard";
 import {
   calculateLifetimeTier,
   getNextTierProgress,
+  getTierBadgeDisplay,
 } from "@/lib/calculateLifetimeTier";
-
-const TIER_BADGE_STYLES: Record<string, string> = {
-  Member: "bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]",
-  Bronze: "bg-amber-700/20 border-amber-600/40 text-amber-400",
-  Silver: "bg-zinc-400/20 border-zinc-400/40 text-zinc-300",
-  Gold: "bg-amber-500/20 border-amber-400/50 text-amber-300",
-  Platinum: "bg-slate-300/20 border-slate-300/50 text-slate-200",
-};
 
 async function Dashboard() {
   const supabase = await createClient();
@@ -42,9 +35,9 @@ async function Dashboard() {
     ? 100
     : Math.min(100, (lifetimePoints / nextThreshold) * 100);
 
+  const tierBadge = getTierBadgeDisplay(lifetimePoints);
   const tierBadgeLabel =
-    discount > 0 ? `${tier} — ${discount}% Off For Life` : tier;
-  const badgeStyle = TIER_BADGE_STYLES[tier] ?? TIER_BADGE_STYLES.Member;
+    discount > 0 ? `${tierBadge.label} — ${discount}% Off For Life` : tierBadge.label;
 
   // Display profile.referral_code from DB; for legacy accounts with null/empty, generate once and persist via ensureReferralCode
   const referralCode =
@@ -131,7 +124,7 @@ async function Dashboard() {
                 </span>
                 <span className="text-lg font-semibold text-zinc-400">pts</span>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}
+                  className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold tier-badge-3d ${tierBadge.gradientClass}`}
                 >
                   {tierBadgeLabel}
                 </span>

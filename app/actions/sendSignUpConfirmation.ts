@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfirmEmailHtml } from "@/emails/ConfirmEmail";
 import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 
-/** Resend from address — must match verified sender in Resend dashboard */
+/** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
   process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
 

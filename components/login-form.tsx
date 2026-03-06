@@ -12,7 +12,7 @@ const inputCls =
   "w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-lg px-4 py-3 outline-none transition-all placeholder:text-zinc-600";
 
 const btnCls =
-  "w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all duration-300 py-3 rounded-lg font-semibold mt-4 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
+  "btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] py-3 rounded-lg font-semibold mt-4 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out";
 
 export function LoginForm({
   className,
@@ -121,7 +121,7 @@ export function LoginForm({
             disabled={isLoading}
             className={cn(btnCls, isLoading && "btn-loading")}
           >
-            {isLoading ? "Processing…" : "Sign In"}
+            <span className="relative z-[1]">{isLoading ? "Processing…" : "Sign In"}</span>
           </button>
         </form>
 

@@ -19,7 +19,8 @@ export async function getBookingsForDate(
   const { data, error } = await supabase
     .from("bookings")
     .select("booking_time, services(name)")
-    .eq("booking_date", date);
+    .eq("booking_date", date)
+    .neq("status", "cancelled");
 
   if (error) {
     console.error("[getBookingsForDate]", error);

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  X,
   ChevronRight,
   ChevronLeft,
   Check,
-  CheckCircle,
-  Star,
   Zap,
   Calendar,
   User,
@@ -120,6 +118,16 @@ const STEPS = [
   { num: 2, label: "Schedule", icon: Calendar },
   { num: 3, label: "Confirm", icon: User },
 ];
+
+/** Step slide: direction 1 = forward (enter from right), -1 = back (enter from left) */
+const stepTransition = { duration: 0.3, ease: "easeInOut" as const };
+function getStepVariants(direction: number) {
+  return {
+    initial: { x: direction * 20, opacity: 0, transition: stepTransition },
+    animate: { x: 0, opacity: 1, transition: stepTransition },
+    exit: { x: -direction * 20, opacity: 0, transition: stepTransition },
+  };
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -269,7 +277,7 @@ function MakeAutocomplete({
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+        className="w-full text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
       />
       {showDropdown && (
         <div className="absolute top-full left-0 right-0 z-[70] mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
@@ -340,7 +348,7 @@ function ModelAutocomplete({
         placeholder={placeholder}
         autoComplete="off"
         disabled={!make.trim()}
-        className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       />
       {showDropdown && (
         <div className="absolute top-full left-0 right-0 z-[70] mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
@@ -370,29 +378,46 @@ function ModelAutocomplete({
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-interface BookingModalProps {
-  isOpen: boolean;
+export interface BookingSuccessData {
+  confirmationId: string;
+  date: string;
+  serviceName: string;
+  pointsEarned: number;
+  firstName: string;
+  /** Phone for success modal to fetch latest points from Supabase (guests) */
+  phone?: string;
+}
+
+export interface BookingSectionProps {
+  /** When true, the section is expanded (accordion open). */
+  isVisible: boolean;
   onClose: () => void;
   selectedService: Service | null;
   services: Service[];
   onSelectService: (service: Service) => void;
+  /** Called when booking succeeds; parent should close dropdown and show success modal */
+  onBookingSuccess?: (data: BookingSuccessData) => void;
   /** Initial reward points (e.g. from auth) for display until phone-based balance is fetched */
   initialRewardPoints?: number | null;
   /** Initial lifetime points for tier (max redeem cap: 500 for Silver/Gold/Platinum, 1000 for Member/Bronze) */
   initialLifetimePoints?: number | null;
 }
 
-export function BookingModal({
-  isOpen,
+export function BookingSection({
+  isVisible,
   onClose,
   selectedService,
   services,
   onSelectService,
+  onBookingSuccess,
   initialRewardPoints = null,
   initialLifetimePoints = null,
-}: BookingModalProps) {
+}: BookingSectionProps) {
   const router = useRouter();
+  const bookingRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(1);
+  /** 1 = forward (Next), -1 = back; used for step slide direction */
+  const [stepDirection, setStepDirection] = useState(1);
 
   // Step 1 — Vehicle
   const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug | "">("");
@@ -508,13 +533,13 @@ export function BookingModal({
 
   // Use initial reward and lifetime points when modal opens; fetch by phone when on step 3 and phone entered
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isVisible) return;
     setRewardPoints(initialRewardPoints ?? null);
     setLifetimePoints(initialLifetimePoints ?? 0);
-  }, [isOpen, initialRewardPoints, initialLifetimePoints]);
+  }, [isVisible, initialRewardPoints, initialLifetimePoints]);
 
   useEffect(() => {
-    if (!isOpen || step !== 3 || !phone || phone.replace(/\D/g, "").length < 10) return;
+    if (!isVisible || step !== 3 || !phone || phone.replace(/\D/g, "").length < 10) return;
     const t = setTimeout(() => {
       getProfilePointsByPhone(phone).then((data) => {
         setRewardPoints(data.reward_points);
@@ -522,7 +547,7 @@ export function BookingModal({
       });
     }, 400);
     return () => clearTimeout(t);
-  }, [isOpen, step, phone]);
+  }, [isVisible, step, phone]);
 
   // Clamp points-to-redeem input when max redeemable drops (e.g. service/travel change)
   useEffect(() => {
@@ -533,12 +558,12 @@ export function BookingModal({
 
   // Fetch referral eligibility once when the modal opens
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isVisible) return;
     getAuthReferralStatus().then(({ eligible, authUserId: uid }) => {
       setReferralEligible(eligible);
       setAuthUserId(uid);
     });
-  }, [isOpen]);
+  }, [isVisible]);
 
   // Advance step-by-step loader every ~800ms while submitting
   const isSubmittingAny = isSubmitting || isStripeLoading;
@@ -553,9 +578,9 @@ export function BookingModal({
     };
   }, [isSubmittingAny]);
 
-  // Lock body scroll while open; reset form state each time modal opens
+  // Reset form state each time the booking section is opened (inline section — no body scroll lock)
   useEffect(() => {
-    if (isOpen) {
+    if (isVisible) {
       setStep(1);
       setVehicleSize("");
       setVehicleYear("");
@@ -587,14 +612,42 @@ export function BookingModal({
       setIsStripeLoading(false);
       setStripeError(null);
       setAutoDetected(false);
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+      setStepDirection(1);
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
+  }, [isVisible]);
+
+  // Apple-level smooth scroll after dropdown opens: short delay so height expansion has started
+  useEffect(() => {
+    if (!isVisible) return;
+    const t = setTimeout(() => {
+      const element = bookingRef.current;
+      if (!element) return;
+      const yOffset = -100; // Account for sticky header
+      const y = element.getBoundingClientRect().top + (window.pageYOffset ?? window.scrollY ?? 0) + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [isVisible]);
+
+  // Smooth scroll to top of booking module when user moves to a new step (Vehicle → Schedule → Confirm)
+  const prevStepRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isVisible) return;
+    if (prevStepRef.current === null) {
+      prevStepRef.current = step;
+      return;
+    }
+    const t = setTimeout(() => {
+      const yOffset = -100; // Account for the sticky header height
+      const element = bookingRef.current;
+      if (element) {
+        const y = element.getBoundingClientRect().top + (window.pageYOffset ?? window.scrollY ?? 0) + yOffset;
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      }
+    }, 100);
+    prevStepRef.current = step;
+    return () => clearTimeout(t);
+  }, [step, isVisible]);
 
   // ── Auto-detect vehicle size ─────────────────────────────────────────────
   useEffect(() => {
@@ -710,10 +763,16 @@ export function BookingModal({
     );
 
   const handleNext = () => {
-    if (step < 3) setStep((s) => s + 1);
+    if (step < 3) {
+      setStepDirection(1);
+      setStep((s) => s + 1);
+    }
   };
   const handleBack = () => {
-    if (step > 1) setStep((s) => s - 1);
+    if (step > 1) {
+      setStepDirection(-1);
+      setStep((s) => s - 1);
+    }
   };
 
   // ── Submit helpers ───────────────────────────────────────────────────────
@@ -758,6 +817,19 @@ export function BookingModal({
       console.error("Profile Error:", result.error);
     }
     setBookingResult(result);
+    if (result.success && onBookingSuccess && selectedService) {
+      const earned = Math.floor(totalAfterDiscount);
+      onClose();
+      router.refresh();
+      onBookingSuccess?.({
+        confirmationId: result.bookingId.slice(0, 8).toUpperCase(),
+        date: selectedDate,
+        serviceName: selectedService.name,
+        pointsEarned: earned,
+        firstName: name.trim().split(/\s+/)[0] ?? "there",
+        phone: phone.trim() || undefined,
+      });
+    }
   };
 
   // ── Pay Now via Stripe ───────────────────────────────────────────────────
@@ -785,6 +857,19 @@ export function BookingModal({
       }
       setIsStripeLoading(false);
       setBookingResult(result);
+      if (result.success && onBookingSuccess && selectedService) {
+        const earned = Math.floor(totalAfterDiscount);
+        onClose();
+        router.refresh();
+        onBookingSuccess?.({
+          confirmationId: result.bookingId.slice(0, 8).toUpperCase(),
+          date: selectedDate,
+          serviceName: selectedService.name,
+          pointsEarned: earned,
+          firstName: name.trim().split(/\s+/)[0] ?? "there",
+          phone: phone.trim() || undefined,
+        });
+      }
     } catch (err) {
       setIsStripeLoading(false);
       setStripeError(err instanceof Error ? err.message : "Something went wrong.");
@@ -838,7 +923,7 @@ export function BookingModal({
               onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
               placeholder="ENTER CODE"
               disabled={isCouponLoading}
-              className="flex-1 bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-sm font-mono tracking-wider uppercase disabled:opacity-50"
+              className="flex-1 text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-sm font-mono tracking-wider uppercase disabled:opacity-50"
             />
             <button
               type="button"
@@ -894,153 +979,32 @@ export function BookingModal({
       : null;
 
   return (
-    <div
-      className={`fixed inset-0 z-[60] transition-opacity duration-300 ${
-        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-      }`}
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={!isSubmittingAny ? onClose : undefined}
-      />
-
-      {/* Modal — bottom sheet on mobile, centered dialog on desktop */}
-      <div className="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div
-          className={`relative w-full sm:w-[95%] md:max-w-2xl max-h-[92vh] flex flex-col overflow-hidden
-            bg-zinc-950/80 backdrop-blur-xl border border-zinc-800
-            rounded-t-[24px] sm:rounded-3xl
-            transition-all duration-300 ease-out
-            ${isOpen ? "translate-y-0 opacity-100" : "translate-y-full sm:translate-y-4 sm:scale-95 sm:opacity-0"}`}
+    <AnimatePresence initial={false}>
+      {isVisible && (
+        <motion.div
+          ref={bookingRef}
+          layout
+          key="booking-section-dropdown"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className="overflow-visible w-full min-h-fit h-auto scroll-mt-[100px] box-border"
         >
-          {/* Drag handle (mobile PWA feel) */}
-          <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0" aria-hidden>
-            <div className="w-10 h-1 rounded-full bg-zinc-600" />
-          </div>
-          {/* Close */}
-          {!isSubmittingAny && (
-            <button
-              onClick={onClose}
-              className="absolute top-3 right-4 sm:top-4 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors z-20 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-              aria-label="Close"
-            >
-              <X size={15} />
-            </button>
-          )}
-
-          {/* ── SUCCESS SCREEN ─────────────────────────────────────────── */}
+          <div
+            className="relative w-full min-h-fit h-auto flex flex-col justify-start overflow-visible box-border pb-10
+              bg-zinc-950/80 backdrop-blur-xl border border-[#d4af37]/30
+              rounded-b-xl shadow-lg"
+          >
+            {/* Success is shown in SuccessModal; brief placeholder if dropdown still visible */}
           {isSuccess ? (
-            authUserId ? (
-              /* Logged-in: VIP success with Redeem button */
-              (() => {
-                const pointsEarned = Math.floor(totalAfterDiscount);
-                const logoUrl = "https://esgdlmvvjrduazdraewq.supabase.co/storage/v1/object/public/public-assets/e.png";
-                return (
-                  <div className="px-6 py-10 flex flex-col items-center overflow-y-auto overscroll-contain modal-scroll">
-                    <div className="bg-zinc-900/60 backdrop-blur-xl border border-[#D4AF37]/30 shadow-[0_0_50px_rgba(212,175,55,0.1)] rounded-3xl p-8 text-center flex flex-col items-center max-w-md mx-auto relative overflow-hidden">
-                      <img src={logoUrl} alt="Arise And Shine VT" className="w-[150px] h-auto mx-auto mb-4 object-contain" width={150} height={150} />
-                      <CheckCircle
-                        className="w-16 h-16 text-[#D4AF37] mb-4 drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]"
-                        strokeWidth={2}
-                      />
-                      <h2 className="text-3xl font-bold text-white mb-2">
-                        Booking Confirmed
-                      </h2>
-                      <p className="text-sm text-zinc-400 max-w-xs leading-relaxed mb-2">
-                        Thanks, {name.split(" ")[0]}! Your{" "}
-                        <span className="text-white font-semibold">{selectedService?.name}</span> is booked for{" "}
-                        <span className="text-white font-semibold">{selectedDate}</span>. We&apos;ll text you at{" "}
-                        <span className="text-white font-semibold">{phone}</span>.
-                      </p>
-                      <div className="bg-[#D4AF37]/10 border border-[#D4AF37]/50 text-[#D4AF37] px-6 py-3 rounded-full font-semibold text-lg my-6 flex items-center gap-2 justify-center">
-                        <Star className="w-5 h-5 fill-[#D4AF37]" />
-                        +{pointsEarned} Points Earned
-                      </div>
-                      <button
-                        onClick={handleRedeem}
-                        disabled={isRedeeming}
-                        className={
-                          isRedeeming
-                            ? "w-full bg-[#D4AF37] text-zinc-950 py-4 rounded-xl font-bold text-lg scale-95 opacity-90 transition-all duration-500 flex justify-center items-center gap-2"
-                            : "w-full bg-zinc-900 border border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-all duration-300 py-4 rounded-xl font-bold text-lg shadow-[0_0_20px_rgba(212,175,55,0.2)]"
-                        }
-                      >
-                        {isRedeeming ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Unlocking Rewards…
-                          </>
-                        ) : (
-                          "Redeem Rewards"
-                        )}
-                      </button>
-                      <p className="mt-4 text-xs text-zinc-500">
-                        Ref #{confirmationId}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              /* Guest: standard success + sign-up CTA */
-              <div className="px-6 py-12 flex flex-col items-center text-center gap-3 overflow-y-auto overscroll-contain modal-scroll">
-                <img
-                  src="https://esgdlmvvjrduazdraewq.supabase.co/storage/v1/object/public/public-assets/e.png"
-                  alt="Arise And Shine VT"
-                  className="w-[150px] h-auto mx-auto mb-4 object-contain"
-                  width={150}
-                  height={150}
-                />
-                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2 shadow-[0_0_40px_rgba(255,255,255,0.15)]">
-                  <Check size={26} className="text-black" strokeWidth={3} />
-                </div>
-                <h3 className="text-2xl font-black text-white tracking-tight">
-                  Booking Confirmed!
-                </h3>
-                <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
-                  Thanks, {name.split(" ")[0]}! Your{" "}
-                  <span className="text-white font-semibold">
-                    {selectedService?.name}
-                  </span>{" "}
-                  is booked for{" "}
-                  <span className="text-white font-semibold">{selectedDate}</span>
-                  . We&apos;ll text you a reminder to{" "}
-                  <span className="text-white font-semibold">{phone}</span>.
-                </p>
-                <div className="mt-1 px-3 py-1.5 bg-white/[0.05] border border-white/[0.08] rounded-lg text-xs text-zinc-500 font-mono">
-                  Ref #{confirmationId}
-                </div>
-                <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
-                  <span>🎁</span>
-                  <span>
-                    {computedPrice} reward points added to your account
-                  </span>
-                </div>
-                <p className="mt-3 text-xs text-zinc-500">
-                  Sign up to track and redeem your points next time.
-                </p>
-                <p className="text-xs text-zinc-500">
-                  Need to reach us? Call{" "}
-                  <a href="tel:802-585-5563" className="font-semibold text-white hover:text-zinc-300 transition-colors">
-                    802-585-5563
-                  </a>
-                  {" "}or email{" "}
-                  <a href="mailto:contact@ariseandshinevt.com" className="font-semibold text-white hover:text-zinc-300 transition-colors">
-                    contact@ariseandshinevt.com
-                  </a>
-                </p>
-                <button
-                  onClick={onClose}
-                  className="mt-5 bg-white text-black font-bold px-10 py-3 rounded-xl text-sm hover:bg-zinc-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Done
-                </button>
-              </div>
-            )
+            <div className="px-6 py-12 flex flex-col items-center justify-center text-center">
+              <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin mb-3" />
+              <p className="text-sm text-zinc-400">Booking confirmed! Opening summary…</p>
+            </div>
           ) : isSubmittingAny ? (
             /* ── Step-by-step progress loader (during confirm) ── */
-            <div className="px-6 py-10 overflow-y-auto overscroll-contain modal-scroll">
+            <div className="px-6 py-10">
               <h3 className="text-lg font-bold text-white mb-1">
                 Preparing your booking…
               </h3>
@@ -1089,7 +1053,7 @@ export function BookingModal({
             </div>
           ) : !selectedService && services.length > 0 ? (
             /* ── Choose Your Service (when opened via Book Now / Schedule Now) ── */
-            <div className="px-6 py-6 overflow-y-auto overscroll-contain modal-scroll">
+            <div className="px-6 py-6">
               <h2 className="text-lg font-bold text-white">
                 Choose Your Service
               </h2>
@@ -1190,7 +1154,7 @@ export function BookingModal({
                         </div>
                         {i < STEPS.length - 1 && (
                           <div
-                            className={`h-px flex-1 mx-2 mb-5 transition-all duration-500 ${
+                            className={`h-px flex-1 mx-2 mb-5 transition-all duration-500 ease-in-out ${
                               step > s.num ? "bg-[#D4AF37]/50" : "bg-white/10"
                             }`}
                           />
@@ -1202,10 +1166,19 @@ export function BookingModal({
               </div>
 
               {/* ── STEP CONTENT ───────────────────────────────────────── */}
-              <div className="px-4 sm:px-6 py-6 sm:py-8 pb-8 flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar flex flex-col justify-start">
-                {/* Step 1: Vehicle Info — Year/Make/Model first, then size cards (auto-detect from make/model) */}
-                {step === 1 && (
-                  <div className="space-y-6">
+              <div className="px-4 sm:px-6 py-6 sm:py-8 pb-20 flex flex-col justify-start h-auto">
+                <AnimatePresence mode="wait">
+                  {/* Step 1: Vehicle Info — Year/Make/Model first, then size cards (auto-detect from make/model) */}
+                  {step === 1 && (
+                    <motion.div
+                      key={1}
+                      variants={getStepVariants(stepDirection)}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      className="space-y-6 min-h-[280px]"
+                      layout
+                    >
                     {/* Year, Make, Model — Make/Model autocomplete with size auto-select on pick */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
@@ -1297,12 +1270,20 @@ export function BookingModal({
                         })}
                       </div>
                     </div>
-                  </div>
-                )}
+                  </motion.div>
+                  )}
 
-                {/* Step 2: Date & Time — slots filtered by existing bookings + service duration */}
-                {step === 2 && (
-                  <div className="space-y-6">
+                  {/* Step 2: Date & Time — slots filtered by existing bookings + service duration */}
+                  {step === 2 && (
+                    <motion.div
+                      key={2}
+                      variants={getStepVariants(stepDirection)}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      className="space-y-6 min-h-[280px]"
+                      layout
+                    >
                     {isSubscription && (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 px-4 py-3 mb-2">
                         <h3 className="text-sm font-bold text-amber-200/90 mb-1">
@@ -1322,7 +1303,7 @@ export function BookingModal({
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         min={todayStr}
-                        className="w-full max-w-full min-h-[44px] box-border bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
+                        className="w-full text-center max-w-full min-h-[44px] box-border bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
                       />
                     </div>
 
@@ -1374,12 +1355,20 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
+                  </motion.div>
+                  )}
 
-                {/* Step 3: Contact & Confirm */}
-                {step === 3 && (
-                  <div className="pt-8 space-y-5">
+                  {/* Step 3: Contact & Confirm */}
+                  {step === 3 && (
+                    <motion.div
+                      key={3}
+                      variants={getStepVariants(stepDirection)}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      className="pt-8 space-y-5 min-h-[280px]"
+                      layout
+                    >
                     {/* Contact info for customers */}
                     <div className="rounded-xl border border-[#252525] bg-[#141414] px-4 py-3 text-center text-sm text-zinc-400">
                       Questions? Reach us at{" "}
@@ -1686,7 +1675,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             }}
                             placeholder={field.placeholder}
                             maxLength={field.id === "phone" ? 14 : undefined}
-                            className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                            className="w-full text-center min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
                           />
                         </div>
                       ))}
@@ -1702,7 +1691,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           onChange={(e) => setNotes(e.target.value)}
                           placeholder="Any special requests or details about your vehicle…"
                           rows={3}
-                          className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm resize-none"
+                          className="w-full text-center min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm resize-none"
                         />
                       </div>
                     </div>
@@ -1726,35 +1715,35 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                       )}
 
                       <div className="relative">
-                        <span className="absolute -top-2.5 left-4 bg-[#D4AF37] text-zinc-950 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider z-10">
+                        <span className="absolute -top-2.5 left-4 bg-[#D4AF37] text-zinc-950 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider z-10 badge-most-popular">
                           Most Popular
                         </span>
                         <button
                           onClick={handlePayNow}
                           disabled={!canConfirm() || isSubmitting || isStripeLoading}
-                          className={`relative w-full rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] group ${
+                          className={`relative w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] group ${
                             isStripeLoading
-                              ? "bg-zinc-900/90 border border-[#D4AF37] btn-loading"
+                              ? "bg-zinc-900/90 border border-[#D4AF37] btn-loading text-zinc-950"
                               : canConfirm() && !isSubmitting
-                                ? "bg-zinc-900/90 border border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
+                                ? "bg-[#d4af37] text-zinc-950 hover:scale-[1.05] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] btn-pay-now-shimmer"
                                 : "bg-zinc-900/50 border border-white/10 text-zinc-500 opacity-60 cursor-not-allowed"
                           }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center shrink-0">
-                              <CreditCard className="w-5 h-5 text-[#D4AF37]" />
+                          <div className="flex items-center gap-3 min-w-0 relative z-[1]">
+                            <div className="w-10 h-10 rounded-lg bg-black/20 border border-black/20 flex items-center justify-center shrink-0">
+                              <CreditCard className="w-5 h-5 text-zinc-950" />
                             </div>
                             <div className="min-w-0">
                               <div className="text-base font-semibold text-inherit">
                                 {isStripeLoading ? "Processing…" : isSubscription ? `Subscribe via Stripe — $${totalAfterDiscount.toFixed(2)}` : `Pay Now — $${totalAfterDiscount.toFixed(2)}`}
                               </div>
-                              <div className="text-xs text-zinc-500 mt-1">
+                              <div className="text-xs text-zinc-700 mt-1">
                                 Secure card checkout · Instant confirmation
                               </div>
                             </div>
                           </div>
                           {!isStripeLoading && (
-                            <ChevronRight className="w-5 h-5 shrink-0 opacity-80" />
+                            <ChevronRight className="w-5 h-5 shrink-0 opacity-80 relative z-[1]" />
                           )}
                         </button>
                       </div>
@@ -1762,20 +1751,20 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                       <button
                         onClick={handlePayAtArrival}
                         disabled={!canConfirm() || isSubmitting || isStripeLoading}
-                        className={`w-full rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] ${
+                        className={`w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-500 ease-in-out active:scale-[0.99] ${
                           isSubmitting
                             ? "bg-zinc-950/50 border border-white/10 btn-loading"
                             : canConfirm() && !isStripeLoading
-                              ? "bg-zinc-950/50 border border-white/10 text-zinc-300 hover:border-white/30 hover:text-white"
+                              ? "bg-transparent border border-[#d4af37]/50 text-[#d4af37] font-medium tracking-wide hover:bg-[#d4af37]/10 hover:border-[#d4af37] hover:-translate-y-0.5 btn-pay-arrival-shimmer"
                               : "bg-zinc-950/30 border border-white/5 text-zinc-500 opacity-60 cursor-not-allowed"
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                            <HandCoins className="w-5 h-5 text-zinc-400" />
+                        <div className="flex items-center gap-3 min-w-0 relative z-[1]">
+                          <div className="w-10 h-10 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center shrink-0">
+                            <HandCoins className="w-5 h-5 text-[#d4af37]" />
                           </div>
                           <div className="min-w-0">
-                            <div className="text-base font-semibold text-inherit">
+                            <div className="text-base font-medium text-inherit tracking-wide">
                               {isSubmitting ? "Processing…" : isSubscription ? "Subscribe & Pay at Arrival" : "Book & Pay at Arrival"}
                             </div>
                             <div className="text-xs text-zinc-500 mt-1">
@@ -1784,7 +1773,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           </div>
                         </div>
                         {!isSubmitting && (
-                          <ChevronRight className="w-5 h-5 text-zinc-500 shrink-0" />
+                          <ChevronRight className="w-5 h-5 text-[#d4af37]/70 shrink-0 relative z-[1]" />
                         )}
                       </button>
 
@@ -1797,8 +1786,9 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         Back to date & time
                       </button>
                     </div>
-                  </div>
-                )}
+                  </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* ── FOOTER / NAVIGATION (Steps 1 & 2 only) ───────────────── */}
@@ -1814,21 +1804,24 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                   <button
                     onClick={handleNext}
                     disabled={!canGoNext()}
-                    className={`flex items-center gap-1.5 font-bold px-8 min-h-[44px] py-3 rounded-xl text-sm transition-all duration-300 ${
+                    className={`flex items-center gap-1.5 font-bold px-8 min-h-[44px] py-3 rounded-xl text-sm ${
                       canGoNext()
-                        ? "bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                        ? "btn-primary-gold-shimmer bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] transition-all duration-500 ease-in-out"
                         : "bg-zinc-900/50 text-zinc-600 cursor-not-allowed border border-white/10"
                     }`}
                   >
-                    Next <ChevronRight size={15} />
+                    <span className="relative z-[1] flex items-center gap-1.5">
+                      Next <ChevronRight size={15} />
+                    </span>
                   </button>
                 </div>
               )}
             </>
           )}
-        </div>
-      </div>
-    </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

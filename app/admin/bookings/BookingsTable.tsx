@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   ChevronUp,
@@ -12,11 +12,17 @@ import {
   MapPin,
   CalendarDays,
   Clock,
+  Ban,
+  Trash2,
+  CalendarClock,
 } from "lucide-react";
 import {
   updateBookingStatus,
   type BookingStatus,
 } from "@/app/actions/updateBookingStatus";
+import { cancelBooking } from "@/app/actions/cancelBooking";
+import { deleteBooking } from "@/app/actions/deleteBooking";
+import { updateBookingSchedule } from "@/app/actions/updateBookingSchedule";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,6 +73,19 @@ function fmt12(t: string | null): string {
   }
 }
 
+const TIME_SLOTS = (() => {
+  const out: string[] = [];
+  for (let h = 8; h <= 17; h++) {
+    for (const m of [0, 30]) {
+      if (h === 17 && m === 30) break;
+      const isPM = h >= 12;
+      const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      out.push(`${displayH}:${m === 0 ? "00" : "30"} ${isPM ? "PM" : "AM"}`);
+    }
+  }
+  return out;
+})();
+
 const STATUS_OPTIONS: {
   value: BookingStatus;
   label: string;
@@ -94,21 +113,64 @@ const STATUS_OPTIONS: {
   {
     value: "cancelled",
     label: "Cancelled",
-    badge: "bg-red-500/15 text-red-400 border-red-500/20",
-    dot: "bg-red-400",
+    badge: "bg-zinc-600/30 text-zinc-500 border-zinc-600/40",
+    dot: "bg-zinc-500",
   },
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  const opt = STATUS_OPTIONS.find((o) => o.value === status);
+  const normalized = (status ?? "").toLowerCase();
+  const opt = STATUS_OPTIONS.find((o) => o.value === normalized);
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border capitalize ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${
         opt?.badge ?? "bg-zinc-700/40 text-zinc-400 border-zinc-700/40"
       }`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${opt?.dot ?? "bg-zinc-500"}`} />
-      {status}
+      {opt?.label ?? status}
+    </span>
+  );
+}
+
+// Service badge gradients (premium jewel-style)
+const SERVICE_GRADIENTS: { match: RegExp | string; gradient: string; textClass: string }[] = [
+  {
+    match: /interior\s*detail/i,
+    gradient: "linear-gradient(135deg, #804A00, #A77044, #804A00)",
+    textClass: "text-white",
+  },
+  {
+    match: /exterior\s*detail/i,
+    gradient: "linear-gradient(135deg, #71717a, #d4d4d8, #71717a)",
+    textClass: "text-zinc-950",
+  },
+  {
+    match: /full\s*detail/i,
+    gradient: "linear-gradient(135deg, #bf953f, #fcf6ba, #aa771c)",
+    textClass: "text-zinc-950",
+  },
+  {
+    match: /monthly\s*plan/i,
+    gradient: "linear-gradient(135deg, #0ea5e9, #e0f2fe, #0ea5e9)",
+    textClass: "text-zinc-950",
+  },
+];
+
+function ServiceBadge({ name }: { name: string | null }) {
+  const raw = (name ?? "").trim() || "—";
+  const config = SERVICE_GRADIENTS.find((c) =>
+    typeof c.match === "string" ? raw.toLowerCase() === c.match.toLowerCase() : c.match.test(raw)
+  );
+  const style = config ? { background: config.gradient } : undefined;
+  const textClass = config?.textClass ?? "text-zinc-300";
+  const isFallback = !config;
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-white/20 backdrop-blur-sm ${textClass} ${isFallback ? "bg-zinc-800/60 shadow-sm" : "shadow-[0_0_12px_rgba(255,255,255,0.08)]"}`}
+      style={style}
+    >
+      {raw}
     </span>
   );
 }
@@ -161,8 +223,17 @@ export function BookingsTable({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [rescheduleRow, setRescheduleRow] = useState<BookingRow | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [toasts, setToasts] = useState<{ id: string; msg: string }[]>([]);
+
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
 
   // ── Filter ──────────────────────────────────────────────────────────────
   const filtered = bookings.filter((b) => {
@@ -213,8 +284,90 @@ export function BookingsTable({
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   };
 
+  const handleCancelBooking = async (b: BookingRow) => {
+    setCancelConfirmId(null);
+    setLoadingId(b.id);
+    setRowErrors((e) => {
+      const next = { ...e };
+      delete next[b.id];
+      return next;
+    });
+    const result = await cancelBooking(b.id);
+    setLoadingId(null);
+    if (result.success) {
+      setBookings((prev) =>
+        prev.map((r) => (r.id === b.id ? { ...r, status: "cancelled" } : r))
+      );
+      addToast("Arise And Shine VT — Booking cancelled. Customer and admin notified.");
+    } else {
+      setRowErrors((e) => ({ ...e, [b.id]: result.error ?? "Arise And Shine VT: Cancel failed." }));
+    }
+  };
+
+  const handleDeleteBooking = async (b: BookingRow) => {
+    setDeleteConfirmId(null);
+    setLoadingId(b.id);
+    setRowErrors((e) => {
+      const next = { ...e };
+      delete next[b.id];
+      return next;
+    });
+    const result = await deleteBooking(b.id);
+    setLoadingId(null);
+    if (result.success) {
+      setBookings((prev) => prev.filter((r) => r.id !== b.id));
+      addToast(`Arise And Shine VT — Booking for ${result.customerName ?? "customer"} has been permanently removed.`);
+    } else {
+      setRowErrors((e) => ({ ...e, [b.id]: result.error ?? "Arise And Shine VT: Delete failed." }));
+    }
+  };
+
+  const to24h = (time12: string): string => {
+    const match = time12.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return time12;
+    let h = parseInt(match[1], 10);
+    const m = match[2];
+    if (match[3].toUpperCase() === "AM" && h === 12) h = 0;
+    if (match[3].toUpperCase() === "PM" && h !== 12) h += 12;
+    return `${String(h).padStart(2, "0")}:${m}:00`;
+  };
+
+  const handleRescheduleSave = async () => {
+    if (!rescheduleRow || !rescheduleDate.trim() || !rescheduleTime.trim()) return;
+    setLoadingId(rescheduleRow.id);
+    setRowErrors((e) => {
+      const next = { ...e };
+      delete next[rescheduleRow.id];
+      return next;
+    });
+    const result = await updateBookingSchedule(rescheduleRow.id, rescheduleDate, rescheduleTime);
+    setLoadingId(null);
+    if (result.success) {
+      const time24 = to24h(rescheduleTime);
+      setBookings((prev) =>
+        prev.map((r) =>
+          r.id === rescheduleRow.id
+            ? { ...r, booking_date: rescheduleDate, booking_time: time24 }
+            : r
+        )
+      );
+      setRescheduleRow(null);
+      setRescheduleDate("");
+      setRescheduleTime("");
+      addToast("Arise And Shine VT — Booking rescheduled. Customer notified.");
+    } else {
+      setRowErrors((e) => ({ ...e, [rescheduleRow.id]: result.error ?? "Reschedule failed." }));
+    }
+  };
+
+  const openReschedule = (b: BookingRow) => {
+    setRescheduleRow(b);
+    setRescheduleDate(b.booking_date);
+    setRescheduleTime(fmt12(b.booking_time) || TIME_SLOTS[0]);
+  };
+
   const handleStatusChange = async (b: BookingRow, newStatus: BookingStatus) => {
-    if (b.status === newStatus) {
+    if ((b.status ?? "").toLowerCase() === newStatus) {
       setOpenDropdown(null);
       return;
     }
@@ -240,14 +393,14 @@ export function BookingsTable({
         prev.map((r) => (r.id === b.id ? { ...r, status: newStatus } : r))
       );
       if (newStatus === "completed" && (result.pointsAwarded ?? 0) > 0) {
-        addToast(`✅ Marked completed · +${result.pointsAwarded} pts awarded`);
+        addToast(`Arise And Shine VT — Marked completed · +${result.pointsAwarded} pts awarded`);
       } else {
-        addToast(`✅ Status updated to "${newStatus}"`);
+        addToast(`Arise And Shine VT — Status updated to "${newStatus}"`);
       }
     } else {
       setRowErrors((e) => ({
         ...e,
-        [b.id]: result.error ?? "Update failed",
+        [b.id]: result.error ?? "Arise And Shine VT: Update failed.",
       }));
     }
   };
@@ -289,6 +442,165 @@ export function BookingsTable({
           className="fixed inset-0 z-10"
           onClick={() => setOpenDropdown(null)}
         />
+      )}
+
+      {/* Cancel confirmation dialog */}
+      {cancelConfirmId && (() => {
+        const b = bookings.find((r) => r.id === cancelConfirmId);
+        if (!b) return null;
+        const profile = norm(b.profiles);
+        const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Customer";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm"
+              onClick={() => setCancelConfirmId(null)}
+            />
+            <div className="relative z-10 w-full max-w-md bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl p-6">
+              <p className="text-sm font-semibold text-white mb-1">Cancel booking</p>
+              <p className="text-xs text-zinc-400 mb-5">
+                Are you sure you want to cancel this booking and notify the customer?
+              </p>
+              <p className="text-xs text-zinc-500 mb-6">
+                <strong className="text-zinc-300">{name}</strong> · {b.booking_date}
+                {b.booking_time ? ` at ${fmt12(b.booking_time)}` : ""}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setCancelConfirmId(null)}
+                  className="px-4 py-2 rounded-xl text-sm text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCancelBooking(b)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                >
+                  Yes, cancel booking
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Permanent delete confirmation dialog */}
+      {deleteConfirmId && (() => {
+        const b = bookings.find((r) => r.id === deleteConfirmId);
+        if (!b) return null;
+        const profile = norm(b.profiles);
+        const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Customer";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm"
+              onClick={() => setDeleteConfirmId(null)}
+            />
+            <div className="relative z-10 w-full max-w-md bg-zinc-900 border border-red-500/20 rounded-2xl shadow-2xl p-6">
+              <p className="text-sm font-semibold text-white mb-2">Permanent delete</p>
+              <p className="text-xs text-zinc-400 mb-4">
+                This action is permanent. It will delete all booking data from the database. Are you sure?
+              </p>
+              <p className="text-xs text-zinc-500 mb-6">
+                <strong className="text-zinc-300">{name}</strong> · {b.booking_date}
+                {b.booking_time ? ` at ${fmt12(b.booking_time)}` : ""}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="px-4 py-2 rounded-xl text-sm text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteBooking(b)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white border border-red-500/50 hover:bg-red-500 transition-colors"
+                >
+                  Yes, delete permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Reschedule modal */}
+      {rescheduleRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm" onClick={() => setRescheduleRow(null)} />
+          <div className="relative z-10 w-full max-w-sm bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-white">Reschedule</p>
+              <button
+                type="button"
+                onClick={() => setRescheduleRow(null)}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.06]"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {(() => {
+              const p = norm(rescheduleRow.profiles);
+              const s = norm(rescheduleRow.services);
+              return (
+                <p className="text-[11px] text-zinc-500 mb-3">
+                  {p?.first_name} {p?.last_name} · {s?.name ?? "—"}
+                </p>
+              );
+            })()}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Time</label>
+                <select
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                  className="w-full bg-zinc-950/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-white"
+                >
+                  {TIME_SLOTS.map((slot) => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setRescheduleRow(null)}
+                className="px-3 py-1.5 rounded-xl text-xs text-zinc-400 hover:bg-white/[0.06]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRescheduleSave}
+                disabled={loadingId === rescheduleRow.id || !rescheduleDate || !rescheduleTime}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#D4AF37] text-zinc-950 hover:bg-[#c9a227] disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {loadingId === rescheduleRow.id ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Table */}
@@ -374,11 +686,9 @@ export function BookingsTable({
 
                       {/* Service / Vehicle */}
                       <td className="px-5 py-4">
-                        <p className="text-xs text-zinc-300 leading-snug">
-                          {service?.name ?? "—"}
-                        </p>
+                        <ServiceBadge name={service?.name ?? null} />
                         {vehicle && (
-                          <p className="text-[10px] text-zinc-600 mt-0.5 capitalize">
+                          <p className="text-[10px] text-zinc-600 mt-1.5 capitalize">
                             {vehicle.year} {vehicle.make} {vehicle.model}
                             {vehicle.size ? ` · ${vehicle.size}` : ""}
                           </p>
@@ -436,21 +746,22 @@ export function BookingsTable({
                         )}
                       </td>
 
-                      {/* Actions dropdown */}
+                      {/* Actions dropdown + Cancel */}
                       <td className="px-5 py-4">
-                        <div className="relative z-20">
-                          <button
-                            disabled={isLoading}
-                            onClick={() =>
-                              setOpenDropdown((id) =>
-                                id === b.id ? null : b.id
-                              )
-                            }
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.07] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            Change status
-                            <ChevronDown size={11} />
-                          </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="relative z-20">
+                            <button
+                              disabled={isLoading}
+                              onClick={() =>
+                                setOpenDropdown((id) =>
+                                  id === b.id ? null : b.id
+                                )
+                              }
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.07] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Change status
+                              <ChevronDown size={11} />
+                            </button>
 
                           {openDropdown === b.id && (
                             <div className="absolute left-0 top-full mt-1.5 w-52 bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl z-30 overflow-hidden">
@@ -460,7 +771,7 @@ export function BookingsTable({
                                 </p>
                               </div>
                               {STATUS_OPTIONS.map((opt) => {
-                                const isCurrent = b.status === opt.value;
+                                const isCurrent = (b.status ?? "").toLowerCase() === opt.value;
                                 return (
                                   <button
                                     key={opt.value}
@@ -493,6 +804,36 @@ export function BookingsTable({
                               })}
                             </div>
                           )}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => openReschedule(b)}
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-[#D4AF37] hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+                            title="Reschedule"
+                          >
+                            <CalendarClock size={14} strokeWidth={2} />
+                          </button>
+                          {(b.status ?? "").toLowerCase() !== "cancelled" && (
+                            <button
+                              type="button"
+                              disabled={isLoading}
+                              onClick={() => setCancelConfirmId(b.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-red-400/90 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Ban size={11} />
+                              Cancel
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => setDeleteConfirmId(b.id)}
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                            title="Permanent delete"
+                          >
+                            <Trash2 size={14} strokeWidth={2} />
+                          </button>
                         </div>
                       </td>
                     </tr>
