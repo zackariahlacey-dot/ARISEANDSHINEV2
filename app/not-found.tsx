@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const LOGO_URL =
   "https://esgdlmvvjrduazdraewq.supabase.co/storage/v1/object/public/public-assets/e.png";
@@ -9,8 +10,7 @@ export default function NotFound() {
       className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ backgroundColor: "#09090b" }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={LOGO_URL}
         alt="Arise And Shine VT"
         width={120}

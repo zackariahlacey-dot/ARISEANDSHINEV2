@@ -375,6 +375,10 @@ html {
   0%, 100% { opacity: 0.7; transform: translateX(-100%); }
   50%      { opacity: 1;   transform: translateX(200%); }
 }
+@keyframes shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
 
 /* Float: entire 3D object moves up/down together (apply to parent of bar or diamond) */
 @keyframes animate-float {
@@ -383,6 +387,8 @@ html {
 }
 .tier-float-container {
   animation: animate-float 3.5s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 .tier-float-bronze  { animation-delay: 0s; }
 .tier-float-silver  { animation-delay: 0.5s; }
@@ -644,6 +650,7 @@ html {
   perspective: 1500px;
   perspective-origin: center 85%;
   position: relative;
+  transform-style: preserve-3d;
 }
 /* Tilt the entire lineup (3D stage) */
 .tier-lineup-tilted {
@@ -676,6 +683,8 @@ html {
   height: 100%;
   transform-style: preserve-3d;
   transform: rotateX(25deg) rotateY(-20deg);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 .tier-solid-bar-front {
   position: absolute;
@@ -685,7 +694,7 @@ html {
   bottom: 0;
   z-index: 2;
   transform-style: preserve-3d;
-  transform: translateZ(0);
+  transform: translateZ(1px);
   border-radius: 0.2rem;
   display: flex;
   flex-direction: column;
@@ -694,13 +703,13 @@ html {
   overflow: hidden;
   backface-visibility: hidden;
 }
-/* Side face: rotateY(90deg), 1px overlap so it touches front (mitered), 40% darker */
+/* Side face: rotateY(90deg); inset 8px top/bottom so it stays inside rounded corners */
 .tier-solid-bar-side {
   position: absolute;
-  top: 0;
+  top: 8px;
   left: calc(100% - 1px);
   width: calc(var(--bar-depth) + 1px);
-  height: 100%;
+  height: calc(100% - 16px);
   transform-origin: 1px 50%;
   transform: rotateY(90deg);
   z-index: 1;
@@ -709,12 +718,12 @@ html {
   border-radius: 0 0.2rem 0.2rem 0;
   pointer-events: none;
 }
-/* Top face: rotateX(90deg), 1px overlap so it touches front (mitered), 20% brighter */
+/* Top face: rotateX(90deg); inset 8px left/right for rounded corners */
 .tier-solid-bar-top {
   position: absolute;
-  left: 0;
+  left: 8px;
   bottom: calc(100% - 1px);
-  width: 100%;
+  width: calc(100% - 16px);
   height: calc(var(--bar-depth) + 1px);
   transform-origin: 50% 100%;
   transform: rotateX(90deg);
@@ -724,12 +733,12 @@ html {
   border-radius: 0.2rem 0.2rem 0 0;
   pointer-events: none;
 }
-/* Bottom face: rotateX(-90deg), sits on 'floor', darkest metal (shadow side); 1px overlap to miter with front */
+/* Bottom face: rotateX(-90deg); inset 8px left/right for rounded corners */
 .tier-solid-bar-bottom {
   position: absolute;
-  left: 0;
+  left: 8px;
   top: calc(100% - 1px);
-  width: 100%;
+  width: calc(100% - 16px);
   height: calc(var(--bar-depth) + 1px);
   transform-origin: 50% 0;
   transform: rotateX(-90deg);
@@ -740,21 +749,21 @@ html {
   pointer-events: none;
 }
 
-/* Front: main metallic gradient; text engraved via .tier-front-engraved */
+/* Front: glossy ingot gradients; minted rim inset; text engraved via .tier-front-engraved */
 .tier-solid-bar-front-bronze {
-  background: linear-gradient(90deg, #4d2d00 0%, #804A00 22%, #d9a066 48%, #fff 52%, #d9a066 78%, #804A00 100%);
-  color: #fff;
-  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.35);
+  background: linear-gradient(135deg, #fed7aa 0%, #f97316 20%, #c2410c 50%, #9a3412 80%, #431407 100%);
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.8), inset -1px -1px 0px rgba(255, 255, 255, 0.3), inset 0 0 20px rgba(249, 115, 22, 0.3);
 }
 .tier-solid-bar-front-silver {
-  background: linear-gradient(90deg, #3f3f46 0%, #71717a 22%, #e5e7eb 48%, #fff 52%, #e5e7eb 78%, #3f3f46 100%);
-  color: #0a0a0a;
-  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 20%, #94a3b8 50%, #64748b 80%, #334155 100%);
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.9), inset -1px -1px 0px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(226, 232, 240, 0.3);
 }
 .tier-solid-bar-front-gold {
-  background: linear-gradient(90deg, #78350f 0%, #bf953f 22%, #fcf6ba 48%, #fff 52%, #bf953f 78%, #78350f 100%);
-  color: #0a0a0a;
-  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4);
+  background: linear-gradient(135deg, #fef08a 0%, #fbbf24 20%, #d97706 50%, #b45309 80%, #78350f 100%);
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.9), inset -1px -1px 0px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(251, 191, 36, 0.3);
 }
 .tier-solid-bar-front::before {
   content: '';
@@ -774,26 +783,49 @@ html {
     0 -1px 1px rgba(0, 0, 0, 0.25),
     1px 0 0 rgba(0, 0, 0, 0.15);
 }
-.tier-solid-bar-front-silver .tier-front-engraved,
-.tier-solid-bar-front-gold .tier-front-engraved {
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.5),
-    0 -1px 1px rgba(0, 0, 0, 0.2),
-    1px 0 0 rgba(0, 0, 0, 0.1);
+/* Metal bars only: indented/engraved effect — black text + bright line below letters */
+.tier-solid-bar-front .tier-front-engraved {
+  color: rgba(0, 0, 0, 0.85);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
-/* Side: 40% darker; 1px specular along bottom edge where side meets bottom face (miter highlight) */
-.tier-solid-bar-side-bronze {
-  background: linear-gradient(180deg, #1f1200 0%, #2d1a00 35%, #3d2400 70%, #1f1200 100%);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+/* Z-stack extrusion: 20 layers, same border-radius as front; diagonal-seam gradient (45–50% hit) */
+.tier-bar-extrusion-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0.2rem;
+  z-index: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  overflow: visible;
+  box-sizing: border-box;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  backface-visibility: hidden;
 }
-.tier-solid-bar-side-silver {
-  background: linear-gradient(180deg, #18181b 0%, #27272a 35%, #3f3f46 70%, #18181b 100%);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+/* Milled edge: alternating layers darker + slightly inset for groove effect */
+.tier-solid-bar-box > .tier-bar-extrusion-layer:nth-child(odd) {
+  filter: brightness(0.6);
 }
-.tier-solid-bar-side-gold {
-  background: linear-gradient(180deg, #351a05 0%, #451f07 35%, #78350f 70%, #351a05 100%);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+.tier-diamond-bar-box > .tier-diamond-extrusion-layer:nth-child(odd) {
+  filter: brightness(0.6);
+}
+.tier-bar-extrusion-bronze {
+  background: conic-gradient(from 90deg at 0% 0%, #2a0a02 0deg, #431407 38deg, #f97316 43deg, #ffffff 44deg, #ffffff 46deg, #f97316 47deg, #431407 52deg, #2a0a02 90deg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.tier-bar-extrusion-silver {
+  background: conic-gradient(from 90deg at 0% 0%, #1e293b 0deg, #334155 38deg, #cbd5e1 43deg, #ffffff 44deg, #ffffff 46deg, #cbd5e1 47deg, #334155 52deg, #1e293b 90deg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.tier-bar-extrusion-gold {
+  background: conic-gradient(from 90deg at 0% 0%, #451a03 0deg, #78350f 38deg, #fbbf24 43deg, #ffffff 44deg, #ffffff 46deg, #fbbf24 47deg, #78350f 52deg, #451a03 90deg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
 
 /* Top: 20% brighter metallic cap (rotateX 90° only), no black */
@@ -807,105 +839,43 @@ html {
   background: linear-gradient(180deg, #fffef0 0%, #fff9c4 50%, #fcf6ba 100%);
 }
 
-/* Bottom: darkest gradient (shadow side on floor); 1px specular on right edge where bottom meets side */
-.tier-solid-bar-bottom-bronze {
-  background: linear-gradient(90deg, #0f0900 0%, #1a0f00 30%, #2d1a00 70%, #0f0900 100%);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1);
+/* ── Diamond Bar: 20-layer Z-stack + diagonal-seam gradient, ambient glow ── */
+.tier-lineup-card-diamond .tier-float-container {
+  filter: drop-shadow(0 0 30px rgba(14, 165, 233, 0.5));
 }
-.tier-solid-bar-bottom-silver {
-  background: linear-gradient(90deg, #0c0c0e 0%, #18181b 30%, #27272a 70%, #0c0c0e 100%);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12);
+.tier-solid-bar-front-diamond {
+  background: linear-gradient(135deg, #f0f9ff 0%, #bae6fd 25%, #0ea5e9 50%, #0284c7 75%, #0c4a6e 100%);
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: inset 1.5px 1.5px 0px rgba(255, 255, 255, 0.9), inset -1px -1px 0px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(186, 230, 253, 0.3);
 }
-/* Gold bottom: fully closed, deep amber #78350f shadow side — solid floating brick */
-.tier-solid-bar-bottom-gold {
-  background: linear-gradient(90deg, #2d1505 0%, #78350f 30%, #78350f 70%, #2d1505 100%);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(0, 0, 0, 0.15);
-}
-
-/* ── 3D Diamond: rebuilt from scratch to match bars — same perspective(1500px), preserve-3d, rotateX(25deg) rotateY(-20deg); 8 triangular facets (4 crown, 4 pavilion) meeting at sharp bottom point; zero gaps; anisotropic shading; 1px specular ── */
-.tier-diamond-wrapper {
-  position: relative;
-  width: 100%;
-  height: 160px;
-  clip-path: polygon(50% 0%, 100% 38%, 75% 100%, 50% 88%, 25% 100%, 0% 38%);
-  transform-style: preserve-3d;
-  transform: rotateX(25deg) rotateY(-20deg);
-  overflow: hidden;
-  border: none;
-  filter: drop-shadow(0 0 16px rgba(14, 165, 233, 0.2));
-  backface-visibility: hidden;
-}
-.tier-diamond-facet {
+.tier-diamond-extrusion-layer {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 0.2rem;
+  background: conic-gradient(from 90deg at 0% 0%, #082f49 0deg, #0369a1 38deg, #0ea5e9 43deg, #ffffff 44deg, #ffffff 46deg, #0ea5e9 47deg, #0369a1 52deg, #082f49 90deg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: 0;
   pointer-events: none;
-  border: none;
-  outline: none;
+  transform-style: preserve-3d;
+  overflow: visible;
+  box-sizing: border-box;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   backface-visibility: hidden;
 }
-/* Crown (top 4): apex at 50% 0%; anisotropic bright & reflective */
-.tier-diamond-facet-t1 {
-  clip-path: polygon(50% 0%, 0% 38%, 100% 38%);
-  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6), inset 1px 0 0 0 rgba(255, 255, 255, 0.35), inset -1px 0 0 0 rgba(255, 255, 255, 0.35);
+.tier-solid-bar-top-diamond {
+  background: linear-gradient(180deg, #e0f9ff 0%, #a5f3fc 50%, #67e8f9 100%);
 }
-.tier-diamond-facet-t2 {
-  clip-path: polygon(50% 0%, 100% 38%, 75% 100%);
-  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
-  box-shadow: inset -1px 0 0 0 rgba(255, 255, 255, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
-}
-.tier-diamond-facet-t3 {
-  clip-path: polygon(50% 0%, 75% 100%, 25% 100%);
-  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
-  box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.4), inset 1px 0 0 0 rgba(255, 255, 255, 0.35), inset -1px 0 0 0 rgba(255, 255, 255, 0.35);
-}
-.tier-diamond-facet-t4 {
-  clip-path: polygon(50% 0%, 25% 100%, 0% 38%);
-  background: linear-gradient(135deg, #0ea5e9, #ffffff, #e0f2fe);
-  box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
-}
-/* Pavilion (bottom 4): apex at 50% 88% (sharp physical point); deep shadow */
-.tier-diamond-facet-b1 {
-  clip-path: polygon(50% 88%, 0% 38%, 25% 100%);
-  background: linear-gradient(135deg, #0c4a6e, #075985);
-  box-shadow: inset 1px 0 0 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 0 rgba(255, 255, 255, 0.2);
-}
-.tier-diamond-facet-b2 {
-  clip-path: polygon(50% 88%, 25% 100%, 75% 100%);
-  background: linear-gradient(135deg, #0c4a6e, #075985);
-  box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.25), inset -1px 0 0 0 rgba(255, 255, 255, 0.2), inset 1px 0 0 0 rgba(255, 255, 255, 0.2);
-}
-.tier-diamond-facet-b3 {
-  clip-path: polygon(50% 88%, 75% 100%, 100% 38%);
-  background: linear-gradient(135deg, #0c4a6e, #075985);
-  box-shadow: inset -1px 0 0 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 0 rgba(255, 255, 255, 0.2);
-}
-.tier-diamond-facet-b4 {
-  clip-path: polygon(50% 88%, 100% 38%, 0% 38%);
-  background: linear-gradient(135deg, #0c4a6e, #075985);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2), inset 1px 0 0 0 rgba(255, 255, 255, 0.2), inset -1px 0 0 0 rgba(255, 255, 255, 0.2);
-}
-/* Content: engraved on front; same style as bar text */
-.tier-diamond-content {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 2;
-  padding: 1rem;
-  pointer-events: auto;
-  clip-path: polygon(50% 0%, 100% 38%, 75% 100%, 50% 88%, 25% 100%, 0% 38%);
-}
-.tier-diamond-content .tier-front-engraved {
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.5),
-    0 -1px 2px rgba(0, 0, 0, 0.35),
-    1px 0 0 rgba(0, 0, 0, 0.2),
-    -1px 0 0 rgba(0, 0, 0, 0.2);
-  color: #fff;
-  font-weight: 800;
+/* Diamond contact shadow: on floor beneath block */
+.tier-lineup-card-diamond .tier-contact-shadow-diamond {
+  width: 65%;
+  height: 18px;
+  transform: translate(-50%, 14px);
+  background: radial-gradient(ellipse 70% 50% at center, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.25) 45%, transparent 70%);
+  filter: blur(10px);
 }
 
 /* Mobile staircase: step cards to the right */

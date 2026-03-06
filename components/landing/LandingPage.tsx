@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -23,9 +24,23 @@ import {
   Phone,
 } from "lucide-react";
 import type { Service } from "@/app/page";
-import { BookingSection } from "./BookingModal";
-import { SuccessModal, type SuccessModalData } from "./SuccessModal";
+import type { SuccessModalData } from "./SuccessModal";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
+
+const BookingSection = dynamic(
+  () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
+  {
+    ssr: true,
+    loading: () => (
+      <section className="min-h-[420px] rounded-xl bg-zinc-900/30 animate-pulse" aria-hidden />
+    ),
+  }
+);
+
+const SuccessModal = dynamic(
+  () => import("./SuccessModal").then((m) => ({ default: m.SuccessModal })),
+  { ssr: false }
+);
 import { RecentActivityToast } from "./RecentActivityToast";
 import { Button } from "@/components/ui/button";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
@@ -400,13 +415,15 @@ export function LandingPage({ services }: { services: Service[] }) {
         className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16"
         style={{ background: "#09090b" }}
       >
-        {/* Moody automotive background image — barely visible texture layer */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        {/* Moody automotive background image — barely visible texture layer (above fold, priority) */}
+        <Image
           src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?q=80&w=2000"
           alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none opacity-[0.07] mix-blend-luminosity"
+          aria-hidden
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover pointer-events-none select-none opacity-[0.07] mix-blend-luminosity"
         />
 
         {/* Bottom fade — blends image into the page background */}
@@ -579,16 +596,20 @@ export function LandingPage({ services }: { services: Service[] }) {
             </h2>
           </div>
           <div className="relative aspect-video rounded-xl overflow-hidden border border-white/[0.08] bg-[#0a0a0a]">
-            {/* Both images stacked; dimensions never change */}
-            <img
+            {/* Both images stacked; dimensions never change (below fold, lazy + sizes) */}
+            <Image
               src={BEFORE_IMAGE}
               alt="Interior before detail"
-              className="absolute inset-0 w-full h-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
-            <img
+            <Image
               src={AFTER_IMAGE}
               alt="Interior after detail"
-              className="absolute inset-0 w-full h-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
               style={{
                 clipPath: `inset(0 0 0 ${beforeAfterPosition}%)`,
               }}
@@ -787,75 +808,75 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* Growth Lineup: 6-sided bullion bars (Tiny→Big) + volumetric Diamond; tilted stage; contact shadow per object; engraved text. */}
           <div className="tier-lineup-stage relative flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 min-h-[320px] sm:min-h-0 pb-16 sm:pb-20 overflow-visible">
             <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-5xl mx-auto px-1 sm:px-0">
-              {/* Bronze — Tiny (60px) 6-sided 3D box; float container so whole object moves together */}
+              {/* Bronze — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
               <div className="tier-lineup-card relative w-full sm:w-[140px] md:w-[160px] flex flex-col items-center sm:staircase-0">
                 <div aria-hidden className="tier-contact-shadow" />
                 <div className="tier-float-container tier-float-bronze w-full">
                 <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "60px" }}>
-                  <div className="tier-solid-bar-front tier-solid-bar-front-bronze px-3 py-2">
-                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase opacity-95 leading-tight">Bronze</p>
-                    <p className="tier-front-engraved text-[10px] opacity-90 mt-0.5">0–499 pts</p>
-                  </div>
-                  <div className="tier-solid-bar-side tier-solid-bar-side-bronze" aria-hidden />
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-bronze" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
+                  ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-bronze" aria-hidden />
-                  <div className="tier-solid-bar-bottom tier-solid-bar-bottom-bronze" aria-hidden />
+                  <div className="tier-solid-bar-front tier-solid-bar-front-bronze px-3 py-2">
+                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase leading-tight">Bronze</p>
+                    <p className="tier-front-engraved text-[10px] mt-0.5">500–999 pts</p>
+                    <p className="tier-front-engraved text-[10px] mt-1">5% off</p>
+                  </div>
                 </div>
                 </div>
               </div>
 
-              {/* Silver — Small (90px) 6-sided 3D box */}
+              {/* Silver — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
               <div className="tier-lineup-card relative w-full sm:w-[160px] md:w-[180px] flex flex-col items-center sm:staircase-1">
                 <div aria-hidden className="tier-contact-shadow" />
                 <div className="tier-float-container tier-float-silver w-full">
                 <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "90px" }}>
-                  <div className="tier-solid-bar-front tier-solid-bar-front-silver px-3 py-2">
-                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase opacity-90">Silver</p>
-                    <p className="tier-front-engraved text-[10px] opacity-85 mt-0.5">500–999 pts</p>
-                    <p className="tier-front-engraved text-[10px] opacity-85 mt-1">5% off · Priority</p>
-                  </div>
-                  <div className="tier-solid-bar-side tier-solid-bar-side-silver" aria-hidden />
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-silver" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
+                  ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-silver" aria-hidden />
-                  <div className="tier-solid-bar-bottom tier-solid-bar-bottom-silver" aria-hidden />
+                  <div className="tier-solid-bar-front tier-solid-bar-front-silver px-3 py-2">
+                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase">Silver</p>
+                    <p className="tier-front-engraved text-[10px] mt-0.5">1,000–1,499 pts</p>
+                    <p className="tier-front-engraved text-[10px] mt-1">10% off · Priority</p>
+                  </div>
                 </div>
                 </div>
               </div>
 
-              {/* Gold — Medium (120px) 6-sided 3D box; closed bottom = solid floating brick */}
+              {/* Gold — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
               <div className="tier-lineup-card relative w-full sm:w-[180px] md:w-[200px] flex flex-col items-center sm:staircase-2">
                 <div aria-hidden className="tier-contact-shadow" />
                 <div className="tier-float-container tier-float-gold w-full">
                 <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "120px" }}>
-                  <div className="tier-solid-bar-front tier-solid-bar-front-gold px-3 py-3">
-                    <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase opacity-90">Gold</p>
-                    <p className="tier-front-engraved text-[11px] opacity-85 mt-0.5">1,000–1,999 pts</p>
-                    <p className="tier-front-engraved text-[10px] opacity-85 mt-1.5">10% off · Ceramic · Support</p>
-                  </div>
-                  <div className="tier-solid-bar-side tier-solid-bar-side-gold" aria-hidden />
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-gold" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
+                  ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-gold" aria-hidden />
-                  <div className="tier-solid-bar-bottom tier-solid-bar-bottom-gold" aria-hidden />
+                  <div className="tier-solid-bar-front tier-solid-bar-front-gold px-3 py-3">
+                    <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase">Gold</p>
+                    <p className="tier-front-engraved text-[11px] mt-0.5">1,500–1,999 pts</p>
+                    <p className="tier-front-engraved text-[10px] mt-1.5">15% off · Priority · Discounted add-ons</p>
+                  </div>
                 </div>
                 </div>
               </div>
 
-              {/* Diamond — Largest, bottom-aligned; same 3D as bars: perspective 1500px, rotateX(25deg) rotateY(-20deg); 8 facets (4 crown, 4 pavilion) meeting at sharp bottom point; animate-float wrapper */}
-              <div className="tier-lineup-card relative w-full sm:w-[220px] md:w-[240px] flex flex-col items-center sm:staircase-3">
-                <div aria-hidden className="tier-contact-shadow" />
-                <div className="tier-float-container tier-float-diamond w-full flex flex-col items-center">
-                  <div className="tier-diamond-wrapper w-full relative z-[1]">
-                    <div className="tier-diamond-facet tier-diamond-facet-t1" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-t2" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-t3" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-t4" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-b1" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-b2" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-b3" aria-hidden />
-                    <div className="tier-diamond-facet tier-diamond-facet-b4" aria-hidden />
-                    <div className="tier-diamond-content text-center">
-                      <p className="tier-front-engraved text-[10px] font-black tracking-[0.2em] uppercase opacity-95">Diamond</p>
-                      <h3 className="tier-front-engraved text-lg font-black mt-1 tracking-tight">2,000+ pts</h3>
-                      <p className="tier-front-engraved text-xs opacity-90 mt-2">20% off · VIP · Platinum</p>
-                    </div>
+              {/* Diamond — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
+              <div className="tier-lineup-card tier-lineup-card-diamond relative w-full sm:w-[220px] md:w-[240px] flex flex-col items-center sm:staircase-3">
+                <div aria-hidden className="tier-contact-shadow tier-contact-shadow-diamond" />
+                <div className="tier-float-container tier-float-diamond w-full">
+                <div className="tier-solid-bar-box tier-diamond-bar-box w-full relative z-[1]" style={{ height: "140px" }}>
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div key={i} className="tier-diamond-extrusion-layer" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
+                  ))}
+                  <div className="tier-solid-bar-top tier-solid-bar-top-diamond" aria-hidden />
+                  <div className="tier-solid-bar-front tier-solid-bar-front-diamond px-3 py-3">
+                    <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase">Diamond</p>
+                    <p className="tier-front-engraved text-[11px] mt-0.5">2,000+ pts</p>
+                    <p className="tier-front-engraved text-[10px] mt-1.5">20% off · VIP · Platinum</p>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
