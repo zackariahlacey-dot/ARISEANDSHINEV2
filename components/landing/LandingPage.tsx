@@ -806,8 +806,8 @@ export function LandingPage({ services }: { services: Service[] }) {
           </div>
 
           {/* Growth Lineup: 6-sided bullion bars (Tiny→Big) + volumetric Diamond; tilted stage; contact shadow per object; engraved text. */}
-          <div className="tier-lineup-stage relative flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 min-h-[320px] sm:min-h-0 pb-16 sm:pb-20 overflow-visible">
-            <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-5xl mx-auto px-1 sm:px-0">
+          <div className="tier-lineup-stage relative flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 min-h-[320px] sm:min-h-0 mt-10 md:mt-16 pb-8 sm:pb-20 -mb-24 md:mb-0 overflow-visible">
+            <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-5xl mx-auto px-1 sm:px-0 scale-[0.85] md:scale-100 origin-top">
               {/* Bronze — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
               <div className="tier-lineup-card relative w-full sm:w-[140px] md:w-[160px] flex flex-col items-center sm:staircase-0">
                 <div aria-hidden className="tier-contact-shadow" />
