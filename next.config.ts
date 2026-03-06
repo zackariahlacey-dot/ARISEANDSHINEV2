@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
+  // cacheComponents removed: incompatible with export const dynamic = 'force-dynamic' on admin routes
   trailingSlash: false,
   images: {
     remotePatterns: [
