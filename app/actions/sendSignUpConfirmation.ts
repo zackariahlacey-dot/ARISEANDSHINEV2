@@ -65,7 +65,7 @@ export async function sendSignUpConfirmationEmails(
       const result = await resend.emails.send({
         from: FROM_ADDRESS,
         to: email.trim(),
-        reply_to: REPLY_TO,
+        replyTo: REPLY_TO,
         subject: "Confirm your account — Arise And Shine VT",
         html,
       });

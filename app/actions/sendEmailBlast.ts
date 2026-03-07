@@ -126,7 +126,7 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
     const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
-      reply_to: REPLY_TO,
+      replyTo: REPLY_TO,
       subject: `[TEST] ${payload.subject.trim()}`,
       html,
     });
@@ -170,7 +170,7 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
     const messages = chunk.map((to) => ({
       from: FROM_ADDRESS,
       to,
-      reply_to: REPLY_TO,
+      replyTo: REPLY_TO,
       subject: payload.subject.trim(),
       html,
     }));

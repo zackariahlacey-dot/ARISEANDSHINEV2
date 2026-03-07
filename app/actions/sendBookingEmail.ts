@@ -41,7 +41,7 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
     const { data, error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: customerEmail.trim(),
-      reply_to: REPLY_TO,
+      replyTo: REPLY_TO,
       subject: `Your Detail is Confirmed — Arise And Shine VT`,
       html,
     });

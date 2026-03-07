@@ -600,7 +600,7 @@ export async function sendBookingCancellationEmails(data: CancellationEmailData)
       ? resend.emails.send({
           from: FROM_ADDRESS,
           to: data.customerEmail,
-          reply_to: REPLY_TO,
+          replyTo: REPLY_TO,
           subject: `Your Arise And Shine VT Booking Has Been Cancelled — ${formattedDate}`,
           html: customerCancellationHtml(data, formattedDate),
         })
@@ -699,7 +699,7 @@ export async function sendUpdatedBookingEmail(data: UpdatedBookingEmailData): Pr
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.customerEmail,
-    reply_to: REPLY_TO,
+    replyTo: REPLY_TO,
     subject: `Arise And Shine VT — Your booking has been updated: ${formattedDate} at ${data.newTime}`,
     html: updatedBookingHtml(data, formattedDate),
   });
@@ -800,7 +800,7 @@ export async function sendBookingEmails(
       ? resend.emails.send({
           from: FROM_ADDRESS,
           to: data.customerEmail,
-          reply_to: REPLY_TO,
+          replyTo: REPLY_TO,
           subject: `Your Arise And Shine VT Booking is Confirmed — ${formattedDate}`,
           html: customerEmailHtml(data, formattedDate, shortRef),
         })
