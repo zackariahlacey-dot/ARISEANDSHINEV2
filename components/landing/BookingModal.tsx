@@ -17,6 +17,7 @@ import {
   CreditCard,
   Lock,
   HandCoins,
+  HelpCircle,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
@@ -237,6 +238,14 @@ function isTimeSlotPassed(timeData: unknown, selectedDate: unknown): boolean {
   }
 }
 
+/** True if the date is Saturday (6) or Sunday (0). Expects YYYY-MM-DD string. */
+function isWeekend(dateStr: string): boolean {
+  if (!dateStr || dateStr.length < 10) return false;
+  const d = new Date(dateStr + "T12:00:00");
+  const day = d.getDay();
+  return day === 0 || day === 6;
+}
+
 // ─── Make Autocomplete ───────────────────────────────────────────────────────
 
 function MakeAutocomplete({
@@ -429,6 +438,7 @@ export function BookingSection({
   const [todayStr, setTodayStr] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [weekendDateError, setWeekendDateError] = useState<string | null>(null);
   const [existingBookingsForDate, setExistingBookingsForDate] = useState<
     BookingOnDate[] | null
   >(null);
@@ -750,7 +760,12 @@ export function BookingSection({
   const canGoNext = (): boolean => {
     if (step === 1)
       return !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
-    if (step === 2) return !!(selectedDate && selectedTime);
+    if (step === 2)
+      return !!(
+        selectedDate &&
+        selectedTime &&
+        !isWeekend(selectedDate)
+      );
     return false;
   };
 
@@ -1225,49 +1240,53 @@ export function BookingSection({
                       </div>
                     </div>
 
-                    {/* Vehicle Size — auto-selected from make/model when matched; user can override by clicking a card */}
+                    {/* Vehicle Size — read-only summary: pending until Year/Make/Model auto-detects */}
                     <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
-                          Vehicle Size
-                        </label>
-                        {autoDetected && vehicleSize && (
-                          <span className="inline-flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/50 text-[#D4AF37] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(212,175,55,0.1)] animate-pulse">
-                            <Zap size={10} className="fill-[#D4AF37]" />
-                            Auto-detected
-                          </span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {VEHICLE_SIZES.map((size) => {
-                          const isSelected = vehicleSize === size.id;
-                          return (
-                            <button
-                              key={size.id}
-                              onClick={() => {
-                                setVehicleSize(size.id);
-                                setAutoDetected(false);
-                              }}
-                              className={`p-4 rounded-2xl border text-left transition-all duration-300 group ${
-                                isSelected
-                                  ? "bg-zinc-900/80 border-[#D4AF37] shadow-[0_0_25px_rgba(212,175,55,0.15)] scale-[1.02]"
-                                  : "bg-zinc-950/40 border border-white/5 hover:border-[#D4AF37]/30"
-                              }`}
-                            >
-                              <div className="text-white font-semibold text-sm">
-                                {size.label}
+                      <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">
+                        Vehicle Size
+                      </label>
+                      <div
+                        className={`w-full rounded-2xl border text-left transition-all duration-300 overflow-hidden cursor-default ${
+                          vehicleSize
+                            ? "bg-zinc-900/80 border-white/10"
+                            : "bg-zinc-950/40 border border-white/5"
+                        }`}
+                      >
+                        {!vehicleSize ? (
+                          <div className="p-5 flex flex-col items-center justify-center gap-2 min-h-[100px]">
+                            <HelpCircle className="w-10 h-10 text-zinc-500 shrink-0" />
+                            <span className="text-zinc-300 font-medium">
+                              Vehicle Type: Pending
+                            </span>
+                            <span className="text-zinc-500 text-sm">
+                              Enter Year / Make / Model to auto-detect
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-white font-semibold">
+                                  {VEHICLE_SIZES.find((s) => s.id === vehicleSize)?.label ?? vehicleSize}
+                                </span>
+                                {autoDetected && (
+                                  <span className="inline-flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/50 text-[#D4AF37] px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.15)]">
+                                    <Zap size={9} className="fill-[#D4AF37]" />
+                                    Auto-detected
+                                  </span>
+                                )}
                               </div>
-                              <div className="text-zinc-500 text-xs mt-0.5">
-                                {size.desc}
-                              </div>
+                              <p className="text-zinc-500 text-sm mt-0.5">
+                                {VEHICLE_SIZES.find((s) => s.id === vehicleSize)?.desc ?? ""}
+                              </p>
                               {selectedService && (
-                                <div className="text-[#D4AF37] font-bold mt-2">
-                                  ${selectedService[size.sizeKey]}
-                                </div>
+                                <p className="text-[#D4AF37] font-bold mt-1.5">
+                                  ${selectedService[VEHICLE_SIZES.find((s) => s.id === vehicleSize)!.sizeKey]}
+                                </p>
                               )}
-                            </button>
-                          );
-                        })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -1301,10 +1320,32 @@ export function BookingSection({
                       <input
                         type="date"
                         value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (isWeekend(value)) {
+                            setWeekendDateError(
+                              "Weekends are not available. Please select a weekday (Monday–Friday)."
+                            );
+                            return;
+                          }
+                          setWeekendDateError(null);
+                          setSelectedDate(value);
+                        }}
                         min={todayStr}
-                        className="w-full text-center max-w-full min-h-[44px] box-border bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm"
+                        className={`w-full text-center max-w-full min-h-[44px] box-border bg-zinc-950/50 border rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm ${
+                          weekendDateError
+                            ? "border-amber-500/60 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50"
+                            : "border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50"
+                        } text-white`}
                       />
+                      <p className="text-zinc-500 text-xs mt-1.5">
+                        Monday–Friday only. Weekends are not available for booking.
+                      </p>
+                      {weekendDateError && (
+                        <p className="text-amber-400 text-sm mt-1.5 font-medium" role="alert">
+                          {weekendDateError}
+                        </p>
+                      )}
                     </div>
 
                     <div>

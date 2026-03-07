@@ -1098,44 +1098,44 @@ export function LandingPage({ services }: { services: Service[] }) {
       </motion.section>
 
       {/* ─── Frequently Asked Questions ───────────────────────── */}
-      <section className="py-16 md:py-24 px-4">
-        <h2 className="text-3xl md:text-5xl font-bold text-white mb-10 text-center">
+      <section className="py-16 md:py-24 px-4 flex flex-col items-center text-center">
+        <h2 className="text-3xl md:text-5xl font-bold text-white mb-10">
           Frequently Asked Questions.
         </h2>
-        <div className="max-w-3xl mx-auto space-y-4 px-4">
-          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group">
+        <div className="max-w-3xl mx-auto space-y-4 px-4 w-full flex flex-col items-center">
+          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
-              Do I need to provide water or power?
+              <span className="flex-1 text-center">Do I need to provide water or power?</span>
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
-            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed">
-              No, our mobile units are fully equipped with spot-free water and quiet generators. We can detail your vehicle anywhere, from your office parking lot to your home driveway.
+            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
+              Yes, we require access to both a water spigot and a standard electrical outlet to properly service your vehicle. Please ensure your vehicle is parked within a reasonable distance of these hookups.
             </p>
           </details>
-          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group">
+          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
-              How long does a Full Detail take?
+              <span className="flex-1 text-center">How long does a Full Detail take?</span>
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
-            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed">
+            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
               A Full Detail typically takes between 3 to 5 hours depending on the size and condition of your vehicle. We never rush perfection.
             </p>
           </details>
-          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group">
+          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
-              Do I need to be present for the detail?
+              <span className="flex-1 text-center">Do I need to be present for the detail?</span>
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
-            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed">
+            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
               Not at all! As long as we have the keys and access to the vehicle, you can work or relax. We will send you a text when your car is pristine.
             </p>
           </details>
-          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group">
+          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
-              What if it rains on my appointment day?
+              <span className="flex-1 text-center">What if it rains on my appointment day?</span>
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
-            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed">
+            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
               If you have a garage we can work inside, we will proceed! If not, we will happily reschedule you to our next available clear day with priority placement.
             </p>
           </details>
