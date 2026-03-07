@@ -5,7 +5,8 @@ import { getBookingConfirmationHtml, type BookingConfirmationDetails } from "@/e
 
 /** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const REPLY_TO = "contact@ariseandshinevt.com";
 
 export type SendBookingEmailParams = {
   customerEmail: string;
@@ -40,6 +41,7 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
     const { data, error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: customerEmail.trim(),
+      reply_to: REPLY_TO,
       subject: `Your Detail is Confirmed — Arise And Shine VT`,
       html,
     });

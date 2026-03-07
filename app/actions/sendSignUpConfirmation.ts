@@ -7,7 +7,8 @@ import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 
 /** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const REPLY_TO = "contact@ariseandshinevt.com";
 
 /** Where Supabase redirects after email verification — never localhost in production */
 const CONFIRM_REDIRECT_BASE =
@@ -64,6 +65,7 @@ export async function sendSignUpConfirmationEmails(
       const result = await resend.emails.send({
         from: FROM_ADDRESS,
         to: email.trim(),
+        reply_to: REPLY_TO,
         subject: "Confirm your account — Arise And Shine VT",
         html,
       });

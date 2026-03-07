@@ -1755,14 +1755,10 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         </div>
                       )}
 
-                      <div className="relative">
-                        <span className="absolute -top-2.5 left-4 bg-[#D4AF37] text-zinc-950 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider z-10 badge-most-popular">
-                          Most Popular
-                        </span>
-                        <button
-                          onClick={handlePayNow}
-                          disabled={!canConfirm() || isSubmitting || isStripeLoading}
-                          className={`relative w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] group ${
+                      <button
+                        onClick={handlePayNow}
+                        disabled={!canConfirm() || isSubmitting || isStripeLoading}
+                        className={`w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] group ${
                             isStripeLoading
                               ? "bg-zinc-900/90 border border-[#D4AF37] btn-loading text-zinc-950"
                               : canConfirm() && !isSubmitting
@@ -1787,7 +1783,6 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             <ChevronRight className="w-5 h-5 shrink-0 opacity-80 relative z-[1]" />
                           )}
                         </button>
-                      </div>
 
                       <button
                         onClick={handlePayAtArrival}

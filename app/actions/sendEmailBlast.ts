@@ -5,7 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const REPLY_TO = "contact@ariseandshinevt.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
 
 /** Converts plain-text body to simple safe HTML (preserves newlines, escapes entities). */
@@ -125,6 +126,7 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
     const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
+      reply_to: REPLY_TO,
       subject: `[TEST] ${payload.subject.trim()}`,
       html,
     });
@@ -168,6 +170,7 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
     const messages = chunk.map((to) => ({
       from: FROM_ADDRESS,
       to,
+      reply_to: REPLY_TO,
       subject: payload.subject.trim(),
       html,
     }));

@@ -7,7 +7,8 @@ const BUSINESS_EMAIL = "contact@ariseandshinevt.com";
 
 /** Verified "from" sender — must use verified domain (ariseandshinevt.com) in Resend; production API key in RESEND_API_KEY */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise And Shine VT <notifications@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const REPLY_TO = "contact@ariseandshinevt.com";
 
 /** Owner inbox for new booking notifications (zackariahlacey@gmail.com). Override with ADMIN_EMAIL in .env.local. From is always notifications@ariseandshinevt.com. */
 const OWNER_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
@@ -599,6 +600,7 @@ export async function sendBookingCancellationEmails(data: CancellationEmailData)
       ? resend.emails.send({
           from: FROM_ADDRESS,
           to: data.customerEmail,
+          reply_to: REPLY_TO,
           subject: `Your Arise And Shine VT Booking Has Been Cancelled — ${formattedDate}`,
           html: customerCancellationHtml(data, formattedDate),
         })
@@ -697,6 +699,7 @@ export async function sendUpdatedBookingEmail(data: UpdatedBookingEmailData): Pr
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.customerEmail,
+    reply_to: REPLY_TO,
     subject: `Arise And Shine VT — Your booking has been updated: ${formattedDate} at ${data.newTime}`,
     html: updatedBookingHtml(data, formattedDate),
   });
@@ -797,6 +800,7 @@ export async function sendBookingEmails(
       ? resend.emails.send({
           from: FROM_ADDRESS,
           to: data.customerEmail,
+          reply_to: REPLY_TO,
           subject: `Your Arise And Shine VT Booking is Confirmed — ${formattedDate}`,
           html: customerEmailHtml(data, formattedDate, shortRef),
         })

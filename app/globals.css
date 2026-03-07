@@ -267,29 +267,6 @@ html {
   animation: btn-shimmer-sweep 3s ease-in-out infinite;
 }
 
-/* ── Most Popular badge: breathing + float (synced with Pay Now shimmer) ─────── */
-@keyframes most-popular-badge {
-  0%, 100% {
-    transform: scale(1) translateY(0);
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
-  }
-  25% {
-    transform: scale(1.02) translateY(-2px);
-    box-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
-  }
-  50% {
-    transform: scale(1.05) translateY(0);
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
-  }
-  75% {
-    transform: scale(1.02) translateY(2px);
-    box-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
-  }
-}
-.badge-most-popular {
-  animation: most-popular-badge 3s ease-in-out infinite;
-}
-
 /* ── Skeleton loader shimmer (time-slot grid & similar placeholder UI) ─── */
 @keyframes skeleton-sweep {
   0%   { background-position: -200% center; }
