@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, CalendarClock, Loader2, X } from "lucide-react";
+import { Trash2, CalendarClock, Loader2, X, CheckCircle } from "lucide-react";
 import { deleteBooking } from "@/app/actions/deleteBooking";
 import { updateBookingSchedule } from "@/app/actions/updateBookingSchedule";
 
@@ -317,10 +317,11 @@ export function RecentBookingsTable({ initialBookings }: { initialBookings: Dash
         </div>
       )}
 
-      {/* Toast */}
+      {/* Toast — premium glassmorphism */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 border border-white/[0.08] rounded-xl px-4 py-3 text-xs text-zinc-200 shadow-2xl animate-in fade-in slide-in-from-bottom-2">
-          {toast}
+        <div className="fixed bottom-6 right-6 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-yellow-500/30 bg-black/80 px-4 py-3 shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <CheckCircle className="h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+          <p className="text-sm text-gray-300">{toast}</p>
         </div>
       )}
     </>

@@ -258,16 +258,22 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                 {tier != null && (
                   <p
                     className={`text-xs font-semibold tracking-wide mb-2 ${
-                      tier.tierLabel === "Silver Member"
-                        ? "bg-gradient-to-r from-zinc-400 via-zinc-100 to-zinc-400 bg-clip-text text-transparent"
+                      tier.tierLabel === "Diamond"
+                        ? "bg-gradient-to-r from-sky-400 via-cyan-100 to-sky-400 bg-clip-text text-transparent"
                         : tier.tierLabel === "Gold Member"
                           ? "text-[#d4af37]"
-                          : "text-zinc-400"
+                          : tier.tierLabel === "Silver Member"
+                            ? "bg-gradient-to-r from-zinc-400 via-zinc-100 to-zinc-400 bg-clip-text text-transparent"
+                            : tier.tierLabel === "Bronze Member"
+                              ? "text-amber-600"
+                              : "text-zinc-400"
                     }`}
                     style={
                       tier.tierLabel === "Silver Member"
                         ? { textShadow: "0 0 24px rgba(192,192,192,0.4)" }
-                        : undefined
+                        : tier.tierLabel === "Diamond"
+                          ? { textShadow: "0 0 24px rgba(14,165,233,0.4)" }
+                          : undefined
                     }
                   >
                     {tier.tierLabel}

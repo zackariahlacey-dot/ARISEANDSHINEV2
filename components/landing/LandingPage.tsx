@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   MapPin,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
+import type { DraftBooking } from "./BookingModal";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 
 const BookingSection = dynamic(
@@ -113,9 +115,12 @@ const REVIEWS = [
 type ExpandedBookingId = "hero" | "club" | "services" | null;
 
 export function LandingPage({ services }: { services: Service[] }) {
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [expandedBookingId, setExpandedBookingId] = useState<ExpandedBookingId>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [initialDraft, setInitialDraft] = useState<DraftBooking | null>(null);
+  const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPastHero, setIsPastHero] = useState(false);
   const [beforeAfterPosition, setBeforeAfterPosition] = useState(50);
@@ -133,6 +138,32 @@ export function LandingPage({ services }: { services: Service[] }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Restore booking draft when returning from cancelled Stripe checkout
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return;
+    if (searchParams.get("stripe") !== "cancelled") return;
+    const raw = sessionStorage.getItem("draftBooking");
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw) as DraftBooking;
+      sessionStorage.removeItem("draftBooking");
+      setInitialDraft(draft);
+      setSelectedService(services.find((s) => s.id === draft.serviceId) ?? null);
+      setExpandedBookingId("hero");
+      setShowRestoreToast(true);
+      const path = window.location.pathname + (window.location.hash || "");
+      window.history.replaceState(null, "", path || "/");
+    } catch {
+      // invalid draft
+    }
+  }, [mounted, searchParams, services]);
+
+  useEffect(() => {
+    if (!showRestoreToast) return;
+    const t = setTimeout(() => setShowRestoreToast(false), 5000);
+    return () => clearTimeout(t);
+  }, [showRestoreToast]);
 
   useEffect(() => {
     getAuthProfile().then((p) => {
@@ -226,6 +257,20 @@ export function LandingPage({ services }: { services: Service[] }) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
+      {/* Toast: checkout cancelled, draft restored */}
+      {showRestoreToast && (
+        <div
+          className="fixed top-4 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-yellow-500/30 bg-black/80 px-4 py-3 shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+          role="status"
+          aria-live="polite"
+        >
+          <CheckCircle className="h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+          <p className="text-sm text-gray-300">
+            Checkout cancelled. Your booking details have been saved—you can still choose to Pay at Arrival!
+          </p>
+        </div>
+      )}
+
       {/* ─── Noise / grain texture overlay ─────────────────────── */}
       <div
         aria-hidden="true"
@@ -499,6 +544,8 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onBookingSuccess={handleBookingSuccess}
                 initialRewardPoints={authRewardPoints}
                 initialLifetimePoints={authLifetimePoints}
+                initialDraft={initialDraft}
+                onDraftRestored={() => setInitialDraft(null)}
               />
             </div>
           )}
@@ -770,6 +817,8 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onBookingSuccess={handleBookingSuccess}
                     initialRewardPoints={authRewardPoints}
                     initialLifetimePoints={authLifetimePoints}
+                    initialDraft={initialDraft}
+                    onDraftRestored={() => setInitialDraft(null)}
                   />
                 </div>
               )}
@@ -874,7 +923,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                   <div className="tier-solid-bar-front tier-solid-bar-front-diamond px-3 py-3">
                     <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase">Diamond</p>
                     <p className="tier-front-engraved text-[11px] mt-0.5">2,000+ pts</p>
-                    <p className="tier-front-engraved text-[10px] mt-1.5">20% off · VIP · Platinum</p>
+                    <p className="tier-front-engraved text-[10px] mt-1.5">20% off · VIP</p>
                   </div>
                 </div>
                 </div>
@@ -982,6 +1031,8 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onBookingSuccess={handleBookingSuccess}
                     initialRewardPoints={authRewardPoints}
                     initialLifetimePoints={authLifetimePoints}
+                    initialDraft={initialDraft}
+                    onDraftRestored={() => setInitialDraft(null)}
                   />
                 </div>
               )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Confetti from "react-confetti";
+import { Trophy, X } from "lucide-react";
 
 const TIER_THRESHOLDS = [500, 1000, 1500, 2000] as const;
 const STORAGE_KEY = "lastSeenTier";
@@ -71,12 +72,33 @@ export function LevelUpConfetti({ lifetimePoints }: { lifetimePoints: number }) 
       )}
       {showToast && (
         <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-4 rounded-xl border border-[#D4AF37]/40 bg-zinc-900/95 backdrop-blur-md shadow-[0_0_24px_rgba(212,175,55,0.2)] transition-all duration-500"
+          className="fixed top-4 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-top-4 duration-300"
           role="alert"
+          aria-live="polite"
         >
-          <p className="text-center text-[#D4AF37] font-bold text-lg">
-            Congratulations! You reached a new Lifetime Tier!
-          </p>
+          <div className="relative rounded-2xl border border-yellow-500/30 bg-black/80 px-5 py-4 pr-8 shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setShowToast(false)}
+              className="absolute top-3 right-3 cursor-pointer text-gray-400 transition-colors hover:text-white"
+              aria-label="Dismiss"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-500/20">
+                <Trophy className="h-5 w-5 text-amber-400" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1 pt-0.5 pr-2">
+                <p className="bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-200 bg-clip-text font-bold text-base text-transparent">
+                  Congratulations! You reached a new Lifetime Tier!
+                </p>
+                <p className="mt-1 text-sm text-gray-300">
+                  Keep earning points to unlock even greater rewards.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>

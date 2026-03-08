@@ -15,6 +15,7 @@ import {
   Ban,
   Trash2,
   CalendarClock,
+  CheckCircle,
 } from "lucide-react";
 import {
   updateBookingStatus,
@@ -30,16 +31,14 @@ interface ProfileData {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
-  email: string | null;
 }
 interface ServiceData {
   name: string | null;
 }
 interface VehicleData {
+  year: number | null;
   make: string | null;
   model: string | null;
-  year: number | null;
-  size: string | null;
 }
 
 export interface BookingRow {
@@ -244,7 +243,6 @@ export function BookingsTable({
     return (
       `${p?.first_name ?? ""} ${p?.last_name ?? ""}`.toLowerCase().includes(q) ||
       (p?.phone ?? "").includes(q) ||
-      (p?.email ?? "").toLowerCase().includes(q) ||
       (s?.name ?? "").toLowerCase().includes(q) ||
       b.booking_date.includes(q) ||
       (b.status ?? "").includes(q)
@@ -680,7 +678,7 @@ export function BookingsTable({
                           {profile?.last_name ?? ""}
                         </p>
                         <p className="text-[10px] text-zinc-600 mt-0.5">
-                          {profile?.phone ?? profile?.email ?? "—"}
+                          {profile?.phone ?? "—"}
                         </p>
                       </td>
 
@@ -690,7 +688,6 @@ export function BookingsTable({
                         {vehicle && (
                           <p className="text-[10px] text-zinc-600 mt-1.5 capitalize">
                             {vehicle.year} {vehicle.make} {vehicle.model}
-                            {vehicle.size ? ` · ${vehicle.size}` : ""}
                           </p>
                         )}
                       </td>
@@ -845,14 +842,15 @@ export function BookingsTable({
         </div>
       </div>
 
-      {/* Toast notifications */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+      {/* Toast notifications — premium glassmorphism */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="bg-zinc-900 border border-white/[0.08] rounded-xl px-4 py-3 text-xs text-zinc-200 shadow-2xl animate-in fade-in slide-in-from-bottom-2"
+            className="flex items-center gap-3 rounded-2xl border border-yellow-500/30 bg-black/80 px-4 py-3 shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-300"
           >
-            {t.msg}
+            <CheckCircle className="h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+            <p className="text-sm text-gray-300">{t.msg}</p>
           </div>
         ))}
       </div>

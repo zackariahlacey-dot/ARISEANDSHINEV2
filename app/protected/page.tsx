@@ -183,7 +183,7 @@ async function Dashboard() {
               <li className="flex items-start gap-2">
                 <Star size={11} className="text-[#D4AF37] shrink-0 mt-0.5" />
                 <span>
-                  Tier Members (Silver/Gold/Platinum): Redeem up to 500 pts ($50 off) in addition to your lifetime % discount.
+                  Tier Members (Silver/Gold/Diamond): Redeem up to 500 pts ($50 off) in addition to your lifetime % discount.
                 </span>
               </li>
             </ul>

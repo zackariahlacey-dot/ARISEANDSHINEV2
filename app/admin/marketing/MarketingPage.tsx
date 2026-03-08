@@ -427,7 +427,7 @@ function EmailBlastComposer({ recipientCount }: { recipientCount: number }) {
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="e.g. Fall Special — 15% Off This Weekend Only!"
+            placeholder="e.g. Hi {firstname}, 15% off this weekend only!"
             className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/40 transition-all"
           />
         </div>
@@ -437,11 +437,14 @@ function EmailBlastComposer({ recipientCount }: { recipientCount: number }) {
           <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">
             Email Body
           </label>
+          <p className="text-[10px] text-zinc-500 mb-2">
+            Use personalization tags: <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{firstname}"}</code>, <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{lastname}"}</code>, <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{points}"}</code> — they are replaced per recipient (e.g. first name, last name, loyalty points).
+          </p>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={10}
-            placeholder={`Hi there,\n\nWe're running a special this weekend — book any detail and save 15% with code FALL15 at checkout.\n\nSpots are limited, so grab yours before they're gone.\n\nThanks for being a valued Arise And Shine VT customer!\n\n— Zack`}
+            placeholder="Hi {firstname}, you have {points} loyalty points waiting to be used!"
             className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/40 transition-all resize-none leading-relaxed"
           />
           <p className="text-[10px] text-zinc-600 mt-1.5">

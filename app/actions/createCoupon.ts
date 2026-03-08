@@ -36,7 +36,7 @@ export async function createCoupon(
       payload.discountType === "amount" ? payload.discountValue : null,
     discount_percentage:
       payload.discountType === "percentage" ? payload.discountValue : null,
-    is_active: payload.isActive,
+    is_active: payload.isActive ?? true,
   };
 
   const { data, error } = await supabase

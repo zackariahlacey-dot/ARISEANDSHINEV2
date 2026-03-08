@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -38,14 +38,14 @@ import {
 } from "@/lib/vehicleDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
-import {
-  calculateLifetimeTier,
-  getMaxRedeemPoints,
-} from "@/lib/calculateLifetimeTier";
+import { calculateLifetimeTier } from "@/lib/calculateLifetimeTier";
 import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
+import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 
-const POINTS_PER_DOLLAR = 10; // 10 points = $1 off
+/** 10 reward points = 1% discount. Max total discount (tier + points) is 40%. */
+const POINTS_PER_PERCENT = 10;
+const MAX_TOTAL_DISCOUNT_PERCENT = 40;
 const MAINTENANCE_SETUP_FEE = 100;
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -91,11 +91,11 @@ const SERVICE_DURATIONS: Record<string, number> = {
 };
 
 const WORKDAY_START = "8:00 AM";
-const WORKDAY_END = "6:00 PM"; // closing — slot start + duration must not exceed this
+const WORKDAY_END = "6:00 PM";
 const SLOT_INTERVAL_MIN = 30;
 
-// All possible slot labels 8:00 AM–5:00 PM in 30-min increments (period for UI)
-function buildAllSlots(): { time: string; period: string }[] {
+// Fallback slots when no operating_hours (8:00 AM–5:30 PM, 30-min increments)
+function buildFallbackSlots(): { time: string; period: string }[] {
   const slots: { time: string; period: string }[] = [];
   for (let h = 8; h <= 17; h++) {
     for (const m of [0, 30]) {
@@ -112,7 +112,7 @@ function buildAllSlots(): { time: string; period: string }[] {
   }
   return slots;
 }
-const ALL_SLOTS = buildAllSlots();
+const FALLBACK_SLOTS = buildFallbackSlots();
 
 const STEPS = [
   { num: 1, label: "Vehicle", icon: Car },
@@ -158,6 +158,30 @@ function timeToMinutes(t: string): number {
   return 0;
 }
 
+/** Build slots from start/end time strings (HH:MM or HH:MM:SS). Interval 30 min. */
+function buildSlotsFromHours(
+  startTime: string,
+  endTime: string
+): { time: string; period: string }[] {
+  const startMin = timeToMinutes(startTime);
+  let endMin = timeToMinutes(endTime);
+  if (endMin <= startMin) endMin = startMin + 60 * 12;
+  const slots: { time: string; period: string }[] = [];
+  for (let m = startMin; m < endMin; m += SLOT_INTERVAL_MIN) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    const isPM = h >= 12;
+    const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    const period =
+      h < 12 ? "Morning" : h < 15 ? "Afternoon" : "Late Afternoon";
+    slots.push({
+      time: `${displayH}:${min === 0 ? "00" : "30"} ${isPM ? "PM" : "AM"}`,
+      period,
+    });
+  }
+  return slots;
+}
+
 const WORKDAY_END_MIN = timeToMinutes("6:00 PM"); // 1080
 
 function getDurationForService(serviceName: string): number {
@@ -168,7 +192,8 @@ function getDurationForService(serviceName: string): number {
 function getAvailableSlots(
   serviceName: string,
   existingBookings: BookingOnDate[] | null,
-  allSlots: { time: string; period: string }[]
+  allSlots: { time: string; period: string }[],
+  closingMinutes: number = WORKDAY_END_MIN
 ): { time: string; period: string }[] {
   const duration = getDurationForService(serviceName);
   const bookedBlocks = (existingBookings ?? []).map((b) => {
@@ -180,7 +205,7 @@ function getAvailableSlots(
   return allSlots.filter((slot) => {
     const start = timeToMinutes(slot.time);
     const end = start + duration;
-    if (end > WORKDAY_END_MIN) return false;
+    if (end > closingMinutes) return false;
     const overlaps = bookedBlocks.some(
       (b) => start < b.end && end > b.start
     );
@@ -397,6 +422,34 @@ export interface BookingSuccessData {
   phone?: string;
 }
 
+/** Persisted draft for restoring after Stripe checkout cancel */
+export interface DraftBooking {
+  serviceId: string;
+  vehicleSize: VehicleSizeSlug;
+  vehicleYear: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  selectedDate: string;
+  selectedTime: string;
+  serviceAddress: string;
+  name: string;
+  phone: string;
+  email: string;
+  notes: string;
+  travelFee: number;
+  distanceMiles: number | null;
+  couponCode: string;
+  appliedCoupon: {
+    couponId: string;
+    code: string;
+    discountAmount: number | null;
+    discountPercentage: number | null;
+  } | null;
+  pointsToRedeemInput: number;
+}
+
+const DRAFT_STORAGE_KEY = "draftBooking";
+
 export interface BookingSectionProps {
   /** When true, the section is expanded (accordion open). */
   isVisible: boolean;
@@ -408,8 +461,12 @@ export interface BookingSectionProps {
   onBookingSuccess?: (data: BookingSuccessData) => void;
   /** Initial reward points (e.g. from auth) for display until phone-based balance is fetched */
   initialRewardPoints?: number | null;
-  /** Initial lifetime points for tier (max redeem cap: 500 for Silver/Gold/Platinum, 1000 for Member/Bronze) */
+  /** Initial lifetime points for tier (max redeem cap: 500 for Silver/Gold/Diamond, 1000 for Member/Bronze) */
   initialLifetimePoints?: number | null;
+  /** Restore form from this draft (e.g. after Stripe cancel); applied once when visible */
+  initialDraft?: DraftBooking | null;
+  /** Called after draft has been applied so parent can clear initialDraft */
+  onDraftRestored?: () => void;
 }
 
 export function BookingSection({
@@ -421,6 +478,8 @@ export function BookingSection({
   onBookingSuccess,
   initialRewardPoints = null,
   initialLifetimePoints = null,
+  initialDraft = null,
+  onDraftRestored,
 }: BookingSectionProps) {
   const router = useRouter();
   const bookingRef = useRef<HTMLDivElement>(null);
@@ -443,6 +502,9 @@ export function BookingSection({
     BookingOnDate[] | null
   >(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  // Availability from Supabase (operating_hours + blocked_dates)
+  const [operatingHours, setOperatingHours] = useState<OperatingHour[]>([]);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
 
   // Step 3 — Contact & Location
   const [serviceAddress, setServiceAddress] = useState("");
@@ -525,21 +587,29 @@ export function BookingSection({
   const totalWithTravel =
     servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee;
   const availablePoints = rewardPoints ?? 0;
-  const tier = calculateLifetimeTier(lifetimePoints).tier;
-  const maxRedeemByTier = getMaxRedeemPoints(tier);
-  const maxRedeemablePoints = Math.min(
-    availablePoints,
-    maxRedeemByTier,
-    Math.floor(totalWithTravel * POINTS_PER_DOLLAR)
-  );
-  const pointsToRedeem = Math.min(pointsToRedeemInput, maxRedeemablePoints);
-  const rewardsDiscount = pointsToRedeem / POINTS_PER_DOLLAR;
-  const totalAfterDiscount = Math.max(0, totalWithTravel - rewardsDiscount);
+  const { tier: tierName, discount: currentTierDiscount } = calculateLifetimeTier(lifetimePoints);
+  const maxPointsAllowed = Math.max(0, (MAX_TOTAL_DISCOUNT_PERCENT - currentTierDiscount) * POINTS_PER_PERCENT);
+  const redeemablePoints = Math.min(maxPointsAllowed, availablePoints);
+  const pointsToRedeem = Math.min(Math.max(0, pointsToRedeemInput), redeemablePoints);
+  const pointsDiscountPercent = pointsToRedeem / POINTS_PER_PERCENT;
+  const totalDiscountPercent = Math.min(MAX_TOTAL_DISCOUNT_PERCENT, currentTierDiscount + pointsDiscountPercent);
+  const tierDiscountAmount = Math.round(totalWithTravel * (currentTierDiscount / 100) * 100) / 100;
+  const pointsDiscountAmount = Math.round(totalWithTravel * (pointsDiscountPercent / 100) * 100) / 100;
+  const totalAfterDiscount = Math.max(0, totalWithTravel - tierDiscountAmount - pointsDiscountAmount);
 
   // Initialise today string client-side (avoids Next.js Cache Components error)
   useEffect(() => {
     setTodayStr(new Date().toISOString().split("T")[0]);
   }, []);
+
+  // Fetch operating_hours and blocked_dates when booking section is visible
+  useEffect(() => {
+    if (!isVisible) return;
+    getAvailability().then(({ operatingHours: hours, blockedDates: blocked }) => {
+      setOperatingHours(hours);
+      setBlockedDates(blocked);
+    });
+  }, [isVisible]);
 
   // Use initial reward and lifetime points when modal opens; fetch by phone when on step 3 and phone entered
   useEffect(() => {
@@ -559,12 +629,12 @@ export function BookingSection({
     return () => clearTimeout(t);
   }, [isVisible, step, phone]);
 
-  // Clamp points-to-redeem input when max redeemable drops (e.g. service/travel change)
+  // Clamp points-to-redeem input when redeemable limit drops (e.g. service/travel change)
   useEffect(() => {
-    if (pointsToRedeemInput > maxRedeemablePoints) {
-      setPointsToRedeemInput(maxRedeemablePoints);
+    if (pointsToRedeemInput > redeemablePoints) {
+      setPointsToRedeemInput(redeemablePoints);
     }
-  }, [maxRedeemablePoints]);
+  }, [redeemablePoints]);
 
   // Fetch referral eligibility once when the modal opens
   useEffect(() => {
@@ -625,6 +695,39 @@ export function BookingSection({
       setStepDirection(1);
     }
   }, [isVisible]);
+
+  const appliedDraftRef = useRef(false);
+  useEffect(() => {
+    if (!initialDraft) {
+      appliedDraftRef.current = false;
+      return;
+    }
+    if (!isVisible || appliedDraftRef.current) return;
+    const service = services.find((s) => s.id === initialDraft!.serviceId);
+    if (service) {
+      onSelectService(service);
+    }
+    setVehicleSize(initialDraft.vehicleSize);
+    setVehicleYear(initialDraft.vehicleYear);
+    setVehicleMake(initialDraft.vehicleMake);
+    setVehicleModel(initialDraft.vehicleModel);
+    setSelectedDate(initialDraft.selectedDate);
+    setSelectedTime(initialDraft.selectedTime);
+    setServiceAddress(initialDraft.serviceAddress);
+    setName(initialDraft.name);
+    setPhone(initialDraft.phone);
+    setEmail(initialDraft.email);
+    setNotes(initialDraft.notes);
+    setTravelFee(initialDraft.travelFee);
+    setDistanceMiles(initialDraft.distanceMiles);
+    setCouponCode(initialDraft.couponCode);
+    setAppliedCoupon(initialDraft.appliedCoupon);
+    setPointsToRedeemInput(initialDraft.pointsToRedeemInput);
+    setStep(3);
+    setStepDirection(1);
+    appliedDraftRef.current = true;
+    onDraftRestored?.();
+  }, [isVisible, initialDraft, services, onSelectService, onDraftRestored]);
 
   // Apple-level smooth scroll after dropdown opens: short delay so height expansion has started
   useEffect(() => {
@@ -721,13 +824,71 @@ export function BookingSection({
     return () => clearTimeout(timer);
   }, [serviceAddress]);
 
-  // ── Available slots for selected date + service (no double-book, end-by 6 PM) ─
+  // ── Resolve operating hours for a date: month override first, then default (month null) ─
+  const { defaultByDay, overrideByMonthDay } = useMemo(() => {
+    const defaultByDay = new Map<number, OperatingHour>();
+    const overrideByMonthDay = new Map<string, OperatingHour>();
+    operatingHours.forEach((h) => {
+      if (h.month == null) defaultByDay.set(h.day_of_week, h);
+      else overrideByMonthDay.set(`${h.month}-${h.day_of_week}`, h);
+    });
+    return { defaultByDay, overrideByMonthDay };
+  }, [operatingHours]);
+
+  const getResolvedForDate = useCallback(
+    (dateStr: string): OperatingHour | null => {
+      if (!dateStr || dateStr.length < 10) return null;
+      const d = new Date(dateStr + "T12:00:00");
+      const selectedMonth = d.getMonth() + 1;
+      const selectedDay = d.getDay();
+      const override = overrideByMonthDay.get(`${selectedMonth}-${selectedDay}`);
+      if (override) return override;
+      const defaultRow = defaultByDay.get(selectedDay);
+      return defaultRow ?? null;
+    },
+    [defaultByDay, overrideByMonthDay]
+  );
+
+  const isDateDisabled = useCallback(
+    (dateStr: string): boolean => {
+      if (!dateStr || dateStr.length < 10) return true;
+      if (blockedDates.includes(dateStr)) return true;
+      if (operatingHours.length === 0) {
+        const day = new Date(dateStr + "T12:00:00").getDay();
+        return day === 0 || day === 6;
+      }
+      const row = getResolvedForDate(dateStr);
+      return row?.isClosed ?? true;
+    },
+    [blockedDates, operatingHours.length, getResolvedForDate]
+  );
+
+  const { slotsForSelectedDate, closingMinutesForSelectedDate } = useMemo(() => {
+    if (!selectedDate) {
+      return { slotsForSelectedDate: FALLBACK_SLOTS, closingMinutesForSelectedDate: WORKDAY_END_MIN };
+    }
+    if (operatingHours.length === 0) {
+      return { slotsForSelectedDate: FALLBACK_SLOTS, closingMinutesForSelectedDate: WORKDAY_END_MIN };
+    }
+    const row = getResolvedForDate(selectedDate);
+    if (!row || row.isClosed) {
+      return { slotsForSelectedDate: [], closingMinutesForSelectedDate: WORKDAY_END_MIN };
+    }
+    const start = row.start_time?.trim() || "08:00";
+    const end = row.end_time?.trim() || "18:00";
+    const slots = buildSlotsFromHours(start, end);
+    const closingMin = timeToMinutes(end);
+    return { slotsForSelectedDate: slots, closingMinutesForSelectedDate: closingMin };
+  }, [selectedDate, operatingHours.length, getResolvedForDate]);
+
+  // ── Available slots for selected date + service (no double-book, respect closing) ─
   const availableSlots =
     selectedService && selectedDate
       ? getAvailableSlots(
           selectedService.name,
           existingBookingsForDate,
-          ALL_SLOTS
+          slotsForSelectedDate,
+          closingMinutesForSelectedDate
         )
       : [];
 
@@ -742,12 +903,13 @@ export function BookingSection({
     const available = getAvailableSlots(
       selectedService?.name ?? "",
       existingBookingsForDate,
-      ALL_SLOTS
+      slotsForSelectedDate,
+      closingMinutesForSelectedDate
     );
     if (available.length > 0 && !available.some((s) => s.time === selectedTime)) {
       setSelectedTime("");
     }
-  }, [selectedDate, existingBookingsForDate, selectedService?.name, selectedTime]);
+  }, [selectedDate, existingBookingsForDate, selectedService?.name, selectedTime, slotsForSelectedDate, closingMinutesForSelectedDate]);
 
   // Auto-deselect if the chosen time has passed (e.g. user had a time, then switched calendar to today)
   useEffect(() => {
@@ -764,7 +926,7 @@ export function BookingSection({
       return !!(
         selectedDate &&
         selectedTime &&
-        !isWeekend(selectedDate)
+        !isDateDisabled(selectedDate)
       );
     return false;
   };
@@ -855,6 +1017,28 @@ export function BookingSection({
     setBookingResult(null);
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const draft: DraftBooking = {
+        serviceId: selectedService.id,
+        vehicleSize: vehicleSize as VehicleSizeSlug,
+        vehicleYear,
+        vehicleMake,
+        vehicleModel,
+        selectedDate,
+        selectedTime,
+        serviceAddress,
+        name,
+        phone,
+        email,
+        notes,
+        travelFee,
+        distanceMiles,
+        couponCode,
+        appliedCoupon,
+        pointsToRedeemInput,
+      };
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      }
       const result = await bookDetailing({
         ...buildPayload(),
         paymentMethod: "pay_now",
@@ -1322,9 +1506,9 @@ export function BookingSection({
                         value={selectedDate}
                         onChange={(e) => {
                           const value = e.target.value;
-                          if (isWeekend(value)) {
+                          if (isDateDisabled(value)) {
                             setWeekendDateError(
-                              "Weekends are not available. Please select a weekday (Monday–Friday)."
+                              "This date is not available for booking. Choose another day."
                             );
                             return;
                           }
@@ -1339,7 +1523,7 @@ export function BookingSection({
                         } text-white`}
                       />
                       <p className="text-zinc-500 text-xs mt-1.5">
-                        Monday–Friday only. Weekends are not available for booking.
+                        Dates are based on our current schedule. Blocked and closed days cannot be selected.
                       </p>
                       {weekendDateError && (
                         <p className="text-amber-400 text-sm mt-1.5 font-medium" role="alert">
@@ -1500,16 +1684,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               </div>
                             )}
                             {renderCouponUI()}
-                            {rewardPoints != null && availablePoints > 0 && maxRedeemablePoints > 0 && (
+                            {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
                               <div className="pt-3 space-y-2">
                                 <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                                  Use Points (Max {maxRedeemByTier}) — 10 pts = $1 off
+                                  Redeem Reward Points
                                 </label>
                                 <div className="flex items-center gap-3">
                                   <input
                                     type="range"
                                     min={0}
-                                    max={maxRedeemablePoints}
+                                    max={redeemablePoints}
                                     step={10}
                                     value={pointsToRedeemInput}
                                     onChange={(e) => setPointsToRedeemInput(Number(e.target.value))}
@@ -1520,20 +1704,34 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-zinc-500">
-                                  Available: {availablePoints} pts · up to ${(maxRedeemablePoints / POINTS_PER_DOLLAR).toFixed(2)} off
+                                  You have {availablePoints} points. You can redeem up to {redeemablePoints} points for an additional {redeemablePoints / POINTS_PER_PERCENT}% off.
                                 </p>
                               </div>
                             )}
-                            {rewardsDiscount > 0 && (
-                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                <span>Rewards Discount</span>
-                                <span className="font-semibold">−${rewardsDiscount.toFixed(2)}</span>
-                              </div>
+                            {(currentTierDiscount > 0 || pointsToRedeem > 0) && (
+                              <>
+                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
+                                  <span className="text-zinc-400">Base price</span>
+                                  <span className="font-semibold text-white">${totalWithTravel.toFixed(2)}</span>
+                                </div>
+                                {currentTierDiscount > 0 && (
+                                  <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
+                                    <span>Tier discount ({tierName}, {currentTierDiscount}%)</span>
+                                    <span className="font-semibold">−${tierDiscountAmount.toFixed(2)}</span>
+                                  </div>
+                                )}
+                                {pointsToRedeem > 0 && (
+                                  <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
+                                    <span>Points applied ({pointsDiscountPercent}%)</span>
+                                    <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                           <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                             <span className="font-bold text-zinc-300">
-                              {pointsToRedeem > 0 ? "New Total" : "Total Due Today"}
+                              {currentTierDiscount > 0 || pointsToRedeem > 0 ? "Final total" : "Total Due Today"}
                             </span>
                             <span className="text-xl font-black text-white tabular-nums">
                               {computedPrice !== null ? `$${totalAfterDiscount.toFixed(2)}` : "—"}
@@ -1600,16 +1798,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             </div>
                           )}
                           {renderCouponUI()}
-                          {rewardPoints != null && availablePoints > 0 && maxRedeemablePoints > 0 && (
+                          {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
                             <div className="pt-3 space-y-2">
                               <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                                Use Points (Max {maxRedeemByTier}) — 10 pts = $1 off
+                                Redeem Reward Points
                               </label>
                               <div className="flex items-center gap-3">
                                 <input
                                   type="range"
                                   min={0}
-                                  max={maxRedeemablePoints}
+                                  max={redeemablePoints}
                                   step={10}
                                   value={pointsToRedeemInput}
                                   onChange={(e) => setPointsToRedeemInput(Number(e.target.value))}
@@ -1620,20 +1818,34 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </span>
                               </div>
                               <p className="text-[11px] text-zinc-500">
-                                Available: {availablePoints} pts · up to ${(maxRedeemablePoints / POINTS_PER_DOLLAR).toFixed(2)} off
+                                You have {availablePoints} points. You can redeem up to {redeemablePoints} points for an additional {redeemablePoints / POINTS_PER_PERCENT}% off.
                               </p>
                             </div>
                           )}
-                          {rewardsDiscount > 0 && (
-                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                              <span>Rewards Discount</span>
-                              <span className="font-semibold">−${rewardsDiscount.toFixed(2)}</span>
-                            </div>
+                          {(currentTierDiscount > 0 || pointsToRedeem > 0) && (
+                            <>
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
+                                <span className="text-zinc-400">Base price</span>
+                                <span className="font-semibold text-white">${totalWithTravel.toFixed(2)}</span>
+                              </div>
+                              {currentTierDiscount > 0 && (
+                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
+                                  <span>Tier discount ({tierName}, {currentTierDiscount}%)</span>
+                                  <span className="font-semibold">−${tierDiscountAmount.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {pointsToRedeem > 0 && (
+                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
+                                  <span>Points applied ({pointsDiscountPercent}%)</span>
+                                  <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                         <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                           <span className="font-bold text-zinc-300">
-                            {pointsToRedeem > 0 ? "New Total" : "Total"}
+                            {currentTierDiscount > 0 || pointsToRedeem > 0 ? "Final total" : "Total"}
                           </span>
                           <span className="text-xl font-black text-white tabular-nums">
                             {computedPrice !== null

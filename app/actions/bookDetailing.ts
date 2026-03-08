@@ -152,8 +152,10 @@ export async function bookDetailing(
     }
   }
 
-  // ── 1b. Redeem: verify and deduct points from booking profile ───────────
-  if (payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
+  const isPayNow = payload.paymentMethod === "pay_now";
+
+  // ── 1b. Redeem points (Pay at Arrival only; Pay Now redeems in webhook after payment) ───────────
+  if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
     const { data: profileRow } = await supabase
       .from("profiles")
       .select("reward_points")
@@ -192,82 +194,32 @@ export async function bookDetailing(
     };
   }
 
-  const isPayNow = payload.paymentMethod === "pay_now";
-  const bookingStatus = isPayNow ? "pending" : "confirmed";
   const paymentNote = isPayNow
     ? "💳 Payment: Pay Now (Stripe)"
     : "💳 Payment: Pay at Arrival";
+  const notesBody = [
+    paymentNote,
+    payload.serviceAddress
+      ? `📍 Service Location: ${payload.serviceAddress}`
+      : null,
+    payload.travelFee != null && payload.travelFee > 0
+      ? `🚗 Travel Fee: $${payload.travelFee.toFixed(2)}`
+      : null,
+    payload.setupFee != null && payload.setupFee > 0
+      ? `🧹 One-time Setup & Reset: $${payload.setupFee.toFixed(2)}`
+      : null,
+    payload.pointsToRedeem != null && payload.pointsToRedeem > 0
+      ? `🎁 Redeemed ${payload.pointsToRedeem} pts for ${payload.pointsToRedeem / 10}% off`
+      : null,
+    payload.couponDiscount != null && payload.couponDiscount > 0
+      ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
+      : null,
+    payload.notes || null,
+  ]
+    .filter(Boolean)
+    .join("\n\n") || null;
 
-  // ── 3. Insert booking ──────────────────────────────────────────────────
-  const { data: booking, error: bookingErr } = await supabase
-    .from("bookings")
-    .insert({
-      user_id: profileId,
-      vehicle_id: vehicle.id,
-      service_id: payload.serviceId,
-      booking_date: payload.bookingDate,
-      booking_time: to24h(payload.bookingTime),
-      status: bookingStatus,
-      total_price: payload.totalPrice,
-      notes: [
-        paymentNote,
-        payload.serviceAddress
-          ? `📍 Service Location: ${payload.serviceAddress}`
-          : null,
-        payload.travelFee != null && payload.travelFee > 0
-          ? `🚗 Travel Fee: $${payload.travelFee.toFixed(2)}`
-          : null,
-        payload.setupFee != null && payload.setupFee > 0
-          ? `🧹 One-time Setup & Reset: $${payload.setupFee.toFixed(2)}`
-          : null,
-        payload.pointsToRedeem != null && payload.pointsToRedeem > 0
-          ? `🎁 Redeemed ${payload.pointsToRedeem} pts for $${(payload.pointsToRedeem / 10).toFixed(2)} off`
-          : null,
-        payload.couponDiscount != null && payload.couponDiscount > 0
-          ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
-          : null,
-        payload.notes || null,
-      ]
-        .filter(Boolean)
-        .join("\n\n") || null,
-      ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
-    })
-    .select("id")
-    .single();
-
-  if (bookingErr || !booking) {
-    console.error("[bookDetailing] booking insert:", bookingErr);
-    return {
-      success: false,
-      error: "Could not finalize your booking. Please try again.",
-    };
-  }
-
-  // ── 3b. Earn: add 1 point per $1 spent on service (excluding travel); update both reward_points and lifetime_points ─────
-  const serviceSubtotal =
-    payload.totalPrice +
-    (payload.pointsToRedeem ?? 0) / 10 -
-    (payload.travelFee ?? 0);
-  const earnedPoints = Math.floor(Math.max(0, serviceSubtotal));
-  if (earnedPoints > 0 && !isPayNow) {
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("reward_points, lifetime_points")
-      .eq("id", profileId)
-      .single();
-    if (prof && typeof prof.reward_points === "number") {
-      const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
-      await supabase
-        .from("profiles")
-        .update({
-          reward_points: prof.reward_points + earnedPoints,
-          lifetime_points: currentLifetime + earnedPoints,
-        })
-        .eq("id", profileId);
-    }
-  }
-
-  // ── 4a. Pay Now: create Stripe Checkout Session and return URL ─────────
+  // ── Pay Now: create Stripe session with full booking payload in metadata; no DB booking yet ───
   if (isPayNow) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) {
@@ -294,23 +246,26 @@ export async function bookDetailing(
         ],
         customer_email: payload.email || undefined,
         metadata: {
-          bookingId: booking.id,
+          profileId,
+          vehicleId: vehicle.id,
           serviceId: payload.serviceId,
-          serviceName: payload.serviceName.slice(0, 499),
+          bookingDate: payload.bookingDate,
+          bookingTime: to24h(payload.bookingTime),
           totalPrice: String(payload.totalPrice),
+          notes: notesBody.slice(0, 500),
+          serviceName: payload.serviceName.slice(0, 499),
           vehicleSize: payload.vehicleSize,
           vehicleYear: payload.vehicleYear,
           vehicleMake: payload.vehicleMake.slice(0, 100),
           vehicleModel: payload.vehicleModel.slice(0, 100),
-          bookingDate: payload.bookingDate,
-          bookingTime: payload.bookingTime,
           serviceAddress: (payload.serviceAddress ?? "").slice(0, 499),
           customerName: payload.name.slice(0, 200),
           customerPhone: phoneDigits,
           customerEmail: payload.email.slice(0, 200),
-          notes: (payload.notes ?? "").slice(0, 499),
+          ...(payload.couponId ? { couponId: payload.couponId } : {}),
           ...(payload.pointsToRedeem != null && payload.pointsToRedeem > 0 && { pointsToRedeem: String(payload.pointsToRedeem) }),
           ...(payload.travelFee != null && payload.travelFee > 0 && { travelFee: String(payload.travelFee) }),
+          ...(payload.setupFee != null && payload.setupFee > 0 && { setupFee: String(payload.setupFee) }),
           ...(payload.isApplyingReferralDiscount && user && {
             isApplyingReferralDiscount: "true",
             authUserId: user,
@@ -322,7 +277,7 @@ export async function bookDetailing(
       });
       return {
         success: true,
-        bookingId: booking.id,
+        bookingId: "", // No booking until webhook confirms payment
         checkoutUrl: session.url ?? undefined,
       };
     } catch (stripeErr) {
@@ -331,6 +286,55 @@ export async function bookDetailing(
         success: false,
         error: stripeErr instanceof Error ? stripeErr.message : "Could not start checkout. Please try Pay at Arrival.",
       };
+    }
+  }
+
+  // ── 3. Insert booking (Pay at Arrival only) ─────────────────────────────
+  const { data: booking, error: bookingErr } = await supabase
+    .from("bookings")
+    .insert({
+      user_id: profileId,
+      vehicle_id: vehicle.id,
+      service_id: payload.serviceId,
+      booking_date: payload.bookingDate,
+      booking_time: to24h(payload.bookingTime),
+      status: "confirmed",
+      total_price: payload.totalPrice,
+      notes: notesBody,
+      ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
+    })
+    .select("id")
+    .single();
+
+  if (bookingErr || !booking) {
+    console.error("[bookDetailing] booking insert:", bookingErr);
+    return {
+      success: false,
+      error: "Could not finalize your booking. Please try again.",
+    };
+  }
+
+  // ── 3b. Earn: add 1 point per $1 spent on service (Pay at Arrival only) ─────
+  const serviceSubtotal =
+    payload.totalPrice +
+    (payload.pointsToRedeem ?? 0) / 10 -
+    (payload.travelFee ?? 0);
+  const earnedPoints = Math.floor(Math.max(0, serviceSubtotal));
+  if (earnedPoints > 0) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("reward_points, lifetime_points")
+      .eq("id", profileId)
+      .single();
+    if (prof && typeof prof.reward_points === "number") {
+      const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
+      await supabase
+        .from("profiles")
+        .update({
+          reward_points: prof.reward_points + earnedPoints,
+          lifetime_points: currentLifetime + earnedPoints,
+        })
+        .eq("id", profileId);
     }
   }
 

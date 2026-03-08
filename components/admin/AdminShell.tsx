@@ -6,9 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
+  CalendarClock,
   Users,
   Megaphone,
   DollarSign,
+  Package,
   Menu,
   X,
   Plus,
@@ -29,6 +31,18 @@ const NAV_ITEMS = [
     label: "Bookings",
     icon: CalendarDays,
     description: "Schedule & manage",
+  },
+  {
+    href: "/admin/schedule",
+    label: "Schedule",
+    icon: CalendarClock,
+    description: "Hours & blocked dates",
+  },
+  {
+    href: "/admin/services",
+    label: "Services",
+    icon: Package,
+    description: "Pricing & packages",
   },
   {
     href: "/admin/customers",

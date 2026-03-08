@@ -1,6 +1,12 @@
+/**
+ * Stripe webhook: checkout.session.completed.
+ * Inserts the booking only after payment is confirmed (no ghost bookings).
+ * Requires bookings.stripe_checkout_session_id (TEXT UNIQUE) for idempotency:
+ *   ALTER TABLE bookings ADD COLUMN stripe_checkout_session_id TEXT UNIQUE;
+ */
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmails } from "@/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -31,53 +37,93 @@ export async function POST(req: NextRequest) {
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
-    const bookingId = session.metadata?.bookingId;
-    if (!bookingId) {
-      console.error("[webhooks/stripe] No bookingId in session metadata");
-      return NextResponse.json({ error: "Missing bookingId" }, { status: 400 });
+    if (session.payment_status !== "paid") {
+      return NextResponse.json({ received: true });
     }
 
-    const supabase = await createClient();
-    const { error: updateErr } = await supabase
+    const m = session.metadata;
+    if (!m?.profileId || !m?.vehicleId || !m?.serviceId || !m?.bookingDate || !m?.bookingTime) {
+      console.error("[webhooks/stripe] Missing required metadata (profileId, vehicleId, serviceId, bookingDate, bookingTime)");
+      return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    // Idempotency: if we already fulfilled this session, skip (prevents double-insert on webhook retry)
+    const { data: existing } = await supabase
       .from("bookings")
-      .update({ status: "confirmed" })
-      .eq("id", bookingId);
+      .select("id")
+      .eq("stripe_checkout_session_id", session.id)
+      .maybeSingle();
 
-    if (updateErr) {
-      console.error("[webhooks/stripe] Booking update failed:", updateErr);
-      return NextResponse.json({ error: "Booking update failed" }, { status: 500 });
+    if (existing) {
+      return NextResponse.json({ received: true });
     }
 
-    const m = session.metadata!;
+    // Insert booking only after successful payment
+    const { data: booking, error: insertErr } = await supabase
+      .from("bookings")
+      .insert({
+        user_id: m.profileId,
+        vehicle_id: m.vehicleId,
+        service_id: m.serviceId,
+        booking_date: m.bookingDate,
+        booking_time: m.bookingTime,
+        status: "confirmed",
+        total_price: Number(m.totalPrice) || 0,
+        notes: m.notes ?? null,
+        ...(m.couponId ? { coupon_id: m.couponId } : {}),
+        stripe_checkout_session_id: session.id,
+      })
+      .select("id")
+      .single();
+
+    if (insertErr || !booking) {
+      console.error("[webhooks/stripe] Booking insert failed:", insertErr);
+      return NextResponse.json({ error: "Booking insert failed" }, { status: 500 });
+    }
+
+    const bookingId = booking.id;
     const totalPrice = Number(m.totalPrice) || 0;
     const pointsToRedeem = Number(m.pointsToRedeem) || 0;
-    const travelFee = Number(m.travelFee) || 0;
-    const serviceSubtotal = totalPrice + pointsToRedeem / 10 - travelFee;
-    const earnedPoints = Math.floor(Math.max(0, serviceSubtotal));
+    // Earn 1 pt per $1 of final amount paid (totalPrice already has tier + points discount applied)
+    const earnedPoints = Math.floor(Math.max(0, totalPrice));
 
-    // Add earned points to booking profile (1 pt per $1 on service, excluding travel)
-    if (earnedPoints > 0) {
-      const { data: bookingRow } = await supabase
-        .from("bookings")
-        .select("user_id")
-        .eq("id", bookingId)
+    // Deduct redeemed points (deferred from Pay Now flow until after payment)
+    if (pointsToRedeem > 0) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("reward_points")
+        .eq("id", m.profileId)
         .single();
-      if (bookingRow?.user_id) {
-        const { data: prof } = await supabase
+      if (prof && typeof prof.reward_points === "number" && prof.reward_points >= pointsToRedeem) {
+        await supabase
           .from("profiles")
-          .select("reward_points")
-          .eq("id", bookingRow.user_id)
-          .single();
-        if (prof && typeof prof.reward_points === "number") {
-          await supabase
-            .from("profiles")
-            .update({ reward_points: prof.reward_points + earnedPoints })
-            .eq("id", bookingRow.user_id);
-        }
+          .update({ reward_points: prof.reward_points - pointsToRedeem })
+          .eq("id", m.profileId);
       }
     }
 
-    // ── Referral: mark discount used + credit referrer 200 pts ─────────────
+    // Add earned points to profile (1 pt per $1 on service, excluding travel)
+    if (earnedPoints > 0) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("reward_points, lifetime_points")
+        .eq("id", m.profileId)
+        .single();
+      if (prof && typeof prof.reward_points === "number") {
+        const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
+        await supabase
+          .from("profiles")
+          .update({
+            reward_points: prof.reward_points + earnedPoints,
+            lifetime_points: currentLifetime + earnedPoints,
+          })
+          .eq("id", m.profileId);
+      }
+    }
+
+    // Referral: mark discount used + credit referrer 200 pts
     const appliedReferral = m.isApplyingReferralDiscount === "true";
     const webhookAuthUserId = m.authUserId;
     if (appliedReferral && webhookAuthUserId) {

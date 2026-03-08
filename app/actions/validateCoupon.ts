@@ -22,6 +22,7 @@ export async function validateCoupon(code: string): Promise<CouponResult> {
     .from("coupons")
     .select("id, code, discount_amount, discount_percentage, is_active")
     .eq("code", trimmed)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (error) {

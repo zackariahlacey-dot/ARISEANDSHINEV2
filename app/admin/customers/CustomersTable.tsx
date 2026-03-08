@@ -24,7 +24,6 @@ export interface CustomerRow {
   /** Combined display name from first_name + last_name */
   customer_name: string | null;
   phone: string | null;
-  email: string | null;
   reward_points: number | null;
   referral_code: string | null;
   created_at: string | null;
@@ -51,7 +50,7 @@ function EditModal({
 
   const name =
     [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
-    customer.email ||
+    customer.phone ||
     "Unknown";
 
   const handleSave = async () => {
@@ -238,7 +237,6 @@ export function CustomersTable({
     const customerName = c.customer_name ?? `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
     return (
       customerName.toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q) ||
       (c.phone ?? "").includes(q) ||
       (c.referral_code ?? "").toLowerCase().includes(q)
     );
@@ -324,7 +322,7 @@ export function CustomersTable({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, phone, or referral code…"
+          placeholder="Search by name, phone, or referral code…"
           className="w-full max-w-md bg-zinc-900/60 border border-white/[0.07] rounded-xl pl-9 pr-9 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
         />
         {search && (
@@ -400,7 +398,7 @@ export function CustomersTable({
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
                             <span className="text-[10px] font-bold text-zinc-400">
-                              {(displayName || c.email || "?").charAt(0).toUpperCase()}
+                              {(displayName || c.phone || "?").charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <p className="text-xs font-semibold text-zinc-200">
@@ -413,9 +411,6 @@ export function CustomersTable({
                       <td className="px-5 py-3.5">
                         <p className="text-[10px] text-zinc-400">
                           {c.phone ?? "—"}
-                        </p>
-                        <p className="text-[10px] text-zinc-600 mt-0.5">
-                          {c.email ?? ""}
                         </p>
                       </td>
 

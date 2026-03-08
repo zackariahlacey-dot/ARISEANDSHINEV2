@@ -1,20 +1,20 @@
-import { createClient } from "@/lib/supabase/server";
+export const dynamic = "force-dynamic";
+
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MarketingPage } from "./MarketingPage";
 import type { CouponRow } from "@/app/actions/createCoupon";
 
 export default async function MarketingServerPage() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [{ data: coupons }, { count: recipientCount }] = await Promise.all([
     supabase
       .from("coupons")
-      .select("id, code, discount_amount, discount_percentage, is_active, created_at")
+      .select("*")
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .not("email", "is", null)
-      .neq("email", ""),
+      .select("*", { count: "exact", head: true }),
   ]);
 
   return (

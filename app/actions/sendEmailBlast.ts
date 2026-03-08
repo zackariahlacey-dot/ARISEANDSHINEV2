@@ -5,9 +5,31 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+  process.env.EMAIL_FROM ?? "Arise & Shine VT <notifications@ariseandshinevt.com>";
 const REPLY_TO = "contact@ariseandshinevt.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
+
+/** Recipient with email + profile data for personalization */
+export type BlastRecipient = {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  reward_points: number | null;
+};
+
+/** Replace personalization tags in text. Case-insensitive for tag names. */
+function replacePersonalizationTags(
+  text: string,
+  recipient: BlastRecipient
+): string {
+  const firstname = recipient.first_name?.trim() || "Customer";
+  const lastname = recipient.last_name?.trim() ?? "";
+  const points = recipient.reward_points != null ? String(recipient.reward_points) : "0";
+  return text
+    .replace(/\{firstname\}/gi, firstname)
+    .replace(/\{lastname\}/gi, lastname)
+    .replace(/\{points\}/gi, points);
+}
 
 /** Converts plain-text body to simple safe HTML (preserves newlines, escapes entities). */
 function bodyToHtml(text: string): string {
@@ -119,16 +141,24 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const html = buildBlastHtml(payload.subject.trim(), payload.body.trim());
 
-  // ── Test mode: send only to admin ─────────────────────────────────────────
+  // ── Test mode: send only to admin (with sample personalization) ───────────
   if (payload.testOnly) {
+    const sampleRecipient: BlastRecipient = {
+      email: ADMIN_EMAIL,
+      first_name: "Valued",
+      last_name: "Customer",
+      reward_points: 250,
+    };
+    const testSubject = replacePersonalizationTags(payload.subject.trim(), sampleRecipient);
+    const testBody = replacePersonalizationTags(payload.body.trim(), sampleRecipient);
+    const testHtml = buildBlastHtml(testSubject, testBody);
     const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
       replyTo: REPLY_TO,
-      subject: `[TEST] ${payload.subject.trim()}`,
-      html,
+      subject: `[TEST] ${testSubject}`,
+      html: testHtml,
     });
 
     if (error) {
@@ -139,46 +169,87 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
     return { success: true, sent: 1, skipped: 0 };
   }
 
-  // ── Full blast: fetch all profiles with an email ───────────────────────────
-  const supabase = createAdminClient();
-  const { data: profiles, error: dbErr } = await supabase
+  // ── Full blast: fetch auth users (emails) + profiles, merge, personalize ───
+  const supabaseAdmin = createAdminClient();
+
+  // 1. List all auth users (paginated)
+  const authUsers: { id: string; email?: string }[] = [];
+  let page = 1;
+  const perPage = 1000;
+  while (true) {
+    const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    if (authErr) {
+      console.error("[sendEmailBlast] auth listUsers:", authErr);
+      return { success: false, error: "Could not fetch user list." };
+    }
+    const users = authData?.users ?? [];
+    authUsers.push(...users.map((u) => ({ id: u.id, email: u.email ?? undefined })));
+    if (users.length < perPage) break;
+    page++;
+  }
+
+  // 2. Fetch all profiles
+  const { data: profiles, error: dbErr } = await supabaseAdmin
     .from("profiles")
-    .select("email")
-    .not("email", "is", null)
-    .neq("email", "");
+    .select("id, first_name, last_name, reward_points");
 
   if (dbErr) {
     console.error("[sendEmailBlast] profile fetch:", dbErr);
     return { success: false, error: "Could not fetch customer list." };
   }
 
-  const emails = (profiles ?? [])
-    .map((p) => p.email as string)
-    .filter(Boolean);
+  const profileMap = new Map<string, { first_name: string | null; last_name: string | null; reward_points: number | null }>();
+  for (const p of profiles ?? []) {
+    profileMap.set(p.id, {
+      first_name: p.first_name ?? null,
+      last_name: p.last_name ?? null,
+      reward_points: p.reward_points ?? null,
+    });
+  }
 
-  if (emails.length === 0) {
+  // 3. Merge: recipients with email + profile data
+  const recipients: BlastRecipient[] = authUsers
+    .filter((u) => u.email && u.email.trim().length > 0)
+    .map((u) => {
+      const profile = profileMap.get(u.id);
+      return {
+        email: u.email!,
+        first_name: profile?.first_name ?? null,
+        last_name: profile?.last_name ?? null,
+        reward_points: profile?.reward_points ?? null,
+      };
+    });
+
+  if (recipients.length === 0) {
     return { success: false, error: "No customers with email addresses found." };
   }
 
-  // Resend batch: max 100 per request — chunk if needed
+  // 4. Build personalized emails and send in batches (Resend batch limit)
   const CHUNK = 100;
   let sent = 0;
   let failed = 0;
 
-  for (let i = 0; i < emails.length; i += CHUNK) {
-    const chunk = emails.slice(i, i + CHUNK);
-    const messages = chunk.map((to) => ({
-      from: FROM_ADDRESS,
-      to,
-      replyTo: REPLY_TO,
-      subject: payload.subject.trim(),
-      html,
-    }));
+  for (let i = 0; i < recipients.length; i += CHUNK) {
+    const chunk = recipients.slice(i, i + CHUNK);
+    const messages = chunk.map((recipient) => {
+      const personalizedSubject = replacePersonalizationTags(payload.subject.trim(), recipient);
+      const personalizedBody = replacePersonalizationTags(payload.body.trim(), recipient);
+      const personalizedHtml = buildBlastHtml(personalizedSubject, personalizedBody);
+      return {
+        from: FROM_ADDRESS,
+        to: recipient.email,
+        replyTo: REPLY_TO,
+        subject: personalizedSubject,
+        html: personalizedHtml,
+      };
+    });
 
     try {
       const result = await resend.batch.send(messages);
-      const errCount =
-        result.error ? chunk.length : 0;
+      const errCount = result.error ? chunk.length : 0;
       sent += chunk.length - errCount;
       failed += errCount;
       if (result.error) {
