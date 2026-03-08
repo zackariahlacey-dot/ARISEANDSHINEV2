@@ -252,7 +252,7 @@ export async function bookDetailing(
           bookingDate: payload.bookingDate,
           bookingTime: to24h(payload.bookingTime),
           totalPrice: String(payload.totalPrice),
-          notes: notesBody.slice(0, 500),
+          notes: (notesBody ?? "").slice(0, 500),
           serviceName: payload.serviceName.slice(0, 499),
           vehicleSize: payload.vehicleSize,
           vehicleYear: payload.vehicleYear,
