@@ -288,12 +288,13 @@ export function LandingPage({ services }: { services: Service[] }) {
       />
       {/* ─── Sticky Header ─────────────────────────────────────── */}
       <header
-        className={`fixed top-0 inset-x-0 z-50 flex justify-between items-center w-full px-4 py-3 md:px-10 md:h-16 transition-all duration-300 ${
+        className={`fixed top-0 inset-x-0 z-50 w-full py-3 md:h-16 transition-all duration-300 ${
           isScrolled || mobileMenuOpen
             ? "bg-black/95 backdrop-blur-md border-b border-white/[0.06] shadow-2xl"
             : "bg-transparent"
         }`}
       >
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <Image
@@ -350,8 +351,9 @@ export function LandingPage({ services }: { services: Service[] }) {
             className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 active:bg-[#D4AF37] active:text-zinc-950 transition-colors duration-300"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> :             <Menu className="w-4 h-4" />}
           </button>
+        </div>
         </div>
       </header>
 
@@ -459,7 +461,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16"
+        className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 pt-16"
         style={{ background: "#09090b" }}
       >
         {/* Moody automotive background image — barely visible texture layer (above fold, priority) */}
@@ -491,8 +493,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           }}
         />
 
-        <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 w-full">
-        <div className="max-w-4xl mx-auto w-full">
+        <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 w-full max-w-3xl mx-auto text-center">
           {/* Eyebrow pill */}
           <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-10">
             <MapPin size={10} className="shrink-0" />
@@ -510,7 +511,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-base md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 md:mb-12 leading-relaxed">
+          <p className="text-base md:text-xl text-zinc-400 mb-10 md:mb-12 leading-relaxed">
             Vermont&apos;s premier mobile auto detailing service — we come to
             you. Professional results with premium products, wherever you are in
             the state.
@@ -536,7 +537,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           {/* Inline booking dropdown (Hero) — client-only to avoid hydration mismatch */}
           {mounted && (
-            <div className="w-full max-w-4xl mx-auto mt-2">
+            <div className="w-full max-w-3xl mx-auto mt-2">
               <BookingSection
                 isVisible={expandedBookingId === "hero"}
                 onClose={() => setExpandedBookingId(null)}
@@ -580,7 +581,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           </div>
 
           {/* Stats row — no bottom padding/margin */}
-          <div className="flex flex-row items-start justify-center gap-4 md:gap-12 w-full max-w-3xl mx-auto">
+          <div className="flex flex-row items-start justify-center gap-4 md:gap-12 w-full">
             {[
               { value: "500+", label: "Vehicles Detailed" },
               { value: "5★", label: "Average Rating" },
@@ -599,7 +600,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
 
         {/* Trust Bar — infinite scrolling marquee with edge fade */}
-        <section className="border-y border-white/[0.06] bg-zinc-950/80 py-8 md:py-10 px-0 w-full mb-6 md:mb-8">
+        <section className="border-y border-white/[0.06] bg-zinc-950/80 py-12 md:py-20 lg:py-24 px-0 w-full mb-6 md:mb-8">
           <div className="marquee-fade-edges w-full overflow-hidden relative flex items-center mt-6 md:mt-8 mb-6 md:mb-8">
             <div className="marquee-container group flex w-max min-w-full gap-6 md:gap-8 pr-6 md:pr-8 marquee-scroll">
               {(() => {
@@ -623,7 +624,6 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
           </div>
         </section>
-        </div>
 
       </motion.section>
 
@@ -633,9 +633,9 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="pt-0 pb-16 md:pb-24 px-4 border-t border-white/[0.06]"
+        className="pt-0 pb-12 md:pb-20 lg:pb-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
-        <div className="max-w-4xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
               See the results
@@ -703,11 +703,11 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-16 px-4 border-t border-white/[0.06]"
+        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
-        <div className="max-w-5xl mx-auto">
-          {/* Section header — tighter */}
-          <div className="text-center mb-6 md:mb-8">
+        <div className="w-full lg:max-w-7xl mx-auto">
+          {/* Section header — mobile only; desktop title lives inside the card */}
+          <div className="text-center mb-6 md:mb-8 lg:hidden">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
               Member Exclusive
             </p>
@@ -724,54 +724,48 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           <div className="relative">
             <div
-              className="absolute inset-0 -m-6 rounded-2xl blur-2xl pointer-events-none opacity-40"
+              className="absolute inset-0 -m-6 rounded-2xl blur-2xl pointer-events-none opacity-40 lg:opacity-60"
               style={{
                 background:
                   "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(212,175,55,0.12) 0%, transparent 70%)",
               }}
             />
-            <div className="relative w-full max-w-lg lg:max-w-none mx-auto bg-zinc-900/40 backdrop-blur-md border border-[#D4AF37]/20 shadow-[0_0_40px_rgba(212,175,55,0.05)] rounded-2xl p-5 md:p-8 overflow-hidden">
-              <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-4">
-                <Crown size={10} />
-                Member Exclusive
-              </div>
-              <div className="flex flex-col md:flex-row items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs px-4 py-3 rounded-lg mb-6 text-center md:text-left w-full">
-                <ShieldCheck size={16} className="shrink-0 text-[#D4AF37]" strokeWidth={1.75} />
-                <p>
-                  Mandatory <span className="font-semibold text-zinc-100">$100 Deep Clean &amp; Reset</span> before recurring schedule.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mb-6 w-full">
-                <div className="w-full">
-                  <details className="group/details w-full">
-                    <summary className="list-none [&::-webkit-details-marker]:hidden text-zinc-300 hover:text-[#D4AF37] cursor-pointer text-base font-semibold flex items-center justify-center gap-2 mb-4 py-3 border-y border-white/5 w-full outline-none transition-colors">
-                      What You Get
-                      <ChevronDown size={18} className="shrink-0 transition-transform duration-200 group-open/details:rotate-180" />
-                    </summary>
-                    <ul className="mt-4 mb-6 space-y-3 flex flex-col items-center text-center w-full">
-                      {[
-                        { icon: CalendarClock, text: "Priority Scheduling", sub: "Slot reserved first." },
-                        { icon: CalendarRange, text: "Fixed Monthly Dates", sub: "Same day each month." },
-                        { icon: Sparkles,      text: "Premium Protectants", sub: "Ceramic-grade every visit." },
-                        { icon: CircleSlash,   text: "Cancel Anytime", sub: "No contracts." },
-                      ].map(({ icon: Icon, text, sub }) => (
-                        <li key={text} className="flex items-center gap-2">
-                          <CheckCircle size={14} className="shrink-0 text-[#D4AF37]" strokeWidth={1.75} />
-                          <div className="text-center">
-                            <p className="text-xs font-semibold text-zinc-100">{text}</p>
-                            <p className="text-[10px] text-zinc-500">{sub}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
-                    Monthly Rate
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
+            {/* Premium container: mobile stacked card; desktop centered banner with glassmorphism */}
+            <div className="relative w-full max-w-lg mx-auto bg-zinc-900/40 backdrop-blur-md border border-[#D4AF37]/20 shadow-[0_0_40px_rgba(212,175,55,0.05)] rounded-2xl p-5 md:p-8 overflow-hidden lg:max-w-5xl lg:mx-auto lg:flex lg:flex-col lg:items-center lg:justify-center lg:text-center lg:p-16 lg:bg-black/40 lg:backdrop-blur-xl lg:border lg:border-yellow-500/30 lg:rounded-[2rem] lg:shadow-2xl">
+              <div className="flex flex-col items-center text-center">
+                {/* Text content: centered, readable width on desktop */}
+                <div className="w-full lg:max-w-3xl lg:mx-auto">
+                  {/* Desktop-only title and description (mobile uses section header above) */}
+                  <div className="hidden lg:block mb-6 text-center">
+                    <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
+                      Member Exclusive
+                    </p>
+                    <h2
+                      className="text-2xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent lg:text-5xl lg:leading-tight"
+                      style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.2))" }}
+                    >
+                      Join the Arise And Shine Maintenance Club
+                    </h2>
+                    <p className="mt-2 text-sm text-zinc-400 max-w-xl mx-auto lg:max-w-none">
+                      Put your vehicle&apos;s care on auto-pilot. Showroom condition year-round.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-4">
+                    <Crown size={10} />
+                    Member Exclusive
+                  </div>
+                  {/* 1. Mandatory / introductory text — centered at top */}
+                  <div className="flex flex-col md:flex-row items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs px-4 py-3 rounded-lg mb-6 text-center md:text-left w-full lg:max-w-md lg:mx-auto lg:text-center">
+                    <ShieldCheck size={16} className="shrink-0 text-[#D4AF37]" strokeWidth={1.75} />
+                    <p>
+                      Mandatory <span className="font-semibold text-zinc-100">$100 Deep Clean &amp; Reset</span> before recurring schedule.
+                    </p>
+                  </div>
+                  {/* 2. Vehicle sizes — 2x2 on mobile, single row of 4 on desktop */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 w-full mb-6 lg:mb-8">
+                    <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-0 col-span-2 lg:col-span-4 text-center lg:text-center order-first">
+                      Monthly Rate
+                    </p>
                     {[
                       { label: "Small",       sub: "Compact",   price: 150 },
                       { label: "Medium",      sub: "Sedan",    price: 160 },
@@ -780,7 +774,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     ].map(({ label, sub, price }) => (
                       <div
                         key={label}
-                        className="bg-zinc-950 rounded-lg p-3 border border-white/5 text-center transition-all duration-300 hover:border-[#D4AF37]/30"
+                        className="bg-zinc-950 rounded-lg p-3 border border-white/5 text-center transition-all duration-300 hover:border-[#D4AF37]/30 flex flex-col justify-center min-h-[88px] lg:min-h-[96px]"
                       >
                         <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
                         <p className="text-lg font-black bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent tabular-nums">
@@ -791,25 +785,51 @@ export function LandingPage({ services }: { services: Service[] }) {
                       </div>
                     ))}
                   </div>
+                  {/* 3. What You Get — full width below sizes; 2-column list on desktop */}
+                  <div className="w-full lg:max-w-3xl lg:mx-auto">
+                    <details className="group/details w-full">
+                      <summary className="list-none [&::-webkit-details-marker]:hidden text-zinc-300 hover:text-[#D4AF37] cursor-pointer text-base font-semibold flex items-center justify-center gap-2 mb-4 py-3 border-y border-white/5 w-full outline-none transition-colors">
+                        What You Get
+                        <ChevronDown size={18} className="shrink-0 transition-transform duration-200 group-open/details:rotate-180" />
+                      </summary>
+                      <ul className="mt-4 mb-6 space-y-3 flex flex-col items-center justify-center text-center w-full lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:justify-items-center lg:text-center">
+                        {[
+                          { icon: CalendarClock, text: "Priority Scheduling", sub: "Slot reserved first." },
+                          { icon: CalendarRange, text: "Fixed Monthly Dates", sub: "Same day each month." },
+                          { icon: Sparkles,      text: "Premium Protectants", sub: "Ceramic-grade every visit." },
+                          { icon: CircleSlash,   text: "Cancel Anytime", sub: "No contracts." },
+                        ].map(({ icon: Icon, text, sub }) => (
+                          <li key={text} className="flex flex-row items-center justify-center text-center gap-2">
+                            <CheckCircle size={14} className="shrink-0 text-[#D4AF37]" strokeWidth={1.75} />
+                            <div className="text-center">
+                              <p className="text-xs font-semibold text-zinc-100">{text}</p>
+                              <p className="text-[10px] text-zinc-500">{sub}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </div>
+                </div>
+                {/* CTA: centered below text; add input+button later with flex flex-col sm:flex-row gap-4 mt-8 if needed */}
+                <div className="border-t border-white/[0.06] pt-5 flex flex-col items-center justify-center gap-1 w-full lg:mt-8 lg:pt-0 lg:border-t-0">
+                  <button
+                    type="button"
+                    onClick={() => monthlyPlanService && openBooking(monthlyPlanService)}
+                    disabled={!monthlyPlanService}
+                    className="btn-primary-gold-shimmer w-full md:w-auto justify-center inline-flex items-center gap-2 rounded-xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] px-8 py-3 text-sm font-bold hover:text-black hover:shadow-[0_0_28px_rgba(212,175,55,0.35)] hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out lg:px-10 lg:py-4 lg:text-lg"
+                  >
+                    <span className="relative z-[1] inline-flex items-center gap-2">
+                      <Crown size={16} className="shrink-0" />
+                      Join the Club
+                    </span>
+                  </button>
+                  <p className="text-[10px] text-zinc-600 text-center">No contracts · $100 setup applies</p>
                 </div>
               </div>
-              <div className="border-t border-white/[0.06] pt-5 flex flex-col items-center gap-1 w-full">
-                <button
-                  type="button"
-                  onClick={() => monthlyPlanService && openBooking(monthlyPlanService)}
-                  disabled={!monthlyPlanService}
-                  className="btn-primary-gold-shimmer w-full md:w-auto justify-center inline-flex items-center gap-2 rounded-xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] px-8 py-3 text-sm font-bold hover:text-black hover:shadow-[0_0_28px_rgba(212,175,55,0.35)] hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out"
-                >
-                  <span className="relative z-[1] inline-flex items-center gap-2">
-                    <Crown size={16} className="shrink-0" />
-                    Join the Club
-                  </span>
-                </button>
-                <p className="text-[10px] text-zinc-600">No contracts · $100 setup applies</p>
-              </div>
-              {/* Inline booking dropdown (Maintenance Club — starts with Maintenance Plan selected) — client-only */}
+              {/* Inline booking dropdown (Maintenance Club) — client-only; full width below on desktop */}
               {mounted && (
-                <div className="w-full mt-4">
+                <div className="w-full mt-4 lg:w-full lg:mt-6">
                   <BookingSection
                     isVisible={expandedBookingId === "club"}
                     onClose={() => setExpandedBookingId(null)}
@@ -824,7 +844,6 @@ export function LandingPage({ services }: { services: Service[] }) {
                   />
                 </div>
               )}
-              </div>
             </div>
           </div>
         </div>
@@ -837,9 +856,9 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-16 px-4 border-t border-white/[0.06]"
+        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto">
           {/* Branding + title */}
           <div className="text-center mb-6 md:mb-8">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
@@ -858,7 +877,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           {/* Growth Lineup: 6-sided bullion bars (Tiny→Big) + volumetric Diamond; tilted stage; contact shadow per object; engraved text. */}
           <div className="tier-lineup-stage relative flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 min-h-[320px] sm:min-h-0 mt-10 md:mt-16 pb-8 sm:pb-20 -mb-24 md:mb-0 overflow-visible">
-            <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-5xl mx-auto px-1 sm:px-0 scale-[0.85] md:scale-100 origin-top">
+            <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-7xl mx-auto px-1 sm:px-0 scale-[0.85] md:scale-100 origin-top">
               {/* Bronze — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
               <div className="tier-lineup-card relative w-full sm:w-[140px] md:w-[160px] flex flex-col items-center sm:staircase-0">
                 <div aria-hidden className="tier-contact-shadow" />
@@ -868,10 +887,10 @@ export function LandingPage({ services }: { services: Service[] }) {
                     <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-bronze" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
                   ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-bronze" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-bronze px-3 py-2">
-                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase leading-tight">Bronze</p>
-                    <p className="tier-front-engraved text-[10px] mt-0.5">500–999 pts</p>
-                    <p className="tier-front-engraved text-[10px] mt-1">5% off</p>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-bronze px-3 py-2 lg:px-4 lg:py-3">
+                    <p className="tier-front-engraved text-[9px] lg:text-xs font-bold tracking-wider uppercase leading-tight">Bronze</p>
+                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-0.5">500–999 pts</p>
+                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1">5% off</p>
                   </div>
                 </div>
                 </div>
@@ -886,10 +905,10 @@ export function LandingPage({ services }: { services: Service[] }) {
                     <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-silver" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
                   ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-silver" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-silver px-3 py-2">
-                    <p className="tier-front-engraved text-[9px] font-bold tracking-wider uppercase">Silver</p>
-                    <p className="tier-front-engraved text-[10px] mt-0.5">1,000–1,499 pts</p>
-                    <p className="tier-front-engraved text-[10px] mt-1">10% off · Priority</p>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-silver px-3 py-2 lg:px-4 lg:py-3">
+                    <p className="tier-front-engraved text-[9px] lg:text-xs font-bold tracking-wider uppercase">Silver</p>
+                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-0.5">1,000–1,499 pts</p>
+                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1">10% off · Priority</p>
                   </div>
                 </div>
                 </div>
@@ -904,10 +923,10 @@ export function LandingPage({ services }: { services: Service[] }) {
                     <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-gold" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
                   ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-gold" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-gold px-3 py-3">
-                    <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase">Gold</p>
-                    <p className="tier-front-engraved text-[11px] mt-0.5">1,500–1,999 pts</p>
-                    <p className="tier-front-engraved text-[10px] mt-1.5">15% off · Priority · Discounted add-ons</p>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-gold px-3 py-3 lg:px-4 lg:py-4">
+                    <p className="tier-front-engraved text-[10px] lg:text-xs font-bold tracking-wider uppercase">Gold</p>
+                    <p className="tier-front-engraved text-[11px] lg:text-xs mt-0.5">1,500–1,999 pts</p>
+                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1.5">15% off · Priority · Discounted add-ons</p>
                   </div>
                 </div>
                 </div>
@@ -922,10 +941,10 @@ export function LandingPage({ services }: { services: Service[] }) {
                     <div key={i} className="tier-diamond-extrusion-layer" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
                   ))}
                   <div className="tier-solid-bar-top tier-solid-bar-top-diamond" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-diamond px-3 py-3">
-                    <p className="tier-front-engraved text-[10px] font-bold tracking-wider uppercase">Diamond</p>
-                    <p className="tier-front-engraved text-[11px] mt-0.5">2,000+ pts</p>
-                    <p className="tier-front-engraved text-[10px] mt-1.5">20% off · VIP</p>
+                  <div className="tier-solid-bar-front tier-solid-bar-front-diamond px-3 py-3 lg:px-4 lg:py-4">
+                    <p className="tier-front-engraved text-[10px] lg:text-xs font-bold tracking-wider uppercase">Diamond</p>
+                    <p className="tier-front-engraved text-[11px] lg:text-xs mt-0.5">2,000+ pts</p>
+                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1.5">20% off · VIP</p>
                   </div>
                 </div>
                 </div>
@@ -936,8 +955,8 @@ export function LandingPage({ services }: { services: Service[] }) {
       </motion.section>
 
       {/* ─── Trust Banner (Our Promise) — 2x2 grid ─────────────────── */}
-      <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-8 md:py-10 px-4">
-        <div className="grid grid-cols-2 gap-3 md:gap-6 w-full max-w-2xl mx-auto mt-8 mb-12 px-4">
+      <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 w-full lg:max-w-7xl mx-auto mt-8 mb-12">
           {[
             { icon: Car,       title: "We Come To You",     desc: "Fully mobile — at home or work." },
             { icon: Shield,    title: "100% Satisfaction", desc: "We make it right, no questions asked." },
@@ -946,7 +965,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           ].map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
-              className="flex flex-col items-center text-center p-4 md:p-6 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl hover:bg-zinc-800/50 transition-colors"
+              className="flex flex-col items-center justify-center text-center p-4 md:p-6 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl hover:bg-zinc-800/50 transition-colors"
             >
               <Icon className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37] mb-3 shrink-0" strokeWidth={1.75} />
               <p className="text-xs md:text-sm font-semibold text-zinc-100 mb-1">{title}</p>
@@ -963,9 +982,9 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-16 md:py-24 px-6"
+        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"
       >
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto">
           <div className="text-center mb-10 md:mb-16">
             <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
               What We Offer
@@ -984,46 +1003,58 @@ export function LandingPage({ services }: { services: Service[] }) {
               <p className="text-sm">Services coming soon — check back shortly.</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center max-w-7xl mx-auto">
-              {/* Pill navigation */}
-              <div className="bg-zinc-900/50 p-1.5 rounded-full inline-flex gap-1 border border-white/5 mb-8">
-                {mainGridServices.map((service) => {
-                  const isActive = activeServiceId === service.id;
-                  const label = service.name === "Full Detail" ? "Full Detail" : service.name.replace(" Detail", "");
-                  return (
-                    <button
-                      key={service.id}
-                      type="button"
-                      onClick={() => setActiveServiceId(service.id)}
-                      className={
-                        isActive
-                          ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-6 py-2 text-sm font-semibold transition-all"
-                          : "text-zinc-400 hover:text-zinc-200 px-6 py-2 text-sm font-medium transition-all rounded-full"
-                      }
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+            <>
+              {/* Desktop: 3-column grid of all cards */}
+              <div className="hidden lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start w-full max-w-7xl mx-auto">
+                {mainGridServices.map((service) => (
+                  <div key={service.id} className="h-fit">
+                    <ServiceCard
+                      service={service}
+                      onBook={() => openBooking(service)}
+                    />
+                  </div>
+                ))}
               </div>
-              {/* Single card with fade-in */}
-              <motion.div
-                key={activeServiceId}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-[450px] mx-auto flex justify-center"
-              >
-                {activeService && (
-                  <ServiceCard
-                    service={activeService}
-                    onBook={() => openBooking(activeService)}
-                  />
-                )}
-              </motion.div>
-              {/* Inline booking dropdown (Services — starts with selected service) — client-only */}
+              {/* Mobile/tablet: pill nav + single card */}
+              <div className="flex flex-col items-center max-w-7xl mx-auto lg:hidden">
+                <div className="bg-zinc-900/50 p-1.5 rounded-full inline-flex gap-1 border border-white/5 mb-8">
+                  {mainGridServices.map((service) => {
+                    const isActive = activeServiceId === service.id;
+                    const label = service.name === "Full Detail" ? "Full Detail" : service.name.replace(" Detail", "");
+                    return (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => setActiveServiceId(service.id)}
+                        className={
+                          isActive
+                            ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-6 py-2 text-sm font-semibold transition-all"
+                            : "text-zinc-400 hover:text-zinc-200 px-6 py-2 text-sm font-medium transition-all rounded-full"
+                        }
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <motion.div
+                  key={activeServiceId}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full max-w-[450px] mx-auto flex justify-center"
+                >
+                  {activeService && (
+                    <ServiceCard
+                      service={activeService}
+                      onBook={() => openBooking(activeService)}
+                    />
+                  )}
+                </motion.div>
+              </div>
+              {/* Inline booking dropdown (Services) — client-only */}
               {mounted && (
-                <div className="w-full max-w-[450px] mx-auto mt-4">
+                <div className="w-full max-w-[450px] lg:max-w-7xl mx-auto mt-4">
                   <BookingSection
                     isVisible={expandedBookingId === "services"}
                     onClose={() => setExpandedBookingId(null)}
@@ -1038,7 +1069,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                   />
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </motion.section>
@@ -1049,9 +1080,9 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-16 md:py-24 px-4 border-t border-white/[0.06]"
+        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-sm font-semibold tracking-widest uppercase text-[#D4AF37] mb-2">
               Client Experiences
@@ -1151,11 +1182,12 @@ export function LandingPage({ services }: { services: Service[] }) {
       </motion.section>
 
       {/* ─── Frequently Asked Questions ───────────────────────── */}
-      <section className="py-16 md:py-24 px-4 flex flex-col items-center text-center">
+      <section className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
+        <div className="w-full max-w-7xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-white mb-10">
           Frequently Asked Questions.
         </h2>
-        <div className="max-w-3xl mx-auto space-y-4 px-4 w-full flex flex-col items-center">
+        <div className="max-w-3xl mx-auto space-y-4 w-full flex flex-col items-center">
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
               <span className="flex-1 text-center">Do I need to provide water or power?</span>
@@ -1193,10 +1225,12 @@ export function LandingPage({ services }: { services: Service[] }) {
             </p>
           </details>
         </div>
+        </div>
       </section>
 
       {/* ─── CTA Banner ─────────────────────────────────────────── */}
-      <section className="py-16 md:py-24 px-6">
+      <section className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-7xl mx-auto">
         <div className="max-w-3xl mx-auto text-center">
           <div
             className="rounded-3xl p-6 md:p-12 border border-white/[0.08] bg-zinc-900/80 backdrop-blur-sm"
@@ -1229,11 +1263,12 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
           </div>
         </div>
+        </div>
       </section>
 
       {/* ─── Areas We Serve (SEO) ───────────────────────────────── */}
-      <div className="w-full border-t border-[#D4AF37]/25 bg-[#09090b] py-10 md:py-12 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col items-center text-center gap-4">
+      <div className="w-full border-t border-[#D4AF37]/25 bg-[#09090b] py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-7xl mx-auto flex flex-col items-center text-center gap-4">
           <MapPin className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
           <p className="text-zinc-500 text-sm md:text-base leading-relaxed">
             Proudly providing premium mobile detailing to
@@ -1250,9 +1285,9 @@ export function LandingPage({ services }: { services: Service[] }) {
       {/* ─── Footer ─────────────────────────────────────────────── */}
       <footer
         id="contact"
-        className="border-t border-white/[0.06] py-12 px-6 bg-zinc-950/50"
+        className="border-t border-white/[0.06] py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-zinc-950/50"
       >
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="w-full max-w-7xl mx-auto space-y-6">
           {/* Main row */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -1506,6 +1541,7 @@ function ServiceCard({
   service: Service;
   onBook: () => void;
 }) {
+  const [isIncludedOpen, setIsIncludedOpen] = useState(false);
   const samePrice = service.price_small === service.price_extra_large;
   const priceDisplay = samePrice
     ? `$${service.price_small}`
@@ -1514,7 +1550,7 @@ function ServiceCard({
   const inclusions = SERVICE_INCLUSIONS[service.name] ?? [];
 
   return (
-    <div className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 md:p-10 flex flex-col h-full transition-all duration-300 hover:-translate-y-1 hover:border-[#D4AF37]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
+    <div className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 md:p-10 flex flex-col h-fit transition-all duration-300 hover:-translate-y-1 hover:border-[#D4AF37]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
       {/* Service name */}
       <div className="mb-5">
         <h3 className="text-xl font-bold text-zinc-100 leading-snug">
@@ -1551,14 +1587,23 @@ function ServiceCard({
         Earn {service.price_small}–{service.price_extra_large} Reward Points
       </div>
 
-      {/* What's Included dropdown */}
+      {/* What's Included dropdown — each card has its own open state */}
       {inclusions.length > 0 && (
-        <details className="group/details mb-6 mt-auto">
-          <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between border-t border-white/5 pt-4 pb-0.5 cursor-pointer text-sm font-medium text-zinc-400 hover:text-[#D4AF37] outline-none transition-colors duration-200 select-none">
+        <details
+          open={isIncludedOpen}
+          className="group/details mb-6 mt-auto"
+        >
+          <summary
+            className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between border-t border-white/5 pt-4 pb-0.5 cursor-pointer text-sm font-medium text-zinc-400 hover:text-[#D4AF37] outline-none transition-colors duration-200 select-none"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsIncludedOpen((prev) => !prev);
+            }}
+          >
             What&apos;s Included
             <ChevronDown
               size={15}
-              className="shrink-0 transition-transform duration-300 group-open/details:rotate-180"
+              className={`shrink-0 transition-transform duration-300 ${isIncludedOpen ? "rotate-180" : ""}`}
             />
           </summary>
           <ul className="mt-4 space-y-2 ml-1">
