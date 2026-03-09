@@ -139,10 +139,12 @@ export function LandingPage({ services }: { services: Service[] }) {
     setMounted(true);
   }, []);
 
-  // Restore booking draft when returning from cancelled Stripe checkout
+  // Restore booking draft when returning from cancelled Stripe or from sign-up flow
   useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
-    if (searchParams.get("stripe") !== "cancelled") return;
+    const stripeCancelled = searchParams.get("stripe") === "cancelled";
+    const restoreBooking = searchParams.get("restore_booking") === "1";
+    if (!stripeCancelled && !restoreBooking) return;
     const raw = sessionStorage.getItem("draftBooking");
     if (!raw) return;
     try {

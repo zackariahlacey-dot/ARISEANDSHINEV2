@@ -38,13 +38,15 @@ export async function createProfileWithReferral(
     matchedReferrerId = referrer?.id ?? null;
   }
 
+  const WELCOME_BONUS_POINTS = 100;
+
   const { error } = await supabase.from("profiles").upsert(
     {
       id: userId,
       email,
       referral_code: referralCodeToSave,
-      reward_points: 0,
-      lifetime_points: 0,
+      reward_points: WELCOME_BONUS_POINTS,
+      lifetime_points: WELCOME_BONUS_POINTS,
       ...(firstName ? { first_name: firstName } : {}),
       ...(lastName ? { last_name: lastName } : {}),
       referred_by: matchedReferrerId ?? null,

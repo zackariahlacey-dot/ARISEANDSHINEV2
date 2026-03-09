@@ -18,6 +18,7 @@ import {
   Lock,
   HandCoins,
   HelpCircle,
+  Sparkles,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
@@ -1009,6 +1010,35 @@ export function BookingSection({
     }
   };
 
+  // ── Save draft and redirect to sign up (keeps booking state for after auth) ─
+  const handleCreateAccountClick = () => {
+    if (!selectedService || !vehicleSize) return;
+    const draft: DraftBooking = {
+      serviceId: selectedService.id,
+      vehicleSize: vehicleSize as VehicleSizeSlug,
+      vehicleYear,
+      vehicleMake,
+      vehicleModel,
+      selectedDate,
+      selectedTime,
+      serviceAddress,
+      name,
+      phone,
+      email,
+      notes,
+      travelFee,
+      distanceMiles,
+      couponCode,
+      appliedCoupon,
+      pointsToRedeemInput,
+    };
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    }
+    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}/?restore_booking=1` : "/?restore_booking=1";
+    window.location.href = `/auth/login?signup=true&redirect=${encodeURIComponent(returnUrl)}`;
+  };
+
   // ── Pay Now via Stripe ───────────────────────────────────────────────────
   const handlePayNow = async () => {
     if (!selectedService || !vehicleSize || !canConfirm()) return;
@@ -1708,6 +1738,35 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </p>
                               </div>
                             )}
+                            {!authUserId && selectedService && vehicleSize && (
+                              <div className="pt-3">
+                                <div className="rounded-xl p-5 bg-black/60 backdrop-blur-md border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.08)]">
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <Sparkles className="h-5 w-5 text-amber-400 shrink-0" aria-hidden />
+                                      <h4 className="text-base font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
+                                        Unlock Premium Rewards
+                                      </h4>
+                                    </div>
+                                    <p className="text-sm text-zinc-300 leading-relaxed">
+                                      Create an account right now to earn points on today&apos;s detail! Plus, get an instant 100-Point Welcome Bonus.
+                                    </p>
+                                    <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
+                                      <li>500 pts = 5% Off For Life</li>
+                                      <li>1,000 pts = 10% Off For Life</li>
+                                      <li>2,000 pts = 20% Off For Life</li>
+                                    </ul>
+                                    <button
+                                      type="button"
+                                      onClick={handleCreateAccountClick}
+                                      className="mt-2 w-full py-3 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_24px_rgba(212,175,55,0.45)] transition-all duration-200"
+                                    >
+                                      Create Account & Claim Points
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {(currentTierDiscount > 0 || pointsToRedeem > 0) && (
                               <>
                                 <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
@@ -1820,6 +1879,35 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               <p className="text-[11px] text-zinc-500">
                                 You have {availablePoints} points. You can redeem up to {redeemablePoints} points for an additional {redeemablePoints / POINTS_PER_PERCENT}% off.
                               </p>
+                            </div>
+                          )}
+                          {!authUserId && selectedService && vehicleSize && (
+                            <div className="pt-3">
+                              <div className="rounded-xl p-5 bg-black/60 backdrop-blur-md border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.08)]">
+                                <div className="flex flex-col gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-amber-400 shrink-0" aria-hidden />
+                                    <h4 className="text-base font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
+                                      Unlock Premium Rewards
+                                    </h4>
+                                  </div>
+                                  <p className="text-sm text-zinc-300 leading-relaxed">
+                                    Create an account right now to earn points on today&apos;s detail! Plus, get an instant 100-Point Welcome Bonus.
+                                  </p>
+                                  <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
+                                    <li>500 pts = 5% Off For Life</li>
+                                    <li>1,000 pts = 10% Off For Life</li>
+                                    <li>2,000 pts = 20% Off For Life</li>
+                                  </ul>
+                                  <button
+                                    type="button"
+                                    onClick={handleCreateAccountClick}
+                                    className="mt-2 w-full py-3 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_24px_rgba(212,175,55,0.45)] transition-all duration-200"
+                                  >
+                                    Create Account & Claim Points
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           )}
                           {(currentTierDiscount > 0 || pointsToRedeem > 0) && (
