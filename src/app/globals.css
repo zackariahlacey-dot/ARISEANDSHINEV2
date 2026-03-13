@@ -1,26 +1,155 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: oklch(0.05 0 0); /* Deep Vizulux Black */
+  --foreground: oklch(0.985 0 0);
+  --accent-primary: #8b5cf6; /* Violet */
+  --accent-secondary: #06b6d4; /* Cyan */
+  --accent-luxury: #fbbf24; /* Amber/Gold */
+  --accent-soft: #f472b6; /* Rose */
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Prism Border Utility */
+.prism-border {
+  position: relative;
+  background: padding-box linear-gradient(to right, #000, #000);
+  border: 1px solid transparent;
+}
+
+.prism-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: conic-gradient(
+    from 0deg,
+    var(--accent-primary),
+    var(--accent-soft),
+    var(--accent-secondary),
+    var(--accent-luxury),
+    var(--accent-primary)
+  );
+  border-radius: inherit;
+  opacity: 0.15;
+  transition: opacity 0.5s ease;
+}
+
+.group:hover .prism-border::before {
+  opacity: 0.4;
+}
+
+/* Atmosphere Light Leak */
+.light-leak-amber {
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.08) 0%, transparent 70%);
+}
+
+.light-leak-violet {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Browser Autofill Overrides */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  background-color: transparent !important;
+}
+
+input, textarea, select {
+  color: white !important;
+  caret-color: #8b5cf6;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: black;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Noise Texture Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 100;
+  filter: contrast(120%) brightness(120%);
+}
+
+/* HUD Grid Utility */
+.hud-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+@keyframes scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(400%); }
+}
+
+.animate-scan {
+  animation: scan 4s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 8s infinite linear;
+}
+
+.glass {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Animated Gradient Background */
+.gradient-mesh {
+  background-color: hsla(240, 100%, 5%, 1);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253, 100%, 15%, 1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225, 100%, 10%, 1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339, 100%, 15%, 1) 0, transparent 50%);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
