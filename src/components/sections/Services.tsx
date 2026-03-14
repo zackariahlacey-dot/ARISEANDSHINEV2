@@ -3,14 +3,13 @@
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
 import { PrismButton } from "@/components/ui/PrismButton";
-import { Check, Crown, Sparkles, Shield, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef } from "react";
 
 const packages = [
-  { id: "01", name: "Interior Detail", price: "150", icon: <Sparkles className="w-5 h-5 text-white/40" />, features: ["Steam Sanitization", "Full Extraction", "Leather Care", "Odor Removal"] },
-  { id: "02", name: "Exterior Detail", price: "125", icon: <Shield className="w-5 h-5 text-white/40" />, features: ["Deionized Wash", "Clay Bar Prep", "Hand Wax", "Wheel Detail"] },
-  { id: "03", name: "Elite Full Detail", price: "250", icon: <Crown className="w-5 h-5 text-[#fbbf24]" />, features: ["Total Restoration", "Hyper Gloss Wax", "Stain Removal", "Headlight Clarity"], featured: true },
+  { id: "01", name: "Interior", price: "150", details: ["Steam Sanitization", "Deep Extraction", "Leather Care", "Odor Removal"] },
+  { id: "02", name: "Exterior", price: "125", details: ["Deionized Wash", "Clay Bar Prep", "Hand Waxing", "Wheel Precision"] },
+  { id: "03", name: "Elite Full", price: "250", details: ["Full Restoration", "Hyper Gloss Wax", "Stain Removal", "Headlight Clarity"], featured: true },
 ];
 
 export default function Services({ onSelectService }: { onSelectService?: (name: string) => void }) {
@@ -24,74 +23,75 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
   };
 
   return (
-    <Section id="services" spacing="none" className="py-24 md:py-48 bg-[#030303] relative border-y border-white/5">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-20 text-center">
-        <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} className="mb-6">
-          <span className="text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.5em]">The Detailing Collections</span>
+    <Section id="services" spacing="none" className="py-24 md:py-48 bg-[#050505] relative border-y border-white/5">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-24 text-center">
+        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mb-8">
+          <span className="text-[10px] luxury-text text-[#fbbf24] tracking-[0.5em]">The Detailing Menu</span>
         </motion.div>
-        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="text-5xl md:text-8xl font-black text-white uppercase tracking-tighter leading-none mb-8">
-          Surgical <span className="text-white/20">Precision</span>
+        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="text-5xl md:text-9xl font-black text-white leading-none mb-10 italic">
+          Signature <span className="text-white/10">Collections</span>
         </motion.h2>
-        <p className="text-lg md:text-xl text-white/40 max-w-2xl mx-auto font-medium">Meticulous care for Central Vermont's most distinguished vehicles.</p>
+        <p className="text-lg md:text-xl text-white/30 max-w-2xl mx-auto font-medium italic">Professional care for discerning automotive enthusiasts.</p>
       </div>
 
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex md:grid md:grid-cols-3 gap-8 md:gap-10 overflow-x-auto md:overflow-x-visible no-scrollbar snap-x snap-mandatory px-6 md:px-12 max-w-7xl mx-auto relative z-10"
+        className="flex md:grid md:grid-cols-3 gap-12 md:gap-px overflow-x-auto md:overflow-x-visible no-scrollbar snap-x snap-mandatory px-6 md:px-0 max-w-[1600px] mx-auto md:bg-white/5"
       >
         {packages.map((pkg, index) => (
           <motion.div
             key={pkg.name}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.8 }}
-            className="flex flex-col min-w-[85vw] md:min-w-0 h-full snap-center group"
+            transition={{ delay: index * 0.1 }}
+            className="flex flex-col min-w-[85vw] md:min-w-0 bg-[#050505] snap-center group"
           >
             <div className={cn(
-              "h-full p-10 md:p-14 flex flex-col relative soft-glass transition-all duration-700",
-              pkg.featured && "border-[#fbbf24]/20 shadow-[0_30px_60px_rgba(251,191,36,0.05)] bg-white/[0.03]"
+              "h-full p-10 md:p-20 flex flex-col relative transition-all duration-1000 luxe-card",
+              pkg.featured && "bg-white/[0.02] border-[#fbbf24]/10"
             )}>
-              <div className="flex justify-between items-start mb-12">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-white/20 transition-all">
-                  {pkg.icon}
-                </div>
-                <span className="text-white/5 text-4xl font-black italic">{pkg.id}</span>
+              <div className="flex justify-between items-start mb-16">
+                <span className="text-sm luxury-text text-white/10 group-hover:text-[#fbbf24]/30 transition-colors duration-700">{pkg.id}</span>
+                {pkg.featured && (
+                  <span className="text-[9px] luxury-text text-[#fbbf24] border-b border-[#fbbf24]/30 pb-1">
+                    Most Requested
+                  </span>
+                )}
               </div>
 
-              <div className="mb-10">
-                <h3 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase tracking-tight">{pkg.name}</h3>
-                <div className="flex items-baseline gap-1">
+              <div className="mb-12">
+                <h3 className="text-4xl md:text-6xl font-black text-white mb-6 italic tracking-tighter">{pkg.name}</h3>
+                <div className="flex items-baseline gap-2">
                   <span className="text-white/20 text-xl font-medium">$</span>
-                  <span className="text-5xl md:text-6xl font-black text-white group-hover:text-[#fbbf24] transition-colors duration-700 tracking-tighter">{pkg.price}</span>
-                  <span className="text-white/20 text-sm font-black ml-1">+</span>
+                  <span className="text-6xl md:text-8xl font-black text-white tracking-tighter group-hover:text-[#fbbf24] transition-colors duration-700">{pkg.price}</span>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-12 flex-grow">
-                {pkg.features.map(f => (
-                  <div key={f} className="flex items-center gap-4 group/item">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover/item:bg-[#fbbf24] transition-colors" />
-                    <span className="text-xs md:text-sm font-bold uppercase tracking-widest text-white/40 group-hover/item:text-white/80 transition-colors">{f}</span>
+              <div className="space-y-5 mb-16 flex-grow border-t border-white/5 pt-10">
+                {pkg.details.map((detail) => (
+                  <div key={detail} className="flex items-center gap-4 group/item">
+                    <div className="w-1 h-1 rounded-full bg-white/10 group-hover/item:bg-[#fbbf24] transition-colors" />
+                    <span className="text-xs md:text-sm font-medium text-white/40 group-hover/item:text-white transition-colors italic">{detail}</span>
                   </div>
                 ))}
               </div>
 
               <PrismButton 
                 variant={pkg.featured ? "gold" : "outline"}
-                className="w-full py-6 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl"
+                className="w-full py-7 text-[10px] luxury-text rounded-none border-x-0"
                 onClick={() => onSelectService?.(pkg.name)}
               >
-                Schedule {pkg.name}
+                Reserve Session
               </PrismButton>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="flex md:hidden justify-center gap-2 mt-12 pb-12">
+      <div className="flex md:hidden justify-center gap-4 mt-16 relative z-10">
         {packages.map((_, i) => (
-          <div key={i} className={cn("h-1 transition-all duration-500 rounded-full", activeIndex === i ? "w-8 bg-[#fbbf24]" : "w-2 bg-white/10")} />
+          <div key={i} className={cn("h-[1px] transition-all duration-700", activeIndex === i ? "w-12 bg-[#fbbf24]" : "w-4 bg-white/10")} />
         ))}
       </div>
     </Section>
