@@ -26,21 +26,78 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* High-End Typography Rules */
+/* High-End Creative Typography */
 h1, h2, h3, h4 {
   text-wrap: balance;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.06em;
   font-weight: 900;
+  text-transform: uppercase;
+  font-style: italic;
 }
 
-.tracking-ultra {
-  letter-spacing: 0.5em;
+.font-technical {
+  font-family: var(--font-geist-mono), monospace;
+  letter-spacing: 0.3em;
+  font-style: normal;
 }
 
-/* Gold Dust Particles */
-.gold-dust {
-  background-image: radial-gradient(circle, var(--accent-luxury) 1px, transparent 1px);
+/* Kinetic Grid Utility */
+.technical-grid {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 100px 100px;
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+}
+
+/* Scanning Line Utility */
+.scan-line {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-luxury), transparent);
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: scan 4s linear infinite;
+  opacity: 0.2;
+}
+
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.5; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Glass-Prism Card Utility */
+.glass-prism {
+  background: rgba(255, 255, 255, 0.01);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-prism::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    rgba(251, 191, 36, 0.1),
+    transparent 20%
+  );
+  animation: rotate 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Global Noise Texture */
@@ -64,49 +121,6 @@ body::after {
   will-change: opacity, transform;
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.015);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.glass-heavy {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Prism Border Utility */
-.prism-border {
-  position: relative;
-  border: 1px solid transparent;
-}
-
-.prism-border::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  background: linear-gradient(
-    45deg,
-    transparent,
-    rgba(251, 191, 36, 0.2),
-    transparent,
-    rgba(139, 92, 246, 0.2),
-    transparent
-  );
-  border-radius: inherit;
-}
-
-/* HUD Grid Utility */
-.hud-grid {
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 80px 80px;
-}
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -117,61 +131,18 @@ body::after {
   animation: shimmer 8s infinite linear;
 }
 
-/* Animated Gradient Background */
-.gradient-mesh {
-  background-color: #020202;
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253, 100%, 8%, 1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225, 100%, 5%, 1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339, 100%, 8%, 1) 0, transparent 50%);
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 2px;
 }
 ::-webkit-scrollbar-track {
   background: black;
 }
 ::-webkit-scrollbar-thumb {
   background: #18181b;
-  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-luxury);
-}
-
-/* Google Autocomplete Overrides */
-.pac-container {
-  background-color: #0a0a0a !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 24px !important;
-  margin-top: 12px !important;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9) !important;
-  z-index: 10000 !important;
-}
-
-.pac-item {
-  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-  padding: 16px 20px !important;
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.pac-item:hover {
-  background-color: rgba(251, 191, 36, 0.08) !important;
-}
-
-.pac-item-query {
-  color: #ffffff !important;
-  font-weight: 700 !important;
-}
-
-.pac-matched {
-  color: var(--accent-luxury) !important;
-}
-
-.pac-logo:after {
-  display: none !important;
 }
 
 @layer utilities {

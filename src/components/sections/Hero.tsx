@@ -6,13 +6,12 @@ import { PrismButton } from "@/components/ui/PrismButton";
 import { LightLeak } from "@/components/ui/LightLeak";
 
 export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
-  // SEO Schema for Local Business
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "AutoDetailing",
     "name": "Arise & Shine VT",
     "image": "https://ariseandshinevt.com/aasbanner.png",
-    "description": "Premium mobile car detailing in Vermont. Specializing in high-gloss Hyper Gloss Wax, interior restoration, and paint decontamination. Professional service that comes to you.",
+    "description": "Premium mobile car detailing in Vermont. Specializing in high-gloss Hyper Gloss Wax and interior restoration.",
     "url": "https://ariseandshinevt.com",
     "telephone": "802-585-5563",
     "address": {
@@ -21,156 +20,76 @@ export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
       "addressRegion": "VT",
       "postalCode": "05676",
       "addressCountry": "US"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 44.3378,
-      "longitude": -72.7562
-    },
-    "priceRange": "$$",
-    "areaServed": {
-      "@type": "State",
-      "name": "Vermont"
-    },
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Mobile Detailing Services",
-      "itemListElement": [
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Interior Restoration"
-          }
-        },
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Hyper Gloss Wax Protection"
-          }
-        },
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Full Elite Transformation"
-          }
-        }
-      ]
     }
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       
       <Section withGrid spacing="none" className="min-h-[90vh] md:min-h-screen flex items-center pt-16 md:pt-48 overflow-hidden bg-black relative">
-        {/* Elite Background Layers */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 gold-dust opacity-10 pointer-events-none" />
-          <LightLeak color="violet" intensity="high" className="-top-1/4 -left-1/4 scale-125 opacity-20 md:opacity-30 md:scale-150 animate-pulse" />
-          <LightLeak color="amber" intensity="medium" className="bottom-0 -right-1/4 scale-110 opacity-15 md:opacity-20 md:scale-125" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.03)_0%,transparent_70%)]" />
-        </div>
-
+        {/* Creative Layering */}
+        <div className="absolute inset-0 z-0 technical-grid opacity-30" />
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.05)_0%,transparent_70%)]" />
+        
         <div className="text-center relative z-10 w-full px-6">
-          {/* Elite Badge */}
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8 md:mb-10"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-4 mb-8"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse shadow-[0_0_15px_#fbbf24]" />
-            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-ultra text-white/70">Vermont's Premier Detailer</span>
+            <div className="h-px w-8 md:w-16 bg-[#fbbf24]" />
+            <span className="text-[10px] md:text-xs font-technical text-[#fbbf24] uppercase">Protocol: Vermont_Elite</span>
+            <div className="h-px w-8 md:w-16 bg-[#fbbf24]" />
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, skewX: 20 }}
+            animate={{ opacity: 1, skewX: 0 }}
+            transition={{ duration: 1 }}
           >
-            <h1 className="text-6xl md:text-[140px] font-black tracking-tighter text-white mb-8 md:mb-10 leading-[0.8] md:leading-[0.8] drop-shadow-[0_0_50px_rgba(255,255,255,0.1)]">
-              <span className="block overflow-hidden h-fit pb-2">
-                <motion.span 
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="block"
-                >
-                  ARISE <span className="text-[#fbbf24] tracking-[-0.08em]">&</span>
-                </motion.span>
-              </span>
-              <span className="block overflow-hidden h-fit">
-                <motion.span 
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] via-white to-[#8b5cf6] bg-[length:200%_auto] animate-shimmer block"
-                >
-                  SHINE VT
-                </motion.span>
-              </span>
+            <h1 className="text-7xl md:text-[180px] font-black tracking-tighter text-white mb-8 md:mb-12 leading-[0.75] drop-shadow-[0_0_80px_rgba(251,191,36,0.15)] italic">
+              <span className="block text-transparent bg-clip-text bg-linear-to-b from-white to-white/20">ARISE</span>
+              <span className="block text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] via-white to-[#8b5cf6] animate-shimmer">SHINE VT</span>
             </h1>
           </motion.div>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 1 }}
-            className="text-lg md:text-2xl text-white/40 max-w-4xl mx-auto mb-12 md:mb-16 leading-relaxed font-medium"
+            transition={{ delay: 0.5 }}
+            className="text-lg md:text-3xl text-white/40 max-w-4xl mx-auto mb-12 md:mb-20 font-bold uppercase tracking-tight italic"
           >
-            Surgical precision meets <br className="md:hidden" /> unrivaled brilliance. 
-            <span className="hidden md:inline"> We redefine the standard of excellence for Vermont's most distinguished collections.</span>
+            Surgical Precision. <span className="text-white">Unrivaled Brilliance.</span>
           </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 1 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 max-w-xs md:max-w-none mx-auto"
-          >
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 max-w-sm md:max-w-none mx-auto">
             <PrismButton 
               variant="gold" 
-              className="w-full sm:w-auto text-[10px] md:text-lg py-5 md:py-6 px-10 md:px-12"
+              className="w-full sm:w-auto text-xs md:text-lg py-6 md:py-8 px-12 md:px-20 group skew-x-[-12deg]"
               onClick={onBookClick}
             >
-              Secure Session
+              <span className="skew-x-[12deg] relative z-10 flex items-center gap-3">
+                Initialize Session <div className="w-2 h-2 rounded-full bg-black animate-pulse" />
+              </span>
             </PrismButton>
             <PrismButton 
               variant="outline" 
-              className="w-full sm:w-auto text-[10px] md:text-lg py-5 md:py-6 px-10 md:px-12 border-white/10"
+              className="w-full sm:w-auto text-xs md:text-lg py-6 md:py-8 px-12 md:px-20 border-white/10 skew-x-[-12deg]"
               onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              View Services
+              <span className="skew-x-[12deg] text-white/40 group-hover:text-white transition-colors">Catalog</span>
             </PrismButton>
-          </motion.div>
+          </div>
         </div>
 
-        {/* Floating Decorative Elements - Scaled for Mobile */}
-        <motion.div 
-          animate={{ 
-            y: [0, -20, 0],
-            rotate: [0, 5, 0]
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 right-[10%] w-48 md:w-96 h-48 md:h-96 glass rounded-full blur-3xl opacity-[0.03] pointer-events-none will-change-transform"
-        />
+        {/* Cinematic Scan Line */}
+        <div className="scan-line" />
         
-        {/* Scroll Indicator */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2, duration: 1 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 md:gap-4"
-        >
-          <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.5em] text-white/20">Scroll</span>
-          <div className="w-[1px] h-10 md:h-12 bg-linear-to-b from-[#fbbf24]/40 to-transparent" />
-        </motion.div>
+        {/* Floating Detail Watermark */}
+        <div className="absolute -bottom-10 -right-10 md:bottom-20 md:right-20 opacity-5 select-none pointer-events-none">
+          <span className="text-[150px] md:text-[300px] font-black text-white leading-none italic uppercase">Detail</span>
+        </div>
       </Section>
     </>
   );
