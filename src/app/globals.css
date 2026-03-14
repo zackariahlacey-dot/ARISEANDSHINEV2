@@ -2,14 +2,13 @@
 
 @theme {
   --font-sans: var(--font-geist-sans);
-  --font-serif: "Times New Roman", serif; /* Fallback to a classic serif */
 }
 
 :root {
-  --background: #050505;
+  --background: #000000;
   --foreground: #ffffff;
-  --accent-gold: #fbbf24;
-  --accent-warm: rgba(251, 191, 36, 0.05);
+  --accent-primary: #fbbf24;
+  --accent-secondary: #8b5cf6;
 }
 
 html {
@@ -24,53 +23,54 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* High-End Editorial Typography */
+/* Swiss Cyber Typography */
 h1, h2, h3 {
   text-wrap: balance;
-  letter-spacing: -0.02em;
-  font-weight: 800;
-  font-family: var(--font-serif);
-}
-
-.luxury-text {
-  font-family: var(--font-sans);
+  letter-spacing: -0.06em;
   font-weight: 900;
-  letter-spacing: -0.05em;
   text-transform: uppercase;
+  line-height: 0.8;
 }
 
-/* Atmospheric Depth */
-.soft-glow {
-  position: absolute;
-  filter: blur(140px);
-  opacity: 0.1;
-  pointer-events: none;
-  z-index: 0;
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
 }
 
-/* Elegant Slab */
-.luxe-card {
-  background: rgba(255, 255, 255, 0.015);
-  backdrop-filter: blur(24px);
+/* Structural Studio Grid */
+.studio-grid {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Cyber Card Utility */
+.cyber-card {
+  background: #0a0a0a;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+  position: relative;
 }
 
-.luxe-card:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-4px);
+.cyber-card:hover {
+  background: #0f0f0f;
+  border-color: var(--accent-primary);
+  transform: scale(1.02);
+  z-index: 10;
 }
 
-/* Global Atmosphere */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.03;
-  pointer-events: none;
-  z-index: 100;
+/* Motion Accents */
+@keyframes pulse-fast {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-fast {
+  animation: pulse-fast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @layer utilities {

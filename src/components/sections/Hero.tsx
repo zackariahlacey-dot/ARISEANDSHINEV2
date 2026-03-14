@@ -6,58 +6,78 @@ import { PrismButton } from "@/components/ui/PrismButton";
 
 export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
   return (
-    <Section withGrid spacing="none" className="min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-[#050505] relative">
-      {/* Editorial Spotlights */}
-      <div className="soft-glow w-[800px] h-[800px] bg-[#fbbf24] -top-96 -left-48" />
-      <div className="soft-glow w-[1000px] h-[1000px] bg-white -bottom-[500px] -right-48" />
+    <Section withGrid spacing="none" className="min-h-screen flex flex-col items-center justify-center pt-24 overflow-hidden bg-black relative studio-grid">
+      {/* Structural Dividers */}
+      <div className="absolute top-0 left-0 w-full h-[30vh] border-b border-white/5 pointer-events-none" />
+      <div className="absolute top-0 left-1/2 w-px h-full border-l border-white/5 pointer-events-none" />
 
-      <div className="text-center relative z-10 w-full px-6 max-w-5xl">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <div className="h-px w-12 bg-white/10" />
-            <span className="text-[10px] luxury-text text-white/40 tracking-[0.4em]">Established 2023</span>
-            <div className="h-px w-12 bg-white/10" />
+      <div className="relative z-10 w-full px-6 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          
+          {/* Metadata Sidebar - Creative Flair */}
+          <div className="lg:col-span-3 space-y-12 hidden lg:block border-l-2 border-[#fbbf24] pl-6 py-4">
+            <div>
+              <p className="mono-label mb-2">Location_Node</p>
+              <p className="text-xs font-black text-white uppercase">Central Vermont_US</p>
+            </div>
+            <div>
+              <p className="mono-label mb-2">Service_Tier</p>
+              <p className="text-xs font-black text-[#fbbf24] uppercase tracking-wider">Elite Mobile Restoration</p>
+            </div>
+            <div>
+              <p className="mono-label mb-2">Version_Manifest</p>
+              <p className="text-[10px] font-bold text-white/20 uppercase">AAS_v3.0_Studio_Build</p>
+            </div>
           </div>
 
-          <h1 className="text-7xl md:text-[150px] font-black text-white leading-[0.8] mb-12 italic">
-            Arise <br /> 
-            <span className="text-transparent bg-clip-text bg-linear-to-b from-white to-white/30">Shine VT</span>
-          </h1>
+          {/* Main Monolith Typography */}
+          <div className="lg:col-span-9">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: [0.2, 1, 0.3, 1] }}
+            >
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-3 h-3 bg-[#fbbf24] animate-pulse-fast shadow-[0_0_15px_#fbbf24]" />
+                <span className="text-sm font-black uppercase tracking-[0.4em] text-white/40">Active Session</span>
+              </div>
 
-          <p className="text-lg md:text-2xl text-white/40 max-w-2xl mx-auto font-medium leading-relaxed italic mb-16">
-            Elite mobile detailing for Central Vermont's most <br className="hidden md:block" /> distinguished automotive collections.
-          </p>
-        </motion.div>
+              <h1 className="text-7xl md:text-[180px] font-black tracking-tight text-white mb-12 drop-shadow-[0_0_100px_rgba(251,191,36,0.1)]">
+                ARISE <br /> <span className="text-transparent bg-clip-text bg-linear-to-r from-white via-[#fbbf24] to-white/20">SHINE</span>
+              </h1>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 1.2 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-12"
-        >
-          <PrismButton 
-            variant="gold" 
-            className="w-full sm:w-auto text-xs font-black py-7 px-16 rounded-none uppercase tracking-[0.2em]"
-            onClick={onBookClick}
-          >
-            Reserve Session
-          </PrismButton>
-          <button 
-            className="text-[10px] luxury-text text-white/30 hover:text-white transition-colors border-b border-white/10 pb-1"
-            onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            Browse Services
-          </button>
-        </motion.div>
+              <div className="max-w-xl border-t border-white/10 pt-8 mb-16">
+                <p className="text-lg md:text-2xl text-white/40 font-bold uppercase tracking-tighter leading-[0.9]">
+                  Surgical precision. <br /> 
+                  <span className="text-white">Unrivaled brilliance.</span> <br />
+                  <span className="text-white/20">Mobile automotive studio.</span>
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-6 items-center">
+                <PrismButton 
+                  variant="gold" 
+                  className="text-xs font-black py-6 px-12 rounded-none border-2 border-[#fbbf24]"
+                  onClick={onBookClick}
+                >
+                  INITIALIZE_BOOKING
+                </PrismButton>
+                <button 
+                  className="mono-label hover:text-white transition-colors border-b border-white/10 pb-1"
+                  onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  EXPLORE_CORE_SYSTEMS [→]
+                </button>
+              </div>
+            </motion.div>
+          </div>
+
+        </div>
       </div>
 
-      {/* Minimal Scroll Accent */}
-      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 opacity-10">
-        <div className="w-[1px] h-20 bg-linear-to-b from-white to-transparent" />
+      {/* Background Graphic */}
+      <div className="absolute -bottom-20 left-0 w-full opacity-[0.03] select-none pointer-events-none">
+        <span className="text-[200px] md:text-[400px] font-black text-white leading-none tracking-tighter">PRESTIGE</span>
       </div>
     </Section>
   );
