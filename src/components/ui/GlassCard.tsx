@@ -1,24 +1,23 @@
 "use client";
 
-import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
-interface GlassCardProps extends HTMLMotionProps<"div"> {
+interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
-  glowColor?: "amber" | "violet" | "none";
+  glowColor?: "none" | "violet" | "amber";
 }
 
 export function GlassCard({
   children,
   className,
   glowColor = "none",
-  ...props
 }: GlassCardProps) {
   const glowStyles = {
-    amber: "shadow-[0_0_40px_-15px_rgba(251,191,36,0.15)]",
-    violet: "shadow-[0_0_40px_-15px_rgba(139,92,246,0.15)]",
     none: "",
+    violet: "after:absolute after:inset-0 after:bg-[#8b5cf6]/5 after:blur-3xl after:pointer-events-none",
+    amber: "after:absolute after:inset-0 after:bg-[#fbbf24]/5 after:blur-3xl after:pointer-events-none",
   };
 
   return (
@@ -26,18 +25,13 @@ export function GlassCard({
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
       className={cn(
-        "glass relative overflow-hidden rounded-2xl p-6",
+        "glass relative rounded-[32px] md:rounded-[40px] border border-white/10 overflow-hidden",
         glowStyles[glowColor],
         className
       )}
-      {...props}
     >
-      <div className="relative z-10">{children}</div>
-      
-      {/* Subtle Inner Glow */}
-      <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-white/5 to-transparent opacity-50" />
+      <div className="relative z-10 h-full">{children}</div>
     </motion.div>
   );
 }

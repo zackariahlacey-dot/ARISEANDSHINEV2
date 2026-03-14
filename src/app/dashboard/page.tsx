@@ -51,7 +51,6 @@ export default async function DashboardPage() {
     .order("preferred_date", { ascending: false });
 
   // Merge and deduplicate sessions for the Ledger
-  // In a production app, we'd ensure these are unified in the DB, but this ensures they see everything now.
   const unifiedSessions = [
     ...(bookings || []).map(b => ({
       id: b.id,
@@ -94,7 +93,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#050505] relative overflow-hidden">
-      <div className="fixed inset-0 gradient-mesh opacity-20 pointer-events-none" />
+      <div className="fixed inset-0 gradient-mesh opacity-20 pointer-events-none -z-10 will-change-opacity" />
       <LightLeak color="violet" intensity="medium" className="-top-1/4 -right-1/4 opacity-30" />
 
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/40 backdrop-blur-2xl">
@@ -274,7 +273,7 @@ export default async function DashboardPage() {
                 <div className="bg-white/5 border border-dashed border-white/10 rounded-[40px] p-24 text-center">
                   <p className="text-white/30 text-xs font-black uppercase tracking-[0.4em] mb-10">No sessions recorded.</p>
                   <Link href="/#booking">
-                    <PrismButton variant="luxury" className="px-12 py-4">Commence Sessions</PrismButton>
+                    <PrismButton variant="gold" className="px-12 py-4">Commence Sessions</PrismButton>
                   </Link>
                 </div>
               )}
