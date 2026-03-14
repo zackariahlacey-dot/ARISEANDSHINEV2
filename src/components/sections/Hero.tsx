@@ -12,7 +12,7 @@ export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
     "@type": "AutoDetailing",
     "name": "Arise & Shine VT",
     "image": "https://ariseandshinevt.com/aasbanner.png",
-    "description": "Elite mobile detailing in Vermont. High-gloss protection and surgical interior restoration.",
+    "description": "Premium mobile car detailing in Vermont. Specializing in high-gloss Hyper Gloss Wax, interior restoration, and paint decontamination. Professional service that comes to you.",
     "url": "https://ariseandshinevt.com",
     "telephone": "802-585-5563",
     "address": {
@@ -27,7 +27,38 @@ export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
       "latitude": 44.3378,
       "longitude": -72.7562
     },
-    "priceRange": "$$"
+    "priceRange": "$$",
+    "areaServed": {
+      "@type": "State",
+      "name": "Vermont"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Mobile Detailing Services",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Interior Restoration"
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Hyper Gloss Wax Protection"
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Full Elite Transformation"
+          }
+        }
+      ]
+    }
   };
 
   return (
