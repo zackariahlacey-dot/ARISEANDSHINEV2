@@ -5,9 +5,10 @@
 }
 
 :root {
-  --background: #000000;
+  --background: #020202;
   --foreground: #ffffff;
   --accent-gold: #fbbf24;
+  --accent-violet: #8b5cf6;
 }
 
 html {
@@ -22,56 +23,57 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Boutique Elite Typography */
+/* Avant-Garde Typography */
 h1, h2, h3 {
   text-wrap: balance;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.text-micro {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.4em;
+.text-variable {
+  font-weight: 100;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.4);
 }
 
-/* Horizontal Boutique Strip */
-.boutique-strip {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.boutique-strip:hover {
-  background: rgba(255, 255, 255, 0.015);
-  border-bottom-color: var(--accent-gold);
-}
-
-/* Elite Button Utility */
-.btn-elite {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.4s ease;
-}
-
-.btn-elite:hover {
-  border-color: var(--accent-gold);
-  color: var(--accent-gold);
-  background: rgba(251, 191, 36, 0.02);
-}
-
-/* Global Grain */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.02;
+/* Color Bloom Atmosphere */
+.color-bloom {
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  filter: blur(150px);
+  opacity: 0.08;
   pointer-events: none;
-  z-index: 100;
+  z-index: -1;
+}
+
+/* Studio Slab Card */
+.studio-slab {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.studio-slab:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+}
+
+/* Precision Cursor Line (Visual only) */
+.cursor-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.05), transparent);
+  pointer-events: none;
+  z-index: 50;
 }
 
 @layer utilities {
