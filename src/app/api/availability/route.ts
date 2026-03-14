@@ -10,26 +10,20 @@ export async function GET(request: Request) {
 
     const supabase = await createClient()
     
-    // Fetch all bookings for the selected date
+    // Fetch all bookings for the selected date including preferred_time
     const { data: bookings, error } = await supabase
       .from('leads')
-      .select('preferred_date, service')
+      .select('preferred_date, service, preferred_time')
       .eq('preferred_date', date)
-      // We check for both leads and confirmed bookings
-      // In a production app, you might want to join or check a unified 'schedule' view
 
     if (error) throw error
 
     // Return the start times that are already taken
-    // You could also calculate overlaps here based on service duration
-    const bookedTimes = bookings?.map(b => {
-      // This logic assumes we store time in a 'preferred_time' field 
-      // or similar in the 'leads' table. Let's ensure leads has a time field.
-      return b.preferred_time // Placeholder: we need to add this column
-    }).filter(Boolean) || []
+    const bookedTimes = bookings?.map(b => b.preferred_time).filter(Boolean) || []
 
     return NextResponse.json({ bookedTimes })
   } catch (error) {
+    console.error('Availability Error:', error)
     return NextResponse.json({ error: 'Failed to fetch availability' }, { status: 500 })
   }
 }

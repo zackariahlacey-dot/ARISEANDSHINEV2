@@ -5,7 +5,7 @@ import { Section } from "@/components/ui/Section";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PrismButton } from "@/components/ui/PrismButton";
 import { LightLeak } from "@/components/ui/LightLeak";
-import { ShieldCheck, Zap } from "lucide-react";
+import { ShieldCheck, Zap, Star, ChevronDown, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const plans = [
@@ -51,7 +51,7 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[10px] font-bold uppercase tracking-[0.4em] mb-6"
+          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.4em] mb-6"
         >
           Elite Membership
         </motion.div>
@@ -59,77 +59,81 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-4xl md:text-7xl font-black text-white mb-6 uppercase tracking-tighter"
+          className="text-4xl md:text-8xl font-black text-white mb-6 uppercase tracking-tighter leading-[0.85]"
         >
-          Arise <span className="text-[#fbbf24]">&</span> Shine <br />
-          <span className="text-transparent bg-clip-text bg-linear-to-r from-white via-[#fbbf24] to-white/40">Maintenance</span>
+          Automated <br />
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-white via-[#fbbf24] to-white/40">Excellence</span>
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.1 }}
-          className="text-white/40 max-w-xl mx-auto text-lg"
+          className="text-white/40 max-w-xl mx-auto text-lg md:text-xl"
         >
-          Automated excellence. Never worry about the state of your vehicle again with our concierge maintenance programs.
+          Never worry about the state of your vehicle again with our concierge maintenance programs.
         </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto relative z-10 px-4">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.name}
-            initial={{ opacity: 0, x: index === 0 ? -50 : 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.8, delay: index * 0.2 }}
           >
             <GlassCard 
               glowColor={plan.glow} 
               className={cn(
-                "p-10 md:p-14 flex flex-col h-full border-white/5 relative group overflow-hidden",
-                plan.featured && "border-[#fbbf24]/20 shadow-[0_0_50px_rgba(251,191,36,0.05)]"
+                "p-10 md:p-16 flex flex-col h-full border-white/5 relative group overflow-hidden transition-all duration-700",
+                plan.featured && "border-[#fbbf24]/20 shadow-[0_0_80px_rgba(251,191,36,0.05)]"
               )}
             >
-              {/* Decorative Background Icon */}
-              <div className="absolute -right-8 -top-8 opacity-5 scale-[3] group-hover:opacity-10 transition-opacity duration-700">
-                {plan.icon}
-              </div>
-
-              <div className="mb-10">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                    {plan.icon}
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                      {plan.icon}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#fbbf24] block mb-1">
+                        {plan.category}
+                      </span>
+                      <h3 className="text-4xl font-bold text-white tracking-tight">{plan.name}</h3>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#fbbf24]">
-                    {plan.category}
-                  </span>
+                  {plan.featured && (
+                    <div className="px-3 py-1 rounded-full bg-[#fbbf24] text-black text-[8px] font-black uppercase tracking-widest">
+                      Best Value
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-4xl font-bold text-white mb-4">{plan.name}</h3>
                 <p className="text-white/40 leading-relaxed text-lg">{plan.description}</p>
               </div>
 
               <div className="flex items-baseline gap-2 mb-12">
-                <span className="text-white/20 text-xl font-medium">$</span>
-                <span className="text-7xl font-black text-white">{plan.price}</span>
-                <span className="text-white/40 text-sm uppercase tracking-widest font-bold">/ month</span>
+                <span className="text-white/20 text-2xl font-medium">$</span>
+                <span className="text-8xl font-black text-white group-hover:text-[#fbbf24] transition-colors duration-500">{plan.price}</span>
+                <span className="text-white/40 text-sm uppercase tracking-widest font-bold">/ Month</span>
               </div>
 
-              <div className="space-y-5 mb-14 flex-grow">
+              <div className="space-y-6 mb-16 flex-grow">
                 {plan.benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-4">
-                    <div className="w-2 h-2 rounded-full bg-[#fbbf24] shadow-[0_0_10px_#fbbf24]" />
-                    <span className="text-white/80 font-medium">{benefit}</span>
+                  <div key={benefit} className="flex items-center gap-4 group/item">
+                    <CheckCircle2 className="w-5 h-5 text-[#fbbf24] opacity-40 group-hover/item:opacity-100 transition-opacity" />
+                    <span className="text-white/70 font-medium group-hover/item:text-white transition-colors">{benefit}</span>
                   </div>
                 ))}
               </div>
 
               <PrismButton 
-                variant={plan.featured ? "luxury" : "outline"} 
-                className="w-full py-6 text-lg"
+                variant={plan.featured ? "gold" : "outline"} 
+                className="w-full py-7 text-lg shadow-2xl"
                 onClick={() => onSelectService?.(plan.name)}
               >
-                Join the Elite
+                Join the Elite Circle
               </PrismButton>
             </GlassCard>
           </motion.div>

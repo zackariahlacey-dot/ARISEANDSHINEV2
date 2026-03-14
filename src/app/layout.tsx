@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import ClientLayout from "./client-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Arise And Shine VT | Premium Mobile Detailing Vermont",
-  description: "Elite mobile detailing in Vermont. Interior deep cleans, exterior shine, and ceramic protection. We come to you. Book your Elite shine today.",
+  description: "Elite mobile detailing in Vermont. Interior deep cleans, exterior shine, and high-gloss protection. We come to you. Book your Elite shine today.",
   keywords: ["mobile detailing VT", "car detailing Vermont", "interior car cleaning", "ceramic coating VT", "Arise And Shine VT"],
   metadataBase: new URL('https://ariseandshinevt.com'),
   icons: {
@@ -57,11 +58,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#050505] text-white selection:bg-violet-500/30`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#020202] text-white selection:bg-violet-500/30`}
       >
-        <div className="fixed inset-0 gradient-mesh opacity-20 pointer-events-none -z-10 will-change-opacity" />
-        <div className="fixed inset-0 hud-grid pointer-events-none -z-10 opacity-30" />
-        {children}
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );
