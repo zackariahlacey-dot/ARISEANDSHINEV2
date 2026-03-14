@@ -75,7 +75,7 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
         </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto relative z-10">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.name}

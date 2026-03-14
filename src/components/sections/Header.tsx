@@ -44,15 +44,15 @@ export default function Header() {
         "border border-white/10 shadow-2xl backdrop-blur-md"
       )}>
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <div className="relative w-10 h-10 overflow-hidden">
+        <Link href="/" className="flex items-center gap-2 md:gap-3">
+          <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden">
             <img 
               src="/e.png" 
               alt="Arise & Shine VT Logo" 
               className="w-full h-full object-contain brightness-110 contrast-125"
             />
           </div>
-          <span className="text-xl font-bold tracking-tighter text-white md:text-2xl">
+          <span className="text-lg font-bold tracking-tighter text-white md:text-2xl">
             ARISE <span className="text-[#fbbf24]">&</span> SHINE
           </span>
         </Link>

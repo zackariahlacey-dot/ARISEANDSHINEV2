@@ -48,7 +48,7 @@ export default function About() {
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#fbbf24]">The Philosophy</span>
               </div>
               
-              <h2 className="text-5xl md:text-[90px] font-black text-white leading-[0.85] tracking-tighter mb-10">
+              <h2 className="text-4xl md:text-[90px] font-black text-white leading-[0.85] tracking-tighter mb-10">
                 Precision detailing for <br />
                 <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] via-white to-white/40">
                   Vermont's finest
@@ -56,7 +56,7 @@ export default function About() {
                 vehicles.
               </h2>
 
-              <p className="text-xl md:text-2xl text-white/40 max-w-2xl leading-relaxed font-medium italic border-l-4 border-[#fbbf24]/30 pl-8">
+              <p className="text-lg md:text-2xl text-white/40 max-w-2xl leading-relaxed font-medium italic border-l-4 border-[#fbbf24]/30 pl-6 md:pl-8">
                 "We don't just clean cars; we restore the emotional connection between driver and machine."
               </p>
             </motion.div>

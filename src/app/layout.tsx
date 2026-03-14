@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   description: "Elite mobile detailing in Vermont. Interior deep cleans, exterior shine, and ceramic protection. We come to you. Book your Elite shine today.",
   keywords: ["mobile detailing VT", "car detailing Vermont", "interior car cleaning", "ceramic coating VT", "Arise And Shine VT"],
   metadataBase: new URL('https://ariseandshinevt.com'),
+  icons: {
+    icon: "/e.png",
+    apple: "/e.png",
+  },
   robots: {
     index: true,
     follow: true,
@@ -26,8 +30,22 @@ export const metadata: Metadata = {
     description: "Premium mobile detailing service in Vermont. Elevate your drive with our professional interior and exterior care.",
     url: 'https://ariseandshinevt.com',
     siteName: 'Arise And Shine VT',
+    images: [
+      {
+        url: '/aasbanner.png',
+        width: 1200,
+        height: 630,
+        alt: 'Arise And Shine VT Premium Detailing',
+      },
+    ],
     locale: 'en_US',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Arise And Shine VT | Elite Mobile Detailing',
+    description: 'Premium mobile detailing service in Vermont.',
+    images: ['/aasbanner.png'],
   },
 };
 

@@ -36,7 +36,7 @@ export default function ServiceAreas() {
 
       <div className="max-w-5xl mx-auto">
         <GlassCard glowColor="violet" className="p-8 md:p-12">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
             {areas.map((area, index) => (
               <motion.div
                 key={area}

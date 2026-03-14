@@ -32,7 +32,7 @@ export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         >
-          <h1 className="text-6xl md:text-[120px] font-black tracking-tighter text-white mb-8 leading-[0.9] drop-shadow-2xl">
+          <h1 className="text-5xl md:text-[120px] font-black tracking-tighter text-white mb-8 leading-[0.9] drop-shadow-2xl">
             Arise <span className="text-[#fbbf24]">&</span> <br />
             <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] via-[#8b5cf6] to-[#f472b6] bg-[length:200%_auto] animate-shimmer">
               Shine VT
