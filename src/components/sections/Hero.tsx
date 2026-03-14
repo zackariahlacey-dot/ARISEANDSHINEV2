@@ -6,78 +6,66 @@ import { PrismButton } from "@/components/ui/PrismButton";
 
 export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
   return (
-    <Section withGrid spacing="none" className="min-h-screen flex flex-col items-center justify-center pt-24 overflow-hidden bg-black relative luxe-grid">
-      {/* Structural Accents */}
-      <div className="absolute top-0 left-0 w-full h-[25vh] border-b border-white/5 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 w-px h-full border-l border-white/5 pointer-events-none" />
-
-      <div className="relative z-10 w-full px-6 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-          
-          {/* Metadata Sidebar - Refined Terminology */}
-          <div className="lg:col-span-3 space-y-16 hidden lg:block border-l-2 border-[#fbbf24] pl-8 py-6">
-            <div>
-              <p className="label-mono mb-2">Studio_Location</p>
-              <p className="text-[11px] font-black text-white uppercase tracking-tighter">Central Vermont // US</p>
-            </div>
-            <div>
-              <p className="label-mono mb-2">Service_Standard</p>
-              <p className="text-[11px] font-black text-[#fbbf24] uppercase tracking-wider">Elite Automotive Care</p>
-            </div>
-            <div>
-              <p className="label-mono mb-2">Creative_Direction</p>
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Vizulux_Prestige_Build</p>
-            </div>
+    <Section withGrid spacing="none" className="min-h-screen flex flex-col items-center justify-center pt-20 overflow-hidden bg-black relative">
+      {/* Precision Frame */}
+      <div className="absolute inset-8 border border-white/5 pointer-events-none hidden md:block" />
+      
+      <div className="text-center relative z-10 w-full px-6 max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5 }}
+        >
+          <div className="flex items-center justify-center gap-6 mb-16">
+            <span className="text-micro">Est. 2023</span>
+            <div className="w-1 h-1 rounded-full bg-[#fbbf24]" />
+            <span className="text-micro">Central Vermont</span>
           </div>
 
-          {/* Main Hero Monolith */}
-          <div className="lg:col-span-9">
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="flex items-center gap-4 mb-10">
-                <div className="w-2 h-2 rounded-full bg-[#fbbf24] shadow-[0_0_20px_#fbbf24]" />
-                <span className="text-xs font-black uppercase tracking-[0.5em] text-white/40">Studio_Active</span>
-              </div>
+          <h1 className="text-7xl md:text-[180px] font-black tracking-tighter text-white leading-[0.8] mb-16">
+            Arise <br /> 
+            <span className="text-transparent bg-clip-text bg-linear-to-b from-white to-white/10">Shine VT</span>
+          </h1>
 
-              <h1 className="text-7xl md:text-[170px] font-black tracking-tight text-white mb-14 drop-shadow-[0_0_80px_rgba(255,255,255,0.05)]">
-                ARISE <br /> <span className="text-transparent bg-clip-text bg-linear-to-r from-white via-[#fbbf24] to-white/30">SHINE VT</span>
-              </h1>
-
-              <div className="max-w-2xl border-t border-white/10 pt-10 mb-16">
-                <p className="text-xl md:text-3xl text-white/40 font-bold uppercase tracking-tighter leading-[0.85]">
-                  Surgical precision for <br /> 
-                  <span className="text-white">discerning collections.</span> <br />
-                  <span className="text-white/20 italic">The gold standard of Vermont.</span>
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-10 items-center">
-                <PrismButton 
-                  variant="gold" 
-                  className="text-xs font-black py-7 px-16 rounded-none border-2 border-[#fbbf24] shadow-[0_20px_50px_rgba(251,191,36,0.1)]"
-                  onClick={onBookClick}
-                >
-                  RESERVE_SESSION
-                </PrismButton>
-                <button 
-                  className="label-mono hover:text-white transition-colors border-b border-white/10 pb-1"
-                  onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  VIEW_COLLECTIONS [→]
-                </button>
-              </div>
-            </motion.div>
+          <div className="max-w-2xl mx-auto border-y border-white/10 py-10 mb-16 relative">
+            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black border border-white/20 rotate-45" />
+            <p className="text-xl md:text-2xl text-white/40 font-bold uppercase tracking-tight italic">
+              Surgical precision for Vermont's <br /> most distinguished collections.
+            </p>
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black border border-white/20 rotate-45" />
           </div>
+        </motion.div>
 
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 1 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-12"
+        >
+          <PrismButton 
+            variant="gold" 
+            className="w-full sm:w-auto text-[10px] font-black py-7 px-20 rounded-none uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(251,191,36,0.1)]"
+            onClick={onBookClick}
+          >
+            RESERVE SESSION
+          </PrismButton>
+          <button 
+            className="text-micro hover:text-white transition-colors border-b border-white/10 pb-1"
+            onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            THE CATALOGUE [→]
+          </button>
+        </motion.div>
       </div>
 
-      {/* Floating Prestige Watermark */}
-      <div className="absolute -bottom-16 left-0 w-full opacity-[0.02] select-none pointer-events-none text-center">
-        <span className="text-[150px] md:text-[350px] font-black text-white leading-none tracking-tighter">PRESTIGE</span>
+      {/* Boutique Metadata - Creative Detail */}
+      <div className="absolute bottom-12 left-12 hidden lg:block text-left">
+        <p className="text-micro mb-1">Status</p>
+        <p className="text-[10px] font-black text-white uppercase">Studio_Ready</p>
+      </div>
+      <div className="absolute bottom-12 right-12 hidden lg:block text-right">
+        <p className="text-micro mb-1">Navigation</p>
+        <p className="text-[10px] font-black text-white uppercase italic">Scroll_to_explore</p>
       </div>
     </Section>
   );

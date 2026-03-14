@@ -3,105 +3,98 @@
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
 import { PrismButton } from "@/components/ui/PrismButton";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 const packages = [
-  { id: "SEC_01", name: "Interior", price: "150", details: ["Steam_Sanitization", "Deep_Extraction", "Leather_Conditioning", "Odor_Purge"] },
-  { id: "SEC_02", name: "Exterior", price: "125", details: ["Deionized_Wash", "Clay_Bar_Prep", "Hand_Wax_Sealant", "Wheel_Precision"] },
-  { id: "SEC_03", name: "Elite Full", price: "250", details: ["Total_Restoration", "Hyper_Gloss_Sync", "Stain_Elimination", "Headlight_Clarity"], featured: true },
+  { id: "01", name: "Interior", price: "150", specs: ["Steam Sanitization", "Deep Extraction", "Leather Conditioning", "Odor Neutralization"] },
+  { id: "02", name: "Exterior", price: "125", specs: ["Deionized Wash", "Clay Bar Surface Prep", "Hand Wax Sealant", "Wheel Precision"] },
+  { id: "03", name: "Elite Full", price: "250", specs: ["Total System Restoration", "Hyper Gloss Wax Sync", "Deep Stain Elimination", "Headlight Clarity"], featured: true },
 ];
 
 export default function Services({ onSelectService }: { onSelectService?: (name: string) => void }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const index = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
-    setActiveIndex(index);
-  };
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
-    <Section id="services" spacing="none" className="py-24 md:py-48 bg-black relative luxe-grid border-y border-white/10">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-24 flex flex-col md:flex-row items-end justify-between border-l-4 border-[#fbbf24] pl-10">
-        <div className="space-y-4">
-          <p className="label-mono">Detailing_Collections // 01</p>
-          <h2 className="text-6xl md:text-[120px] font-black text-white uppercase tracking-tighter leading-none">
-            The <br /> <span className="text-white/10">Studio_Grid</span>
+    <Section id="services" spacing="none" className="py-24 md:py-48 bg-black relative border-y border-white/10">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-32 flex flex-col md:flex-row items-end justify-between">
+        <div className="space-y-6">
+          <p className="text-micro text-[#fbbf24]">The Detailing Collections // Vol. 01</p>
+          <h2 className="text-6xl md:text-[140px] font-black text-white uppercase tracking-tighter leading-none">
+            Our <br /> <span className="text-white/10">Catalogue</span>
           </h2>
         </div>
         <div className="hidden md:block text-right">
-          <p className="label-mono mb-4">Precision_Index</p>
-          <div className="flex gap-2 justify-end">
-            {[1, 2, 3].map(i => (
-              <div key={i} className={cn("w-10 h-1", i === 1 ? "bg-[#fbbf24]" : "bg-white/10")} />
+          <p className="text-micro mb-4 italic">Professional_Index</p>
+          <div className="flex gap-1 justify-end">
+            {packages.map((_, i) => (
+              <div key={i} className="w-12 h-0.5 bg-white/10" />
             ))}
           </div>
         </div>
       </div>
 
-      <div 
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex md:grid md:grid-cols-3 gap-0 border border-white/10 overflow-x-auto md:overflow-x-visible no-scrollbar snap-x snap-mandatory px-6 md:px-0 max-w-[1600px] mx-auto relative z-10 bg-black"
-      >
+      <div className="max-w-[1600px] mx-auto border-t border-white/5">
         {packages.map((pkg, index) => (
           <motion.div
             key={pkg.name}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="flex flex-col min-w-[85vw] md:min-w-0 h-full snap-center group border-r border-white/10 last:border-r-0"
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className="boutique-strip relative group cursor-pointer overflow-hidden"
+            onClick={() => onSelectService?.(pkg.name)}
           >
-            <div className={cn(
-              "h-full p-10 md:p-20 flex flex-col relative transition-all duration-700 elite-slab border-none",
-              pkg.featured && "bg-white/[0.02]"
-            )}>
-              <div className="flex justify-between items-start mb-16">
-                <span className="label-mono">{pkg.id}</span>
-                {pkg.featured && (
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#fbbf24] border border-[#fbbf24]/30 px-4 py-1.5">
-                    Elite_Standard
-                  </span>
-                )}
-              </div>
-
-              <div className="mb-12">
-                <h3 className="text-4xl md:text-6xl font-black text-white mb-6 uppercase tracking-tighter group-hover:text-[#fbbf24] transition-colors duration-500">{pkg.name}</h3>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-white/20 text-xl font-medium">$</span>
-                  <span className="text-7xl md:text-9xl font-black text-white tracking-tighter">{pkg.price}</span>
+            <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 md:py-20 flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+              
+              <div className="flex items-center gap-12 md:gap-24">
+                <span className="text-micro text-white/10 group-hover:text-[#fbbf24] transition-colors duration-500">{pkg.id}</span>
+                <div className="space-y-2">
+                  <h3 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter group-hover:italic transition-all duration-700">{pkg.name}</h3>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    {pkg.specs.slice(0, 2).map(s => (
+                      <span key={s} className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{s}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-16 flex-grow border-t border-white/5 pt-10">
-                {pkg.details.map(detail => (
-                  <div key={detail} className="flex items-center justify-between group/item">
-                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white/40 group-hover/item:text-white transition-colors">
-                      {detail}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-white/10 group-hover/item:bg-[#fbbf24] transition-colors shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
-                  </div>
-                ))}
+              <div className="flex items-center gap-12 md:gap-20">
+                <div className="text-right">
+                  <p className="text-micro mb-1">Session_Rate</p>
+                  <p className="text-3xl md:text-5xl font-black text-white tracking-tighter">${pkg.price}</p>
+                </div>
+                <div className={cn(
+                  "w-12 h-12 md:w-16 md:h-16 rounded-full border border-white/10 flex items-center justify-center transition-all duration-700",
+                  "group-hover:bg-[#fbbf24] group-hover:border-[#fbbf24] group-hover:rotate-90"
+                )}>
+                  <Plus className="w-6 h-6 text-white group-hover:text-black transition-colors" />
+                </div>
               </div>
 
-              <PrismButton 
-                variant={pkg.featured ? "gold" : "outline"}
-                className="w-full py-7 md:py-9 text-[10px] font-black uppercase tracking-[0.4em] rounded-none border-2 group/btn"
-                onClick={() => onSelectService?.(pkg.name)}
-              >
-                BOOK_SESSION <ArrowRight className="ml-2 w-3 h-3 group-hover/btn:translate-x-1 transition-all" />
-              </PrismButton>
             </div>
-          </motion.div>
-        ))}
-      </div>
 
-      <div className="flex md:hidden justify-center gap-4 mt-16 relative z-10">
-        {packages.map((_, i) => (
-          <div key={i} className={cn("h-[1px] transition-all duration-700", activeIndex === i ? "w-12 bg-[#fbbf24]" : "w-4 bg-white/10")} />
+            {/* Expandable Details on Desktop Hover */}
+            <motion.div 
+              initial={false}
+              animate={{ height: hoveredIndex === index ? "auto" : 0, opacity: hoveredIndex === index ? 1 : 0 }}
+              className="max-w-7xl mx-auto px-6 md:px-12 hidden md:block"
+            >
+              <div className="pb-20 grid grid-cols-4 gap-8">
+                {pkg.specs.map(spec => (
+                  <div key={spec} className="border-l border-[#fbbf24]/20 pl-6 py-2">
+                    <p className="text-micro mb-1">Feature</p>
+                    <p className="text-xs font-black text-white/60 uppercase tracking-widest">{spec}</p>
+                  </div>
+                ))}
+                <div className="flex items-end justify-end">
+                  <PrismButton variant="gold" className="text-[10px] py-4 px-10 rounded-none">Reserve_Session_Now</PrismButton>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Background Reveal Logic */}
+            <div className="absolute inset-0 bg-white/[0.01] translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
+          </motion.div>
         ))}
       </div>
     </Section>
