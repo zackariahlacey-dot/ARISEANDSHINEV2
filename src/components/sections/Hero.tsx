@@ -5,8 +5,64 @@ import { Section } from "@/components/ui/Section";
 import { PrismButton } from "@/components/ui/PrismButton";
 
 export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "AutoDetailing",
+    "name": "Arise & Shine VT",
+    "image": "https://ariseandshinevt.com/aasbanner.png",
+    "description": "Vermont's premier mobile detailing studio. Specializing in surgical interior restoration, high-gloss paint protection, and elite concierge automotive care. We bring the clinical studio experience to your location.",
+    "url": "https://ariseandshinevt.com",
+    "telephone": "802-585-5563",
+    "priceRange": "$$",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Waterbury",
+      "addressRegion": "VT",
+      "postalCode": "05676",
+      "addressCountry": "US"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 44.3378,
+      "longitude": -72.7562
+    },
+    "areaServed": {
+      "@type": "State",
+      "name": "Vermont"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Elite Detailing Services",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Surgical Interior Restoration"
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Hyper Gloss Paint Protection"
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Elite Full Transformation"
+          }
+        }
+      ]
+    }
+  };
+
   return (
-    <Section withGrid spacing="none" className="min-h-screen flex items-center justify-center pt-24 overflow-hidden bg-[#020202] relative">
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Section withGrid spacing="none" className="min-h-screen flex items-center justify-center pt-24 overflow-hidden bg-[#020202] relative">
       {/* Avant-Garde Background Blooms */}
       <div className="color-bloom bg-[#fbbf24] -top-[20%] -left-[10%] animate-pulse" />
       <div className="color-bloom bg-[#8b5cf6] -bottom-[30%] -right-[10%]" />
