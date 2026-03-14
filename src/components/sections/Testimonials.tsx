@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { Star, Quote, ShieldCheck } from "lucide-react";
+import { Star, Quote } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const reviews = [
   {
@@ -45,35 +45,25 @@ const reviews = [
 ];
 
 export default function Testimonials() {
-  // Duplicate for infinite scroll effect
   const duplicatedReviews = [...reviews, ...reviews];
 
   return (
-    <Section id="testimonials" spacing="medium" className="relative overflow-hidden">
-      <div className="text-center mb-16 md:mb-24 px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mb-6"
-        >
-          Social Proof
-        </motion.div>
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-3xl md:text-7xl font-black text-white mb-4 uppercase tracking-tighter"
-        >
-          Client <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] to-white">Voices</span>
-        </motion.h2>
-        <p className="text-white/40 max-w-2xl mx-auto text-sm md:text-lg">The standard of excellence, confirmed by Vermont's most discerning owners.</p>
+    <Section id="testimonials" spacing="none" className="py-24 md:py-48 bg-[#020202] relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-32 relative z-10">
+        <div className="flex items-center gap-6 mb-8">
+          <span className="text-variable">Index_04</span>
+          <div className="h-[1px] flex-grow bg-white/5" />
+          <span className="text-variable">Social_Proof</span>
+        </div>
+        <h2 className="text-6xl md:text-[140px] font-black text-white uppercase tracking-tighter leading-none italic">
+          Client <br /> <span className="text-transparent bg-clip-text bg-linear-to-b from-[#fbbf24] to-white">Voices</span>
+        </h2>
       </div>
 
       {/* Infinite Marquee Container */}
-      <div className="relative flex overflow-hidden py-10 mask-fade">
+      <div className="relative flex overflow-hidden py-10 mask-fade z-10">
         <motion.div 
-          className="flex gap-6 whitespace-nowrap"
+          className="flex gap-8 whitespace-nowrap"
           animate={{ x: ["0%", "-50%"] }}
           transition={{ 
             duration: 40, 
@@ -82,43 +72,43 @@ export default function Testimonials() {
           }}
         >
           {duplicatedReviews.map((review, index) => (
-            <GlassCard 
+            <div 
               key={`${review.name}-${index}`} 
-              glowColor="amber" 
-              className="w-[300px] md:w-[450px] p-8 md:p-10 flex flex-col relative overflow-hidden group shrink-0"
+              className="w-[350px] md:w-[500px] p-10 md:p-16 flex flex-col relative overflow-hidden group shrink-0 studio-slab border-none bg-white/[0.01]"
             >
-              <Quote className="absolute -right-4 -top-4 w-20 h-20 md:w-24 md:h-24 text-white/5 rotate-12 group-hover:text-[#fbbf24]/10 transition-colors" />
+              <Quote className="absolute -right-4 -top-4 w-24 h-24 text-white/[0.02] rotate-12 group-hover:text-[#fbbf24]/5 transition-colors duration-700" />
               
-              <div className="flex gap-1 mb-6">
+              <div className="flex gap-1 mb-10">
                 {[...Array(review.rating)].map((_, i) => (
-                  <Star key={i} className="w-3 h-3 md:w-4 md:h-4 fill-[#fbbf24] text-[#fbbf24]" />
+                  <Star key={i} className="w-3 h-3 md:w-4 md:h-4 fill-[#fbbf24] text-[#fbbf24] shadow-[0_0_10px_#fbbf24]" />
                 ))}
               </div>
 
-              <p className="text-white/70 italic mb-8 flex-grow leading-relaxed text-sm md:text-base whitespace-normal">
+              <p className="text-white/60 italic mb-12 flex-grow leading-relaxed text-sm md:text-xl whitespace-normal font-medium">
                 "{review.content}"
               </p>
 
-              <div className="pt-6 border-t border-white/5 flex items-center justify-between">
-                <div>
-                  <h4 className="text-white font-bold text-sm md:text-base">{review.name}</h4>
-                  <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-[#fbbf24]/70 font-black">{review.vehicle}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-[#fbbf24] opacity-50" />
-                </div>
+              <div className="border-t border-white/5 pt-8">
+                <p className="text-white font-black text-xl tracking-tighter uppercase mb-1">{review.name}</p>
+                <p className="text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.3em] opacity-60">{review.vehicle}</p>
               </div>
-            </GlassCard>
+            </div>
           ))}
         </motion.div>
       </div>
 
+      {/* CSS for fading edges */}
       <style jsx global>{`
         .mask-fade {
           mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
           -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
         }
       `}</style>
+
+      {/* Floating Art Background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.01] select-none pointer-events-none">
+        <span className="text-[200px] md:text-[500px] font-black text-white leading-none">VOICE</span>
+      </div>
     </Section>
   );
 }

@@ -29,57 +29,59 @@ export default function Header() {
   const navLinks = [
     { name: "Services", href: "#services" },
     { name: "Maintenance", href: "#maintenance" },
-    { name: "About", href: "#about" },
-    { name: "Contact", href: "#contact" },
+    { name: "Gallery", href: "#transformations" },
+    { name: "Portal", href: "/auth" },
   ];
 
   return (
     <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 flex justify-center p-4 md:p-6"
+      className="fixed top-0 left-0 right-0 z-50 flex justify-center p-4 md:p-8"
     >
       <nav className={cn(
-        "glass flex items-center justify-between w-full max-w-7xl rounded-2xl px-6 py-3 md:px-8 md:py-4",
-        "border border-white/10 shadow-2xl backdrop-blur-md"
+        "flex items-center justify-between w-full max-w-7xl px-6 py-4 md:px-10",
+        "bg-black/40 backdrop-blur-2xl border border-white/5 rounded-none"
       )}>
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 md:gap-3">
-          <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[#fbbf24]/50 transition-all">
             <img 
               src="/e.png" 
-              alt="Arise & Shine VT Logo" 
-              className="w-full h-full object-contain brightness-110 contrast-125"
+              alt="Logo" 
+              className="w-6 h-6 md:w-7 md:h-7 object-contain brightness-110"
             />
           </div>
-          <span className="text-lg font-bold tracking-tighter text-white md:text-2xl">
+          <span className="text-xl font-black tracking-tighter text-white md:text-2xl uppercase italic">
             ARISE <span className="text-[#fbbf24]">&</span> SHINE
           </span>
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              className="text-sm font-medium text-white/70 transition-colors hover:text-[#fbbf24]"
-            >
-              {link.name}
-            </Link>
-          ))}
+        <div className="hidden md:flex items-center gap-12">
+          <div className="flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 transition-colors hover:text-[#fbbf24]"
+              >
+                {link.name}
+              </Link>
+            ))}
+          </div>
           
-          <div className="flex items-center gap-4 border-l border-white/10 pl-8">
+          <div className="flex items-center gap-6 border-l border-white/10 pl-12">
             <Link href={user ? "/dashboard" : "/auth"}>
-              <button className="flex items-center gap-2 text-white/40 hover:text-[#fbbf24] transition-colors group">
-                <UserCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] hidden lg:block">
-                  {user ? "Dashboard" : "Portal"}
+              <button className="flex items-center gap-3 text-white/40 hover:text-white transition-colors group">
+                <UserCircle className="w-5 h-5 group-hover:text-[#fbbf24] transition-colors" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">
+                  {user ? "System_Active" : "Member_Sync"}
                 </span>
               </button>
             </Link>
-            <PrismButton variant="luxury" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })}>
-              Book Now
+            <PrismButton variant="gold" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })} className="py-4 px-8 text-[10px]">
+              RESERVE_NOW
             </PrismButton>
           </div>
         </div>
@@ -89,8 +91,8 @@ export default function Header() {
           <Link href={user ? "/dashboard" : "/auth"}>
             <UserCircle className="w-6 h-6 text-white/40" />
           </Link>
-          <PrismButton variant="luxury" className="px-4 py-2 text-xs" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })}>
-            Book Now
+          <PrismButton variant="gold" className="px-4 py-2 text-[8px]" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })}>
+            RESERVE
           </PrismButton>
         </div>
       </nav>

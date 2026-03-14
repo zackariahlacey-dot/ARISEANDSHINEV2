@@ -26,7 +26,7 @@ export function GlassCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       className={cn(
-        "glass relative rounded-[32px] md:rounded-[40px] border border-white/10 overflow-hidden",
+        "glass relative rounded-none border border-white/5 overflow-hidden",
         glowStyles[glowColor],
         className
       )}

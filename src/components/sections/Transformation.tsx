@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
-import { LightLeak } from "@/components/ui/LightLeak";
 
 export default function Transformation() {
   const [sliderPosition, setSliderPosition] = useState(50);
@@ -18,78 +17,73 @@ export default function Transformation() {
   };
 
   return (
-    <Section id="transformations" spacing="large" className="relative overflow-hidden">
-      <LightLeak color="amber" intensity="low" className="-top-24 -right-24 opacity-20" />
-      
-      <div className="text-center mb-16 relative z-10">
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-3xl md:text-7xl font-black text-white mb-4 uppercase tracking-tighter"
-        >
-          Visual <span className="text-[#fbbf24]">Precision</span>
-        </motion.h2>
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="text-white/40 max-w-2xl mx-auto"
-        >
-          Witness the difference of a professional detail. Interact with the slider to reveal the transformation.
-        </motion.p>
+    <Section id="transformations" spacing="none" className="py-24 md:py-48 bg-[#020202] relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-32 relative z-10 text-right">
+        <div className="flex items-center gap-6 mb-8 justify-end">
+          <div className="h-[1px] flex-grow bg-white/5" />
+          <span className="text-variable">Index_03</span>
+          <div className="h-[1px] w-24 bg-white/5" />
+          <span className="text-variable">Visual_Evidence</span>
+        </div>
+        <h2 className="text-6xl md:text-[140px] font-black text-white uppercase tracking-tighter leading-none italic">
+          Elite <br /> <span className="text-white/10">Metamorphosis</span>
+        </h2>
       </div>
 
-      <div className="max-w-5xl mx-auto relative px-4">
+      <div className="max-w-6xl mx-auto relative px-4 z-10">
         <div 
           ref={containerRef}
-          className="relative h-[400px] md:h-[600px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl cursor-ew-resize select-none"
+          className="relative h-[400px] md:h-[700px] overflow-hidden group cursor-ew-resize select-none border border-white/5"
           onMouseMove={handleMove}
           onTouchMove={handleMove}
         >
-          {/* After Image (Always in Background) */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/JEEP INT AFTER.jpg')" }}
-          />
+          {/* After Image */}
+          <div className="absolute inset-0">
+            <img 
+              src="/JEEP INT AFTER.jpg" 
+              alt="After Detail"
+              className="w-full h-full object-cover grayscale-[0.2]"
+            />
+          </div>
 
           {/* Before Image (Clipped) */}
           <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ 
-              backgroundImage: "url('/JEEP INT BEFORE.jpg')",
-              clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
-            }}
-          />
+            className="absolute inset-0"
+            style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+          >
+            <img 
+              src="/JEEP INT BEFORE.jpg" 
+              alt="Before Detail"
+              className="w-full h-full object-cover grayscale"
+            />
+          </div>
 
           {/* Slider Handle */}
           <div 
-            className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_20px_rgba(251,191,36,0.5)] z-20 pointer-events-none"
+            className="absolute top-0 bottom-0 w-1 bg-[#fbbf24] z-20 group-hover:w-1.5 transition-all shadow-[0_0_30px_rgba(251,191,36,0.5)]"
             style={{ left: `${sliderPosition}%` }}
           >
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-[#fbbf24] flex items-center justify-center shadow-2xl">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-[#fbbf24] rounded-full flex items-center justify-center shadow-2xl">
               <div className="flex gap-1">
-                <div className="w-1 h-3 bg-[#fbbf24] rounded-full" />
-                <div className="w-1 h-3 bg-[#fbbf24] rounded-full" />
+                <div className="w-1 h-1 bg-black rounded-full" />
+                <div className="w-1 h-1 bg-black rounded-full" />
               </div>
             </div>
           </div>
 
           {/* Labels */}
-          <div className="absolute top-6 left-6 z-30 px-4 py-2 rounded-full glass border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/70">
-            Before
+          <div className="absolute top-8 left-8 bg-black/80 backdrop-blur-xl border border-white/10 px-6 py-2 z-10">
+            <span className="text-[10px] font-black text-white uppercase tracking-[0.4em]">Historical_State</span>
           </div>
-          <div className="absolute top-6 right-6 z-30 px-4 py-2 rounded-full glass border border-white/10 text-[10px] font-black uppercase tracking-widest text-[#fbbf24]">
-            After
+          <div className="absolute top-8 right-8 bg-[#fbbf24] border border-[#fbbf24] px-6 py-2 z-10">
+            <span className="text-[10px] font-black text-black uppercase tracking-[0.4em]">Optimal_State</span>
           </div>
         </div>
+      </div>
 
-        {/* Caption */}
-        <div className="mt-8 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-6">
-          <span>Jeep Interior Restore</span>
-          <span>Hyper Gloss Finish</span>
-        </div>
+      {/* Floating Art Background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.01] select-none pointer-events-none">
+        <span className="text-[200px] md:text-[500px] font-black text-white leading-none">SHIFT</span>
       </div>
     </Section>
   );
