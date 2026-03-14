@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Header from "@/components/sections/Header";
 import Hero from "@/components/sections/Hero";
 import Services from "@/components/sections/Services";
@@ -30,7 +30,9 @@ export default function Home() {
       <Testimonials />
       <ServiceAreas />
       <About />
-      <BookingForm initialService={selectedService} />
+      <Suspense fallback={<div className="py-20 text-center text-white/20 uppercase tracking-widest text-xs">Initializing Studio...</div>}>
+        <BookingForm initialService={selectedService} />
+      </Suspense>
       <Footer />
     </main>
   );
