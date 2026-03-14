@@ -13,7 +13,7 @@ const plans = [
     name: "Monthly Interior",
     category: "Elite Interior Care",
     price: "99",
-    description: "Ensure your interior remains in pristine, factory-fresh condition through every season.",
+    description: "Ensure your interior remains in pristine condition through every season.",
     benefits: [
       "Full Monthly Interior Detail",
       "Fixed Monthly Pricing",
@@ -46,12 +46,12 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
       {/* Super Premium Accents */}
       <LightLeak color="violet" intensity="medium" className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
       
-      <div className="text-center mb-20 relative z-10">
+      <div className="text-center mb-16 md:mb-20 relative z-10 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.4em] mb-6"
+          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mb-6"
         >
           Elite Membership
         </motion.div>
@@ -69,13 +69,13 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.1 }}
-          className="text-white/40 max-w-xl mx-auto text-lg md:text-xl"
+          className="text-white/40 max-w-xl mx-auto text-base md:text-xl"
         >
-          Never worry about the state of your vehicle again with our concierge maintenance programs.
+          Concierge maintenance programs.
         </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto relative z-10 px-4">
+      <div className="flex lg:grid lg:grid-cols-2 gap-6 lg:gap-12 max-w-6xl mx-auto relative z-10 px-6 lg:px-4 overflow-x-auto lg:overflow-x-visible pb-8 lg:pb-0 no-scrollbar snap-x snap-mandatory">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.name}
@@ -83,25 +83,26 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: index * 0.2 }}
+            className="flex flex-col min-w-[85vw] lg:min-w-0 h-full snap-center"
           >
             <GlassCard 
               glowColor={plan.glow} 
               className={cn(
-                "p-10 md:p-16 flex flex-col h-full border-white/5 relative group overflow-hidden transition-all duration-700",
+                "p-8 md:p-16 flex flex-col h-full border-white/5 relative group overflow-hidden transition-all duration-700",
                 plan.featured && "border-[#fbbf24]/20 shadow-[0_0_80px_rgba(251,191,36,0.05)]"
               )}
             >
-              <div className="mb-12">
-                <div className="flex items-center justify-between mb-8">
+              <div className="mb-8 md:mb-12">
+                <div className="flex items-center justify-between mb-6 md:mb-8">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
                       {plan.icon}
                     </div>
                     <div>
                       <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#fbbf24] block mb-1">
                         {plan.category}
                       </span>
-                      <h3 className="text-4xl font-bold text-white tracking-tight">{plan.name}</h3>
+                      <h3 className="text-2xl md:text-4xl font-bold text-white tracking-tight">{plan.name}</h3>
                     </div>
                   </div>
                   {plan.featured && (
@@ -110,27 +111,27 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
                     </div>
                   )}
                 </div>
-                <p className="text-white/40 leading-relaxed text-lg">{plan.description}</p>
+                <p className="text-white/40 leading-relaxed text-sm md:text-lg">{plan.description}</p>
               </div>
 
-              <div className="flex items-baseline gap-2 mb-12">
-                <span className="text-white/20 text-2xl font-medium">$</span>
-                <span className="text-8xl font-black text-white group-hover:text-[#fbbf24] transition-colors duration-500">{plan.price}</span>
-                <span className="text-white/40 text-sm uppercase tracking-widest font-bold">/ Month</span>
+              <div className="flex items-baseline gap-2 mb-8 md:mb-12">
+                <span className="text-white/20 text-xl md:text-2xl font-medium">$</span>
+                <span className="text-6xl md:text-8xl font-black text-white group-hover:text-[#fbbf24] transition-colors duration-500">{plan.price}</span>
+                <span className="text-white/40 text-xs md:text-sm uppercase tracking-widest font-bold">/ Month</span>
               </div>
 
-              <div className="space-y-6 mb-16 flex-grow">
+              <div className="space-y-4 md:space-y-6 mb-10 md:mb-16 flex-grow">
                 {plan.benefits.map((benefit) => (
                   <div key={benefit} className="flex items-center gap-4 group/item">
-                    <CheckCircle2 className="w-5 h-5 text-[#fbbf24] opacity-40 group-hover/item:opacity-100 transition-opacity" />
-                    <span className="text-white/70 font-medium group-hover/item:text-white transition-colors">{benefit}</span>
+                    <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-[#fbbf24] opacity-40 group-hover/item:opacity-100 transition-opacity" />
+                    <span className="text-xs md:text-sm text-white/70 font-medium group-hover/item:text-white transition-colors">{benefit}</span>
                   </div>
                 ))}
               </div>
 
               <PrismButton 
                 variant={plan.featured ? "gold" : "outline"} 
-                className="w-full py-7 text-lg shadow-2xl"
+                className="w-full py-5 md:py-7 text-xs md:text-lg shadow-2xl"
                 onClick={() => onSelectService?.(plan.name)}
               >
                 Join the Elite Circle
