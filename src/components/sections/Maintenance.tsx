@@ -5,8 +5,9 @@ import { Section } from "@/components/ui/Section";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PrismButton } from "@/components/ui/PrismButton";
 import { LightLeak } from "@/components/ui/LightLeak";
-import { ShieldCheck, Zap, Star, ChevronDown, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Zap, ArrowRight, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useRef } from "react";
 
 const plans = [
   {
@@ -41,12 +42,22 @@ const plans = [
 ];
 
 export default function Maintenance({ onSelectService }: { onSelectService?: (name: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const scrollLeft = scrollRef.current.scrollLeft;
+    const width = scrollRef.current.offsetWidth;
+    const index = Math.round(scrollLeft / width);
+    setActiveIndex(index);
+  };
+
   return (
     <Section id="maintenance" spacing="large" className="relative overflow-hidden">
-      {/* Super Premium Accents */}
       <LightLeak color="violet" intensity="medium" className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
       
-      <div className="text-center mb-16 md:mb-20 relative z-10 px-4">
+      <div className="text-center mb-12 md:mb-20 relative z-10 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -64,18 +75,19 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
           Automated <br />
           <span className="text-transparent bg-clip-text bg-linear-to-r from-white via-[#fbbf24] to-white/40">Excellence</span>
         </motion.h2>
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="text-white/40 max-w-xl mx-auto text-base md:text-xl"
-        >
-          Concierge maintenance programs.
-        </motion.p>
+        
+        {/* Mobile Swipe Hint */}
+        <div className="flex lg:hidden items-center justify-center gap-2 text-[#fbbf24] animate-pulse mb-4">
+          <span className="text-[8px] font-black uppercase tracking-[0.3em]">Discover Membership</span>
+          <ArrowRight className="w-3 h-3" />
+        </div>
       </div>
 
-      <div className="flex lg:grid lg:grid-cols-2 gap-6 lg:gap-12 max-w-6xl mx-auto relative z-10 px-6 lg:px-4 overflow-x-auto lg:overflow-x-visible pb-8 lg:pb-0 no-scrollbar snap-x snap-mandatory">
+      <div 
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex lg:grid lg:grid-cols-2 gap-6 lg:gap-12 max-w-6xl mx-auto relative z-10 px-6 lg:px-4 overflow-x-auto lg:overflow-x-visible pb-12 lg:pb-0 no-scrollbar snap-x snap-mandatory"
+      >
         {plans.map((plan, index) => (
           <motion.div
             key={plan.name}
@@ -138,6 +150,19 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
               </PrismButton>
             </GlassCard>
           </motion.div>
+        ))}
+      </div>
+
+      {/* Pagination Dots for Mobile */}
+      <div className="flex lg:hidden justify-center gap-2 mt-4 pb-12">
+        {plans.map((_, i) => (
+          <div 
+            key={i} 
+            className={cn(
+              "h-1 transition-all duration-300 rounded-full",
+              activeIndex === i ? "w-8 bg-[#fbbf24]" : "w-2 bg-white/10"
+            )} 
+          />
         ))}
       </div>
     </Section>

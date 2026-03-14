@@ -3,58 +3,53 @@
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { MapPin } from "lucide-react";
-
-const areas = [
-  "Waterbury", "Stowe", "Montpelier", "Burlington", "South Burlington", 
-  "Williston", "Shelburne", "Charlotte", "Richmond", "Waitsfield", 
-  "Warren", "Mad River Valley", "Essex", "Winooski", "Colchester"
-];
+import { MapPin, Globe } from "lucide-react";
 
 export default function ServiceAreas() {
   return (
     <Section id="areas" spacing="medium" className="relative overflow-hidden">
-      <div className="text-center mb-16">
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-3xl md:text-6xl font-black text-white mb-4 uppercase tracking-tighter"
-        >
-          Serving <span className="text-[#fbbf24]">Vermont</span>
-        </motion.h2>
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="text-white/40 max-w-2xl mx-auto"
-        >
-          We are a fully mobile detailing service. We bring the elite studio experience directly to your home or office across Central Vermont and the Champlain Valley.
-        </motion.p>
-      </div>
+      <div className="max-w-4xl mx-auto px-4">
+        <GlassCard glowColor="violet" className="p-10 md:p-20 text-center relative overflow-hidden">
+          {/* Subtle Background Icon */}
+          <Globe className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 text-[#fbbf24]/5 pointer-events-none" />
+          
+          <div className="relative z-10">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-3 px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.4em] mb-8"
+            >
+              <MapPin className="w-3 h-3" />
+              <span>Mobile Studio</span>
+            </motion.div>
 
-      <div className="max-w-5xl mx-auto">
-        <GlassCard glowColor="violet" className="p-8 md:p-12">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-            {areas.map((area, index) => (
-              <motion.div
-                key={area}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-center gap-2 group cursor-default"
-              >
-                <MapPin className="w-4 h-4 text-[#fbbf24] group-hover:scale-125 transition-transform" />
-                <span className="text-sm font-medium text-white/60 group-hover:text-white transition-colors">{area}</span>
-              </motion.div>
-            ))}
+            <motion.h2 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-4xl md:text-7xl font-black text-white mb-6 uppercase tracking-tighter leading-none"
+            >
+              Proudly Serving <br />
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] to-white">
+                All of Vermont
+              </span>
+            </motion.h2>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-white/40 max-w-xl mx-auto text-lg md:text-xl font-medium"
+            >
+              Elite on-site detailing. We bring the clinical studio experience directly to your doorstep, anywhere in the Green Mountain State.
+            </motion.p>
           </div>
-          <div className="mt-12 pt-8 border-t border-white/5 text-center">
-            <p className="text-xs font-black uppercase tracking-[0.3em] text-white/20">
-              Don't see your town? <span className="text-[#fbbf24]/50">Contact us for custom travel quotes.</span>
-            </p>
+
+          {/* Hidden SEO Keywords for Search Engines */}
+          <div className="sr-only">
+            Mobile car detailing services available in Waterbury VT, Stowe, Montpelier, Burlington, South Burlington, Williston, Shelburne, Charlotte, Richmond, Waitsfield, Warren, Mad River Valley, Essex, Winooski, Colchester, and all other Vermont towns. We specialize in interior deep cleaning, paint correction, and Hyper Gloss Wax applications.
           </div>
         </GlassCard>
       </div>

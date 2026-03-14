@@ -20,7 +20,7 @@ export function Section({
 }: SectionProps) {
   const spacingStyles = {
     none: "py-0",
-    small: "py-12 md:py-16",
+    small: "py-12 md:py-20",
     medium: "py-20 md:py-32",
     large: "py-32 md:py-48",
   };

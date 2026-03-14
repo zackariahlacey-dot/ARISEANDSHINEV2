@@ -5,8 +5,9 @@ import { Section } from "@/components/ui/Section";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PrismButton } from "@/components/ui/PrismButton";
 import { LightLeak } from "@/components/ui/LightLeak";
-import { Check, Sparkles, Shield, Zap, Crown } from "lucide-react";
+import { Check, Sparkles, Shield, Crown, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useRef } from "react";
 
 const packages = [
   {
@@ -55,13 +56,23 @@ const packages = [
 ];
 
 export default function Services({ onSelectService }: { onSelectService?: (name: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const scrollLeft = scrollRef.current.scrollLeft;
+    const width = scrollRef.current.offsetWidth;
+    const index = Math.round(scrollLeft / width);
+    setActiveIndex(index);
+  };
+
   return (
-    <Section id="services" spacing="medium" className="relative overflow-hidden">
-      {/* Background Color Depth */}
+    <Section id="services" spacing="none" className="relative overflow-hidden pt-12 md:pt-32">
       <LightLeak color="amber" intensity="low" className="-top-24 -right-24 opacity-10" />
       <LightLeak color="violet" intensity="low" className="bottom-0 -left-24 opacity-10" />
 
-      <div className="text-center mb-16 md:mb-24 relative z-10 px-4">
+      <div className="text-center mb-12 md:mb-24 relative z-10 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -79,19 +90,19 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
           Surgical <br />
           <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] to-white">Precision</span>
         </motion.h2>
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="text-white/40 max-w-2xl mx-auto text-base md:text-xl"
-        >
-          Meticulous care for Vermont's finest vehicles.
-        </motion.p>
+        
+        {/* Mobile Swipe Hint */}
+        <div className="flex md:hidden items-center justify-center gap-2 text-[#fbbf24] animate-pulse mb-4">
+          <span className="text-[8px] font-black uppercase tracking-[0.3em]">Swipe to explore</span>
+          <ArrowRight className="w-3 h-3" />
+        </div>
       </div>
 
-      {/* Horizontal Scroll on Mobile, Grid on Desktop */}
-      <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 px-6 md:px-4 no-scrollbar snap-x snap-mandatory relative z-10">
+      <div 
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 overflow-x-auto md:overflow-x-visible pb-12 md:pb-0 px-6 md:px-4 no-scrollbar snap-x snap-mandatory relative z-10"
+      >
         {packages.map((pkg, index) => (
           <motion.div
             key={pkg.name}
@@ -152,6 +163,19 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
               </PrismButton>
             </GlassCard>
           </motion.div>
+        ))}
+      </div>
+
+      {/* Pagination Dots for Mobile */}
+      <div className="flex md:hidden justify-center gap-2 mt-4 pb-12">
+        {packages.map((_, i) => (
+          <div 
+            key={i} 
+            className={cn(
+              "h-1 transition-all duration-300 rounded-full",
+              activeIndex === i ? "w-8 bg-[#fbbf24]" : "w-2 bg-white/10"
+            )} 
+          />
         ))}
       </div>
     </Section>

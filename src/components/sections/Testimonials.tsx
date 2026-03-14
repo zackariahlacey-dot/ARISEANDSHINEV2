@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, ShieldCheck } from "lucide-react";
 
 const reviews = [
   {

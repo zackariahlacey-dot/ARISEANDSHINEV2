@@ -27,7 +27,7 @@ const features = [
 
 export default function About() {
   return (
-    <Section id="about" spacing="large" className="relative overflow-hidden bg-[#050505]">
+    <Section id="about" spacing="large" className="relative overflow-hidden bg-[#050505] hidden md:block">
       {/* Visual Accents */}
       <LightLeak color="violet" intensity="medium" className="-top-1/4 -left-1/4 opacity-30" />
       <div className="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
