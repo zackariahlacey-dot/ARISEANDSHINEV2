@@ -26,6 +26,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* High-End Typography Rules */
+h1, h2, h3, h4 {
+  text-wrap: balance;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+}
+
+.tracking-ultra {
+  letter-spacing: 0.5em;
+}
+
+/* Gold Dust Particles */
+.gold-dust {
+  background-image: radial-gradient(circle, var(--accent-luxury) 1px, transparent 1px);
+  background-size: 100px 100px;
+}
+
 /* Global Noise Texture */
 body::after {
   content: "";
@@ -35,7 +52,7 @@ body::after {
   width: 100%;
   height: 100%;
   background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.03;
+  opacity: 0.04;
   pointer-events: none;
   z-index: 100;
 }
@@ -48,26 +65,46 @@ body::after {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.01);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.015);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.glass-heavy {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Prism Border Utility */
+.prism-border {
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.prism-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(251, 191, 36, 0.2),
+    transparent,
+    rgba(139, 92, 246, 0.2),
+    transparent
+  );
+  border-radius: inherit;
+}
+
+/* HUD Grid Utility */
 .hud-grid {
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 60px 60px;
-}
-
-/* Animated Gradient Background */
-.gradient-mesh {
-  background-color: #020202;
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253, 100%, 8%, 1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225, 100%, 5%, 1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339, 100%, 8%, 1) 0, transparent 50%);
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
 }
 
 @keyframes shimmer {
@@ -77,7 +114,16 @@ body::after {
 
 .animate-shimmer {
   background-size: 200% auto;
-  animation: shimmer 6s infinite linear;
+  animation: shimmer 8s infinite linear;
+}
+
+/* Animated Gradient Background */
+.gradient-mesh {
+  background-color: #020202;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253, 100%, 8%, 1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225, 100%, 5%, 1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339, 100%, 8%, 1) 0, transparent 50%);
 }
 
 /* Custom Scrollbar */
@@ -99,24 +145,25 @@ body::after {
 .pac-container {
   background-color: #0a0a0a !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 16px !important;
-  margin-top: 8px !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
+  border-radius: 24px !important;
+  margin-top: 12px !important;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9) !important;
   z-index: 10000 !important;
 }
 
 .pac-item {
   border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-  padding: 12px 16px !important;
+  padding: 16px 20px !important;
   color: rgba(255, 255, 255, 0.5) !important;
 }
 
 .pac-item:hover {
-  background-color: rgba(251, 191, 36, 0.05) !important;
+  background-color: rgba(251, 191, 36, 0.08) !important;
 }
 
 .pac-item-query {
   color: #ffffff !important;
+  font-weight: 700 !important;
 }
 
 .pac-matched {

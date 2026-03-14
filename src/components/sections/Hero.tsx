@@ -37,25 +37,25 @@ export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      <Section withGrid spacing="none" className="min-h-[90vh] md:min-h-screen flex items-center pt-16 md:pt-48 overflow-hidden bg-black">
-        {/* Cinematic Background Atmosphere */}
-        <div className="absolute inset-0 z-0">
-          {/* Mobile Optimized Leaks - Tighter and more localized */}
+      <Section withGrid spacing="none" className="min-h-[90vh] md:min-h-screen flex items-center pt-16 md:pt-48 overflow-hidden bg-black relative">
+        {/* Elite Background Layers */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute inset-0 gold-dust opacity-10 pointer-events-none" />
           <LightLeak color="violet" intensity="high" className="-top-1/4 -left-1/4 scale-125 opacity-20 md:opacity-30 md:scale-150 animate-pulse" />
           <LightLeak color="amber" intensity="medium" className="bottom-0 -right-1/4 scale-110 opacity-15 md:opacity-20 md:scale-125" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.03)_0%,transparent_70%)]" />
         </div>
 
         <div className="text-center relative z-10 w-full px-6">
-          {/* Elite Badge - Scaled for impact */}
+          {/* Elite Badge */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8 md:mb-10"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse shadow-[0_0_10px_#fbbf24]" />
-            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-white/70">Vermont's Premier Detailer</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse shadow-[0_0_15px_#fbbf24]" />
+            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-ultra text-white/70">Vermont's Premier Detailer</span>
           </motion.div>
 
           <motion.div
@@ -63,15 +63,15 @@ export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           >
-            <h1 className="text-6xl md:text-[130px] font-black tracking-tighter text-white mb-8 md:mb-10 leading-[0.85] drop-shadow-2xl">
-              <span className="block overflow-hidden h-fit">
+            <h1 className="text-6xl md:text-[140px] font-black tracking-tighter text-white mb-8 md:mb-10 leading-[0.8] md:leading-[0.8] drop-shadow-[0_0_50px_rgba(255,255,255,0.1)]">
+              <span className="block overflow-hidden h-fit pb-2">
                 <motion.span 
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
                   transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   className="block"
                 >
-                  ARISE <span className="text-[#fbbf24]">&</span>
+                  ARISE <span className="text-[#fbbf24] tracking-[-0.08em]">&</span>
                 </motion.span>
               </span>
               <span className="block overflow-hidden h-fit">

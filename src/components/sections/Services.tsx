@@ -72,12 +72,12 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
       <LightLeak color="amber" intensity="low" className="-top-24 -right-24 opacity-10" />
       <LightLeak color="violet" intensity="low" className="bottom-0 -left-24 opacity-10" />
 
-      <div className="text-center mb-12 md:mb-24 relative z-10 px-4">
+      <div className="text-center mb-16 md:mb-32 relative z-10 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mb-6"
+          className="inline-block px-4 py-1 rounded-full border border-[#fbbf24]/20 bg-[#fbbf24]/5 text-[#fbbf24] text-[8px] md:text-[10px] font-black uppercase tracking-ultra mb-6"
         >
           Signature Detailing
         </motion.div>
@@ -85,7 +85,7 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-4xl md:text-8xl font-black text-white mb-6 uppercase tracking-tighter leading-[0.85]"
+          className="text-4xl md:text-[100px] font-black text-white mb-6 uppercase tracking-tighter leading-[0.8] md:leading-[0.8]"
         >
           Surgical <br />
           <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] to-white">Precision</span>
@@ -101,7 +101,7 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 overflow-x-auto md:overflow-x-visible pb-12 md:pb-0 px-6 md:px-4 no-scrollbar snap-x snap-mandatory relative z-10"
+        className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12 overflow-x-auto md:overflow-x-visible pb-12 md:pb-0 px-6 md:px-12 no-scrollbar snap-x snap-mandatory relative z-10 max-w-[1600px] mx-auto"
       >
         {packages.map((pkg, index) => (
           <motion.div
@@ -110,56 +110,56 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.1, duration: 0.8 }}
-            className="flex flex-col min-w-[85vw] md:min-w-0 h-full snap-center"
+            className="flex flex-col min-w-[85vw] md:min-w-0 h-full snap-center group"
           >
             <GlassCard 
               glowColor={pkg.glow} 
               className={cn(
-                "h-full p-8 md:p-14 flex flex-col relative group transition-all duration-700 md:hover:translate-y-[-12px] border-white/5",
-                pkg.featured && "border-[#fbbf24]/20 bg-[#fbbf24]/5 shadow-[0_0_80px_rgba(251,191,36,0.05)]"
+                "h-full p-8 md:p-16 flex flex-col relative transition-all duration-1000 md:hover:translate-y-[-20px] border-white/5 prism-border",
+                pkg.featured && "border-[#fbbf24]/20 bg-[#fbbf24]/5 shadow-[0_0_100px_rgba(251,191,36,0.08)]"
               )}
             >
-              <div className="mb-8 md:mb-12 relative z-10">
-                <div className="flex items-center justify-between mb-6 md:mb-8">
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+              <div className="mb-10 md:mb-16 relative z-10">
+                <div className="flex items-center justify-between mb-8 md:mb-12">
+                  <div className="w-14 h-14 md:w-20 md:h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 group-hover:border-[#fbbf24]/50 transition-all duration-700">
                     {pkg.icon}
                   </div>
                   {pkg.featured && (
-                    <div className="px-3 py-1 rounded-full bg-[#fbbf24] text-black text-[8px] font-black uppercase tracking-widest animate-pulse">
-                      Most Popular
+                    <div className="px-4 py-1.5 rounded-full bg-[#fbbf24] text-black text-[9px] font-black uppercase tracking-widest shadow-[0_0_20px_#fbbf24]">
+                      Top Rated
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#fbbf24] opacity-70 block mb-2">
+                <span className="text-[10px] font-black uppercase tracking-ultra text-[#fbbf24] opacity-70 block mb-3">
                   {pkg.category}
                 </span>
-                <h3 className="text-2xl md:text-4xl font-bold text-white mb-4 tracking-tight">{pkg.name}</h3>
-                <p className="text-white/40 text-xs md:text-sm leading-relaxed">{pkg.description}</p>
+                <h3 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tighter">{pkg.name}</h3>
+                <p className="text-white/40 text-sm md:text-base leading-relaxed font-medium">{pkg.description}</p>
               </div>
 
-              <div className="flex items-baseline gap-1 mb-8 md:mb-12 relative z-10">
-                <span className="text-white/20 text-xl font-medium">$</span>
-                <span className="text-5xl md:text-7xl font-black text-white group-hover:text-[#fbbf24] transition-colors duration-500">{pkg.price}</span>
+              <div className="flex items-baseline gap-1 mb-10 md:mb-16 relative z-10">
+                <span className="text-white/20 text-2xl font-medium">$</span>
+                <span className="text-6xl md:text-9xl font-black text-white group-hover:text-[#fbbf24] transition-colors duration-700 tracking-tighter">{pkg.price}</span>
                 <span className="text-white/40 text-sm uppercase tracking-widest ml-1 font-black">+</span>
               </div>
 
-              <div className="space-y-4 md:space-y-5 mb-10 md:mb-16 flex-grow relative z-10">
+              <div className="space-y-5 md:space-y-6 mb-12 md:mb-20 flex-grow relative z-10">
                 {pkg.features.map((feature) => (
-                  <div key={feature} className="flex items-start gap-4 group/item">
-                    <div className="mt-1 w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 md:group-hover/item:border-[#fbbf24]/50 transition-colors">
-                      <Check className="w-3 h-3 text-[#fbbf24] opacity-40 group-hover/item:opacity-100" />
+                  <div key={feature} className="flex items-start gap-5 group/item">
+                    <div className="mt-1 w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 md:group-hover/item:border-[#fbbf24]/50 transition-all duration-500">
+                      <Check className="w-3.5 h-3.5 text-[#fbbf24] opacity-40 group-hover/item:opacity-100" />
                     </div>
-                    <span className="text-xs md:text-sm text-white/60 font-medium md:group-hover:text-white transition-colors">{feature}</span>
+                    <span className="text-sm md:text-lg text-white/60 font-medium md:group-hover:text-white transition-colors duration-500">{feature}</span>
                   </div>
                 ))}
               </div>
 
               <PrismButton 
                 variant={pkg.featured ? "gold" : "outline"} 
-                className="w-full relative z-10 py-5 md:py-6 text-xs md:text-sm"
+                className="w-full relative z-10 py-6 md:py-8 text-xs md:text-sm tracking-ultra"
                 onClick={() => onSelectService?.(pkg.name)}
               >
-                Schedule {pkg.name}
+                Reserve Session
               </PrismButton>
             </GlassCard>
           </motion.div>
@@ -167,13 +167,13 @@ export default function Services({ onSelectService }: { onSelectService?: (name:
       </div>
 
       {/* Pagination Dots for Mobile */}
-      <div className="flex md:hidden justify-center gap-2 mt-4 pb-12">
+      <div className="flex md:hidden justify-center gap-2 mt-6 pb-12">
         {packages.map((_, i) => (
           <div 
             key={i} 
             className={cn(
-              "h-1 transition-all duration-300 rounded-full",
-              activeIndex === i ? "w-8 bg-[#fbbf24]" : "w-2 bg-white/10"
+              "h-1 transition-all duration-500 rounded-full",
+              activeIndex === i ? "w-12 bg-[#fbbf24]" : "w-2 bg-white/10"
             )} 
           />
         ))}
