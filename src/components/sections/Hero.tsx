@@ -6,69 +6,57 @@ import { PrismButton } from "@/components/ui/PrismButton";
 
 export default function Hero({ onBookClick }: { onBookClick?: () => void }) {
   return (
-    <Section withGrid spacing="none" className="min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-[#020202] relative">
-      {/* Structural Accents */}
-      <div className="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-full h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+    <Section withGrid spacing="none" className="min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-[#030303] relative">
+      {/* Organic Mesh Atmosphere */}
+      <div className="mesh-gradient" />
       
-      {/* Technical Metadata - Corner Creative Flair */}
-      <div className="absolute top-32 left-12 hidden lg:block">
-        <p className="font-mono-tech mb-2">Location_Coordinate</p>
-        <p className="text-[10px] font-black text-white/40 uppercase tracking-tighter">44.3378° N, 72.7562° W</p>
-      </div>
-      <div className="absolute top-32 right-12 hidden lg:block text-right">
-        <p className="font-mono-tech mb-2">Established_Date</p>
-        <p className="text-[10px] font-black text-white/40 uppercase tracking-tighter">Central Vermont_2023</p>
-      </div>
-
-      <div className="text-center relative z-10 w-full px-6 max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="inline-flex items-center gap-4 mb-12">
-            <div className="h-[1px] w-8 bg-[#fbbf24]" />
-            <span className="font-mono-tech text-[#fbbf24]">The Detailing Authority</span>
-            <div className="h-[1px] w-8 bg-[#fbbf24]" />
-          </div>
-
-          <h1 className="text-7xl md:text-[160px] font-black tracking-tighter text-white leading-[0.75] mb-12 uppercase drop-shadow-2xl">
-            Arise <br /> 
-            <span className="text-transparent bg-clip-text bg-linear-to-b from-white to-white/10">Shine VT</span>
-          </h1>
-
-          <div className="max-w-2xl mx-auto precision-line pb-8 mb-12">
-            <p className="text-lg md:text-xl text-white/40 font-bold uppercase tracking-tight leading-relaxed">
-              Surgical precision for Vermont's <br /> most distinguished collections.
-            </p>
-          </div>
-        </motion.div>
-
+      <div className="text-center relative z-10 w-full px-6 max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 1 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-10"
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/60">Vermont's Premier Mobile Detailing</span>
+          </div>
+
+          <h1 className="text-6xl md:text-[130px] font-black tracking-tight text-white leading-[0.85] mb-10 drop-shadow-[0_0_40px_rgba(255,255,255,0.1)]">
+            ARISE <br /> <span className="text-transparent bg-clip-text bg-linear-to-r from-[#fbbf24] via-white to-white/40">SHINE VT</span>
+          </h1>
+
+          <p className="text-lg md:text-2xl text-white/40 max-w-2xl mx-auto font-medium leading-relaxed mb-12">
+            Professional interior restoration and high-gloss paint protection. We bring the studio experience to your doorstep.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 1 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-6"
         >
           <PrismButton 
             variant="gold" 
-            className="w-full sm:w-auto text-xs font-black py-6 px-16 rounded-none uppercase tracking-widest"
+            className="w-full sm:w-auto text-sm font-bold py-6 px-12 rounded-2xl shadow-[0_20px_40px_rgba(251,191,36,0.15)]"
             onClick={onBookClick}
           >
-            Secure Session
+            Schedule Your Session
           </PrismButton>
           <button 
-            className="font-mono-tech hover:text-white transition-colors"
+            className="text-xs font-bold uppercase tracking-widest text-white/30 hover:text-white transition-colors py-4 px-8"
             onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
           >
-            Explore_Catalog [→]
+            Explore Services
           </button>
         </motion.div>
       </div>
 
-      {/* Vertical Structural Line */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 hidden lg:block -z-10" />
+      {/* Subtle Bottom Accent */}
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-20">
+        <span className="text-[8px] font-bold uppercase tracking-[0.5em]">Scroll to Discover</span>
+        <div className="w-px h-12 bg-linear-to-b from-white to-transparent" />
+      </div>
     </Section>
   );
 }
