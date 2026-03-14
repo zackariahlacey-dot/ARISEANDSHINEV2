@@ -9,18 +9,16 @@ import { useState, useRef } from "react";
 
 const plans = [
   {
-    id: "04",
+    id: "PRT_04",
     name: "Interior",
     price: "99",
-    description: "Ensure your interior remains in pristine condition through every season.",
-    benefits: ["Monthly Detail", "Fixed Pricing", "Priority Access", "Deodorization"],
+    specs: ["Monthly_Detailing", "Fixed_Executive_Rate", "Priority_Scheduling", "Odor_Elimination"],
   },
   {
-    id: "05",
+    id: "PRT_05",
     name: "Elite",
     price: "199",
-    description: "Comprehensive care for those who demand absolute perfection month after month.",
-    benefits: ["Full Monthly Detail", "Wax Maintenance", "Concierge Line", "Surface Upgrades"],
+    specs: ["Full_Monthly_Service", "Wax_Maintenance_Sync", "Concierge_Direct_Line", "Surface_Upgrades"],
     featured: true
   },
 ];
@@ -36,73 +34,85 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
   };
 
   return (
-    <Section id="maintenance" spacing="none" className="py-24 md:py-48 bg-[#050505] relative overflow-hidden">
-      <div className="text-center mb-24 relative z-10 px-4">
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="flex items-center justify-center gap-4 mb-8">
-          <div className="h-px w-8 bg-white/10" />
-          <span className="text-white/20 text-[10px] font-black uppercase tracking-[0.6em]">Continuity Program</span>
-          <div className="h-px w-8 bg-white/10" />
-        </motion.div>
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          className="text-5xl md:text-9xl font-black text-white uppercase tracking-tighter leading-none"
-        >
-          Automated <br /> <span className="text-transparent bg-clip-text bg-linear-to-b from-white to-white/5">Care</span>
-        </motion.h2>
+    <Section id="maintenance" spacing="none" className="py-24 md:py-48 bg-[#020202] relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-24 flex flex-col md:flex-row items-end justify-between border-b border-white/5 pb-12">
+        <div className="space-y-4">
+          <p className="font-mono-tech text-[#8b5cf6]">Protocol_Continuity // 02</p>
+          <h2 className="text-5xl md:text-9xl font-black text-white uppercase tracking-tighter leading-none">
+            Automated <br /> <span className="text-white/10">Excellence</span>
+          </h2>
+        </div>
+        <div className="hidden md:block text-right">
+          <p className="font-mono-tech mb-4">Membership_Status</p>
+          <div className="flex gap-2">
+            {[1, 2].map(i => (
+              <div key={i} className={cn("w-12 h-1 rounded-full", i === 1 ? "bg-[#8b5cf6]" : "bg-white/10")} />
+            ))}
+          </div>
+        </div>
       </div>
 
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex lg:grid lg:grid-cols-2 gap-8 md:gap-12 overflow-x-auto lg:overflow-x-visible no-scrollbar snap-x snap-mandatory px-6 lg:px-12 max-w-6xl mx-auto relative z-10"
+        className="flex lg:grid lg:grid-cols-2 gap-12 md:gap-8 overflow-x-auto lg:overflow-x-visible no-scrollbar snap-x snap-mandatory px-6 lg:px-12 max-w-[1200px] mx-auto relative z-10"
       >
         {plans.map((plan, index) => (
           <motion.div
             key={plan.name}
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: index * 0.1 }}
-            className="flex flex-col min-w-[85vw] lg:min-w-0 h-full snap-center group"
+            transition={{ duration: 0.8, delay: index * 0.1 }}
+            className="flex flex-col min-w-[85vw] lg:min-w-0 bg-[#020202] snap-center group relative"
           >
             <div className={cn(
-              "h-full p-10 md:p-20 flex flex-col relative rounded-[40px] transition-all duration-1000 glass-frame",
+              "h-full p-10 md:p-20 flex flex-col relative transition-all duration-700 glass-slab border-white/5",
               plan.featured && "border-[#8b5cf6]/20 bg-white/[0.02]"
             )}>
+              <div className="flex justify-between items-start mb-16">
+                <span className="font-mono-tech">{plan.id}</span>
+                {plan.featured && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#8b5cf6] border-b border-[#8b5cf6] pb-1">
+                    Signature_Circle
+                  </span>
+                )}
+              </div>
+
               <div className="mb-12">
-                <span className="text-xs font-black text-[#8b5cf6]/40 uppercase tracking-[0.4em] block mb-4">{plan.id}</span>
-                <h3 className="text-3xl md:text-5xl font-black text-white mb-6 uppercase tracking-tighter">{plan.name} Plan</h3>
-                <div className="flex items-baseline gap-2 mb-8">
+                <h3 className="text-4xl md:text-6xl font-black text-white mb-6 uppercase tracking-tighter group-hover:text-[#8b5cf6] transition-colors duration-500">{plan.name} Plan</h3>
+                <div className="flex items-baseline gap-2">
                   <span className="text-white/20 text-xl font-medium">$</span>
-                  <span className="text-6xl md:text-[120px] font-black text-white tracking-tighter group-hover:text-[#8b5cf6] transition-colors duration-700 leading-none">{plan.price}</span>
-                  <span className="text-white/20 text-xs md:text-lg uppercase tracking-widest font-black ml-2">/ Month</span>
+                  <span className="text-7xl md:text-9xl font-black text-white tracking-tighter">{plan.price}</span>
+                  <span className="text-white/20 text-sm font-black uppercase tracking-widest ml-2">/ Month</span>
                 </div>
               </div>
 
-              <div className="space-y-5 mb-16 flex-grow">
-                {plan.benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-4 opacity-40 group-hover:opacity-100 transition-opacity duration-700">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-                    <span className="text-xs md:text-lg font-bold uppercase tracking-widest text-white/80">{benefit}</span>
+              <div className="space-y-4 mb-16 flex-grow border-t border-white/5 pt-8">
+                {plan.specs.map((spec) => (
+                  <div key={spec} className="flex items-center justify-between group/item">
+                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white/40 group-hover/item:text-white transition-colors">
+                      {spec}
+                    </span>
+                    <div className="w-1 h-1 rounded-full bg-white/10 group-hover/item:bg-[#8b5cf6] transition-colors" />
                   </div>
                 ))}
               </div>
 
               <PrismButton 
                 variant={plan.featured ? "violet" : "outline"} 
-                className="w-full py-6 md:py-9 text-[10px] tracking-[0.4em] font-black rounded-full"
+                className="w-full relative z-10 py-6 md:py-8 text-[10px] font-black uppercase tracking-[0.3em] rounded-none border-x-0"
                 onClick={() => onSelectService?.(plan.name)}
               >
-                Sync Access
+                Sync_Membership
               </PrismButton>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="flex lg:hidden justify-center gap-2 mt-12 pb-20">
+      <div className="flex lg:hidden justify-center gap-4 mt-16 relative z-10">
         {plans.map((_, i) => (
-          <div key={i} className={cn("h-1 transition-all duration-700 rounded-full", activeIndex === i ? "w-12 bg-[#8b5cf6]" : "w-2 bg-white/10")} />
+          <div key={i} className={cn("h-[1px] transition-all duration-700", activeIndex === i ? "w-12 bg-[#8b5cf6]" : "w-4 bg-white/10")} />
         ))}
       </div>
     </Section>
