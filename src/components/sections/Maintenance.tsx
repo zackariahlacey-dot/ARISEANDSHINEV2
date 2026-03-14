@@ -3,24 +3,13 @@
 import { motion } from "framer-motion";
 import { Section } from "@/components/ui/Section";
 import { PrismButton } from "@/components/ui/PrismButton";
-import { ShieldCheck, Zap, ArrowRight, Activity } from "lucide-react";
+import { ShieldCheck, Zap, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef } from "react";
 
 const plans = [
-  {
-    id: "04",
-    name: "Interior",
-    price: "99",
-    specs: ["Full_Monthly_Sync", "Fixed_Executive_Rate", "Priority_Node_Access", "Odor_Purge_System"],
-  },
-  {
-    id: "05",
-    name: "Elite Full",
-    price: "199",
-    specs: ["Total_System_Restore", "Wax_Maintenance_Sync", "Concierge_Direct_Line", "Surface_Upgrade_v2"],
-    featured: true
-  },
+  { id: "04", name: "Interior Monthly", price: "99", description: "Ensure your interior remains in pristine condition through every season.", details: ["Full Monthly Detail", "Fixed Executive Rate", "Priority VIP Scheduling", "Complimentary Deodorization"] },
+  { id: "05", name: "Elite Monthly", price: "199", description: "Comprehensive care for those who demand absolute perfection month after month.", details: ["Full Monthly Elite Detail", "Wax Maintenance Sync", "Concierge Direct Line", "Seasonal Surface Upgrades"], featured: true },
 ];
 
 export default function Maintenance({ onSelectService }: { onSelectService?: (name: string) => void }) {
@@ -34,77 +23,74 @@ export default function Maintenance({ onSelectService }: { onSelectService?: (na
   };
 
   return (
-    <Section id="maintenance" spacing="none" className="py-24 md:py-48 bg-[#020202] relative overflow-hidden border-b border-white/5">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-32 relative z-10 text-right">
-        <div className="flex items-center gap-6 mb-8 justify-end">
-          <div className="h-[1px] flex-grow bg-white/5" />
-          <span className="text-variable">Index_02</span>
-        </div>
-        <h2 className="text-6xl md:text-[140px] font-black text-white uppercase tracking-tighter leading-none">
-          Automated <br /> <span className="text-[#8b5cf6] italic">Care</span>
-        </h2>
+    <Section id="maintenance" spacing="none" className="py-24 md:py-48 bg-[#050505] relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-24 text-center">
+        <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} className="mb-6">
+          <span className="text-[#8b5cf6] text-[10px] font-black uppercase tracking-[0.5em]">The Continuity Circle</span>
+        </motion.div>
+        <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="text-5xl md:text-9xl font-black text-white uppercase tracking-tighter leading-none mb-10 italic">
+          Automated <span className="text-white/10">Care</span>
+        </motion.h2>
+        <p className="text-lg md:text-xl text-white/30 max-w-2xl mx-auto font-medium italic">Concierge detailing programs designed for discerning owners.</p>
       </div>
 
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex lg:grid lg:grid-cols-2 gap-0 overflow-x-auto lg:overflow-x-visible no-scrollbar snap-x snap-mandatory max-w-[1400px] mx-auto relative z-10"
+        className="flex lg:grid lg:grid-cols-2 gap-8 md:gap-12 overflow-x-auto lg:overflow-x-visible no-scrollbar snap-x snap-mandatory px-6 lg:px-12 max-w-6xl mx-auto relative z-10"
       >
         {plans.map((plan, index) => (
           <motion.div
             key={plan.name}
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: index * 0.1 }}
-            className="flex flex-col min-w-[85vw] lg:min-w-0 bg-[#020202] snap-center group border-r border-white/5 last:border-r-0"
+            className="flex flex-col min-w-[85vw] lg:min-w-0 h-full snap-center group"
           >
             <div className={cn(
-              "h-full p-10 md:p-20 flex flex-col relative transition-all duration-1000 studio-slab border-none",
-              plan.featured && "bg-white/[0.02]"
+              "h-full p-10 md:p-16 flex flex-col relative glass-panel rounded-[40px] transition-all duration-1000",
+              plan.featured && "border-[#8b5cf6]/20 shadow-[0_30px_60px_rgba(139,92,246,0.05)] bg-white/[0.03]"
             )}>
-              <div className="mb-16">
-                <p className="text-variable mb-4">Protocol_Continuity</p>
-                <h3 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter group-hover:text-[#8b5cf6] transition-colors duration-700">{plan.name} Plan</h3>
+              <div className="flex justify-between items-start mb-12">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-white/20 transition-all">
+                  {plan.featured ? <ShieldCheck className="w-6 h-6 text-[#8b5cf6]" /> : <Zap className="w-6 h-6 text-white/40" />}
+                </div>
+                <span className="text-white/5 text-4xl font-black italic">{plan.id}</span>
               </div>
 
-              <div className="relative mb-16">
-                <span className="text-white/5 text-8xl md:text-[120px] font-black absolute -top-12 -left-4 pointer-events-none group-hover:text-[#8b5cf6]/10 transition-colors duration-700">
-                  {plan.id}
-                </span>
-                <div className="flex items-baseline gap-2 relative z-10">
-                  <span className="text-white/20 text-2xl font-light italic">$</span>
-                  <span className="text-7xl md:text-9xl font-black text-white tracking-tighter">{plan.price}</span>
+              <div className="mb-10">
+                <h3 className="text-2xl md:text-4xl font-black text-white mb-4 uppercase tracking-tight">{plan.name}</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-white/20 text-xl font-medium">$</span>
+                  <span className="text-5xl md:text-8xl font-black text-white group-hover:text-[#8b5cf6] transition-colors duration-700 tracking-tighter">{plan.price}</span>
                   <span className="text-white/20 text-sm font-black uppercase tracking-widest ml-2">/ Month</span>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-20 flex-grow border-t border-white/5 pt-10">
-                {plan.specs.map((spec) => (
-                  <div key={spec} className="flex items-center gap-4 group/item">
-                    <div className="w-1.5 h-[1px] bg-white/20 group-hover/item:bg-[#8b5cf6] group-hover/item:w-4 transition-all duration-500" />
-                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white/40 group-hover/item:text-white transition-colors italic">
-                      {spec}
-                    </span>
+              <div className="space-y-4 mb-12 flex-grow">
+                {plan.details.map((detail) => (
+                  <div key={detail} className="flex items-center gap-4 group/item">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover/item:bg-[#8b5cf6] transition-colors" />
+                    <span className="text-xs md:text-sm font-bold uppercase tracking-widest text-white/40 group-hover/item:text-white/80 transition-colors italic">{detail}</span>
                   </div>
                 ))}
               </div>
 
               <PrismButton 
                 variant={plan.featured ? "violet" : "outline"} 
-                className="w-full py-7 md:py-9 text-[10px] font-black uppercase tracking-[0.4em] rounded-none group/btn"
+                className="w-full py-6 text-[10px] font-black uppercase tracking-[0.3em] rounded-full shadow-xl"
                 onClick={() => onSelectService?.(plan.name)}
               >
-                Sync_Membership <ArrowRight className="ml-2 w-3 h-3 group-hover/btn:translate-x-1 transition-all" />
+                Join the {plan.name}
               </PrismButton>
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Pagination Mobile */}
-      <div className="flex lg:hidden justify-center gap-4 mt-16 relative z-10 pb-12">
+      <div className="flex lg:hidden justify-center gap-2 mt-12 pb-12">
         {plans.map((_, i) => (
-          <div key={i} className={cn("h-[1px] transition-all duration-700", activeIndex === i ? "w-12 bg-[#8b5cf6]" : "w-4 bg-white/10")} />
+          <div key={i} className={cn("h-1 transition-all duration-500 rounded-full", activeIndex === i ? "w-8 bg-[#8b5cf6]" : "w-2 bg-white/10")} />
         ))}
       </div>
     </Section>

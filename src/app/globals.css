@@ -5,7 +5,7 @@
 }
 
 :root {
-  --background: #020202;
+  --background: #050505;
   --foreground: #ffffff;
   --accent-gold: #fbbf24;
   --accent-violet: #8b5cf6;
@@ -23,57 +23,55 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Avant-Garde Typography */
-h1, h2, h3 {
+/* Cinematic Typography */
+h1, h2, h3, h4 {
   text-wrap: balance;
-  letter-spacing: -0.05em;
-  font-weight: 900;
-  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  font-weight: 800;
 }
 
-.text-variable {
-  font-weight: 100;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+.text-reveal {
+  background: linear-gradient(to bottom, #ffffff 0%, rgba(255, 255, 255, 0.4) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* Color Bloom Atmosphere */
-.color-bloom {
-  position: absolute;
-  width: 60vw;
-  height: 60vw;
-  border-radius: 50%;
-  filter: blur(150px);
-  opacity: 0.08;
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* Studio Slab Card */
-.studio-slab {
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-}
-
-.studio-slab:hover {
+/* Premium Glassmorphism */
+.glass-panel {
   background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: scale(1.02);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Precision Cursor Line (Visual only) */
-.cursor-line {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.05), transparent);
+.glass-panel:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-4px);
+}
+
+/* Atmosphere Utility */
+.atmosphere-glow {
+  position: absolute;
+  width: 50vw;
+  height: 50vw;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.1;
   pointer-events: none;
-  z-index: 50;
+  z-index: 0;
+}
+
+/* Global Noise Texture */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 100;
 }
 
 @layer utilities {

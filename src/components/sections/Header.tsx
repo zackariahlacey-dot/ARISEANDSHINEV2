@@ -28,9 +28,9 @@ export default function Header() {
 
   const navLinks = [
     { name: "Services", href: "#services" },
-    { name: "Maintenance", href: "#maintenance" },
+    { name: "Membership", href: "#maintenance" },
     { name: "Gallery", href: "#transformations" },
-    { name: "Portal", href: "/auth" },
+    { name: "Experience", href: "#about" },
   ];
 
   return (
@@ -40,26 +40,26 @@ export default function Header() {
       className="fixed top-0 left-0 right-0 z-50 flex justify-center p-4 md:p-8"
     >
       <nav className={cn(
-        "flex items-center justify-between w-full max-w-7xl px-6 py-4 md:px-10",
-        "bg-black/40 backdrop-blur-2xl border border-white/5 rounded-none"
+        "flex items-center justify-between w-full max-w-7xl px-6 py-4 md:px-10 rounded-full",
+        "bg-black/40 backdrop-blur-2xl border border-white/5 shadow-2xl"
       )}>
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[#fbbf24]/50 transition-all">
+          <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[#fbbf24]/50 transition-all duration-500">
             <img 
               src="/e.png" 
               alt="Logo" 
-              className="w-6 h-6 md:w-7 md:h-7 object-contain brightness-110"
+              className="w-6 h-6 md:w-7 md:h-7 object-contain"
             />
           </div>
-          <span className="text-xl font-black tracking-tighter text-white md:text-2xl uppercase italic">
+          <span className="text-xl font-black tracking-tighter text-white md:text-2xl uppercase italic leading-none">
             ARISE <span className="text-[#fbbf24]">&</span> SHINE
           </span>
         </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-12">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-10">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -73,15 +73,15 @@ export default function Header() {
           
           <div className="flex items-center gap-6 border-l border-white/10 pl-12">
             <Link href={user ? "/dashboard" : "/auth"}>
-              <button className="flex items-center gap-3 text-white/40 hover:text-white transition-colors group">
+              <button className="flex items-center gap-3 text-white/40 hover:text-white transition-colors">
                 <UserCircle className="w-5 h-5 group-hover:text-[#fbbf24] transition-colors" />
                 <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-                  {user ? "System_Active" : "Member_Sync"}
+                  {user ? "Portal" : "Join"}
                 </span>
               </button>
             </Link>
-            <PrismButton variant="gold" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })} className="py-4 px-8 text-[10px]">
-              RESERVE_NOW
+            <PrismButton variant="gold" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })} className="py-4 px-10 rounded-full text-[10px] shadow-[0_10px_30px_rgba(251,191,36,0.1)]">
+              RESERVE
             </PrismButton>
           </div>
         </div>
@@ -91,8 +91,8 @@ export default function Header() {
           <Link href={user ? "/dashboard" : "/auth"}>
             <UserCircle className="w-6 h-6 text-white/40" />
           </Link>
-          <PrismButton variant="gold" className="px-4 py-2 text-[8px]" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })}>
-            RESERVE
+          <PrismButton variant="gold" className="px-5 py-2.5 text-[8px] rounded-full" onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })}>
+            BOOK
           </PrismButton>
         </div>
       </nav>

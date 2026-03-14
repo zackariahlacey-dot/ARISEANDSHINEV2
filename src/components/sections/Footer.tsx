@@ -7,20 +7,20 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <Section spacing="none" className="py-24 md:py-32 border-t border-white/5 bg-black">
+    <Section spacing="none" className="py-24 md:py-32 border-t border-white/5 bg-[#050505]">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-24 text-center md:text-left">
           {/* Brand */}
           <div className="space-y-8 flex flex-col items-center md:items-start">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative w-8 h-8 md:w-10 md:h-10 overflow-hidden rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[#fbbf24]/50 transition-all">
+              <div className="relative w-10 h-10 md:w-12 md:h-12 overflow-hidden rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[#fbbf24]/50 transition-all duration-500">
                 <img 
                   src="/e.png" 
                   alt="Logo" 
-                  className="w-6 h-6 md:w-7 md:h-7 object-contain"
+                  className="w-7 h-7 md:w-8 md:h-8 object-contain"
                 />
               </div>
-              <span className="text-xl font-black tracking-tighter text-white md:text-2xl uppercase italic">
+              <span className="text-xl font-black tracking-tighter text-white md:text-3xl uppercase italic">
                 ARISE <span className="text-[#fbbf24]">&</span> SHINE
               </span>
             </Link>
@@ -31,18 +31,18 @@ export default function Footer() {
 
           {/* Links */}
           <div className="space-y-6">
-            <p className="text-variable">Navigation</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#fbbf24]">Experience</p>
             <div className="flex flex-col gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
-              <Link href="#services" className="hover:text-[#fbbf24] transition-colors">Services_Grid</Link>
-              <Link href="#maintenance" className="hover:text-[#fbbf24] transition-colors">Concierge_Sync</Link>
-              <Link href="#transformations" className="hover:text-[#fbbf24] transition-colors">Visual_Evidence</Link>
-              <Link href="/auth" className="hover:text-[#fbbf24] transition-colors">Member_Portal</Link>
+              <Link href="#services" className="hover:text-white transition-colors">The_Collections</Link>
+              <Link href="#maintenance" className="hover:text-white transition-colors">The_Continuity</Link>
+              <Link href="#transformations" className="hover:text-white transition-colors">The_Evidence</Link>
+              <Link href="/auth" className="hover:text-[#fbbf24] transition-colors">Member_Access</Link>
             </div>
           </div>
 
           {/* Contact */}
           <div className="space-y-6">
-            <p className="text-variable">Contact_Node</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#fbbf24]">Inquiries</p>
             <div className="flex flex-col gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
               <a href="tel:802-585-5563" className="hover:text-white transition-colors">802.585.5563</a>
               <a href="mailto:contact@ariseandshinevt.com" className="hover:text-white transition-colors lowercase">contact@ariseandshinevt.com</a>
@@ -50,17 +50,17 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Prestige */}
+          {/* Status */}
           <div className="space-y-6">
-            <p className="text-variable">System_Status</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#fbbf24]">Studio_Status</p>
             <div className="flex flex-col gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
-              <span className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                Studio_Online
+              <span className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                Currently_Accepting_Collections
               </span>
-              <span className="flex items-center gap-2 text-white/20">
-                <div className="w-1 h-1 rounded-full bg-white/20" />
-                Central_VT_Node
+              <span className="flex items-center gap-3 text-white/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                Mobile_Studio_Online
               </span>
             </div>
           </div>
@@ -74,7 +74,7 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <div className="h-px w-8 bg-white/10" />
             <p className="text-[10px] text-white/20 uppercase tracking-[0.4em] font-black italic">
-              Built_with_Precision
+              Crafted_with_Precision
             </p>
           </div>
         </div>
