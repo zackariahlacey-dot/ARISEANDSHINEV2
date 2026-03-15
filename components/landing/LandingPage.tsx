@@ -1506,10 +1506,10 @@ function ServiceCard({
   onBook: () => void;
 }) {
   const [isIncludedOpen, setIsIncludedOpen] = useState(false);
-  const samePrice = service.price_small === service.price_extra_large;
+  const samePrice = service.price_small === service.price_large;
   const priceDisplay = samePrice
     ? `$${service.price_small}`
-    : `$${service.price_small} – $${service.price_extra_large}`;
+    : `$${service.price_small} – $${service.price_large}`;
 
   const inclusions = SERVICE_INCLUSIONS[service.name] ?? [];
 
@@ -1548,7 +1548,7 @@ function ServiceCard({
       {/* Reward points badge */}
       <div className="inline-flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-medium px-4 py-1.5 rounded-full mb-6 w-fit">
         <Sparkles size={11} className="shrink-0" />
-        Earn {service.price_small}–{service.price_extra_large} Reward Points
+        Earn {service.price_small}–{service.price_large} Reward Points
       </div>
 
       {/* What's Included dropdown — each card has its own open state */}

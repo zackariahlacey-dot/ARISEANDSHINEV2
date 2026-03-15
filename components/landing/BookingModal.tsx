@@ -58,27 +58,15 @@ const VEHICLE_SIZES: {
 }[] = [
   {
     id: "compact",
-    label: "Compact / Hatchback",
-    desc: "Mini, Subcompact",
+    label: "Small / Medium",
+    desc: "Sedans, Coupes, Small SUVs (No 3rd Row)",
     sizeKey: "price_small",
   },
   {
-    id: "sedan",
-    label: "Sedan / Coupe",
-    desc: "Standard 2–4 door car",
-    sizeKey: "price_medium",
-  },
-  {
     id: "suv",
-    label: "SUV / Crossover / Truck",
-    desc: "Mid-size, Full-size, Pickups",
+    label: "Large / 3-Row / Van",
+    desc: "3-Row SUVs, Vans, Large Trucks",
     sizeKey: "price_large",
-  },
-  {
-    id: "xl",
-    label: "Van / Minivan / 3-Row",
-    desc: "Large capacity vehicles",
-    sizeKey: "price_extra_large",
   },
 ];
 
