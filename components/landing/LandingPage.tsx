@@ -205,7 +205,8 @@ export function LandingPage({ services }: { services: Service[] }) {
     setExpandedBookingId(null);
     setSuccessModalData(data);
     setShowSuccessModal(true);
-  }, []);
+    router.refresh();
+  }, [router]);
 
   const handleCloseSuccessModal = useCallback(() => {
     setShowSuccessModal(false);
