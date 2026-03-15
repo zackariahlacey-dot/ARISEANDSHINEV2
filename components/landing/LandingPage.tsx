@@ -924,9 +924,9 @@ export function LandingPage({ services }: { services: Service[] }) {
       </motion.section>
 
 
-      {/* ─── Trust Banner (Our Promise) — 2x2 grid ─────────────────── */}
+      {/* ─── Trust Banner (Our Promise) — 2x2 grid on mobile ─────────────────── */}
       <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 w-full lg:max-w-7xl mx-auto mt-8 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 w-full lg:max-w-7xl mx-auto mt-8 mb-12">
           {[
             { icon: Car,       title: "We Come To You",     desc: "Fully mobile — at home or work." },
             { icon: Shield,    title: "100% Satisfaction", desc: "We make it right, no questions asked." },
@@ -935,11 +935,13 @@ export function LandingPage({ services }: { services: Service[] }) {
           ].map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
-              className="flex flex-col items-center justify-center text-center p-4 md:p-6 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl hover:bg-zinc-800/50 transition-colors"
+              className="flex flex-col items-center justify-center text-center p-4 md:p-8 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl hover:bg-zinc-800/50 transition-colors group"
             >
-              <Icon className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37] mb-3 shrink-0" strokeWidth={1.75} />
-              <p className="text-xs md:text-sm font-semibold text-zinc-100 mb-1">{title}</p>
-              <p className="text-[10px] md:text-xs text-zinc-500 leading-tight">{desc}</p>
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-4 border border-white/5 group-hover:border-[#D4AF37]/30 transition-colors">
+                <Icon className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" strokeWidth={1.75} />
+              </div>
+              <p className="text-[10px] md:text-sm font-bold text-zinc-100 mb-1 uppercase tracking-wider">{title}</p>
+              <p className="text-[9px] md:text-xs text-zinc-500 leading-tight max-w-[120px] md:max-w-none">{desc}</p>
             </div>
           ))}
         </div>
