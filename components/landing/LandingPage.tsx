@@ -255,6 +255,11 @@ export function LandingPage({ services }: { services: Service[] }) {
   });
   const activeService = mainGridServices.find((s) => s.id === activeServiceId) ?? mainGridServices[0];
 
+  const [activeMonthlyPlanId, setActiveMonthlyPlanId] = useState<string | null>(() => {
+    return monthlyPlanServices[0]?.id ?? null;
+  });
+  const activeMonthlyPlan = monthlyPlanServices.find((s) => s.id === activeMonthlyPlanId) ?? monthlyPlanServices[0];
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
       {/* Toast: checkout cancelled, draft restored */}
@@ -700,78 +705,85 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="py-16 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
       >
-        <div className="w-full max-w-7xl mx-auto">
+        {/* Background Decorative Element */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="w-full max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-12 md:mb-20">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6">
+              <Crown size={10} fill="currentColor" />
               Member Exclusive
-            </p>
-            <h2
-              className="text-3xl md:text-5xl font-black tracking-tight text-white mb-6"
-            >
-              The Maintenance Club
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
+              The Maintenance <span className="text-zinc-500">Club</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-              Put your vehicle&apos;s care on auto-pilot. Showroom condition year-round with our recurring maintenance plans.
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+              Experience the pinnacle of automotive care. Our recurring plans ensure your vehicle remains in showroom condition with effortless, scheduled maintenance.
             </p>
-            <div className="mt-8 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-full text-amber-200 text-xs font-bold">
+            <div className="mt-10 inline-flex items-center gap-2 bg-zinc-900/80 border border-white/5 px-5 py-2.5 rounded-2xl text-zinc-400 text-xs font-medium backdrop-blur-sm">
               <ShieldCheck size={14} className="text-[#D4AF37]" />
               $100 Signup & Deep Clean Fee applies to all new memberships
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto">
-            {monthlyPlanServices.map((plan) => {
-              const isFull = plan.name.toLowerCase().includes("full");
-              return (
-                <div 
-                  key={plan.id}
-                  className="relative group h-full"
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[2rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
-                  <div className="relative h-full bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 lg:p-12 flex flex-col">
-                    <div className="mb-8">
-                      <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center mb-6 border border-white/5">
-                        {isFull ? <Crown className="text-[#D4AF37]" size={24} /> : <Car className="text-[#D4AF37]" size={24} />}
-                      </div>
-                      <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                      <p className="text-zinc-500 text-sm leading-relaxed min-h-[40px]">
-                        {plan.description}
-                      </p>
-                    </div>
-
-                    <div className="mb-8 flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-white">${plan.price_small}</span>
-                      <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">/ Month</span>
-                    </div>
-
-                    <ul className="space-y-4 mb-10 flex-1">
-                      {[
-                        "Priority Scheduling",
-                        "Fixed Monthly Dates",
-                        "Premium Protectants Included",
-                        "10% Off Additional Services",
-                        "Cancel Anytime",
-                      ].map((feature) => (
-                        <li key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
-                          <CheckCircle size={16} className="text-[#D4AF37] shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-
+          {/* Desktop Grid / Mobile Tabs */}
+          <div className="max-w-5xl mx-auto">
+            {/* Mobile Tab Navigation */}
+            <div className="flex justify-center mb-10 md:hidden">
+              <div className="bg-zinc-900/50 p-1.5 rounded-full inline-flex gap-1 border border-white/5">
+                {monthlyPlanServices.map((plan) => {
+                  const isActive = activeMonthlyPlanId === plan.id;
+                  const label = plan.name.toLowerCase().includes("full") ? "Full Detail" : "Interior";
+                  return (
                     <button
+                      key={plan.id}
                       type="button"
-                      onClick={() => openBooking(plan)}
-                      className="w-full py-4 rounded-xl bg-white text-black font-black hover:bg-[#D4AF37] transition-all duration-300 shadow-xl shadow-white/5"
+                      onClick={() => setActiveMonthlyPlanId(plan.id)}
+                      className={
+                        isActive
+                          ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-6 py-2.5 text-sm font-bold transition-all"
+                          : "text-zinc-500 hover:text-zinc-300 px-6 py-2.5 text-sm font-semibold transition-all rounded-full"
+                      }
                     >
-                      Join The Club
+                      {label}
                     </button>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Desktop Grid Display */}
+            <div className="hidden md:grid md:grid-cols-2 gap-8 lg:gap-12">
+              {monthlyPlanServices.map((plan) => (
+                <MaintenanceCard 
+                  key={plan.id} 
+                  plan={plan} 
+                  onBook={() => openBooking(plan)} 
+                />
+              ))}
+            </div>
+
+            {/* Mobile Single Card Display with Animation */}
+            <div className="md:hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeMonthlyPlanId}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {activeMonthlyPlan && (
+                    <MaintenanceCard 
+                      plan={activeMonthlyPlan} 
+                      onBook={() => openBooking(activeMonthlyPlan)} 
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Inline booking dropdown (Maintenance Club) */}
@@ -1497,6 +1509,104 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
   "Interior Monthly Maintenance": [...INTERIOR_ITEMS, ...MAINTENANCE_ITEMS],
   "Full Detail Monthly Maintenance": [...EXTERIOR_ITEMS, ...INTERIOR_ITEMS, ...MAINTENANCE_ITEMS],
 };
+
+// ─── Maintenance Card ──────────────────────────────────────────────────────────
+
+function MaintenanceCard({
+  plan,
+  onBook,
+}: {
+  plan: Service;
+  onBook: () => void;
+}) {
+  const [isIncludedOpen, setIsIncludedOpen] = useState(false);
+  const isFull = plan.name.toLowerCase().includes("full");
+  const inclusions = SERVICE_INCLUSIONS[plan.name] ?? [];
+
+  return (
+    <div className="relative group h-full">
+      <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[2.5rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
+      <div className="relative h-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 lg:p-12 flex flex-col transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="mb-8">
+          <div className="flex justify-between items-start mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
+              {isFull ? <Crown className="text-[#D4AF37]" size={28} /> : <Car className="text-[#D4AF37]" size={28} />}
+            </div>
+            <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[#D4AF37] text-[10px] font-black uppercase tracking-widest">
+              Limited Spots
+            </div>
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">{plan.name}</h3>
+          <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+            {plan.description}
+          </p>
+        </div>
+
+        <div className="mb-10">
+          <div className="flex items-baseline gap-1">
+            <span className="text-5xl font-black text-white">${plan.price_small}</span>
+            <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">/ Month</span>
+          </div>
+          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-2">
+            +$100 Initial Setup Fee
+          </p>
+        </div>
+
+        {/* Features Preview */}
+        <ul className="space-y-4 mb-10">
+          {[
+            "Priority Scheduling",
+            "Fixed Monthly Dates",
+            "Premium Protectants Included",
+          ].map((feature) => (
+            <li key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
+              <CheckCircle size={16} className="text-[#D4AF37] shrink-0" />
+              {feature}
+            </li>
+          ))}
+        </ul>
+
+        {/* What's Included Dropdown */}
+        {inclusions.length > 0 && (
+          <details
+            open={isIncludedOpen}
+            className="group/details mb-10"
+          >
+            <summary
+              className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between border-t border-white/5 pt-5 cursor-pointer text-sm font-bold text-zinc-500 hover:text-[#D4AF37] transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                setIsIncludedOpen((prev) => !prev);
+              }}
+            >
+              Full Inclusions
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-300 ${isIncludedOpen ? "rotate-180" : ""}`}
+              />
+            </summary>
+            <ul className="mt-5 space-y-3">
+              {inclusions.map((item) => (
+                <li key={item} className="flex items-start gap-3 text-xs text-zinc-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-1.5 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
+        <button
+          type="button"
+          onClick={onBook}
+          className="mt-auto w-full py-5 rounded-2xl bg-zinc-100 text-black font-black hover:bg-[#D4AF37] transition-all duration-300 shadow-xl shadow-black/20 active:scale-[0.98]"
+        >
+          Join The Club
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── Service Card ──────────────────────────────────────────────────────────────
 
