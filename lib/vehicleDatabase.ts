@@ -337,13 +337,13 @@ export function filterModelsByQuery(
   return models.filter((e) => e.model.toLowerCase().includes(q));
 }
 
-/** Map database size tier to booking modal VehicleSizeSlug (compact | sedan | suv | xl) */
-export function sizeTierToSlug(tier: SizeTier): "compact" | "sedan" | "suv" | "xl" {
-  const map: Record<SizeTier, "compact" | "sedan" | "suv" | "xl"> = {
+/** Map database size tier to booking modal VehicleSizeSlug (compact | suv) */
+export function sizeTierToSlug(tier: SizeTier): "compact" | "suv" {
+  const map: Record<SizeTier, "compact" | "suv"> = {
     small: "compact",
-    medium: "sedan",
+    medium: "compact",
     large: "suv",
-    extra_large: "xl",
+    extra_large: "suv",
   };
-  return map[tier] ?? "sedan";
+  return map[tier] ?? "compact";
 }
