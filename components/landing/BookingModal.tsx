@@ -18,6 +18,7 @@ import {
   Lock,
   HandCoins,
   HelpCircle,
+  Crown,
   Sparkles,
 } from "lucide-react";
 import type { Service } from "@/app/page";
