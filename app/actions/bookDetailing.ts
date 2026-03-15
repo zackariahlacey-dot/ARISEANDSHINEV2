@@ -9,9 +9,7 @@ import Stripe from "stripe";
 // Maps our UI vehicle size slugs to the DB enum values
 const VEHICLE_SIZE_MAP = {
   compact: "small",
-  sedan: "medium",
   suv: "large",
-  xl: "extra_large",
 } as const;
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
@@ -107,13 +105,13 @@ export async function bookDetailing(
 
   // ── 1. Resolve profile: logged-in skip profile creation and use user.id; guest find/create by phone ─
   let profileId: string;
+  const adminSupabase = createAdminClient();
 
   if (user) {
     // Logged-in: skip profile creation/upsert; use auth user id as booking user_id
     profileId = user;
   } else {
     // Guest: find or create profile by phone (use admin client to bypass RLS)
-    const adminSupabase = createAdminClient();
     const { data: existing } = await adminSupabase
       .from("profiles")
       .select("id")
@@ -156,7 +154,7 @@ export async function bookDetailing(
 
   // ── 1b. Redeem points (Pay at Arrival only; Pay Now redeems in webhook after payment) ───────────
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
-    const { data: profileRow } = await supabase
+    const { data: profileRow } = await adminSupabase
       .from("profiles")
       .select("reward_points")
       .eq("id", profileId)
@@ -167,14 +165,14 @@ export async function bookDetailing(
         error: "You don't have enough reward points to redeem. Please adjust or continue without redeeming.",
       };
     }
-    await supabase
+    await adminSupabase
       .from("profiles")
       .update({ reward_points: profileRow.reward_points - payload.pointsToRedeem })
       .eq("id", profileId);
   }
 
   // ── 2. Insert vehicle ──────────────────────────────────────────────────
-  const { data: vehicle, error: vehicleErr } = await supabase
+  const { data: vehicle, error: vehicleErr } = await adminSupabase
     .from("vehicles")
     .insert({
       user_id: profileId,
@@ -290,7 +288,7 @@ export async function bookDetailing(
   }
 
   // ── 3. Insert booking (Pay at Arrival only) ─────────────────────────────
-  const { data: booking, error: bookingErr } = await supabase
+  const { data: booking, error: bookingErr } = await adminSupabase
     .from("bookings")
     .insert({
       user_id: profileId,
@@ -321,14 +319,14 @@ export async function bookDetailing(
     (payload.travelFee ?? 0);
   const earnedPoints = Math.floor(Math.max(0, serviceSubtotal));
   if (earnedPoints > 0) {
-    const { data: prof } = await supabase
+    const { data: prof } = await adminSupabase
       .from("profiles")
       .select("reward_points, lifetime_points")
       .eq("id", profileId)
       .single();
     if (prof && typeof prof.reward_points === "number") {
       const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
-      await supabase
+      await adminSupabase
         .from("profiles")
         .update({
           reward_points: prof.reward_points + earnedPoints,
@@ -349,20 +347,20 @@ export async function bookDetailing(
         .maybeSingle();
 
       if (authProfile?.referred_by && !authProfile.has_used_referral) {
-        await supabase
+        await adminSupabase
           .from("profiles")
           .update({ has_used_referral: true })
           .eq("id", user);
 
         // 2. Credit 200 points to the referrer
-        const { data: referrerProfile } = await supabase
+        const { data: referrerProfile } = await adminSupabase
           .from("profiles")
           .select("reward_points")
           .eq("id", authProfile.referred_by)
           .maybeSingle();
 
         if (referrerProfile != null) {
-          await supabase
+          await adminSupabase
             .from("profiles")
             .update({
               reward_points: (referrerProfile.reward_points ?? 0) + 200,
