@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -116,6 +116,7 @@ type ExpandedBookingId = "hero" | "club" | "services" | null;
 
 export function LandingPage({ services }: { services: Service[] }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [expandedBookingId, setExpandedBookingId] = useState<ExpandedBookingId>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
