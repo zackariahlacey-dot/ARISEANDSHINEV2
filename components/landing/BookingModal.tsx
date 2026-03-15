@@ -87,7 +87,8 @@ const SERVICE_DURATIONS: Record<string, number> = {
   "Interior Detail": 180,
   "Exterior Detail": 120,
   "Full Detail": 210,
-  "Monthly Maintenance Plan": 120,
+  "Interior Monthly Maintenance": 120,
+  "Full Detail Monthly Maintenance": 180,
 };
 
 const WORKDAY_START = "8:00 AM";
@@ -569,7 +570,7 @@ export function BookingSection({
   };
 
   // Price/points derived values (declared early so useEffect below can reference maxRedeemablePoints)
-  const isMonthlyPlan = selectedService?.name === "Monthly Maintenance Plan";
+  const isMonthlyPlan = selectedService?.name.toLowerCase().includes("monthly maintenance");
   const setupFee = isMonthlyPlan ? MAINTENANCE_SETUP_FEE : 0;
   const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
   const referralDiscountAmount = referralEligible

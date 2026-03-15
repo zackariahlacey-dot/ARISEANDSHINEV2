@@ -71,27 +71,84 @@ export async function POST(req: NextRequest) {
       req.headers.get("origin") ??
       `${req.nextUrl.protocol}//${req.nextUrl.host}`;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+    // Mode depends on whether it's a subscription or a one-off
+    const isSubscription = serviceName.toLowerCase().includes("monthly");
+    const mode = isSubscription ? "subscription" : "payment";
 
-      line_items: [
-        {
+    // Setup fee for subscriptions ($100)
+    const setupFee = isSubscription ? 100 : 0;
+    
+    // The totalPrice from modal already includes setup fee + travel fee - points.
+    // For subscriptions, we want Stripe to charge:
+    // 1. The monthly price (recurring)
+    // 2. The setup fee + travel fee - points (one-time)
+    
+    // We'll split the totalPrice into line items for subscriptions.
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+    if (isSubscription) {
+      // 1. Recurring Monthly Price
+      // We assume the recurring price is (totalPrice - setupFee - travelFee + points)
+      // but actually the modal passes 'totalPrice' as the due today amount.
+      // Let's use a simpler approach: 
+      // If subscription, use service price as recurring and the rest as setup.
+      const monthlyPrice = serviceName.toLowerCase().includes("full detail") ? 150 : 100;
+      
+      line_items.push({
+        price_data: {
+          currency: "usd",
+          recurring: { interval: "month" },
+          unit_amount: Math.round(monthlyPrice * 100),
+          product_data: {
+            name: serviceName,
+            description: "Monthly Maintenance Plan recurring fee",
+          },
+        },
+        quantity: 1,
+      });
+
+      // 2. One-time Setup + Travel - Points
+      const initialCharge = totalPrice - monthlyPrice;
+      if (initialCharge > 0) {
+        line_items.push({
           price_data: {
             currency: "usd",
-            // Stripe amounts are in cents
-            unit_amount: Math.round(totalPrice * 100),
+            unit_amount: Math.round(initialCharge * 100),
             product_data: {
-              name: serviceName,
+              name: "Initial Setup & Deep Clean",
               description: [
                 `${vehicleYear} ${vehicleMake} ${vehicleModel}`,
                 SIZE_LABELS[vehicleSize] ?? vehicleSize,
                 `${bookingDate} at ${bookingTime}`,
+                "Includes setup fee and any travel/discounts",
               ].join(" · "),
             },
           },
           quantity: 1,
+        });
+      }
+    } else {
+      // Standard one-off payment
+      line_items.push({
+        price_data: {
+          currency: "usd",
+          unit_amount: Math.round(totalPrice * 100),
+          product_data: {
+            name: serviceName,
+            description: [
+              `${vehicleYear} ${vehicleMake} ${vehicleModel}`,
+              SIZE_LABELS[vehicleSize] ?? vehicleSize,
+              `${bookingDate} at ${bookingTime}`,
+            ].join(" · "),
+          },
         },
-      ],
+        quantity: 1,
+      });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode,
+      line_items,
 
       // Pre-fill the customer email on the Stripe checkout page
       customer_email: email || undefined,
