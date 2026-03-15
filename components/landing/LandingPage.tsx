@@ -1526,40 +1526,40 @@ function MaintenanceCard({
   return (
     <div className="relative group h-full">
       <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[2.5rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
-      <div className="relative h-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 lg:p-12 flex flex-col transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        <div className="mb-8">
-          <div className="flex justify-between items-start mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
-              {isFull ? <Crown className="text-[#D4AF37]" size={28} /> : <Car className="text-[#D4AF37]" size={28} />}
+      <div className="relative h-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 lg:p-12 flex flex-col items-center text-center transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="mb-8 flex flex-col items-center w-full">
+          <div className="flex flex-col items-center mb-6 gap-4">
+            <div className="w-16 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
+              {isFull ? <Crown className="text-[#D4AF37]" size={32} /> : <Car className="text-[#D4AF37]" size={32} />}
             </div>
             <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[#D4AF37] text-[10px] font-black uppercase tracking-widest">
               Limited Spots
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">{plan.name}</h3>
-          <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">{plan.name}</h3>
+          <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">
             {plan.description}
           </p>
         </div>
 
         <div className="mb-10">
-          <div className="flex items-baseline gap-1">
-            <span className="text-5xl font-black text-white">${plan.price_small}</span>
-            <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">/ Month</span>
+          <div className="flex items-baseline justify-center gap-1">
+            <span className="text-5xl md:text-6xl font-black text-white">${plan.price_small}</span>
+            <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">/ mo</span>
           </div>
-          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-2">
+          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-3">
             +$100 Initial Setup Fee
           </p>
         </div>
 
         {/* Features Preview */}
-        <ul className="space-y-4 mb-10">
+        <ul className="space-y-4 mb-10 w-full max-w-xs mx-auto">
           {[
             "Priority Scheduling",
             "Fixed Monthly Dates",
             "Premium Protectants Included",
           ].map((feature) => (
-            <li key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
+            <li key={feature} className="flex items-center justify-center gap-3 text-sm text-zinc-300">
               <CheckCircle size={16} className="text-[#D4AF37] shrink-0" />
               {feature}
             </li>
@@ -1570,10 +1570,10 @@ function MaintenanceCard({
         {inclusions.length > 0 && (
           <details
             open={isIncludedOpen}
-            className="group/details mb-10"
+            className="group/details mb-10 w-full"
           >
             <summary
-              className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between border-t border-white/5 pt-5 cursor-pointer text-sm font-bold text-zinc-500 hover:text-[#D4AF37] transition-colors"
+              className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-center gap-3 border-t border-white/5 pt-5 cursor-pointer text-sm font-bold text-zinc-500 hover:text-[#D4AF37] transition-colors"
               onClick={(e) => {
                 e.preventDefault();
                 setIsIncludedOpen((prev) => !prev);
@@ -1585,9 +1585,9 @@ function MaintenanceCard({
                 className={`transition-transform duration-300 ${isIncludedOpen ? "rotate-180" : ""}`}
               />
             </summary>
-            <ul className="mt-5 space-y-3">
+            <ul className="mt-5 space-y-3 max-w-xs mx-auto">
               {inclusions.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-xs text-zinc-400">
+                <li key={item} className="flex items-start gap-3 text-xs text-zinc-400 text-left">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-1.5 shrink-0" />
                   {item}
                 </li>
@@ -1599,9 +1599,9 @@ function MaintenanceCard({
         <button
           type="button"
           onClick={onBook}
-          className="mt-auto w-full py-5 rounded-2xl bg-zinc-100 text-black font-black hover:bg-[#D4AF37] transition-all duration-300 shadow-xl shadow-black/20 active:scale-[0.98]"
+          className="btn-primary-gold-shimmer mt-auto w-full py-5 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-black hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden active:scale-[0.98]"
         >
-          Join The Club
+          <span className="relative z-[1]">Join The Club</span>
         </button>
       </div>
     </div>
