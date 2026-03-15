@@ -13,7 +13,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { updateCustomerProfile } from "@/app/actions/updateCustomerProfile";
-import { getTierBadgeDisplay } from "@/lib/calculateLifetimeTier";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -362,9 +361,6 @@ export function CustomersTable({
                   <SortBtn label="Points" col="reward_points" />
                 </th>
                 <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">
-                  Tier
-                </th>
-                <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">
                   Referral Code
                 </th>
                 <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-600">
@@ -384,8 +380,6 @@ export function CustomersTable({
                 </tr>
               ) : (
                 sorted.map((c) => {
-                  const { label, gradientClass } = getTierBadgeDisplay(c.lifetime_points ?? c.reward_points ?? 0);
-                  
                   const displayName = c.customer_name ?? ([c.first_name, c.last_name].filter(Boolean).join(" ") || "—");
 
                   return (
@@ -432,15 +426,6 @@ export function CustomersTable({
                             {(c.reward_points ?? 0).toLocaleString()}
                           </span>
                         </div>
-                      </td>
-
-                      {/* Tier */}
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex items-center justify-center px-2.5 py-0.5 text-[10px] font-semibold tier-badge-3d ${gradientClass}`}
-                        >
-                          {label}
-                        </span>
                       </td>
 
                       {/* Referral code */}

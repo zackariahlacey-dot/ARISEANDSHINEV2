@@ -7,7 +7,6 @@ import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
-import { getSuccessTier } from "@/lib/calculateLifetimeTier";
 
 export interface SuccessModalData {
   confirmationId: string;
@@ -68,16 +67,8 @@ const itemVariants = {
   }),
 };
 
-type LiveTier = {
-  currentPoints: number;
-  tierLabel: string;
-  nextTierGoal: number;
-  percent: number;
-};
-
 export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
   const hasFiredConfetti = useRef(false);
-  const [liveTier, setLiveTier] = useState<LiveTier | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -104,56 +95,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
     if (!isOpen) hasFiredConfetti.current = false;
   }, [isOpen, data]);
 
-  // Data refresh: fetch absolute latest points from Supabase when modal opens
-  useEffect(() => {
-    if (!isOpen || !data) {
-      setLiveTier(null);
-      return;
-    }
-    let cancelled = false;
-    const run = async () => {
-      await new Promise((r) => setTimeout(r, 300));
-      if (cancelled) return;
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: row } = await supabase
-          .from("profiles")
-          .select("reward_points, lifetime_points")
-          .eq("id", user.id)
-          .single();
-        if (cancelled) return;
-        const lifetime = typeof row?.lifetime_points === "number" ? row.lifetime_points : 0;
-        const tierData = getSuccessTier(lifetime);
-        setLiveTier({
-          currentPoints: lifetime,
-          tierLabel: tierData.tierLabel,
-          nextTierGoal: tierData.nextTierGoal,
-          percent: tierData.percent,
-        });
-        return;
-      }
-      if (data.phone?.trim()) {
-        getProfilePointsByPhone(data.phone).then((profile) => {
-          if (cancelled) return;
-          const lifetime = profile.lifetime_points;
-          const tierData = getSuccessTier(lifetime);
-          setLiveTier({
-            currentPoints: lifetime,
-            tierLabel: tierData.tierLabel,
-            nextTierGoal: tierData.nextTierGoal,
-            percent: tierData.percent,
-          });
-        }).catch(() => { if (!cancelled) setLiveTier(null); });
-      }
-    };
-    run();
-    return () => { cancelled = true; };
-  }, [isOpen, data?.phone, data?.confirmationId]);
-
   if (!isOpen) return null;
-
-  const tier = liveTier;
 
   return (
     <div
@@ -242,60 +184,23 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
               Booking Confirmed
             </motion.p>
 
-            {/* 3. XP progress bar: (currentPoints / nextTierGoal) * 100; tier label */}
+            {/* 3. Points Earned */}
             {data && (
               <motion.div
-                key="xp"
+                key="points"
                 custom={2}
                 variants={itemVariants}
                 initial="hidden"
                 animate="visible"
                 className="w-full max-w-xs flex flex-col items-center mb-6"
               >
-                <p className="text-sm mb-2.5 font-medium tracking-wide" style={{ color: CHAMPAGNE }}>
-                  +{data.pointsEarned} points
-                </p>
-                {tier != null && (
-                  <p
-                    className={`text-xs font-semibold tracking-wide mb-2 ${
-                      tier.tierLabel === "Diamond"
-                        ? "bg-gradient-to-r from-sky-400 via-cyan-100 to-sky-400 bg-clip-text text-transparent"
-                        : tier.tierLabel === "Gold Member"
-                          ? "text-[#d4af37]"
-                          : tier.tierLabel === "Silver Member"
-                            ? "bg-gradient-to-r from-zinc-400 via-zinc-100 to-zinc-400 bg-clip-text text-transparent"
-                            : tier.tierLabel === "Bronze Member"
-                              ? "text-amber-600"
-                              : "text-zinc-400"
-                    }`}
-                    style={
-                      tier.tierLabel === "Silver Member"
-                        ? { textShadow: "0 0 24px rgba(192,192,192,0.4)" }
-                        : tier.tierLabel === "Diamond"
-                          ? { textShadow: "0 0 24px rgba(14,165,233,0.4)" }
-                          : undefined
-                    }
-                  >
-                    {tier.tierLabel}
+                <div className="px-6 py-3 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/20">
+                  <p className="text-xl font-black tracking-wide" style={{ color: GOLD }}>
+                    +{data.pointsEarned} Points
                   </p>
-                )}
-                <div className="w-full relative">
-                  {/* Bar width = (currentPoints / nextTierGoal) * 100 */}
-                  <div className="h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full bg-[#d4af37] shadow-[0_0_16px_rgba(212,175,55,0.6)]"
-                      initial={{ width: "0%" }}
-                      animate={{
-                        width: tier != null ? `${Math.min(100, tier.percent)}%` : "0%",
-                      }}
-                      transition={{
-                        delay: 0.5,
-                        duration: 1.2,
-                        ease: [0.25, 0.1, 0.25, 1],
-                      }}
-                      style={{ maxWidth: "100%" }}
-                    />
-                  </div>
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">
+                    Loyalty Reward Earned
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -308,7 +213,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                 variants={itemVariants}
                 initial="hidden"
                 animate="visible"
-                className="w-full max-w-xs mb-6"
+                className="w-full max-w-xs mb-8"
               >
                 <div className="rounded-2xl bg-zinc-900/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(212,175,55,0.1)] p-4 text-center">
                   <p className="text-sm text-zinc-300 font-sans">
@@ -321,7 +226,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
               </motion.div>
             )}
 
-            {/* 5. View Points — primary button (shimmer + tilt), navigate to /dashboard */}
+            {/* 5. View Points — primary button */}
             <motion.div
               key="cta"
               custom={4}
@@ -335,7 +240,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                 href="/dashboard"
                 onClick={onClose}
               >
-                View Points
+                View My Account
               </Button>
             </motion.div>
           </AnimatePresence>
@@ -344,3 +249,4 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
     </div>
   );
 }
+

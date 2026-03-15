@@ -7,13 +7,7 @@ import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getRecentPointTransactions } from "@/app/actions/getRecentPointTransactions";
 import { ensureReferralCode } from "@/app/actions/createProfileWithReferral";
 import { ReferAndEarnCard } from "@/components/landing/ReferAndEarnCard";
-import { LevelUpConfetti } from "@/components/dashboard/LevelUpConfetti";
 import { XpHistoryCard } from "@/components/dashboard/XpHistoryCard";
-import {
-  calculateLifetimeTier,
-  getNextTierProgress,
-  getTierBadgeDisplay,
-} from "@/lib/calculateLifetimeTier";
 
 async function Dashboard() {
   const supabase = await createClient();
@@ -27,17 +21,6 @@ async function Dashboard() {
   const currentPoints = profile?.current_points ?? 0;
   const lifetimePoints = profile?.lifetime_points ?? 0;
   const emailHandle = user.email?.split("@")[0] ?? "there";
-
-  const { tier, discount } = calculateLifetimeTier(lifetimePoints);
-  const { nextThreshold, nextTierName, pointsRemaining, isMaxTier } =
-    getNextTierProgress(lifetimePoints);
-  const progressPercentage = isMaxTier
-    ? 100
-    : Math.min(100, (lifetimePoints / nextThreshold) * 100);
-
-  const tierBadge = getTierBadgeDisplay(lifetimePoints);
-  const tierBadgeLabel =
-    discount > 0 ? `${tierBadge.label} — ${discount}% Off For Life` : tierBadge.label;
 
   // Display profile.referral_code from DB; for legacy accounts with null/empty, generate once and persist via ensureReferralCode
   const referralCode =
@@ -71,8 +54,6 @@ async function Dashboard() {
           mixBlendMode: "overlay",
         }}
       />
-
-      <LevelUpConfetti lifetimePoints={lifetimePoints} />
 
       <div className="relative z-10 max-w-2xl mx-auto px-4 py-10 pb-20">
         {/* Back link */}
@@ -123,11 +104,6 @@ async function Dashboard() {
                   {currentPoints.toLocaleString()}
                 </span>
                 <span className="text-lg font-semibold text-zinc-400">pts</span>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold tier-badge-3d ${tierBadge.gradientClass}`}
-                >
-                  {tierBadgeLabel}
-                </span>
               </div>
               <p className="text-sm text-zinc-500 mt-1">
                 <span className="text-zinc-400">Available Points</span> ={" "}
@@ -135,7 +111,7 @@ async function Dashboard() {
                 off your next booking
               </p>
               <p className="text-xs text-zinc-600 mt-0.5">
-                Lifetime: {lifetimePoints.toLocaleString()} pts (for tier status)
+                Lifetime: {lifetimePoints.toLocaleString()} pts
               </p>
             </div>
             <div className="shrink-0 w-12 h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
@@ -143,25 +119,7 @@ async function Dashboard() {
             </div>
           </div>
 
-          {/* Progress bar: how close to next milestone (500, 1000, 1500, 2000) */}
-          <div>
-            <div className="flex items-center justify-between text-xs text-zinc-500 mb-1.5">
-              <span>{lifetimePoints.toLocaleString()} pts (lifetime)</span>
-              {isMaxTier ? (
-                <span className="text-[#D4AF37] font-medium">Max Tier Reached</span>
-              ) : (
-                <span>Next: {nextThreshold.toLocaleString()} pts</span>
-              )}
-            </div>
-            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] transition-all duration-1000 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Rules — 2-column grid */}
+          {/* Simple Info — 2-column grid */}
           <div className="mt-5 pt-5 border-t border-white/[0.06]">
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs text-zinc-500">
               <li className="flex items-start gap-2">
@@ -170,25 +128,20 @@ async function Dashboard() {
               </li>
               <li className="flex items-start gap-2">
                 <Star size={11} className="text-[#D4AF37] shrink-0 mt-0.5" />
-                <span>
-                  Unlock Lifetime Discounts at 500, 1000, 1500, and 2000 points.
-                </span>
+                <span>Redeem points for discounts (10 pts = $1).</span>
               </li>
               <li className="flex items-start gap-2">
                 <Star size={11} className="text-[#D4AF37] shrink-0 mt-0.5" />
-                <span>
-                  Standard Members: Redeem up to 1,000 pts ($100 off) per booking.
-                </span>
+                <span>Redeem up to 1,000 pts ($100 off) per booking.</span>
               </li>
               <li className="flex items-start gap-2">
                 <Star size={11} className="text-[#D4AF37] shrink-0 mt-0.5" />
-                <span>
-                  Tier Members (Silver/Gold/Diamond): Redeem up to 500 pts ($50 off) in addition to your lifetime % discount.
-                </span>
+                <span>Points never expire for active accounts.</span>
               </li>
             </ul>
           </div>
         </div>
+
 
         {/* ── XP History Ledger ─────────────────────────────────────────────── */}
         <XpHistoryCard transactions={transactions} />

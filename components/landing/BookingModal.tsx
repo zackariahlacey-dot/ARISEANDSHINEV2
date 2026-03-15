@@ -39,14 +39,13 @@ import {
 } from "@/lib/vehicleDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
-import { calculateLifetimeTier } from "@/lib/calculateLifetimeTier";
 import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 
-/** 10 reward points = 1% discount. Max total discount (tier + points) is 40%. */
-const POINTS_PER_PERCENT = 10;
-const MAX_TOTAL_DISCOUNT_PERCENT = 40;
+/** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
+const POINTS_PER_DOLLAR = 10;
+const MAX_REDEEMABLE_POINTS = 1000;
 const MAINTENANCE_SETUP_FEE = 100;
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -462,8 +461,6 @@ export interface BookingSectionProps {
   onBookingSuccess?: (data: BookingSuccessData) => void;
   /** Initial reward points (e.g. from auth) for display until phone-based balance is fetched */
   initialRewardPoints?: number | null;
-  /** Initial lifetime points for tier (max redeem cap: 500 for Silver/Gold/Diamond, 1000 for Member/Bronze) */
-  initialLifetimePoints?: number | null;
   /** Restore form from this draft (e.g. after Stripe cancel); applied once when visible */
   initialDraft?: DraftBooking | null;
   /** Called after draft has been applied so parent can clear initialDraft */
@@ -478,7 +475,6 @@ export function BookingSection({
   onSelectService,
   onBookingSuccess,
   initialRewardPoints = null,
-  initialLifetimePoints = null,
   initialDraft = null,
   onDraftRestored,
 }: BookingSectionProps) {
@@ -533,9 +529,8 @@ export function BookingSection({
   // Auto-detect: true when the current vehicleSize was set by the detector
   const [autoDetected, setAutoDetected] = useState(false);
 
-  // Loyalty: reward points and lifetime (from initial prop or fetched by phone on step 3)
+  // Loyalty: reward points (from initial prop or fetched by phone on step 3)
   const [rewardPoints, setRewardPoints] = useState<number | null>(null);
-  const [lifetimePoints, setLifetimePoints] = useState<number>(0);
   const [pointsToRedeemInput, setPointsToRedeemInput] = useState(0);
 
   // Referral welcome discount — fetched once when modal opens for auth users
@@ -588,15 +583,12 @@ export function BookingSection({
   const totalWithTravel =
     servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee;
   const availablePoints = rewardPoints ?? 0;
-  const { tier: tierName, discount: currentTierDiscount } = calculateLifetimeTier(lifetimePoints);
-  const maxPointsAllowed = Math.max(0, (MAX_TOTAL_DISCOUNT_PERCENT - currentTierDiscount) * POINTS_PER_PERCENT);
-  const redeemablePoints = Math.min(maxPointsAllowed, availablePoints);
+  
+  // 10 points = $1. Max redeemable is 1000 pts ($100).
+  const redeemablePoints = Math.min(MAX_REDEEMABLE_POINTS, availablePoints);
   const pointsToRedeem = Math.min(Math.max(0, pointsToRedeemInput), redeemablePoints);
-  const pointsDiscountPercent = pointsToRedeem / POINTS_PER_PERCENT;
-  const totalDiscountPercent = Math.min(MAX_TOTAL_DISCOUNT_PERCENT, currentTierDiscount + pointsDiscountPercent);
-  const tierDiscountAmount = Math.round(totalWithTravel * (currentTierDiscount / 100) * 100) / 100;
-  const pointsDiscountAmount = Math.round(totalWithTravel * (pointsDiscountPercent / 100) * 100) / 100;
-  const totalAfterDiscount = Math.max(0, totalWithTravel - tierDiscountAmount - pointsDiscountAmount);
+  const pointsDiscountAmount = pointsToRedeem / POINTS_PER_DOLLAR;
+  const totalAfterDiscount = Math.max(0, totalWithTravel - pointsDiscountAmount);
 
   // Initialise today string client-side (avoids Next.js Cache Components error)
   useEffect(() => {
@@ -612,19 +604,17 @@ export function BookingSection({
     });
   }, [isVisible]);
 
-  // Use initial reward and lifetime points when modal opens; fetch by phone when on step 3 and phone entered
+  // Use initial reward points when modal opens; fetch by phone when on step 3 and phone entered
   useEffect(() => {
     if (!isVisible) return;
     setRewardPoints(initialRewardPoints ?? null);
-    setLifetimePoints(initialLifetimePoints ?? 0);
-  }, [isVisible, initialRewardPoints, initialLifetimePoints]);
+  }, [isVisible, initialRewardPoints]);
 
   useEffect(() => {
     if (!isVisible || step !== 3 || !phone || phone.replace(/\D/g, "").length < 10) return;
     const t = setTimeout(() => {
       getProfilePointsByPhone(phone).then((data) => {
         setRewardPoints(data.reward_points);
-        setLifetimePoints(data.lifetime_points);
       });
     }, 400);
     return () => clearTimeout(t);
@@ -1734,7 +1724,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-zinc-500">
-                                  You have {availablePoints} points. You can redeem up to {redeemablePoints} points for an additional {redeemablePoints / POINTS_PER_PERCENT}% off.
+                                  You have {availablePoints} points. 10 pts = $1 off. You can redeem up to {redeemablePoints} points (${redeemablePoints / POINTS_PER_DOLLAR} off).
                                 </p>
                               </div>
                             )}
@@ -1745,16 +1735,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                     <div className="flex items-center gap-2">
                                       <Sparkles className="h-5 w-5 text-amber-400 shrink-0" aria-hidden />
                                       <h4 className="text-base font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
-                                        Unlock Premium Rewards
+                                        Loyalty Club
                                       </h4>
                                     </div>
                                     <p className="text-sm text-zinc-300 leading-relaxed">
                                       Create an account right now to earn points on today&apos;s detail! Plus, get an instant 100-Point Welcome Bonus.
                                     </p>
                                     <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                                      <li>500 pts = 5% Off For Life</li>
-                                      <li>1,000 pts = 10% Off For Life</li>
-                                      <li>2,000 pts = 20% Off For Life</li>
+                                      <li>Earn 1 pt for every $1 spent</li>
+                                      <li>10 points = $1 off anything</li>
+                                      <li>Redeem up to $100 per booking</li>
                                     </ul>
                                     <button
                                       type="button"
@@ -1767,30 +1757,22 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </div>
                               </div>
                             )}
-                            {(currentTierDiscount > 0 || pointsToRedeem > 0) && (
+                            {pointsToRedeem > 0 && (
                               <>
                                 <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
                                   <span className="text-zinc-400">Base price</span>
                                   <span className="font-semibold text-white">${totalWithTravel.toFixed(2)}</span>
                                 </div>
-                                {currentTierDiscount > 0 && (
-                                  <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                    <span>Tier discount ({tierName}, {currentTierDiscount}%)</span>
-                                    <span className="font-semibold">−${tierDiscountAmount.toFixed(2)}</span>
-                                  </div>
-                                )}
-                                {pointsToRedeem > 0 && (
-                                  <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                    <span>Points applied ({pointsDiscountPercent}%)</span>
-                                    <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
-                                  </div>
-                                )}
+                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
+                                  <span>Points applied</span>
+                                  <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
+                                </div>
                               </>
                             )}
                           </div>
                           <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                             <span className="font-bold text-zinc-300">
-                              {currentTierDiscount > 0 || pointsToRedeem > 0 ? "Final total" : "Total Due Today"}
+                              {pointsToRedeem > 0 ? "Final total" : "Total Due Today"}
                             </span>
                             <span className="text-xl font-black text-white tabular-nums">
                               {computedPrice !== null ? `$${totalAfterDiscount.toFixed(2)}` : "—"}
@@ -1877,7 +1859,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </span>
                               </div>
                               <p className="text-[11px] text-zinc-500">
-                                You have {availablePoints} points. You can redeem up to {redeemablePoints} points for an additional {redeemablePoints / POINTS_PER_PERCENT}% off.
+                                You have {availablePoints} points. 10 pts = $1 off. You can redeem up to {redeemablePoints} points (${redeemablePoints / POINTS_PER_DOLLAR} off).
                               </p>
                             </div>
                           )}
@@ -1888,16 +1870,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                   <div className="flex items-center gap-2">
                                     <Sparkles className="h-5 w-5 text-amber-400 shrink-0" aria-hidden />
                                     <h4 className="text-base font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
-                                      Unlock Premium Rewards
+                                      Loyalty Club
                                     </h4>
                                   </div>
                                   <p className="text-sm text-zinc-300 leading-relaxed">
                                     Create an account right now to earn points on today&apos;s detail! Plus, get an instant 100-Point Welcome Bonus.
                                   </p>
                                   <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                                    <li>500 pts = 5% Off For Life</li>
-                                    <li>1,000 pts = 10% Off For Life</li>
-                                    <li>2,000 pts = 20% Off For Life</li>
+                                    <li>Earn 1 pt for every $1 spent</li>
+                                    <li>10 points = $1 off anything</li>
+                                    <li>Redeem up to $100 per booking</li>
                                   </ul>
                                   <button
                                     type="button"
@@ -1910,30 +1892,22 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               </div>
                             </div>
                           )}
-                          {(currentTierDiscount > 0 || pointsToRedeem > 0) && (
+                          {pointsToRedeem > 0 && (
                             <>
                               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
                                 <span className="text-zinc-400">Base price</span>
                                 <span className="font-semibold text-white">${totalWithTravel.toFixed(2)}</span>
                               </div>
-                              {currentTierDiscount > 0 && (
-                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                  <span>Tier discount ({tierName}, {currentTierDiscount}%)</span>
-                                  <span className="font-semibold">−${tierDiscountAmount.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {pointsToRedeem > 0 && (
-                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                  <span>Points applied ({pointsDiscountPercent}%)</span>
-                                  <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
-                                </div>
-                              )}
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
+                                <span>Points applied</span>
+                                <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
+                              </div>
                             </>
                           )}
                         </div>
                         <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                           <span className="font-bold text-zinc-300">
-                            {currentTierDiscount > 0 || pointsToRedeem > 0 ? "Final total" : "Total"}
+                            {pointsToRedeem > 0 ? "Final total" : "Total"}
                           </span>
                           <span className="text-xl font-black text-white tabular-nums">
                             {computedPrice !== null

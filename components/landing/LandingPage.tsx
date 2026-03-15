@@ -849,110 +849,124 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ─── Loyalty Tiers — 3D Growth Lineup: Bronze → Silver → Gold → Diamond (Arise And Shine VT) ───────── */}
+      {/* ─── Loyalty Rewards — Simple & Elegant ─────────────────────────────────────────── */}
       <motion.section
-        id="loyalty-tiers"
+        id="loyalty-rewards"
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
       >
-        <div className="w-full max-w-7xl mx-auto">
-          {/* Branding + title */}
-          <div className="text-center mb-6 md:mb-8">
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
-              Arise And Shine VT
-            </p>
-            <h2
-              className="text-2xl md:text-4xl font-black tracking-tight text-white"
-              style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.3))" }}
-            >
-              Loyalty Tiers
-            </h2>
-            <p className="mt-3 text-sm text-zinc-400 max-w-xl mx-auto">
-              How it works: Earn 1 point for every $1 spent. Redeem for discounts on future details.
-            </p>
-          </div>
+        {/* Ambient background glow */}
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-96 opacity-20 pointer-events-none"
+          style={{
+            background: "radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 70%)",
+            filter: "blur(60px)"
+          }}
+        />
 
-          {/* Growth Lineup: 6-sided bullion bars (Tiny→Big) + volumetric Diamond; tilted stage; contact shadow per object; engraved text. */}
-          <div className="tier-lineup-stage relative flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 min-h-[320px] sm:min-h-0 mt-10 md:mt-16 pb-8 sm:pb-20 -mb-24 md:mb-0 overflow-visible">
-            <div className="tier-lineup-tilted relative z-10 flex flex-col-reverse sm:flex-row items-end justify-center gap-3 sm:gap-4 md:gap-5 w-full max-w-7xl mx-auto px-1 sm:px-0 scale-[0.85] md:scale-100 origin-top">
-              {/* Bronze — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
-              <div className="tier-lineup-card relative w-full sm:w-[140px] md:w-[160px] flex flex-col items-center sm:staircase-0">
-                <div aria-hidden className="tier-contact-shadow" />
-                <div className="tier-float-container tier-float-bronze w-full">
-                <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "60px" }}>
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-bronze" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
-                  ))}
-                  <div className="tier-solid-bar-top tier-solid-bar-top-bronze" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-bronze px-3 py-2 lg:px-4 lg:py-3">
-                    <p className="tier-front-engraved text-[9px] lg:text-xs font-bold tracking-wider uppercase leading-tight">Bronze</p>
-                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-0.5">500–999 pts</p>
-                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1">5% off</p>
+        <div className="w-full max-w-7xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left Column: Visual Reward Card */}
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#D4AF37]/20 to-amber-500/20 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-2xl overflow-hidden">
+                <div className="absolute top-0 right-0 p-8">
+                  <Sparkles className="w-12 h-12 text-[#D4AF37]/20" />
+                </div>
+                
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-8">
+                  <Star size={10} fill="currentColor" />
+                  Exclusive Program
+                </div>
+                
+                <h3 className="text-3xl md:text-4xl font-black text-white mb-6 leading-tight">
+                  Arise & Shine <br />
+                  <span className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] bg-clip-text text-transparent">Loyalty Club</span>
+                </h3>
+                
+                <div className="space-y-6 mb-10">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
+                      <Car className="w-5 h-5 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-100 font-bold">Earn Points</p>
+                      <p className="text-sm text-zinc-500">Get 1 point for every $1 spent on any detailing service.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
+                      <BadgeCheck className="w-5 h-5 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <p className="text-zinc-100 font-bold">Redeem & Save</p>
+                      <p className="text-sm text-zinc-500">Every 10 points equals $1 off. Save them up for a free detail!</p>
+                    </div>
                   </div>
                 </div>
+
+                <div className="p-6 rounded-2xl bg-zinc-950/50 border border-white/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Welcome Bonus</p>
+                    <p className="text-xl font-black text-white">+100 Points</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">On Sign Up</p>
+                    <p className="text-[#D4AF37] font-bold">Instant Reward</p>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Silver — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
-              <div className="tier-lineup-card relative w-full sm:w-[160px] md:w-[180px] flex flex-col items-center sm:staircase-1">
-                <div aria-hidden className="tier-contact-shadow" />
-                <div className="tier-float-container tier-float-silver w-full">
-                <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "90px" }}>
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-silver" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
-                  ))}
-                  <div className="tier-solid-bar-top tier-solid-bar-top-silver" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-silver px-3 py-2 lg:px-4 lg:py-3">
-                    <p className="tier-front-engraved text-[9px] lg:text-xs font-bold tracking-wider uppercase">Silver</p>
-                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-0.5">1,000–1,499 pts</p>
-                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1">10% off · Priority</p>
-                  </div>
-                </div>
-                </div>
+            {/* Right Column: Text & CTA */}
+            <div className="flex flex-col justify-center">
+              <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-4">
+                Rewarding Your Trust
+              </p>
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-8 leading-[1.1]">
+                Details that <br />
+                Pay You Back.
+              </h2>
+              <p className="text-lg text-zinc-400 mb-10 leading-relaxed">
+                We believe in long-term relationships. That&apos;s why every dollar you spend with Arise & Shine helps you earn towards your next showroom-quality finish. No complicated tiers, just simple rewards for every customer.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <LoyaltyHeaderButton />
+                <button
+                  onClick={() => openBooking()}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all font-bold"
+                >
+                  Book & Earn
+                </button>
               </div>
 
-              {/* Gold — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
-              <div className="tier-lineup-card relative w-full sm:w-[180px] md:w-[200px] flex flex-col items-center sm:staircase-2">
-                <div aria-hidden className="tier-contact-shadow" />
-                <div className="tier-float-container tier-float-gold w-full">
-                <div className="tier-solid-bar-box w-full relative z-[1]" style={{ height: "120px" }}>
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div key={i} className="tier-bar-extrusion-layer tier-bar-extrusion-gold" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
+              <div className="mt-12 flex items-center gap-6">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-zinc-950 bg-zinc-800 overflow-hidden relative">
+                      <Image 
+                        src={`https://i.pravatar.cc/100?img=${i+10}`} 
+                        alt="User"
+                        fill
+                        className="object-cover grayscale"
+                      />
+                    </div>
                   ))}
-                  <div className="tier-solid-bar-top tier-solid-bar-top-gold" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-gold px-3 py-3 lg:px-4 lg:py-4">
-                    <p className="tier-front-engraved text-[10px] lg:text-xs font-bold tracking-wider uppercase">Gold</p>
-                    <p className="tier-front-engraved text-[11px] lg:text-xs mt-0.5">1,500–1,999 pts</p>
-                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1.5">15% off · Priority · Discounted add-ons</p>
-                  </div>
                 </div>
-                </div>
-              </div>
-
-              {/* Diamond — 20-layer Z-stack (rounded corners) + diagonal-seam gradient on stack */}
-              <div className="tier-lineup-card tier-lineup-card-diamond relative w-full sm:w-[220px] md:w-[240px] flex flex-col items-center sm:staircase-3">
-                <div aria-hidden className="tier-contact-shadow tier-contact-shadow-diamond" />
-                <div className="tier-float-container tier-float-diamond w-full">
-                <div className="tier-solid-bar-box tier-diamond-bar-box w-full relative z-[1]" style={{ height: "140px" }}>
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div key={i} className="tier-diamond-extrusion-layer" style={{ transform: `translateZ(-${i + 1}px)${i % 2 === 0 ? ' scale(0.995)' : ''}` }} aria-hidden />
-                  ))}
-                  <div className="tier-solid-bar-top tier-solid-bar-top-diamond" aria-hidden />
-                  <div className="tier-solid-bar-front tier-solid-bar-front-diamond px-3 py-3 lg:px-4 lg:py-4">
-                    <p className="tier-front-engraved text-[10px] lg:text-xs font-bold tracking-wider uppercase">Diamond</p>
-                    <p className="tier-front-engraved text-[11px] lg:text-xs mt-0.5">2,000+ pts</p>
-                    <p className="tier-front-engraved text-[10px] lg:text-xs mt-1.5">20% off · VIP</p>
-                  </div>
-                </div>
-                </div>
+                <p className="text-sm text-zinc-500">
+                  <span className="text-zinc-200 font-bold">500+ members</span> earning rewards daily.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </motion.section>
+
 
       {/* ─── Trust Banner (Our Promise) — 2x2 grid ─────────────────── */}
       <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
