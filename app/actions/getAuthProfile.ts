@@ -42,9 +42,22 @@ export async function getAuthProfile(): Promise<AuthProfile> {
     .eq("id", user.id)
     .maybeSingle();
 
-  const currentPoints = profile?.reward_points ?? 0;
+  // ── Points SSOT: Sum the ledger for accuracy ───────────────────────────
+  const { data: ledger } = await supabase
+    .from("point_transactions")
+    .select("amount")
+    .eq("user_id", user.id);
+
+  const ledgerTotal = (ledger ?? []).reduce((sum, t) => sum + (t.amount || 0), 0);
+  const ledgerLifetime = (ledger ?? [])
+    .filter(t => t.amount > 0)
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Fallback to profile column if ledger is empty (for legacy or welcome bonus)
+  const currentPoints = Math.max(ledgerTotal, profile?.reward_points ?? 0);
+  const lifetimePoints = Math.max(ledgerLifetime, profile?.lifetime_points ?? 0);
+
   const row = profile as {
-    lifetime_points?: number;
     saved_vehicle?: unknown;
     saved_address?: string;
   } | null;
