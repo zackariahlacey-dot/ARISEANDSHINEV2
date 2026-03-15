@@ -24,7 +24,7 @@ import {
   CheckCircle,
   Phone,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
