@@ -670,7 +670,6 @@ export function BookingSection({
       setDistanceMiles(null);
       setTravelFeeLoading(false);
       setRewardPoints(null);
-      setLifetimePoints(0);
       setPointsToRedeemInput(0);
       setReferralEligible(false);
       setAuthUserId(null);
