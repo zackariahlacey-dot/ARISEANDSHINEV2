@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.services (
   price_large NUMERIC(10, 2),
   price_extra_large NUMERIC(10, 2),
   category TEXT,
+  is_subscription BOOLEAN DEFAULT FALSE,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -101,6 +101,13 @@ export async function POST(req: NextRequest) {
           .from("profiles")
           .update({ reward_points: prof.reward_points - pointsToRedeem })
           .eq("id", m.profileId);
+
+        // Record redemption
+        await supabase.from("point_transactions").insert({
+          user_id: m.profileId,
+          amount: -pointsToRedeem,
+          description: `Redeemed for ${m.serviceName}`,
+        });
       }
     }
 
@@ -120,6 +127,13 @@ export async function POST(req: NextRequest) {
             lifetime_points: currentLifetime + earnedPoints,
           })
           .eq("id", m.profileId);
+
+        // Record earning
+        await supabase.from("point_transactions").insert({
+          user_id: m.profileId,
+          amount: earnedPoints,
+          description: `Earned from ${m.serviceName}`,
+        });
       }
     }
 

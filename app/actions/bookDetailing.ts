@@ -341,6 +341,13 @@ export async function bookDetailing(
           lifetime_points: currentLifetime + earnedPoints,
         })
         .eq("id", profileId);
+
+      // Add transaction entry so it shows in dashboard
+      await adminSupabase.from("point_transactions").insert({
+        user_id: profileId,
+        amount: earnedPoints,
+        description: `Earned from ${payload.serviceName}`,
+      });
     }
   }
 

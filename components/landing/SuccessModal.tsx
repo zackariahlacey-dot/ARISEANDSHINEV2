@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { X, Check, Calendar, Award, User, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
-import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
 
 export interface SuccessModalData {
   confirmationId: string;
@@ -28,42 +26,47 @@ const GOLD = "#d4af37";
 const CHAMPAGNE = "#f7e7ce";
 
 function fireGoldConfetti() {
-  const count = 80;
+  const count = 100;
   const defaults = {
-    origin: { y: 0.35 },
+    origin: { y: 0.4 },
     zIndex: 9999,
-    colors: [GOLD, CHAMPAGNE, "#c9a227", "#e8d5a3"],
+    colors: [GOLD, CHAMPAGNE, "#c9a227", "#e8d5a3", "#ffffff"],
     disableForReducedMotion: true,
   };
   confetti({
     ...defaults,
-    particleCount: count * 0.5,
-    spread: 100,
-    startVelocity: 35,
+    particleCount: count * 0.6,
+    spread: 120,
+    startVelocity: 40,
   });
   confetti({
     ...defaults,
     particleCount: count * 0.4,
     spread: 80,
     angle: 60,
-    startVelocity: 45,
+    startVelocity: 50,
   });
   confetti({
     ...defaults,
     particleCount: count * 0.4,
     spread: 80,
     angle: 120,
-    startVelocity: 45,
+    startVelocity: 50,
   });
 }
 
-const stagger = 0.12;
+const stagger = 0.1;
 const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * stagger, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] as const },
+    scale: 1,
+    transition: { 
+      delay: i * stagger, 
+      duration: 0.5, 
+      ease: [0.215, 0.61, 0.355, 1.0] 
+    },
   }),
 };
 
@@ -89,7 +92,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
   useEffect(() => {
     if (isOpen && data && !hasFiredConfetti.current) {
       hasFiredConfetti.current = true;
-      const t = setTimeout(fireGoldConfetti, 180);
+      const t = setTimeout(fireGoldConfetti, 300);
       return () => clearTimeout(t);
     }
     if (!isOpen) hasFiredConfetti.current = false;
@@ -102,151 +105,149 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
       className="fixed inset-0 z-[200] flex items-center justify-center px-4"
       aria-modal="true"
       role="dialog"
-      aria-label="Booking confirmed"
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Centered panel */}
-      <div
-        className="relative z-10 w-full max-w-md rounded-2xl border border-[#d4af37]/30 bg-[#09090b] shadow-[0_0_50px_rgba(212,175,55,0.15)] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-[#d4af37] hover:bg-white/5 transition-colors z-20"
-          aria-label="Close"
-        >
-          <X size={18} />
-        </button>
-
-        <div className="p-8 pt-10 flex flex-col items-center text-center">
-          <AnimatePresence mode="wait">
-            {/* 1. Large gold-animated checkmark */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
             <motion.div
-              key="checkmark"
-              custom={0}
-              variants={itemVariants}
-              initial="hidden"
-              animate="visible"
-              className="flex items-center justify-center mb-5"
-            >
-              <motion.div
-                className="w-24 h-24 rounded-full bg-[#d4af37]/20 border-2 border-[#d4af37]/50 flex items-center justify-center"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{
-                  scale: 1,
-                  opacity: 1,
-                  transition: { type: "spring", stiffness: 200, damping: 18 },
-                }}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={GOLD}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-12 h-12 overflow-visible"
-                >
-                  <motion.path
-                    d="M5 13l4 4L19 7"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ delay: 0.15, duration: 0.5, ease: "easeOut" }}
-                  />
-                </svg>
-              </motion.div>
-            </motion.div>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-zinc-950/90 backdrop-blur-md"
+              onClick={onClose}
+            />
 
-            {/* 2. Title — Arise And Shine VT */}
-            <motion.h2
-              key="title"
-              custom={1}
-              variants={itemVariants}
-              initial="hidden"
-              animate="visible"
-              className="text-2xl font-serif font-semibold text-white mb-1 tracking-tight"
-            >
-              Arise And Shine VT
-            </motion.h2>
-            <motion.p
-              key="subtitle"
-              custom={1}
-              variants={itemVariants}
-              initial="hidden"
-              animate="visible"
-              className="text-sm text-zinc-400 mb-6"
-            >
-              Booking Confirmed
-            </motion.p>
-
-            {/* 3. Points Earned */}
-            {data && (
-              <motion.div
-                key="points"
-                custom={2}
-                variants={itemVariants}
-                initial="hidden"
-                animate="visible"
-                className="w-full max-w-xs flex flex-col items-center mb-6"
-              >
-                <div className="px-6 py-3 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/20">
-                  <p className="text-xl font-black tracking-wide" style={{ color: GOLD }}>
-                    +{data.pointsEarned} Points
-                  </p>
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">
-                    Loyalty Reward Earned
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* 4. Details card — refined glassmorphism */}
-            {data && (
-              <motion.div
-                key="details"
-                custom={3}
-                variants={itemVariants}
-                initial="hidden"
-                animate="visible"
-                className="w-full max-w-xs mb-8"
-              >
-                <div className="rounded-2xl bg-zinc-900/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(212,175,55,0.1)] p-4 text-center">
-                  <p className="text-sm text-zinc-300 font-sans">
-                    <span className="text-white font-medium">{data.date}</span>
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-500 font-mono">
-                    Ref #{data.confirmationId}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* 5. View Points — primary button */}
+            {/* Modal Panel */}
             <motion.div
-              key="cta"
-              custom={4}
-              variants={itemVariants}
-              initial="hidden"
-              animate="visible"
-              className="flex items-center justify-center"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative z-10 w-full max-w-lg rounded-[2.5rem] border border-white/10 bg-zinc-900/50 shadow-2xl overflow-hidden backdrop-blur-2xl"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Button
-                variant="primary"
-                href="/dashboard"
+              {/* Decorative Header Glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-gradient-to-b from-[#d4af37]/10 to-transparent pointer-events-none" />
+
+              <button
                 onClick={onClose}
+                className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all z-20"
               >
-                View My Account
-              </Button>
+                <X size={20} />
+              </button>
+
+              <div className="p-8 md:p-12 flex flex-col items-center text-center">
+                {/* 1. Icon Celebration */}
+                <motion.div
+                  custom={0}
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="relative mb-8"
+                >
+                  <div className="absolute -inset-4 bg-[#d4af37]/20 rounded-full blur-2xl animate-pulse" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-[#d4af37] to-[#f7e7ce] p-[2px]">
+                    <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center">
+                      <Check size={40} className="text-[#d4af37]" strokeWidth={3} />
+                    </div>
+                  </div>
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                    className="absolute -top-2 -right-2 text-[#d4af37]"
+                  >
+                    <Sparkles size={24} fill="currentColor" />
+                  </motion.div>
+                </motion.div>
+
+                {/* 2. Success Title */}
+                <motion.div custom={1} variants={itemVariants} initial="hidden" animate="visible">
+                  <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">
+                    Booking Confirmed!
+                  </h2>
+                  <p className="text-zinc-400 text-lg mb-8">
+                    We&apos;ve sent a confirmation to your email.
+                  </p>
+                </motion.div>
+
+                {/* 3. Points Reward Card */}
+                {data && (
+                  <motion.div
+                    custom={2}
+                    variants={itemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="w-full mb-8"
+                  >
+                    <div className="relative group">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-[#d4af37]/50 to-amber-500/50 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000" />
+                      <div className="relative py-6 px-8 rounded-2xl bg-zinc-950/50 border border-[#d4af37]/30 flex flex-col items-center">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Award size={16} className="text-[#d4af37]" />
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d4af37]">Loyalty Reward</span>
+                        </div>
+                        <div className="text-4xl font-black bg-gradient-to-r from-[#d4af37] via-[#f7e7ce] to-[#d4af37] bg-clip-text text-transparent">
+                          +{data.pointsEarned.toLocaleString()} Points
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-2 font-medium">
+                          These will be added to your account after service.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 4. Booking Summary Grid */}
+                {data && (
+                  <motion.div
+                    custom={3}
+                    variants={itemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid grid-cols-2 gap-4 w-full mb-10"
+                  >
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 text-left">
+                      <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                        <Calendar size={14} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Date</span>
+                      </div>
+                      <div className="text-sm font-bold text-zinc-200">{data.date}</div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5 text-left">
+                      <div className="flex items-center gap-2 text-zinc-500 mb-1">
+                        <User size={14} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Ref ID</span>
+                      </div>
+                      <div className="text-sm font-bold text-zinc-200">#{data.confirmationId}</div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 5. CTA Button */}
+                <motion.div
+                  custom={4}
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="w-full"
+                >
+                  <Button
+                    variant="primary"
+                    href="/dashboard"
+                    className="w-full py-7 text-lg rounded-2xl bg-[#d4af37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+                    onClick={onClose}
+                  >
+                    Go to My Dashboard
+                  </Button>
+                  <p className="mt-4 text-xs text-zinc-600 font-medium">
+                    Questions? Call us at <span className="text-zinc-400">802-585-5563</span>
+                  </p>
+                </motion.div>
+              </div>
             </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
