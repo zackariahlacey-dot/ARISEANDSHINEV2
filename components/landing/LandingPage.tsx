@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
   Shield,
@@ -125,7 +125,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [isPastHero, setIsPastHero] = useState(false);
   const [beforeAfterPosition, setBeforeAfterPosition] = useState(50);
   const [authRewardPoints, setAuthRewardPoints] = useState<number | null>(null);
-  const [authLifetimePoints, setAuthLifetimePoints] = useState<number | null>(null);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
@@ -170,7 +169,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   useEffect(() => {
     getAuthProfile().then((p) => {
       setAuthRewardPoints(p?.rewardPoints ?? null);
-      setAuthLifetimePoints(p?.lifetime_points ?? null);
     });
   }, [expandedBookingId]);
 
@@ -194,7 +192,6 @@ export function LandingPage({ services }: { services: Service[] }) {
     } else {
       setExpandedBookingId("services");
     }
-    // Scroll is handled by BookingSection’s onAnimationComplete so one silky scroll runs after expand
   };
 
   const scrollToServices = useCallback(() => {
@@ -248,12 +245,11 @@ export function LandingPage({ services }: { services: Service[] }) {
     };
   }, []);
 
-  const mainGridServices = services.filter((s) => s.name !== "Monthly Maintenance Plan");
-  const monthlyPlanService = services.find((s) => s.name === "Monthly Maintenance Plan");
+  const mainGridServices = services.filter((s) => !s.is_subscription);
+  const monthlyPlanServices = services.filter((s) => s.is_subscription);
 
   const [activeServiceId, setActiveServiceId] = useState<string | null>(() => {
-    const main = services.filter((s) => s.name !== "Monthly Maintenance Plan");
-    return main[0]?.id ?? null;
+    return mainGridServices[0]?.id ?? null;
   });
   const activeService = mainGridServices.find((s) => s.id === activeServiceId) ?? mainGridServices[0];
 
@@ -546,7 +542,6 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onSelectService={setSelectedService}
                 onBookingSuccess={handleBookingSuccess}
                 initialRewardPoints={authRewardPoints}
-                initialLifetimePoints={authLifetimePoints}
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
               />
@@ -633,7 +628,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="pt-0 pb-12 md:pb-20 lg:pb-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="pt-0 pb-12 md:pb-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
         <div className="w-full max-w-7xl mx-auto">
           <div className="text-center mb-8">
@@ -703,149 +698,96 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
-        <div className="w-full lg:max-w-7xl mx-auto">
-          {/* Section header — mobile only; desktop title lives inside the card */}
-          <div className="text-center mb-6 md:mb-8 lg:hidden">
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="text-center mb-12 md:mb-20">
+            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
               Member Exclusive
             </p>
             <h2
-              className="text-2xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-              style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.2))" }}
+              className="text-3xl md:text-5xl font-black tracking-tight text-white mb-6"
             >
-              Join the Arise And Shine Maintenance Club
+              The Maintenance Club
             </h2>
-            <p className="mt-2 text-sm text-zinc-400 max-w-xl mx-auto">
-              Put your vehicle&apos;s care on auto-pilot. Showroom condition year-round.
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+              Put your vehicle&apos;s care on auto-pilot. Showroom condition year-round with our recurring maintenance plans.
             </p>
-          </div>
-
-          <div className="relative">
-            <div
-              className="absolute inset-0 -m-6 rounded-2xl blur-2xl pointer-events-none opacity-40 lg:opacity-60"
-              style={{
-                background:
-                  "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(212,175,55,0.12) 0%, transparent 70%)",
-              }}
-            />
-            {/* Premium container: mobile stacked card; desktop centered banner with glassmorphism */}
-            <div className="relative w-full max-w-lg mx-auto bg-zinc-900/40 backdrop-blur-md border border-[#D4AF37]/20 shadow-[0_0_40px_rgba(212,175,55,0.05)] rounded-2xl p-5 md:p-8 overflow-hidden lg:max-w-5xl lg:mx-auto lg:flex lg:flex-col lg:items-center lg:justify-center lg:text-center lg:p-16 lg:bg-black/40 lg:backdrop-blur-xl lg:border lg:border-yellow-500/30 lg:rounded-[2rem] lg:shadow-2xl">
-              <div className="flex flex-col items-center text-center">
-                {/* Text content: centered, readable width on desktop */}
-                <div className="w-full lg:max-w-3xl lg:mx-auto">
-                  {/* Desktop-only title and description (mobile uses section header above) */}
-                  <div className="hidden lg:block mb-6 text-center">
-                    <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
-                      Member Exclusive
-                    </p>
-                    <h2
-                      className="text-2xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent lg:text-5xl lg:leading-tight"
-                      style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.2))" }}
-                    >
-                      Join the Arise And Shine Maintenance Club
-                    </h2>
-                    <p className="mt-2 text-sm text-zinc-400 max-w-xl mx-auto lg:max-w-none">
-                      Put your vehicle&apos;s care on auto-pilot. Showroom condition year-round.
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-4">
-                    <Crown size={10} />
-                    Member Exclusive
-                  </div>
-                  {/* 1. Mandatory / introductory text — centered at top */}
-                  <div className="flex flex-col md:flex-row items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs px-4 py-3 rounded-lg mb-6 text-center md:text-left w-full lg:max-w-md lg:mx-auto lg:text-center">
-                    <ShieldCheck size={16} className="shrink-0 text-[#D4AF37]" strokeWidth={1.75} />
-                    <p>
-                      Mandatory <span className="font-semibold text-zinc-100">$100 Deep Clean &amp; Reset</span> before recurring schedule.
-                    </p>
-                  </div>
-                  {/* 2. Vehicle sizes — 2x2 on mobile, single row of 4 on desktop */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 w-full mb-6 lg:mb-8">
-                    <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-0 col-span-2 lg:col-span-4 text-center lg:text-center order-first">
-                      Monthly Rate
-                    </p>
-                    {[
-                      { label: "Small",       sub: "Compact",   price: 150 },
-                      { label: "Medium",      sub: "Sedan",    price: 160 },
-                      { label: "Large",       sub: "SUV/Truck", price: 170 },
-                      { label: "Extra Large", sub: "Van/3-Row", price: 180 },
-                    ].map(({ label, sub, price }) => (
-                      <div
-                        key={label}
-                        className="bg-zinc-950 rounded-lg p-3 border border-white/5 text-center transition-all duration-300 hover:border-[#D4AF37]/30 flex flex-col justify-center min-h-[88px] lg:min-h-[96px]"
-                      >
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
-                        <p className="text-lg font-black bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent tabular-nums">
-                          ${price}
-                        </p>
-                        <p className="text-[9px] text-zinc-600">/mo</p>
-                        <p className="text-[9px] text-zinc-500 truncate">{sub}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {/* 3. What You Get — full width below sizes; 2-column list on desktop */}
-                  <div className="w-full lg:max-w-3xl lg:mx-auto">
-                    <details className="group/details w-full">
-                      <summary className="list-none [&::-webkit-details-marker]:hidden text-zinc-300 hover:text-[#D4AF37] cursor-pointer text-base font-semibold flex items-center justify-center gap-2 mb-4 py-3 border-y border-white/5 w-full outline-none transition-colors">
-                        What You Get
-                        <ChevronDown size={18} className="shrink-0 transition-transform duration-200 group-open/details:rotate-180" />
-                      </summary>
-                      <ul className="mt-4 mb-6 space-y-3 flex flex-col items-center justify-center text-center w-full lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:justify-items-center lg:text-center">
-                        {[
-                          { icon: CalendarClock, text: "Priority Scheduling", sub: "Slot reserved first." },
-                          { icon: CalendarRange, text: "Fixed Monthly Dates", sub: "Same day each month." },
-                          { icon: Sparkles,      text: "Premium Protectants", sub: "Ceramic-grade every visit." },
-                          { icon: CircleSlash,   text: "Cancel Anytime", sub: "No contracts." },
-                        ].map(({ icon: Icon, text, sub }) => (
-                          <li key={text} className="flex flex-row items-center justify-center text-center gap-2">
-                            <CheckCircle size={14} className="shrink-0 text-[#D4AF37]" strokeWidth={1.75} />
-                            <div className="text-center">
-                              <p className="text-xs font-semibold text-zinc-100">{text}</p>
-                              <p className="text-[10px] text-zinc-500">{sub}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  </div>
-                </div>
-                {/* CTA: centered below text; add input+button later with flex flex-col sm:flex-row gap-4 mt-8 if needed */}
-                <div className="border-t border-white/[0.06] pt-5 flex flex-col items-center justify-center gap-1 w-full lg:mt-8 lg:pt-0 lg:border-t-0">
-                  <button
-                    type="button"
-                    onClick={() => monthlyPlanService && openBooking(monthlyPlanService)}
-                    disabled={!monthlyPlanService}
-                    className="btn-primary-gold-shimmer w-full md:w-auto justify-center inline-flex items-center gap-2 rounded-xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] px-8 py-3 text-sm font-bold hover:text-black hover:shadow-[0_0_28px_rgba(212,175,55,0.35)] hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out lg:px-10 lg:py-4 lg:text-lg"
-                  >
-                    <span className="relative z-[1] inline-flex items-center gap-2">
-                      <Crown size={16} className="shrink-0" />
-                      Join the Club
-                    </span>
-                  </button>
-                  <p className="text-[10px] text-zinc-600 text-center">No contracts · $100 setup applies</p>
-                </div>
-              </div>
-              {/* Inline booking dropdown (Maintenance Club) — client-only; full width below on desktop */}
-              {mounted && (
-                <div className="w-full mt-4 lg:w-full lg:mt-6">
-                  <BookingSection
-                    isVisible={expandedBookingId === "club"}
-                    onClose={() => setExpandedBookingId(null)}
-                    selectedService={expandedBookingId === "club" ? selectedService : null}
-                    services={services}
-                    onSelectService={setSelectedService}
-                    onBookingSuccess={handleBookingSuccess}
-                    initialRewardPoints={authRewardPoints}
-                    initialLifetimePoints={authLifetimePoints}
-                    initialDraft={initialDraft}
-                    onDraftRestored={() => setInitialDraft(null)}
-                  />
-                </div>
-              )}
+            <div className="mt-8 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-full text-amber-200 text-xs font-bold">
+              <ShieldCheck size={14} className="text-[#D4AF37]" />
+              $100 Signup & Deep Clean Fee applies to all new memberships
             </div>
           </div>
+
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto">
+            {monthlyPlanServices.map((plan) => {
+              const isFull = plan.name.toLowerCase().includes("full");
+              return (
+                <div 
+                  key={plan.id}
+                  className="relative group h-full"
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[2rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
+                  <div className="relative h-full bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 lg:p-12 flex flex-col">
+                    <div className="mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center mb-6 border border-white/5">
+                        {isFull ? <Crown className="text-[#D4AF37]" size={24} /> : <Car className="text-[#D4AF37]" size={24} />}
+                      </div>
+                      <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+                      <p className="text-zinc-500 text-sm leading-relaxed min-h-[40px]">
+                        {plan.description}
+                      </p>
+                    </div>
+
+                    <div className="mb-8 flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-white">${plan.price_small}</span>
+                      <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">/ Month</span>
+                    </div>
+
+                    <ul className="space-y-4 mb-10 flex-1">
+                      {[
+                        "Priority Scheduling",
+                        "Fixed Monthly Dates",
+                        "Premium Protectants Included",
+                        "10% Off Additional Services",
+                        "Cancel Anytime",
+                      ].map((feature) => (
+                        <li key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
+                          <CheckCircle size={16} className="text-[#D4AF37] shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      type="button"
+                      onClick={() => openBooking(plan)}
+                      className="w-full py-4 rounded-xl bg-white text-black font-black hover:bg-[#D4AF37] transition-all duration-300 shadow-xl shadow-white/5"
+                    >
+                      Join The Club
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Inline booking dropdown (Maintenance Club) */}
+          {mounted && expandedBookingId === "club" && (
+            <div className="w-full max-w-3xl mx-auto mt-12 animate-in fade-in slide-in-from-top-4 duration-500">
+              <BookingSection
+                isVisible={true}
+                onClose={() => setExpandedBookingId(null)}
+                selectedService={selectedService}
+                services={services}
+                onSelectService={setSelectedService}
+                onBookingSuccess={handleBookingSuccess}
+                initialRewardPoints={authRewardPoints}
+                initialDraft={initialDraft}
+                onDraftRestored={() => setInitialDraft(null)}
+              />
+            </div>
+          )}
         </div>
       </motion.section>
 
@@ -1067,17 +1009,16 @@ export function LandingPage({ services }: { services: Service[] }) {
                 </motion.div>
               </div>
               {/* Inline booking dropdown (Services) — client-only */}
-              {mounted && (
-                <div className="w-full max-w-[450px] lg:max-w-7xl mx-auto mt-4">
+              {mounted && expandedBookingId === "services" && (
+                <div className="w-full max-w-[450px] lg:max-w-7xl mx-auto mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
                   <BookingSection
-                    isVisible={expandedBookingId === "services"}
+                    isVisible={true}
                     onClose={() => setExpandedBookingId(null)}
-                    selectedService={expandedBookingId === "services" ? selectedService : null}
+                    selectedService={selectedService}
                     services={services}
                     onSelectService={setSelectedService}
                     onBookingSuccess={handleBookingSuccess}
                     initialRewardPoints={authRewardPoints}
-                    initialLifetimePoints={authLifetimePoints}
                     initialDraft={initialDraft}
                     onDraftRestored={() => setInitialDraft(null)}
                   />
@@ -1540,10 +1481,19 @@ const INTERIOR_ITEMS = [
   "Light spot-treatment for stains",
 ];
 
+const MAINTENANCE_ITEMS = [
+  "Everything in standard detail",
+  "Priority scheduling",
+  "Premium ceramic-grade protectants",
+  "Fixed monthly dates",
+];
+
 const SERVICE_INCLUSIONS: Record<string, string[]> = {
   "Exterior Detail": EXTERIOR_ITEMS,
   "Interior Detail": INTERIOR_ITEMS,
   "Full Detail": [...EXTERIOR_ITEMS, ...INTERIOR_ITEMS],
+  "Interior Monthly Maintenance": [...INTERIOR_ITEMS, ...MAINTENANCE_ITEMS],
+  "Full Detail Monthly Maintenance": [...EXTERIOR_ITEMS, ...INTERIOR_ITEMS, ...MAINTENANCE_ITEMS],
 };
 
 // ─── Service Card ──────────────────────────────────────────────────────────────
