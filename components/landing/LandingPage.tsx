@@ -24,6 +24,7 @@ import {
   CheckCircle,
   Phone,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
@@ -845,7 +846,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+        className="py-16 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
       >
         {/* Ambient background glow */}
         <div 
@@ -857,13 +858,24 @@ export function LandingPage({ services }: { services: Service[] }) {
         />
 
         <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            {/* Left Column: Visual Reward Card */}
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-gradient-to-r from-[#D4AF37]/20 to-amber-500/20 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <div className="flex flex-col items-center text-center">
+            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-4">
+              Rewarding Your Trust
+            </p>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-8 leading-[1.1]">
+              Details that <br />
+              <span className="text-zinc-500">Pay You Back.</span>
+            </h2>
+            <p className="text-lg text-zinc-400 mb-12 leading-relaxed max-w-2xl mx-auto">
+              We believe in long-term relationships. That&apos;s why every dollar you spend with Arise & Shine helps you earn towards your next showroom-quality finish. No complicated tiers, just simple rewards for every customer.
+            </p>
+
+            {/* Loyalty Visual Card — Centered */}
+            <div className="relative group w-full max-w-2xl mb-12">
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#D4AF37]/20 to-amber-500/20 rounded-[2rem] blur-2xl opacity-50 transition-opacity duration-700" />
               <div className="relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-2xl overflow-hidden">
-                <div className="absolute top-0 right-0 p-8">
-                  <Sparkles className="w-12 h-12 text-[#D4AF37]/20" />
+                <div className="absolute top-0 right-0 p-8 opacity-20">
+                  <Sparkles size={64} className="text-[#D4AF37]" />
                 </div>
                 
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-8">
@@ -871,86 +883,89 @@ export function LandingPage({ services }: { services: Service[] }) {
                   Exclusive Program
                 </div>
                 
-                <h3 className="text-3xl md:text-4xl font-black text-white mb-6 leading-tight">
+                <h3 className="text-3xl md:text-4xl font-black text-white mb-10 leading-tight">
                   Arise & Shine <br />
                   <span className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] bg-clip-text text-transparent">Loyalty Club</span>
                 </h3>
                 
-                <div className="space-y-6 mb-10">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
-                      <Car className="w-5 h-5 text-[#D4AF37]" />
+                <div className="grid md:grid-cols-2 gap-8 mb-10">
+                  <div className="flex flex-col items-center md:items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
+                      <Car className="w-6 h-6 text-[#D4AF37]" />
                     </div>
-                    <div>
+                    <div className="text-center md:text-left">
                       <p className="text-zinc-100 font-bold">Earn Points</p>
                       <p className="text-sm text-zinc-500">Get 1 point for every $1 spent on any detailing service.</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
-                      <BadgeCheck className="w-5 h-5 text-[#D4AF37]" />
+                  <div className="flex flex-col items-center md:items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
+                      <BadgeCheck className="w-6 h-6 text-[#D4AF37]" />
                     </div>
-                    <div>
+                    <div className="text-center md:text-left">
                       <p className="text-zinc-100 font-bold">Redeem & Save</p>
                       <p className="text-sm text-zinc-500">Every 10 points equals $1 off. Save them up for a free detail!</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-zinc-950/50 border border-white/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Welcome Bonus</p>
-                    <p className="text-xl font-black text-white">+100 Points</p>
+                <div className="p-6 rounded-2xl bg-zinc-950/50 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Sign Up Bonus</p>
+                    <p className="text-2xl font-black text-white">+100 Points</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">On Sign Up</p>
+                  <div className="h-px w-8 bg-white/5 sm:hidden" />
+                  <div className="text-center sm:text-right">
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Claim Today</p>
                     <p className="text-[#D4AF37] font-bold">Instant Reward</p>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Right Column: Text & CTA */}
-            <div className="flex flex-col justify-center">
-              <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-4">
-                Rewarding Your Trust
-              </p>
-              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-8 leading-[1.1]">
-                Details that <br />
-                Pay You Back.
-              </h2>
-              <p className="text-lg text-zinc-400 mb-10 leading-relaxed">
-                We believe in long-term relationships. That&apos;s why every dollar you spend with Arise & Shine helps you earn towards your next showroom-quality finish. No complicated tiers, just simple rewards for every customer.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <LoyaltyHeaderButton />
-                <button
-                  onClick={() => openBooking()}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all font-bold"
+            
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {authUserId ? (
+                <Button
+                  variant="primary"
+                  href="/protected"
+                  className="btn-primary-gold-shimmer px-10 py-6 rounded-2xl text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
                 >
-                  Book & Earn
-                </button>
-              </div>
+                  <span className="relative z-[1]">View My Dashboard</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  href="/auth/sign-up"
+                  className="btn-primary-gold-shimmer px-10 py-6 rounded-2xl text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
+                >
+                  <span className="relative z-[1]">Sign Up & Claim Points</span>
+                </Button>
+              )}
+              <button
+                onClick={() => openBooking()}
+                className="px-10 py-6 rounded-2xl border border-white/10 text-white hover:bg-white/5 transition-all text-lg font-bold active:scale-[0.98]"
+              >
+                Book & Earn
+              </button>
+            </div>
 
-              <div className="mt-12 flex items-center gap-6">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-zinc-950 bg-zinc-800 overflow-hidden relative">
-                      <Image 
-                        src={`https://i.pravatar.cc/100?img=${i+10}`} 
-                        alt="User"
-                        fill
-                        className="object-cover grayscale"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-zinc-500">
-                  <span className="text-zinc-200 font-bold">500+ members</span> earning rewards daily.
-                </p>
+            <div className="mt-16 flex flex-col items-center gap-6">
+              <div className="flex -space-x-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-12 h-12 rounded-full border-2 border-zinc-950 bg-zinc-800 overflow-hidden relative shadow-xl">
+                    <Image 
+                      src={`https://i.pravatar.cc/100?img=${i+15}`} 
+                      alt="User"
+                      fill
+                      className="object-cover grayscale"
+                    />
+                  </div>
+                ))}
               </div>
+              <p className="text-sm text-zinc-500">
+                <span className="text-zinc-200 font-bold">500+ members</span> already earning rewards.
+              </p>
             </div>
           </div>
         </div>
@@ -1354,7 +1369,7 @@ export function LandingPage({ services }: { services: Service[] }) {
       {/* ─── Sticky Mobile CTA (only after scrolling past hero) ──────── */}
       <div
         className={`md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-2 transition-all duration-300 ease-out ${
-          isPastHero
+          isPastHero && !isBottomCtaVisible
             ? "translate-y-0 opacity-100"
             : "translate-y-full opacity-0 pointer-events-none"
         }`}
