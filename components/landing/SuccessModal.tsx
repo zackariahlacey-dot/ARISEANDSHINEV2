@@ -162,7 +162,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
 
                 {/* 2. Success Title */}
                 <motion.div custom={1} variants={itemVariants} initial="hidden" animate="visible">
-                  <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">
                     Booking Confirmed!
                   </h2>
                   <p className="text-zinc-400 text-lg mb-8">
