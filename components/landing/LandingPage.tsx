@@ -130,14 +130,47 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthUserId(user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthUserId(session?.user?.id ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const reviewIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const bottomCtaRef = useRef<HTMLDivElement>(null);
+  const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Intersection Observer to hide sticky CTA when reaching the bottom one
+  useEffect(() => {
+    if (!mounted) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsBottomCtaVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (bottomCtaRef.current) {
+      observer.observe(bottomCtaRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [mounted]);
 
   // Restore booking draft when returning from cancelled Stripe or from sign-up flow
   useEffect(() => {
