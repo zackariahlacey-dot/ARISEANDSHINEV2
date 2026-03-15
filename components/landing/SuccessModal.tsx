@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { X, Check, Calendar, Award, User, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 
@@ -56,7 +56,7 @@ function fireGoldConfetti() {
 }
 
 const stagger = 0.1;
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.95 },
   visible: (i: number) => ({
     opacity: 1,
@@ -65,7 +65,7 @@ const itemVariants = {
     transition: { 
       delay: i * stagger, 
       duration: 0.5, 
-      ease: [0.215, 0.61, 0.355, 1.0] 
+      ease: [0.215, 0.61, 0.355, 1.0] as const
     },
   }),
 };
