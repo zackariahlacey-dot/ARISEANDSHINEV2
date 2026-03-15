@@ -75,27 +75,25 @@ const VEHICLE_SIZES: {
 const SERVICE_DURATIONS: Record<string, number> = {
   "Interior Detail": 180,
   "Exterior Detail": 120,
-  "Full Detail": 210,
+  "Full Detail": 240,
   "Interior Monthly Maintenance": 120,
   "Full Detail Monthly Maintenance": 180,
 };
 
-const WORKDAY_START = "8:00 AM";
-const WORKDAY_END = "6:00 PM";
+const WORKDAY_START = "1:00 PM";
+const WORKDAY_END = "6:30 PM";
 const SLOT_INTERVAL_MIN = 30;
 
-// Fallback slots when no operating_hours (8:00 AM–5:30 PM, 30-min increments)
+// Fallback slots when no operating_hours (1:00 PM–6:00 PM, 30-min increments)
 function buildFallbackSlots(): { time: string; period: string }[] {
   const slots: { time: string; period: string }[] = [];
-  for (let h = 8; h <= 17; h++) {
+  for (let h = 13; h <= 18; h++) {
     for (const m of [0, 30]) {
-      if (h === 17 && m === 30) break;
-      const isPM = h >= 12;
-      const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
-      const period =
-        h < 12 ? "Morning" : h < 15 ? "Afternoon" : "Late Afternoon";
+      if (h === 18 && m === 30) break;
+      const displayH = h > 12 ? h - 12 : h;
+      const period = h < 15 ? "Afternoon" : "Late Afternoon";
       slots.push({
-        time: `${displayH}:${m === 0 ? "00" : "30"} ${isPM ? "PM" : "AM"}`,
+        time: `${displayH}:${m === 0 ? "00" : "30"} PM`,
         period,
       });
     }
@@ -832,13 +830,15 @@ export function BookingSection({
   const isDateDisabled = useCallback(
     (dateStr: string): boolean => {
       if (!dateStr || dateStr.length < 10) return true;
+
+      // Universally disable weekends (0=Sun, 6=Sat)
+      const day = new Date(dateStr + "T12:00:00").getDay();
+      if (day === 0 || day === 6) return true;
+
       if (blockedDates.includes(dateStr)) return true;
-      if (operatingHours.length === 0) {
-        const day = new Date(dateStr + "T12:00:00").getDay();
-        return day === 0 || day === 6;
-      }
+      if (operatingHours.length === 0) return false;
       const row = getResolvedForDate(dateStr);
-      return row?.isClosed ?? true;
+      return row?.isClosed ?? false;
     },
     [blockedDates, operatingHours.length, getResolvedForDate]
   );
