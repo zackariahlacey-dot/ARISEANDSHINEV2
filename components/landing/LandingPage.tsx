@@ -134,7 +134,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = createBrowserSupabaseClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setAuthUserId(user?.id ?? null);
     });
