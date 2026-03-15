@@ -1473,7 +1473,7 @@ export function BookingSection({
                               </p>
                               {selectedService && (
                                 <p className="text-[#D4AF37] font-bold mt-1.5">
-                                  ${selectedService[VEHICLE_SIZES.find((s) => s.id === vehicleSize)!.sizeKey]}
+                                  ${selectedService[VEHICLE_SIZES.find((s) => s.id === vehicleSize)?.sizeKey ?? "price_small"]}
                                 </p>
                               )}
                             </div>
