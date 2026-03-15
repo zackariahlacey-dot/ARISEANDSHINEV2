@@ -234,22 +234,67 @@ export async function bookDetailing(
     }
     const origin = payload.successUrl ?? payload.cancelUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
     const stripe = new Stripe(stripeKey, { apiVersion: "2026-02-25.clover" });
+    const isSubscription = payload.serviceName.toLowerCase().includes("monthly");
+    const mode = isSubscription ? "subscription" : "payment";
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+    if (isSubscription) {
+      // 1. Recurring Monthly Price (The base service price)
+      // Interior Monthly is $100, Full Detail Monthly is $150
+      const monthlyPrice = payload.serviceName.toLowerCase().includes("full detail") ? 150 : 100;
+      
+      line_items.push({
+        price_data: {
+          currency: "usd",
+          recurring: { interval: "month" },
+          unit_amount: Math.round(monthlyPrice * 100),
+          product_data: {
+            name: payload.serviceName,
+            description: "Monthly Maintenance Plan recurring fee",
+          },
+        },
+        quantity: 1,
+      });
+
+      // 2. One-time Setup + Travel - Points
+      // payload.totalPrice already includes (monthlyPrice + setupFee + travel - points)
+      const initialOneTimeCharge = payload.totalPrice - monthlyPrice;
+      if (initialOneTimeCharge > 0) {
+        line_items.push({
+          price_data: {
+            currency: "usd",
+            unit_amount: Math.round(initialOneTimeCharge * 100),
+            product_data: {
+              name: "Initial Setup & Deep Clean",
+              description: [
+                `${payload.vehicleYear} ${payload.vehicleMake} ${payload.vehicleModel}`,
+                `Appointment: ${payload.bookingDate} at ${payload.bookingTime}`,
+                "Includes mandatory setup fee and any travel/discounts",
+              ].join(" · "),
+            },
+          },
+          quantity: 1,
+        });
+      }
+    } else {
+      // Standard one-off payment
+      line_items.push({
+        price_data: {
+          currency: "usd",
+          unit_amount: Math.round(payload.totalPrice * 100),
+          product_data: {
+            name: payload.serviceName,
+            description: `${payload.vehicleYear} ${payload.vehicleMake} ${payload.vehicleModel} · ${payload.bookingDate} at ${payload.bookingTime}`,
+          },
+        },
+        quantity: 1,
+      });
+    }
+
     try {
       const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: Math.round(payload.totalPrice * 100),
-              product_data: {
-                name: payload.serviceName,
-                description: `${payload.vehicleYear} ${payload.vehicleMake} ${payload.vehicleModel} · ${payload.bookingDate} at ${payload.bookingTime}`,
-              },
-            },
-            quantity: 1,
-          },
-        ],
+        mode,
+        line_items,
         customer_email: payload.email || undefined,
         metadata: {
           profileId,
