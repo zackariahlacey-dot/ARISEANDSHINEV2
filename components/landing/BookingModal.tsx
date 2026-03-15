@@ -1261,40 +1261,76 @@ export function BookingSection({
           ) : !selectedService && services.length > 0 ? (
             /* ── Choose Your Service (when opened via Book Now / Schedule Now) ── */
             <div className="px-6 py-6">
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-xl font-black text-white">
                 Choose Your Service
               </h2>
-              <p className="text-sm text-zinc-500 mt-0.5 mb-5">
+              <p className="text-sm text-zinc-500 mt-0.5 mb-6">
                 Select a package to continue — price varies by vehicle size
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                {services.map((service) => (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => onSelectService(service)}
-                    className="p-3.5 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 hover:bg-white/[0.025] active:scale-[0.99]"
-                  >
-                    <div className="font-semibold text-sm text-white">
-                      {service.name}
-                    </div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">
-                      From ${service.price_small} (Small)
-                    </div>
-                    {service.description && (
-                      <div className="text-[11px] text-zinc-600 mt-1 line-clamp-2">
-                        {service.description}
-                      </div>
-                    )}
-                    <div className="mt-2 flex items-center justify-end">
-                      <ChevronRight size={14} className="text-zinc-600" />
-                    </div>
-                  </button>
-                ))}
+
+              <div className="space-y-8">
+                {/* 1. One-Time Detailing */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles size={14} className="text-[#D4AF37]" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">One-Time Detailing</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {services.filter(s => !s.is_subscription).map((service) => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => onSelectService(service)}
+                        className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-white/[0.02] active:scale-[0.99] group"
+                      >
+                        <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                          {service.name}
+                        </div>
+                        <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
+                          From ${service.price_small}
+                        </div>
+                        {service.description && (
+                          <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                            {service.description}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Monthly Maintenance Plans */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Crown size={14} className="text-[#D4AF37]" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Maintenance Club</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {services.filter(s => s.is_subscription).map((service) => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => onSelectService(service)}
+                        className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-amber-500/[0.04] active:scale-[0.99] group"
+                      >
+                        <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                          {service.name}
+                        </div>
+                        <div className="text-[11px] text-[#D4AF37] font-bold mt-0.5 uppercase tracking-tighter">
+                          ${service.price_small} / Month
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-1">
+                          +$100 Initial Setup Fee
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
+
               <button
                 onClick={onClose}
-                className="mt-5 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors py-2"
+                className="mt-8 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors py-2 border-t border-white/5 pt-6"
               >
                 Cancel
               </button>
