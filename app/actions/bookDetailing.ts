@@ -103,15 +103,21 @@ export async function bookDetailing(
   const firstName = parts[0] ?? "";
   const lastName = parts.slice(1).join(" ") || null;
 
-  // ── 1. Resolve profile: logged-in skip profile creation and use user.id; guest find/create by phone ─
+  // ── 1. Resolve profile: logged-in or guest ──────────────────────────────────
   let profileId: string;
   const adminSupabase = createAdminClient();
 
   if (user) {
-    // Logged-in: skip profile creation/upsert; use auth user id as booking user_id
+    // Logged-in: use auth user id, but ensure profile exists
     profileId = user;
+    await adminSupabase.from("profiles").upsert({
+      id: profileId,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      phone: phoneDigits.length >= 10 ? phoneDigits : null,
+    }, { onConflict: "id" });
   } else {
-    // Guest: find or create profile by phone (use admin client to bypass RLS)
+    // Guest: find or create profile by phone
     const { data: existing } = await adminSupabase
       .from("profiles")
       .select("id")
@@ -120,32 +126,33 @@ export async function bookDetailing(
 
     if (existing && existing.length > 0) {
       profileId = existing[0].id;
+      // Update name if guest provided a new one
+      await adminSupabase.from("profiles").update({
+        first_name: firstName || null,
+        last_name: lastName || null,
+      }).eq("id", profileId);
     } else {
       const guestId = crypto.randomUUID();
       const { data: created, error: profileErr } = await adminSupabase
         .from("profiles")
-        .upsert(
-          {
-            id: guestId,
-            first_name: firstName || null,
-            last_name: lastName || null,
-            phone: phoneDigits.length >= 10 ? phoneDigits : null,
-            reward_points: 0,
-            lifetime_points: 0,
-          },
-          { onConflict: "id" }
-        )
+        .insert({
+          id: guestId,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          phone: phoneDigits.length >= 10 ? phoneDigits : null,
+          reward_points: 0,
+          lifetime_points: 0,
+        })
         .select("id")
         .single();
 
       if (profileErr || !created) {
-        console.error("Profile Error:", profileErr);
+        console.error("Profile Creation Error:", profileErr);
         return {
           success: false,
-          error: "Could not create your profile. Please try again.",
+          error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
         };
       }
-
       profileId = created.id;
     }
   }
@@ -172,23 +179,24 @@ export async function bookDetailing(
   }
 
   // ── 2. Insert vehicle ──────────────────────────────────────────────────
+  const vehicleYearInt = parseInt(payload.vehicleYear, 10);
   const { data: vehicle, error: vehicleErr } = await adminSupabase
     .from("vehicles")
     .insert({
       user_id: profileId,
-      make: payload.vehicleMake.trim(),
-      model: payload.vehicleModel.trim(),
-      year: parseInt(payload.vehicleYear, 10),
-      size: VEHICLE_SIZE_MAP[payload.vehicleSize],
+      make: (payload.vehicleMake || "Unknown").trim(),
+      model: (payload.vehicleModel || "Unknown").trim(),
+      year: isNaN(vehicleYearInt) ? null : vehicleYearInt,
+      size: VEHICLE_SIZE_MAP[payload.vehicleSize] || "small",
     })
     .select("id")
     .single();
 
   if (vehicleErr || !vehicle) {
-    console.error("[bookDetailing] vehicle insert:", vehicleErr);
+    console.error("[bookDetailing] vehicle insert error:", vehicleErr);
     return {
       success: false,
-      error: "Could not save vehicle info. Please try again.",
+      error: `Could not save vehicle info: ${vehicleErr?.message || "Unknown error"}. Please try again.`,
     };
   }
 
