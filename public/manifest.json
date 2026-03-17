@@ -1,0 +1,36 @@
+{
+  "name": "A&S Detailing Admin",
+  "short_name": "A&S Admin",
+  "description": "Vermont Detailing Mission Control",
+  "start_url": "/admin/today",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#D4AF37",
+  "icons": [
+    {
+      "src": "/aasbanner.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/aasbanner.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Booking",
+      "short_name": "New Job",
+      "url": "/admin/bookings?new=true",
+      "icons": [{ "src": "/aasbanner.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Today's Planner",
+      "short_name": "Planner",
+      "url": "/admin/planner",
+      "icons": [{ "src": "/aasbanner.png", "sizes": "192x192" }]
+    }
+  ]
+}

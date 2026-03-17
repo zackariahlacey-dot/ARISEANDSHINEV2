@@ -36,6 +36,8 @@ export type BookingPayload = {
   travelFee?: number;
   /** One-time setup fee for Monthly Maintenance Plan (included in totalPrice) */
   setupFee?: number;
+  /** Optional add-ons (included in totalPrice) */
+  selectedAddons?: { id: string; label: string; price: number }[];
   /** When "pay_now", booking is created as pending and a Stripe Checkout URL is returned; emails sent after payment via webhook */
   paymentMethod?: "pay_at_arrival" | "pay_now";
   /** Required when paymentMethod is "pay_now" for Stripe redirect URLs */
@@ -200,6 +202,10 @@ export async function bookDetailing(
     };
   }
 
+  const addonsNote = payload.selectedAddons && payload.selectedAddons.length > 0
+    ? `✨ Add-ons:\n${payload.selectedAddons.map(a => `• ${a.label} ($${a.price})`).join("\n")}`
+    : null;
+
   const paymentNote = isPayNow
     ? "💳 Payment: Pay Now (Stripe)"
     : "💳 Payment: Pay at Arrival";
@@ -208,6 +214,7 @@ export async function bookDetailing(
     payload.serviceAddress
       ? `📍 Service Location: ${payload.serviceAddress}`
       : null,
+    addonsNote,
     payload.travelFee != null && payload.travelFee > 0
       ? `🚗 Travel Fee: $${payload.travelFee.toFixed(2)}`
       : null,
@@ -256,8 +263,8 @@ export async function bookDetailing(
         quantity: 1,
       });
 
-      // 2. One-time Setup + Travel - Points
-      // payload.totalPrice already includes (monthlyPrice + setupFee + travel - points)
+      // 2. One-time Setup + Travel + Add-ons - Points
+      // payload.totalPrice already includes (monthlyPrice + setupFee + travel + addons - points)
       const initialOneTimeCharge = payload.totalPrice - monthlyPrice;
       if (initialOneTimeCharge > 0) {
         line_items.push({
@@ -265,11 +272,11 @@ export async function bookDetailing(
             currency: "usd",
             unit_amount: Math.round(initialOneTimeCharge * 100),
             product_data: {
-              name: "Initial Setup & Deep Clean",
+              name: "Initial Setup & Options",
               description: [
                 `${payload.vehicleYear} ${payload.vehicleMake} ${payload.vehicleModel}`,
                 `Appointment: ${payload.bookingDate} at ${payload.bookingTime}`,
-                "Includes mandatory setup fee and any travel/discounts",
+                "Includes setup fee, add-ons, travel and discounts",
               ].join(" · "),
             },
           },
@@ -470,6 +477,8 @@ export async function bookDetailing(
       vehicleSize: payload.vehicleSize,
       rewardPointsEarned: earnedPoints,
       serviceAddress: payload.serviceAddress || undefined,
+      distanceMiles: payload.distanceMiles || undefined,
+      paymentMethod: payload.paymentMethod,
       notes: payload.notes || undefined,
     },
     { skipCustomerEmail: true }

@@ -20,6 +20,79 @@ import {
 import { createCoupon, type CouponRow } from "@/app/actions/createCoupon";
 import { toggleCoupon } from "@/app/actions/toggleCoupon";
 import { sendEmailBlast } from "@/app/actions/sendEmailBlast";
+import { sendReengagementEmails } from "@/app/actions/sendReengagementEmails";
+import { Zap } from "lucide-react";
+
+// ── Automations ───────────────────────────────────────────────────────────────
+
+function AutomationsTab() {
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const handleSend = async (testOnly: boolean) => {
+    setSending(true);
+    setResult(null);
+    const res = await sendReengagementEmails({ testOnly });
+    setSending(false);
+    if (res.success) {
+      setResult({ type: "success", msg: res.msg || "Sent successfully." });
+    } else {
+      setResult({ type: "error", msg: res.error || "Failed to send." });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 p-5 md:p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Zap size={15} className="text-[#D4AF37]" />
+          <h3 className="text-sm font-bold text-white">90-Day Re-engagement</h3>
+        </div>
+        
+        <p className="text-sm text-zinc-400 leading-relaxed">
+          This automation finds customers who haven't booked in over 90 days and sends them a friendly "Time for a refresh?" email containing a 10% off promo code (<strong>REFRESH10</strong>). 
+        </p>
+
+        {result && (
+          <div
+            className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs ${
+              result.type === "success"
+                ? "bg-emerald-950/40 border border-emerald-800/40 text-emerald-300"
+                : "bg-red-950/40 border border-red-800/40 text-red-300"
+            }`}
+          >
+            {result.type === "success" ? <Check size={13} className="shrink-0" /> : <AlertCircle size={13} className="shrink-0" />}
+            {result.msg}
+            <button onClick={() => setResult(null)} className="ml-auto text-current opacity-50 hover:opacity-100"><X size={12} /></button>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3 pt-2">
+          <button
+            onClick={() => handleSend(true)}
+            disabled={sending}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-zinc-800 text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />}
+            Test Send (Admin Only)
+          </button>
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to send this to all eligible customers right now?")) {
+                handleSend(false);
+              }
+            }}
+            disabled={sending}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-[#c9a430] transition-colors disabled:opacity-50"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            Run Automation Live
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Coupon Manager ────────────────────────────────────────────────────────────
 
@@ -433,23 +506,50 @@ function EmailBlastComposer({ recipientCount }: { recipientCount: number }) {
         </div>
 
         {/* Body */}
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">
-            Email Body
-          </label>
-          <p className="text-[10px] text-zinc-500 mb-2">
-            Use personalization tags: <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{firstname}"}</code>, <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{lastname}"}</code>, <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{points}"}</code> — they are replaced per recipient (e.g. first name, last name, loyalty points).
-          </p>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={10}
-            placeholder="Hi {firstname}, you have {points} loyalty points waiting to be used!"
-            className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/40 transition-all resize-none leading-relaxed"
-          />
-          <p className="text-[10px] text-zinc-600 mt-1.5">
-            Plain text only — line breaks are preserved. A &ldquo;Book Your Detail&rdquo; button is appended automatically.
-          </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">
+              Email Body
+            </label>
+            <p className="text-[10px] text-zinc-500 mb-2">
+              Use personalization tags: <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{firstname}"}</code>, <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{lastname}"}</code>, <code className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-amber-400/90 font-mono">{"{points}"}</code>.
+            </p>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={12}
+              placeholder="Hi {firstname}, you have {points} loyalty points waiting to be used!"
+              className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/40 transition-all resize-none leading-relaxed"
+            />
+          </div>
+
+          <div className="space-y-4">
+            <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">
+              Personalization Preview
+            </label>
+            <div className="bg-zinc-950/40 border border-white/[0.04] rounded-xl p-5 min-h-[300px] flex flex-col">
+              <div className="pb-3 mb-4 border-b border-white/5">
+                <p className="text-[10px] text-zinc-600 uppercase font-bold tracking-widest mb-1">Subject Preview</p>
+                <p className="text-sm font-bold text-zinc-200">
+                  {subject.replace(/\{firstname\}/g, "John").replace(/\{lastname\}/g, "Doe").replace(/\{points\}/g, "150") || "(Empty Subject)"}
+                </p>
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] text-zinc-600 uppercase font-bold tracking-widest mb-2">Body Preview</p>
+                <div className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                  {body.replace(/\{firstname\}/g, "John").replace(/\{lastname\}/g, "Doe").replace(/\{points\}/g, "150") || "Start typing to see a preview..."}
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-white/5 flex justify-center">
+                <div className="px-6 py-2 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-black uppercase tracking-widest">
+                  Book Your Detail
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-zinc-600 text-center italic">
+              Preview shown for: John Doe (150 pts)
+            </p>
+          </div>
         </div>
 
         {/* Test mode toggle */}
@@ -561,7 +661,7 @@ export function MarketingPage({
   initialCoupons,
   recipientCount,
 }: MarketingPageProps) {
-  const [tab, setTab] = useState<"coupons" | "email">("coupons");
+  const [tab, setTab] = useState<"coupons" | "email" | "automations">("coupons");
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -571,11 +671,12 @@ export function MarketingPage({
           [
             { key: "coupons", label: "Promo Codes", icon: Tag },
             { key: "email", label: "Email Blast", icon: Mail },
+            { key: "automations", label: "Automations", icon: Zap },
           ] as const
         ).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => setTab(key as any)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               tab === key
                 ? "bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/20"
@@ -591,8 +692,10 @@ export function MarketingPage({
       {/* Tab content */}
       {tab === "coupons" ? (
         <CouponManager initialCoupons={initialCoupons} />
-      ) : (
+      ) : tab === "email" ? (
         <EmailBlastComposer recipientCount={recipientCount} />
+      ) : (
+        <AutomationsTab />
       )}
     </div>
   );

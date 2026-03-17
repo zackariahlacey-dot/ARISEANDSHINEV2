@@ -119,7 +119,8 @@ export function RecentBookingsTable({ initialBookings }: { initialBookings: Dash
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.04]">
@@ -204,6 +205,66 @@ export function RecentBookingsTable({ initialBookings }: { initialBookings: Dash
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden flex flex-col p-4 gap-4">
+        {bookings.length === 0 ? (
+          <div className="text-center text-zinc-600 text-sm py-10">No bookings yet</div>
+        ) : (
+          bookings.map((b) => {
+            const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
+            const service = Array.isArray(b.services) ? b.services[0] : b.services;
+            const vehicle = Array.isArray(b.vehicles) ? b.vehicles[0] : b.vehicles;
+            const isLoading = loadingId === b.id;
+
+            return (
+              <div key={b.id} className="bg-zinc-900/60 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-3 relative">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-bold text-white text-sm">
+                      {profile?.first_name ?? "—"} {profile?.last_name ?? ""}
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-0.5">{service?.name ?? "—"}</p>
+                  </div>
+                  <StatusBadge status={b.status ?? "pending"} />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-widest block">Date & Time</span>
+                    <span className="text-zinc-300 font-medium">{b.booking_date} <span className="text-zinc-500 ml-1">{fmtTime(b.booking_time)}</span></span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-widest block">Total</span>
+                    <span className="text-[#D4AF37] font-bold tabular-nums">${(b.total_price ?? 0).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-white/[0.06] flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => openReschedule(b)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.06] hover:text-[#D4AF37] hover:bg-white/[0.07] transition-all disabled:opacity-50"
+                  >
+                    <CalendarClock size={12} strokeWidth={2} />
+                    Reschedule
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => setDeleteConfirmId(b.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.06] hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50"
+                  >
+                    <Trash2 size={12} strokeWidth={2} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Delete confirmation */}

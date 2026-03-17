@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   lifetime_points INTEGER DEFAULT 0,
   has_used_referral BOOLEAN DEFAULT FALSE,
   referred_by UUID REFERENCES public.profiles(id),
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -94,10 +95,25 @@ CREATE TABLE IF NOT EXISTS public.blocked_dates (
 CREATE TABLE IF NOT EXISTS public.point_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  amount INTEGER NOT NULL,
+-- 10. Service Add-ons Table
+CREATE TABLE IF NOT EXISTS public.service_addons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
   description TEXT,
+  price NUMERIC(10, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 11. System Settings Table
+CREATE TABLE IF NOT EXISTS public.settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Initial Settings
+INSERT INTO public.settings (key, value) VALUES ('travel_buffer', '30') ON CONFLICT DO NOTHING;
+
 
 -- 9. Booking Holds (Temporary during checkout)
 CREATE TABLE IF NOT EXISTS public.booking_holds (

@@ -49,6 +49,13 @@ const POINTS_PER_DOLLAR = 10;
 const MAX_REDEEMABLE_POINTS = 1000;
 const MAINTENANCE_SETUP_FEE = 100;
 
+const ADD_ONS = [
+  { id: "pet_hair", label: "Heavy Pet Hair Removal", price: 25, desc: "Deep extraction for severe pet hair accumulation" },
+  { id: "odor", label: "Odor Elimination", price: 60, desc: "Chemical-free treatment to neutralize deep-seated smells" },
+  { id: "stain_2", label: "Difficult Stain Removal (2 Stains)", price: 30, desc: "Targeted deep cleaning for 2 challenging spots" },
+  { id: "stain_3plus", label: "Difficult Stain Removal (3+ Stains)", price: 45, desc: "Comprehensive treatment for 3 or more stubborn stains" },
+];
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const VEHICLE_SIZES: {
@@ -478,6 +485,24 @@ export function BookingSection({
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
 
+  // Add-ons
+  const [selectedAddons, setSelectedAddons] = useState<{ id: string; label: string; price: number }[]>([]);
+
+  const toggleAddon = (addon: typeof ADD_ONS[number]) => {
+    setSelectedAddons(prev => {
+      const isSelected = prev.some(a => a.id === addon.id);
+      if (isSelected) {
+        return prev.filter(a => a.id !== addon.id);
+      } else {
+        // Handle mutually exclusive stains
+        let filtered = prev;
+        if (addon.id === 'stain_2') filtered = prev.filter(a => a.id !== 'stain_3plus');
+        if (addon.id === 'stain_3plus') filtered = prev.filter(a => a.id !== 'stain_2');
+        return [...filtered, { id: addon.id, label: addon.label, price: addon.price }];
+      }
+    });
+  };
+
   // Step 2 — Date & Time
   const [todayStr, setTodayStr] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -560,6 +585,7 @@ export function BookingSection({
   const isMonthlyPlan = selectedService?.name.toLowerCase().includes("monthly maintenance");
   const setupFee = isMonthlyPlan ? MAINTENANCE_SETUP_FEE : 0;
   const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const referralDiscountAmount = referralEligible
     ? Math.round(servicePrice * 0.1 * 100) / 100
     : 0;
@@ -569,7 +595,7 @@ export function BookingSection({
       : Math.min(appliedCoupon.discountAmount ?? 0, servicePrice)
     : 0;
   const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee;
+    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee + addonsTotal;
   const availablePoints = rewardPoints ?? 0;
   
   // 10 points = $1. Max redeemable is 1000 pts ($100).
@@ -645,6 +671,7 @@ export function BookingSection({
       setVehicleYear("");
       setVehicleMake("");
       setVehicleModel("");
+      setSelectedAddons([]);
       setSelectedDate("");
       setSelectedTime("");
       setExistingBookingsForDate(null);
@@ -948,6 +975,7 @@ export function BookingSection({
     phone,
     email,
     notes,
+    selectedAddons,
     ...(travelFee > 0 && { travelFee }),
     ...(setupFee > 0 && { setupFee }),
     ...(pointsToRedeem > 0 && { pointsToRedeem }),
@@ -1518,6 +1546,48 @@ export function BookingSection({
                         )}
                       </div>
                     </div>
+
+                    {/* Enhance Your Detail (Add-ons Section) */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={14} className="text-[#D4AF37]" />
+                        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
+                          Enhance Your Detail
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {ADD_ONS.map((addon) => {
+                          const isSelected = selectedAddons.some(a => a.id === addon.id);
+                          return (
+                            <button
+                              key={addon.id}
+                              type="button"
+                              onClick={() => toggleAddon(addon)}
+                              className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
+                                isSelected 
+                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]" 
+                                  : "bg-zinc-950/40 border-white/5 hover:border-white/20"
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
+                                    {addon.label}
+                                  </span>
+                                  {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                </div>
+                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed truncate">
+                                  {addon.desc}
+                                </p>
+                              </div>
+                              <div className={`shrink-0 font-black text-sm tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                +${addon.price}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </motion.div>
                   )}
 
@@ -1675,6 +1745,18 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           }
                         />
                         <ReceiptRow label="Location" value={serviceAddress || "—"} />
+                        {selectedAddons.length > 0 && (
+                          <div className="flex flex-col gap-1.5 pt-1.5">
+                            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.15em]">Applied Add-ons</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedAddons.map(a => (
+                                <span key={a.id} className="px-2 py-0.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-[10px] font-bold rounded-lg uppercase">
+                                  {a.label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1694,6 +1776,12 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               <span className="text-zinc-400">First Month (Based on Vehicle Size)</span>
                               <span className="font-semibold text-white">${(servicePrice ?? 0).toFixed(2)}</span>
                             </div>
+                            {selectedAddons.map(a => (
+                              <div key={a.id} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
+                                <span className="text-zinc-400">{a.label}</span>
+                                <span className="font-semibold text-white">${a.price.toFixed(2)}</span>
+                              </div>
+                            ))}
                             {referralDiscountAmount > 0 && (
                               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                                 <span className="flex items-center gap-1.5">
@@ -1819,6 +1907,12 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               ${(servicePrice ?? 0).toFixed(2)}
                             </span>
                           </div>
+                          {selectedAddons.map(a => (
+                            <div key={a.id} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
+                              <span className="text-zinc-400">{a.label}</span>
+                              <span className="font-semibold text-white">${a.price.toFixed(2)}</span>
+                            </div>
+                          ))}
                           {referralDiscountAmount > 0 && (
                             <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                               <span className="flex items-center gap-1.5">

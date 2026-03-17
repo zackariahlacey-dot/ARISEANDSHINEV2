@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   X,
@@ -84,7 +85,7 @@ function EditModal({
       />
 
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-md bg-zinc-900/95 border border-white/[0.08] rounded-2xl shadow-2xl">
+      <div className="relative z-10 w-full max-w-md bg-zinc-900/95 border border-white/[0.08] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
           <div>
@@ -223,6 +224,7 @@ export function CustomersTable({
 }: {
   initialCustomers: CustomerRow[];
 }) {
+  const router = useRouter();
   const [customers, setCustomers] = useState<CustomerRow[]>(initialCustomers);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<"lifetimeValue" | "reward_points" | "created_at">("lifetimeValue");
@@ -339,8 +341,8 @@ export function CustomersTable({
         {search ? " matching" : " total"}
       </p>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-2xl border border-white/[0.06] bg-zinc-900/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
@@ -385,7 +387,8 @@ export function CustomersTable({
                   return (
                     <tr
                       key={c.id}
-                      className="border-b border-white/[0.03] hover:bg-white/[0.015] transition-colors"
+                      onClick={() => router.push(`/admin/customers/${c.id}`)}
+                      className="border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors cursor-pointer"
                     >
                       {/* Customer */}
                       <td className="px-5 py-3.5">
@@ -395,7 +398,7 @@ export function CustomersTable({
                               {(displayName || c.phone || "?").charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-xs font-semibold text-zinc-200">
+                          <p className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors">
                             {displayName}
                           </p>
                         </div>
@@ -442,7 +445,10 @@ export function CustomersTable({
                       {/* Edit button */}
                       <td className="px-5 py-3.5">
                         <button
-                          onClick={() => setEditing(c)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditing(c);
+                          }}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.07] transition-all"
                         >
                           <Edit3 size={11} />
@@ -456,6 +462,82 @@ export function CustomersTable({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden flex flex-col gap-4">
+        {sorted.length === 0 ? (
+          <div className="px-5 py-14 text-center text-zinc-600 bg-zinc-900/40 rounded-2xl border border-white/[0.06] text-sm">
+            {search ? "No customers match your search" : "No customers yet"}
+          </div>
+        ) : (
+          sorted.map((c) => {
+            const displayName = c.customer_name ?? ([c.first_name, c.last_name].filter(Boolean).join(" ") || "—");
+
+            return (
+              <div
+                key={c.id}
+                onClick={() => router.push(`/admin/customers/${c.id}`)}
+                className="bg-zinc-900/60 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-4 active:bg-white/[0.02] transition-colors"
+              >
+                {/* Header: Name & Letter */}
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-zinc-400">
+                        {(displayName || c.phone || "?").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-200">{displayName}</p>
+                      <p className="text-[11px] text-zinc-600 mt-0.5">{c.phone ?? "—"}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing(c);
+                    }}
+                    className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-zinc-400"
+                  >
+                    <Edit3 size={14} />
+                  </button>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/[0.04]">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-600">Lifetime Value</p>
+                    <p className="text-sm font-bold text-zinc-200">${c.lifetimeValue.toFixed(2)}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-600">Reward Points</p>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Gift size={12} className="text-amber-500/70" />
+                      <p className="text-sm font-bold text-amber-400/90">{(c.reward_points ?? 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Info */}
+                <div className="flex justify-between items-center pt-3 border-t border-white/[0.04] text-[10px]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-600 uppercase font-bold tracking-wider">Bookings:</span>
+                    <span className="text-zinc-400 font-bold">{c.bookingCount}</span>
+                  </div>
+                  {c.referral_code && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-600 uppercase font-bold tracking-wider">Ref:</span>
+                      <span className="font-mono text-zinc-500 bg-zinc-950/60 border border-zinc-800 px-2 py-0.5 rounded-md">
+                        {c.referral_code}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </>
   );

@@ -15,7 +15,7 @@ export default async function BookingsPage() {
       supabase
         .from("bookings")
         .select(
-          "*, profiles:user_id(first_name, last_name, phone), vehicles:vehicle_id(year, make, model), services:service_id(name)"
+          "*, profiles:user_id(first_name, last_name, phone), vehicles:vehicle_id(year, make, model), services:service_id(name), coupons:coupon_id(code)"
         )
         .order("booking_date", { ascending: false })
         .order("booking_time", { ascending: false })

@@ -34,12 +34,39 @@ export type BookingEmailData = {
   vehicleSize: string; // UI slug: compact | sedan | suv | truck
   // Loyalty
   rewardPointsEarned: number;
-  // Optional
+  // Optional / Admin specific
   serviceAddress?: string;
+  distanceMiles?: number;
+  paymentMethod?: "pay_at_arrival" | "pay_now";
   notes?: string;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function getGoogleCalendarUrl(data: BookingEmailData): string {
+  const [year, month, day] = data.bookingDate.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  
+  // Parse time "10:00 AM"
+  const match = data.bookingTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    if (match[3].toUpperCase() === "PM" && hours !== 12) hours += 12;
+    if (match[3].toUpperCase() === "AM" && hours === 12) hours = 0;
+    date.setHours(hours, minutes);
+  }
+
+  const start = date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+  // Duration approx 3 hours
+  const end = new Date(date.getTime() + 3 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+  
+  const title = `Detailing: ${data.customerName} (${data.serviceName})`;
+  const details = `Vehicle: ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}\nPhone: ${data.customerPhone}\nService: ${data.serviceName}\nTotal: $${data.servicePrice}`;
+  const location = data.serviceAddress ?? "Customer Location";
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+}
 
 const VEHICLE_SIZE_LABELS: Record<string, string> = {
   compact: "Compact / Hatchback",
@@ -130,6 +157,8 @@ function customerEmailHtml(
     `Sit back and relax while we restore your vehicle to showroom condition!`,
   ];
 
+  const calendarUrl = getGoogleCalendarUrl(data);
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -174,10 +203,13 @@ function customerEmailHtml(
                           letter-spacing:-0.5px;line-height:1.1;">
                 Booking Confirmed!
               </h1>
-              <p style="color:#999999;font-size:14px;margin:0;line-height:1.5;">
+              <p style="color:#999999;font-size:14px;margin:0 0 20px;line-height:1.5;">
                 See you on <strong style="color:#ffffff;">${esc(formattedDate)}</strong>
                 at <strong style="color:#ffffff;">${esc(data.bookingTime)}</strong>.
               </p>
+              <a href="${calendarUrl}" style="display:inline-block;background-color:#ffffff;color:#111111;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px;text-decoration:none;letter-spacing:0.2px;">
+                📅 Add to Google Calendar
+              </a>
             </td>
           </tr>
 
@@ -345,8 +377,12 @@ function adminEmailHtml(
     ["Date", esc(formattedDate)],
     ["Time", esc(data.bookingTime)],
     ...(data.serviceAddress
-      ? ([["Location", `&#128205;&nbsp;${esc(data.serviceAddress)}`]] as [string, string][])
+      ? ([["Address", `&#128205;&nbsp;${esc(data.serviceAddress)}`]] as [string, string][])
       : []),
+    ...(data.distanceMiles != null
+      ? ([["Distance", `${data.distanceMiles.toFixed(1)} miles from base`]] as [string, string][])
+      : []),
+    ["Payment Type", data.paymentMethod === "pay_now" ? "Paid (Online)" : "Pay at Arrival"],
     ["Total", `$${esc(data.servicePrice)}`],
     ["Ref", `#${shortRef}`],
   ];
@@ -359,6 +395,8 @@ function adminEmailHtml(
     ["Size", esc(VEHICLE_SIZE_LABELS[data.vehicleSize] ?? data.vehicleSize)],
     ...(data.notes ? [["Notes", esc(data.notes)] as [string, string]] : []),
   ];
+
+  const calendarUrl = getGoogleCalendarUrl(data);
 
   const infoTable = (rows: [string, string][]) => `
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -428,9 +466,12 @@ function adminEmailHtml(
                           letter-spacing:-0.4px;">
                 New Booking Request
               </h1>
-              <p style="color:#999999;font-size:13px;margin:0;">
+              <p style="color:#999999;font-size:13px;margin:0 0 16px;">
                 ${esc(data.serviceName)} &mdash; ${esc(formattedDate)} at ${esc(data.bookingTime)}
               </p>
+              <a href="${calendarUrl}" style="display:inline-block;background-color:#ffffff;color:#111111;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px;text-decoration:none;letter-spacing:0.2px;">
+                📅 Add to Google Calendar
+              </a>
             </td>
           </tr>
 
@@ -463,11 +504,11 @@ function adminEmailHtml(
                 <tr>
                   <td style="padding:20px 24px;">
                     <p style="font-size:13px;color:#92400e;font-weight:700;margin:0 0 4px;">
-                      &#9888;&#65039; Action Required
+                      &#9888;&#65039; Status Alert
                     </p>
                     <p style="font-size:13px;color:#b45309;margin:0;line-height:1.5;">
-                      This booking is currently <strong>pending</strong>.
-                      Confirm it in your dashboard, or contact the customer to confirm directly.
+                      Payment status: <strong>${data.paymentMethod === "pay_now" ? "PAID" : "DUE AT ARRIVAL"}</strong>.<br/>
+                      Confirm this booking in your admin dashboard.
                     </p>
                   </td>
                 </tr>
@@ -771,6 +812,236 @@ export async function sendBookingDeletionAuditEmail(data: DeletionAuditData): Pr
   if (result.error) {
     console.error("[email] deletion audit send failed:", result.error);
   }
+}
+
+// ─── Job Completed / Receipt Email ───────────────────────────────────────────
+
+function jobCompletedHtml(
+  data: {
+    customerName: string;
+    serviceName: string;
+    amountPaid: number;
+    pointsEarned: number;
+  }
+): string {
+  const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Service Completed — Arise And Shine VT</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:600px;width:100%;">
+
+          <!--  ── HEADER ── -->
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;
+                        padding:32px 40px;text-align:center;">
+              ${logo}
+            </td>
+          </tr>
+
+          <!--  ── HERO ── -->
+          <tr>
+            <td style="background-color:#111111;padding:36px 40px;text-align:center;
+                        border-bottom:1px solid #1e1e1e;">
+              <table cellpadding="0" cellspacing="0" border="0" align="center"
+                     style="margin:0 auto 20px auto;">
+                <tr>
+                  <td width="64" height="64"
+                      style="background-color:#16a34a;border-radius:50%;
+                             text-align:center;vertical-align:middle;
+                             font-size:30px;color:#ffffff;font-weight:900;
+                             line-height:64px;">
+                    &#10003;
+                  </td>
+                </tr>
+              </table>
+              <h1 style="color:#ffffff;font-size:28px;font-weight:900;margin:0 0 8px;
+                          letter-spacing:-0.5px;line-height:1.1;">
+                Service Completed!
+              </h1>
+              <p style="color:#999999;font-size:16px;margin:0;line-height:1.5;">
+                Your vehicle is ready. Enjoy that showroom shine! ✨
+              </p>
+            </td>
+          </tr>
+
+          <!--  ── BODY ── -->
+          <tr>
+            <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
+
+              <p style="font-size:16px;font-weight:700;color:#111111;margin:0 0 6px;">
+                Hi ${firstName},
+              </p>
+              <p style="font-size:14px;color:#666666;margin:0 0 32px;line-height:1.7;">
+                Your <strong>${esc(data.serviceName)}</strong> is complete! We hope you love the results. 
+                Thank you for choosing Arise And Shine VT for your detailing needs. 
+                Below is your receipt for the service.
+              </p>
+
+              <!-- Receipt card -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7f7f7;border-radius:14px;
+                            overflow:hidden;margin-bottom:24px;">
+                ${detailRow("Service Performed", esc(data.serviceName))}
+                <tr>
+                  <td style="padding:16px 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td>
+                          <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0;
+                                    letter-spacing:0.12em;text-transform:uppercase;">
+                            Total Paid
+                          </p>
+                        </td>
+                        <td align="right">
+                          <p style="font-size:24px;font-weight:900;color:#111111;margin:0;">
+                            $${esc(data.amountPaid.toFixed(2))}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Loyalty Points -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#fffbeb;border:1px solid #fde68a;
+                            border-radius:12px;margin-bottom:32px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle;padding-right:14px;font-size:26px;">
+                          &#127873;
+                        </td>
+                        <td>
+                          <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 3px;">
+                            You earned ${esc(data.pointsEarned)} points!
+                          </p>
+                          <p style="font-size:12px;color:#b45309;margin:0;line-height:1.5;">
+                            These points have been added to your account. 
+                            Remember, you can redeem them for discounts on future details!
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;text-align:center;">
+                Love your detail? We'd appreciate a quick review! It helps us more than you know.
+              </p>
+
+              <!-- Help CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7f7f7;border-radius:12px;margin-bottom:32px;">
+                <tr>
+                  <td style="padding:24px;text-align:center;">
+                    <p style="font-size:14px;color:#555555;margin:0 0 14px;line-height:1.5;">
+                      Questions about your service or account?
+                    </p>
+                    <a href="mailto:${BUSINESS_EMAIL}"
+                       style="display:inline-block;background-color:#111111;color:#ffffff;
+                              font-size:13px;font-weight:700;padding:11px 28px;
+                              border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
+                      Contact Us
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          ${footer}
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Sends a completion receipt to the customer.
+ */
+export async function sendJobCompletedEmail(data: {
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  amountPaid: number;
+  pointsEarned: number;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY is not set — skipping completion email.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const result = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.customerEmail,
+    replyTo: REPLY_TO,
+    subject: `Service Completed — Your Arise And Shine VT Receipt`,
+    html: jobCompletedHtml(data),
+  });
+  if (result.error) {
+    console.error("[email] job completed email send failed:", result.error);
+  }
+}
+
+/**
+ * Sends a 24-hour review follow-up email.
+ */
+export async function sendReviewFollowupEmail(data: {
+  customerName: string;
+  customerEmail: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+
+  const bodyHtml = `
+    <div style="text-align:center;padding:40px;">
+      <h1 style="color:#111111;font-size:24px;font-weight:900;margin:0 0 16px;">How's the shine holding up? ✨</h1>
+      <p style="color:#555555;font-size:16px;line-height:1.6;margin:0 0 24px;">
+        Hi ${firstName}, it's been 24 hours since your detail with Arise And Shine VT. 
+        We hope you're loving how your vehicle looks!
+      </p>
+      <p style="color:#555555;font-size:16px;line-height:1.6;margin:0 0 32px;">
+        If you have a moment, would you mind sharing your experience? 
+        Reviews help our small business grow more than anything else.
+      </p>
+      <a href="https://g.page/r/your-google-review-link/review" style="display:inline-block;background-color:#D4AF37;color:#111111;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;">
+        Leave a Google Review
+      </a>
+    </div>
+  `;
+
+  const html = getEmailLayoutHtml({
+    title: "How was your detail? - Arise And Shine VT",
+    headline: "We'd love your feedback!",
+    bodyHtml
+  });
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.customerEmail,
+    subject: `How's the shine holding up? ✨`,
+    html,
+  });
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

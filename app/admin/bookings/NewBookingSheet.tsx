@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, User, Car, CalendarClock, CreditCard, Banknote } from "lucide-react";
+import { X, Loader2, User, Car, CalendarClock, CreditCard, Banknote, MapPin, Plus, Minus, FileText } from "lucide-react";
 import { createAdminBooking } from "@/app/actions/createAdminBooking";
 
 const TIME_SLOTS = (() => {
@@ -33,6 +33,8 @@ export type ServiceOption = {
   price_extra_large: number;
 };
 
+const VEHICLE_SIZE_KEYS = { compact: 0, sedan: 1, suv: 2, xl: 3 };
+
 function getPriceForSize(service: ServiceOption, size: keyof typeof VEHICLE_SIZE_KEYS): number {
   switch (size) {
     case "compact":
@@ -47,8 +49,6 @@ function getPriceForSize(service: ServiceOption, size: keyof typeof VEHICLE_SIZE
       return service.price_medium;
   }
 }
-
-const VEHICLE_SIZE_KEYS = { compact: 0, sedan: 1, suv: 2, xl: 3 };
 
 export function NewBookingSheet({
   open,
@@ -73,11 +73,19 @@ export function NewBookingSheet({
   const [bookingDate, setBookingDate] = useState("");
   const [bookingTime, setBookingTime] = useState("");
   const [paymentOption, setPaymentOption] = useState<"pay_at_arrival" | "send_invoice">("pay_at_arrival");
+  
+  // New Fields
+  const [serviceAddress, setServiceAddress] = useState("");
+  const [travelFee, setTravelFee] = useState<number>(0);
+  const [setupFee, setSetupFee] = useState<number>(0);
+  const [notes, setNotes] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedService = services.find((s) => s.id === serviceId);
-  const totalPrice = selectedService ? getPriceForSize(selectedService, vehicleSize) : 0;
+  const basePrice = selectedService ? getPriceForSize(selectedService, vehicleSize) : 0;
+  const totalPrice = basePrice + travelFee + setupFee;
 
   const resetForm = () => {
     setFirstName("");
@@ -92,6 +100,10 @@ export function NewBookingSheet({
     setBookingDate("");
     setBookingTime("");
     setPaymentOption("pay_at_arrival");
+    setServiceAddress("");
+    setTravelFee(0);
+    setSetupFee(0);
+    setNotes("");
     setError(null);
   };
 
@@ -118,6 +130,10 @@ export function NewBookingSheet({
       bookingDate,
       bookingTime,
       paymentOption,
+      serviceAddress: serviceAddress.trim(),
+      travelFee,
+      setupFee,
+      notes: notes.trim(),
     });
     setSubmitting(false);
     if (result.success) {
@@ -160,7 +176,7 @@ export function NewBookingSheet({
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-5 space-y-4">
+          <div className="p-5 space-y-5">
             {/* Customer */}
             <div className="space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
@@ -188,24 +204,26 @@ export function NewBookingSheet({
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-medium text-zinc-400 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-medium text-zinc-400 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-medium text-zinc-400 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-zinc-400 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
@@ -268,25 +286,41 @@ export function NewBookingSheet({
               </div>
             </div>
 
-            {/* Service */}
-            <div>
-              <label className="block text-[10px] font-medium text-zinc-400 mb-1">Service</label>
-              <select
-                value={serviceId}
-                onChange={(e) => setServiceId(e.target.value)}
-                className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
-                required
-              >
-                <option value="">Select service</option>
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} — ${getPriceForSize(s, vehicleSize).toFixed(2)}
-                  </option>
-                ))}
-              </select>
+            {/* Service & Location */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                <MapPin size={12} /> Service & Location
+              </p>
+              <div>
+                <label className="block text-[10px] font-medium text-zinc-400 mb-1">Service</label>
+                <select
+                  value={serviceId}
+                  onChange={(e) => setServiceId(e.target.value)}
+                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white mb-2"
+                  required
+                >
+                  <option value="">Select service</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — ${getPriceForSize(s, vehicleSize).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium text-zinc-400 mb-1">Service Address</label>
+                <input
+                  type="text"
+                  value={serviceAddress}
+                  onChange={(e) => setServiceAddress(e.target.value)}
+                  placeholder="Street, City, Zip"
+                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
+                  required
+                />
+              </div>
             </div>
 
-            {/* Date & Time */}
+            {/* Schedule */}
             <div className="space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
                 <CalendarClock size={12} /> Schedule
@@ -322,6 +356,46 @@ export function NewBookingSheet({
               </div>
             </div>
 
+            {/* Fees & Adjustments */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                <Plus size={12} /> Fees & Adjustments
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-medium text-zinc-400 mb-1">Travel Fee ($)</label>
+                  <input
+                    type="number"
+                    value={travelFee}
+                    onChange={(e) => setTravelFee(Number(e.target.value))}
+                    className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-zinc-400 mb-1">Setup Fee ($)</label>
+                  <input
+                    type="number"
+                    value={setupFee}
+                    onChange={(e) => setSetupFee(Number(e.target.value))}
+                    className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                <FileText size={12} /> Internal Notes
+              </p>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional notes for the detailer..."
+                className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white min-h-[80px]"
+              />
+            </div>
+
             {/* Payment option */}
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
@@ -350,27 +424,46 @@ export function NewBookingSheet({
                   }`}
                 >
                   <CreditCard size={14} />
-                  Send Stripe Invoice
+                  Send Invoice
                 </button>
               </div>
             </div>
 
             {totalPrice > 0 && (
-              <p className="text-sm font-bold text-[#D4AF37]">
-                Total: ${totalPrice.toFixed(2)}
-              </p>
+              <div className="bg-zinc-950/50 rounded-xl p-3 border border-white/5 space-y-1">
+                <div className="flex justify-between text-[11px] text-zinc-500">
+                  <span>Base Service:</span>
+                  <span>${basePrice.toFixed(2)}</span>
+                </div>
+                {travelFee > 0 && (
+                  <div className="flex justify-between text-[11px] text-zinc-500">
+                    <span>Travel Fee:</span>
+                    <span>${travelFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {setupFee > 0 && (
+                  <div className="flex justify-between text-[11px] text-zinc-500">
+                    <span>Setup Fee:</span>
+                    <span>${setupFee.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-bold text-[#D4AF37] pt-1 border-t border-white/5">
+                  <span>Total:</span>
+                  <span>${totalPrice.toFixed(2)}</span>
+                </div>
+              </div>
             )}
 
             {error && (
-              <p className="text-xs text-red-400">{error}</p>
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
             )}
           </div>
 
-          <div className="sticky bottom-0 px-5 py-4 border-t border-white/10 bg-zinc-900">
+          <div className="sticky bottom-0 px-5 py-4 border-t border-white/10 bg-zinc-900 mt-auto">
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-[#c9a227] disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-[#c9a227] disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
             >
               {submitting ? (
                 <>

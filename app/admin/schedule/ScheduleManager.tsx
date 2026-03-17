@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Clock, CalendarX, Trash2 } from "lucide-react";
+import { Loader2, Clock, CalendarX, Trash2, Settings, ShieldCheck } from "lucide-react";
 import { updateOperatingHours } from "@/app/actions/updateOperatingHours";
 import { insertBlockedDate, deleteBlockedDate } from "@/app/actions/blockedDates";
 
@@ -77,11 +77,12 @@ export function ScheduleManager({
   const router = useRouter();
   const [allHours, setAllHours] = useState<OperatingHoursRow[]>(initialHours);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [bufferTime, setBufferTime] = useState("30");
+
   const defaultRows = useMemo(
     () => allHours.filter((h) => h.month == null),
     [allHours]
   );
-  const defaultGrid = useMemo(() => buildWeekGrid(defaultRows), [defaultRows]);
   const monthRowsMap = useMemo(() => {
     const m = new Map<number, OperatingHoursRow[]>();
     allHours.forEach((h) => {
@@ -93,6 +94,7 @@ export function ScheduleManager({
     });
     return m;
   }, [allHours]);
+
   const [hours, setHours] = useState<Omit<OperatingHoursRow, "id" | "month">[]>(() =>
     buildWeekGrid(initialHours.filter((h) => h.month == null))
   );
@@ -172,7 +174,50 @@ export function ScheduleManager({
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-5xl mx-auto">
+      {/* Smart Scheduling */}
+      <section className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-2">
+          <Settings size={18} className="text-[#D4AF37]" />
+          <h3 className="text-sm font-bold text-white">Smart Scheduling</h3>
+        </div>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-2">
+                Travel Buffer (Minutes)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={bufferTime}
+                  onChange={(e) => setBufferTime(e.target.value)}
+                  className="w-24 bg-zinc-950/80 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/20 outline-none"
+                />
+                <p className="text-[10px] text-zinc-500 leading-relaxed uppercase font-bold tracking-widest">
+                  Space between jobs
+                </p>
+              </div>
+              <p className="text-[10px] text-zinc-600 mt-2">
+                This time is automatically added after every job to prevent overbooking while you travel.
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-zinc-950/40 border border-white/[0.04] rounded-xl p-4 flex gap-4 items-start">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 text-emerald-500">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-zinc-200">Double-Booking Protection</p>
+              <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+                The system automatically cross-references your operating hours and existing jobs to ensure no two details overlap.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Operating Hours */}
       <section className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 overflow-hidden">
         <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between flex-wrap gap-3">

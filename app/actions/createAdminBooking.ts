@@ -2,8 +2,10 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
+import { sendBookingEmails } from "@/lib/email";
 import { Resend } from "resend";
 import Stripe from "stripe";
+import { getTravelFee } from "@/lib/travelFee";
 
 const VEHICLE_SIZE_MAP = {
   compact: "small",
@@ -40,6 +42,10 @@ export type CreateAdminBookingPayload = {
   bookingDate: string;
   bookingTime: string;
   paymentOption: "pay_at_arrival" | "send_invoice";
+  serviceAddress?: string;
+  travelFee?: number;
+  setupFee?: number;
+  notes?: string;
 };
 
 export type CreateAdminBookingResult =
@@ -61,7 +67,14 @@ export async function createAdminBooking(
     return { success: false, error: "Valid service and price are required." };
   }
 
-  // 1. Find or create profile (by phone; profiles have no email column)
+  // Calculate distance for admin alerts
+  let distanceMiles = 0;
+  if (payload.serviceAddress) {
+    const feeRes = await getTravelFee(payload.serviceAddress);
+    if (feeRes.ok) distanceMiles = feeRes.distanceMiles;
+  }
+
+  // 1. Find or create profile
   let profileId: string;
   const { data: existing } = await supabase
     .from("profiles")
@@ -72,12 +85,12 @@ export async function createAdminBooking(
 
   if (existing?.id) {
     profileId = existing.id;
-    // Optionally update name if we have new data
     await supabase
       .from("profiles")
       .update({
         first_name: payload.firstName.trim() || null,
         last_name: payload.lastName.trim() || null,
+        email: payload.email.trim() || null,
       })
       .eq("id", profileId);
   } else {
@@ -86,6 +99,7 @@ export async function createAdminBooking(
       id: profileId,
       first_name: payload.firstName.trim() || null,
       last_name: payload.lastName.trim() || null,
+      email: payload.email.trim() || null,
       phone: phoneDigits,
       reward_points: 0,
       lifetime_points: 0,
@@ -116,10 +130,18 @@ export async function createAdminBooking(
 
   const status =
     payload.paymentOption === "pay_at_arrival" ? "confirmed" : "pending_payment";
-  const paymentNote =
-    payload.paymentOption === "pay_at_arrival"
-      ? "💳 Payment: Pay at Arrival (admin-created)"
-      : "💳 Payment: Stripe Invoice (admin-created)";
+  
+  const paymentMethodText = payload.paymentOption === "pay_at_arrival" 
+    ? "💳 Payment: Pay at Arrival (admin-created)" 
+    : "💳 Payment: Stripe Invoice (admin-created)";
+
+  const notesBody = [
+    paymentMethodText,
+    payload.serviceAddress ? `📍 Service Location: ${payload.serviceAddress}` : null,
+    payload.travelFee != null && payload.travelFee > 0 ? `🚗 Travel Fee: $${payload.travelFee.toFixed(2)}` : null,
+    payload.setupFee != null && payload.setupFee > 0 ? `🧹 One-time Setup & Reset: $${payload.setupFee.toFixed(2)}` : null,
+    payload.notes || null,
+  ].filter(Boolean).join("\n\n");
 
   // 3. Insert booking
   const { data: booking, error: bookingErr } = await supabase
@@ -132,7 +154,7 @@ export async function createAdminBooking(
       booking_time: to24h(payload.bookingTime),
       status,
       total_price: payload.totalPrice,
-      notes: paymentNote,
+      notes: notesBody,
     })
     .select("id")
     .single();
@@ -143,13 +165,10 @@ export async function createAdminBooking(
   }
 
   const customerName = [payload.firstName, payload.lastName].filter(Boolean).join(" ") || "Customer";
-  const bookingTime12 =
-    payload.bookingTime && payload.bookingTime.includes("AM")
-      ? payload.bookingTime
-      : payload.bookingTime;
+  const bookingTime12 = payload.bookingTime;
 
+  // 4a. Stripe Invoice
   if (payload.paymentOption === "send_invoice") {
-    // 4a. Create Stripe Checkout Session for invoice
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) {
       return { success: false, error: "Stripe is not configured. Use Pay at Arrival." };
@@ -177,26 +196,21 @@ export async function createAdminBooking(
         metadata: { booking_id: booking.id },
         success_url: `${origin}/admin/bookings?paid=1`,
         cancel_url: `${origin}/admin/bookings`,
-        expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
+        expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
       });
       invoiceUrl = session.url ?? undefined;
     } catch (stripeErr) {
       console.error("[createAdminBooking] Stripe session:", stripeErr);
-      return {
-        success: false,
-        error: stripeErr instanceof Error ? stripeErr.message : "Could not create invoice link.",
-      };
+      return { success: false, error: "Could not create invoice link." };
     }
 
-    // 4b. Send invoice email with link
     if (payload.email?.trim() && invoiceUrl) {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const from = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-      const replyTo = "contact@ariseandshinevt.com";
       const html = `
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f0f0;">
+<body style="margin:0;padding:0;font-family:sans-serif;background:#f0f0f0;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:32px 16px;">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#18181b;border-radius:12px;overflow:hidden;border:1px solid #d4af37;">
@@ -216,17 +230,35 @@ export async function createAdminBooking(
       await resend.emails.send({
         from,
         to: payload.email.trim(),
-        replyTo,
         subject: `Your Arise And Shine VT Appointment — Please Pay Your Invoice`,
         html,
       }).catch((err) => console.error("[createAdminBooking] invoice email:", err));
     }
-
-    return { success: true, bookingId: booking.id, invoiceUrl };
   }
 
-  // 4. Pay at Arrival: send standard confirmation email
-  if (payload.email?.trim()) {
+  // 4b. Send comprehensive emails (Admin & Customer)
+  const emailData = {
+    bookingId: booking.id,
+    customerName,
+    customerEmail: payload.email,
+    customerPhone: phoneDigits,
+    serviceName: payload.serviceName,
+    servicePrice: payload.totalPrice,
+    bookingDate: payload.bookingDate,
+    bookingTime: payload.bookingTime,
+    vehicleYear: payload.vehicleYear,
+    vehicleMake: payload.vehicleMake,
+    vehicleModel: payload.vehicleModel,
+    vehicleSize: payload.vehicleSize,
+    rewardPointsEarned: 0, // Points awarded on completion
+    serviceAddress: payload.serviceAddress,
+    distanceMiles,
+    paymentMethod: payload.paymentOption === "send_invoice" ? "pay_now" : "pay_at_arrival" as const,
+    notes: payload.notes,
+  };
+
+  if (payload.paymentOption === "pay_at_arrival" && payload.email?.trim()) {
+    // Standard confirmation for Pay at Arrival
     await sendBookingEmail({
       customerEmail: payload.email.trim(),
       bookingDetails: {
@@ -237,12 +269,17 @@ export async function createAdminBooking(
         vehicleModel: payload.vehicleModel,
         bookingDate: payload.bookingDate,
         bookingTime: bookingTime12,
-        travelFee: 0,
+        travelFee: payload.travelFee ?? 0,
         totalPrice: payload.totalPrice,
       },
       totalPrice: payload.totalPrice,
     }).catch((err) => console.error("[createAdminBooking] confirmation email:", err));
   }
 
-  return { success: true, bookingId: booking.id };
+  // Comprehensive Admin Alert
+  await sendBookingEmails(emailData, { skipCustomerEmail: true }).catch((err) => 
+    console.error("[createAdminBooking] admin email alert failed:", err)
+  );
+
+  return { success: true, bookingId: booking.id, invoiceUrl: payload.paymentOption === "send_invoice" ? "sent" : undefined };
 }

@@ -40,6 +40,9 @@ interface VehicleData {
   make: string | null;
   model: string | null;
 }
+interface CouponData {
+  code: string | null;
+}
 
 export interface BookingRow {
   id: string;
@@ -52,6 +55,7 @@ export interface BookingRow {
   profiles: ProfileData | ProfileData[] | null;
   services: ServiceData | ServiceData[] | null;
   vehicles: VehicleData | VehicleData[] | null;
+  coupons: CouponData | CouponData[] | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -601,8 +605,8 @@ export function BookingsTable({
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-2xl border border-white/[0.06] bg-zinc-900/60 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
@@ -726,6 +730,13 @@ export function BookingsTable({
                         <span className="text-xs font-bold text-zinc-200">
                           ${(b.total_price ?? 0).toFixed(2)}
                         </span>
+                        {norm(b.coupons)?.code && (
+                          <div className="mt-1 flex items-center gap-1 text-[#D4AF37]">
+                            <span className="text-[9px] font-bold uppercase tracking-wider bg-[#D4AF37]/10 px-1.5 py-0.5 rounded border border-[#D4AF37]/20">
+                              {norm(b.coupons)?.code}
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Status */}
@@ -840,6 +851,172 @@ export function BookingsTable({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden flex flex-col gap-4">
+        {sorted.length === 0 ? (
+          <div className="px-5 py-14 text-center text-zinc-600 bg-zinc-900/40 rounded-2xl border border-white/[0.06] text-sm">
+            {search ? "No bookings match your search" : "No bookings yet"}
+          </div>
+        ) : (
+          sorted.map((b) => {
+            const profile = norm(b.profiles);
+            const service = norm(b.services);
+            const vehicle = norm(b.vehicles);
+            const isLoading = loadingId === b.id;
+            const err = rowErrors[b.id];
+            const earnedPts = Math.floor(b.total_price ?? 0);
+
+            const addressLine = (b.notes ?? "")
+              .split("\n\n")
+              .find((l: string) => l.startsWith("📍"))
+              ?.replace("📍 Service Location: ", "");
+
+            return (
+              <div key={b.id} className="bg-zinc-900/60 border border-white/[0.06] rounded-2xl p-4 flex flex-col gap-4">
+                {/* Header: Customer & Status */}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-200">
+                      {profile?.first_name ?? "—"} {profile?.last_name ?? ""}
+                    </p>
+                    <p className="text-[11px] text-zinc-600 mt-0.5">{profile?.phone ?? "—"}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {isLoading ? (
+                      <Loader2 size={14} className="animate-spin text-zinc-500" />
+                    ) : (
+                      <StatusBadge status={b.status ?? "pending"} />
+                    )}
+                  </div>
+                </div>
+
+                {/* Service & Vehicle */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <ServiceBadge name={service?.name ?? null} />
+                  {vehicle && (
+                    <span className="text-[11px] text-zinc-500 capitalize">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </span>
+                  )}
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-4 text-[11px]">
+                  <div className="space-y-1.5">
+                    <p className="text-zinc-600 font-bold uppercase tracking-wider">Date & Time</p>
+                    <div className="flex items-center gap-1.5 text-zinc-300">
+                      <CalendarDays size={12} className="text-zinc-600 shrink-0" />
+                      {b.booking_date}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-zinc-400">
+                      <Clock size={12} className="text-zinc-700 shrink-0" />
+                      {fmt12(b.booking_time)}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-right">
+                    <p className="text-zinc-600 font-bold uppercase tracking-wider">Total</p>
+                    <p className="text-sm font-bold text-zinc-200">${(b.total_price ?? 0).toFixed(2)}</p>
+                    {norm(b.coupons)?.code && (
+                      <div className="flex justify-end">
+                        <span className="text-[9px] font-bold uppercase tracking-wider bg-[#D4AF37]/10 px-1.5 py-0.5 rounded border border-[#D4AF37]/20 text-[#D4AF37]">
+                          {norm(b.coupons)?.code}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location */}
+                {addressLine && (
+                  <div className="flex items-start gap-2 pt-3 border-t border-white/[0.04]">
+                    <MapPin size={12} className="text-zinc-700 shrink-0 mt-0.5" />
+                    <span className="text-[11px] text-zinc-500 leading-relaxed">{addressLine}</span>
+                  </div>
+                )}
+
+                {err && <p className="text-[10px] text-red-400">{err}</p>}
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-3 border-t border-white/[0.04]">
+                  <div className="relative flex-1">
+                    <button
+                      disabled={isLoading}
+                      onClick={() => setOpenDropdown((id) => (id === b.id ? null : b.id))}
+                      className="w-full flex items-center justify-between gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.06] hover:text-zinc-200"
+                    >
+                      Status
+                      <ChevronDown size={11} />
+                    </button>
+                    {openDropdown === b.id && (
+                      <div className="absolute left-0 bottom-full mb-2 w-full min-w-[180px] bg-zinc-900 border border-white/[0.08] rounded-xl shadow-2xl z-30 overflow-hidden">
+                        <div className="px-3 py-2 border-b border-white/[0.05]">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-600">
+                            Set status
+                          </p>
+                        </div>
+                        {STATUS_OPTIONS.map((opt) => {
+                          const isCurrent = (b.status ?? "").toLowerCase() === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => handleStatusChange(b, opt.value)}
+                              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
+                            >
+                              <span className="flex items-center gap-2.5">
+                                <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                                <span className="text-xs text-zinc-300">{opt.label}</span>
+                                {opt.value === "completed" && (
+                                  <span className="text-[9px] text-blue-400/70 font-mono">
+                                    +{earnedPts} pts
+                                  </span>
+                                )}
+                              </span>
+                              {isCurrent && <Check size={11} className="text-[#D4AF37] shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => openReschedule(b)}
+                    className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-zinc-400 hover:text-[#D4AF37] transition-colors"
+                    title="Reschedule"
+                  >
+                    <CalendarClock size={16} />
+                  </button>
+
+                  {(b.status ?? "").toLowerCase() !== "cancelled" && (
+                    <button
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => setCancelConfirmId(b.id)}
+                      className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-semibold flex items-center gap-1.5 hover:bg-red-500/20 transition-colors"
+                    >
+                      <Ban size={12} />
+                      Cancel
+                    </button>
+                  )}
+                  
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => setDeleteConfirmId(b.id)}
+                    className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+                    title="Permanent delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Toast notifications — premium glassmorphism */}

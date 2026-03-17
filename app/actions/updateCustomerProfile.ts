@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export interface CustomerProfileUpdates {
   reward_points?: number;
   phone?: string;
+  notes?: string;
 }
 
 export async function updateCustomerProfile(
@@ -17,6 +18,7 @@ export async function updateCustomerProfile(
   const patch: Record<string, unknown> = {};
   if (updates.reward_points !== undefined) patch.reward_points = updates.reward_points;
   if (updates.phone !== undefined) patch.phone = updates.phone;
+  if (updates.notes !== undefined) patch.notes = updates.notes;
 
   if (Object.keys(patch).length === 0) {
     return { success: false, error: "No fields to update." };

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, List, Calendar as CalendarIcon } from "lucide-react";
 import { BookingsTable, type BookingRow } from "./BookingsTable";
 import { NewBookingSheet, type ServiceOption } from "./NewBookingSheet";
+import { BookingsCalendar } from "./BookingsCalendar";
 
 export function BookingsPageClient({
   initialBookings,
@@ -16,6 +17,7 @@ export function BookingsPageClient({
   const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   useEffect(() => {
     if (!toast) return;
@@ -34,20 +36,46 @@ export function BookingsPageClient({
         <div>
           <h2 className="text-2xl font-black text-white">Bookings</h2>
           <p className="text-sm text-zinc-500 mt-0.5">
-            All appointments — search, sort, and update status in real time
+            All appointments — search, sort, and view schedule
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setSheetOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#D4AF37] text-zinc-950 hover:bg-[#c9a227] transition-colors shrink-0"
-        >
-          <Plus size={18} />
-          New Booking
-        </button>
+        <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex items-center bg-zinc-900/60 border border-white/[0.06] rounded-xl p-1 shrink-0">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-lg flex items-center justify-center transition-colors ${
+                viewMode === "list" ? "bg-white/[0.08] text-white" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <List size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`p-1.5 rounded-lg flex items-center justify-center transition-colors ${
+                viewMode === "calendar" ? "bg-white/[0.08] text-white" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <CalendarIcon size={16} />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#D4AF37] text-zinc-950 hover:bg-[#c9a227] transition-colors shrink-0"
+          >
+            <Plus size={18} />
+            New Booking
+          </button>
+        </div>
       </div>
 
-      <BookingsTable initialBookings={initialBookings} />
+      {viewMode === "list" ? (
+        <BookingsTable initialBookings={initialBookings} />
+      ) : (
+        <BookingsCalendar bookings={initialBookings} />
+      )}
 
       <NewBookingSheet
         open={sheetOpen}

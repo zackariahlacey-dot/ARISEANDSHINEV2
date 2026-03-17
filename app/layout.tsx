@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
+import { PWARegistration } from "@/components/PWARegistration";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,8 +12,18 @@ export const metadata: Metadata = {
     "Vermont's premier mobile auto detailing service. We come to you.",
   keywords:
     "mobile detailing, Vermont, Williston, Burlington, auto detailing, car wash, ceramic coating, paint correction",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "A&S Admin",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: "/favicon.ico",
+    apple: "/aasbanner.png",
   },
   openGraph: {
     title: "Arise And Shine VT | Premium Mobile Detailing",
@@ -47,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`}>
+        <PWARegistration />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

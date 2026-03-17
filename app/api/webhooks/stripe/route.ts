@@ -187,6 +187,8 @@ export async function POST(req: NextRequest) {
       vehicleSize: m.vehicleSize ?? "sedan",
       rewardPointsEarned: earnedPoints,
       serviceAddress: m.serviceAddress || undefined,
+      distanceMiles: m.distanceMiles ? Number(m.distanceMiles) : undefined,
+      paymentMethod: "pay_now",
       notes: m.notes || undefined,
     }).catch((err) => console.error("[webhooks/stripe] Email error:", err));
 
