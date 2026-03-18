@@ -253,7 +253,7 @@ export async function createAdminBooking(
     rewardPointsEarned: 0, // Points awarded on completion
     serviceAddress: payload.serviceAddress,
     distanceMiles,
-    paymentMethod: payload.paymentOption === "send_invoice" ? "pay_now" : "pay_at_arrival" as const,
+    paymentMethod: (payload.paymentOption === "send_invoice" ? "pay_now" : "pay_at_arrival") as "pay_now" | "pay_at_arrival",
     notes: payload.notes,
   };
 

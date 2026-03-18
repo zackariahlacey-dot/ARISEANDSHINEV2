@@ -45,13 +45,19 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
     email: profile.email,
     phone: profile.phone,
     reward_points: profile.reward_points,
+    notes: profile.notes,
     lifetimeValue,
     bookingCount: (bookings ?? []).length,
     vehicles: vehicles ?? [],
-    bookings: (bookings ?? []).map(b => ({
-      ...b,
-      service_name: Array.isArray(b.services) ? b.services[0]?.name : b.services?.name ?? "Unknown Service"
-    })),
+    bookings: (bookings ?? []).map(b => {
+      const services = b.services as any;
+      return {
+        ...b,
+        service_name: Array.isArray(services) 
+          ? services[0]?.name 
+          : services?.name ?? "Unknown Service"
+      };
+    }),
   };
 
   return <CustomerDetailClient customer={customerData} />;

@@ -9,7 +9,9 @@ import Stripe from "stripe";
 // Maps our UI vehicle size slugs to the DB enum values
 const VEHICLE_SIZE_MAP = {
   compact: "small",
+  sedan: "medium",
   suv: "large",
+  xl: "extra_large",
 } as const;
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
@@ -36,6 +38,8 @@ export type BookingPayload = {
   travelFee?: number;
   /** One-time setup fee for Monthly Maintenance Plan (included in totalPrice) */
   setupFee?: number;
+  /** Optional travel distance in miles */
+  distanceMiles?: number;
   /** Optional add-ons (included in totalPrice) */
   selectedAddons?: { id: string; label: string; price: number }[];
   /** When "pay_now", booking is created as pending and a Stripe Checkout URL is returned; emails sent after payment via webhook */

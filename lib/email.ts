@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getAdminBookingAlertHtml } from "@/emails/AdminBookingAlert";
+import { getEmailLayoutHtml } from "@/emails/Layout";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
