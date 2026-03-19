@@ -329,17 +329,36 @@ html {
 /* ── Trust badges marquee (infinite horizontal scroll) ──────────────────── */
 @keyframes marquee-scroll {
   0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(-33.33%); } /* Matches the 3x duplication for seamlessness */
 }
-.marquee-scroll {
-  animation: marquee-scroll 20s linear infinite;
+.animate-marquee {
+  animation: marquee-scroll 40s linear infinite;
+  display: flex;
+  width: max-content;
 }
-.marquee-container:hover .marquee-scroll {
+.animate-marquee:hover {
   animation-play-state: paused;
 }
 .marquee-fade-edges {
-  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+/* ── Testimonials Marquee ────────────────────────────────────────── */
+@keyframes testimonials-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+.animate-testimonials-marquee {
+  animation: testimonials-marquee 120s linear infinite;
+  display: flex;
+  width: max-content;
+}
+.animate-testimonials-marquee:hover {
+  animation-play-state: paused;
+}
+.animate-testimonials-marquee:active {
+  animation-play-state: paused;
 }
 
 @layer utilities {

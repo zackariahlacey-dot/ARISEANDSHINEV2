@@ -9,6 +9,7 @@ import { generateReferralCode } from "@/lib/referralCode";
  * - Uses the pre-generated referral_code from the client (or generates one if not passed)
  * - If referredByCode (?ref=) is supplied, looks up the referrer's profile ID and sets referred_by
  * - Inserts/upserts the profile row with referral_code saved at account creation
+ * - RECONCILIATION: Finds guest bookings/vehicles with matching email/phone and attaches them to this account.
  *
  * Uses the service-role client to bypass RLS since the user's session
  * is not yet active (email confirmation is pending).
@@ -27,7 +28,7 @@ export async function createProfileWithReferral(
       ? newReferralCode.trim().toUpperCase()
       : generateReferralCode();
 
-  // Resolve the referrer's profile ID from their referral code (?ref=XYZ123)
+  // 1. Resolve the referrer's profile ID from their referral code (?ref=XYZ123)
   let matchedReferrerId: string | null = null;
   if (referredByCode) {
     const { data: referrer } = await supabase
@@ -40,13 +41,41 @@ export async function createProfileWithReferral(
 
   const WELCOME_BONUS_POINTS = 100;
 
+  // 2. Reconciliation: Find guest data before creating the final profile
+  // We look for profiles with matching email but NO corresponding auth user (guest profiles)
+  const { data: guestProfiles } = await supabase
+    .from("profiles")
+    .select("id, reward_points, lifetime_points, phone")
+    .eq("email", email.trim().toLowerCase());
+
+  let guestPoints = 0;
+  let guestLifetimePoints = 0;
+  let guestPhone: string | null = null;
+  const guestIds: string[] = [];
+
+  if (guestProfiles && guestProfiles.length > 0) {
+    for (const gp of guestProfiles) {
+      // Skip the new user's ID if it somehow exists
+      if (gp.id === userId) continue;
+      
+      // Guest profiles in our system are often random UUIDs that don't exist in auth.users
+      // We'll treat any profile with matching email that isn't the current userId as a guest to merge
+      guestPoints += (gp.reward_points || 0);
+      guestLifetimePoints += (gp.lifetime_points || 0);
+      if (!guestPhone && gp.phone) guestPhone = gp.phone;
+      guestIds.push(gp.id);
+    }
+  }
+
+  // 3. Create/Upsert the real profile
   const { error } = await supabase.from("profiles").upsert(
     {
       id: userId,
-      email,
+      email: email.trim().toLowerCase(),
       referral_code: referralCodeToSave,
-      reward_points: WELCOME_BONUS_POINTS,
-      lifetime_points: WELCOME_BONUS_POINTS,
+      reward_points: WELCOME_BONUS_POINTS + guestPoints,
+      lifetime_points: WELCOME_BONUS_POINTS + guestLifetimePoints,
+      phone: guestPhone || null,
       ...(firstName ? { first_name: firstName } : {}),
       ...(lastName ? { last_name: lastName } : {}),
       referred_by: matchedReferrerId ?? null,
@@ -56,8 +85,27 @@ export async function createProfileWithReferral(
   );
 
   if (error) {
-    console.error("[createProfileWithReferral]", error);
+    console.error("[createProfileWithReferral] Upsert Error:", error);
     return { ok: false, referralCode: referralCodeToSave };
+  }
+
+  // 4. Move Bookings, Vehicles, and Transactions if guests were found
+  if (guestIds.length > 0) {
+    try {
+      // Update bookings
+      await supabase.from("bookings").update({ user_id: userId }).in("user_id", guestIds);
+      // Update vehicles
+      await supabase.from("vehicles").update({ user_id: userId }).in("user_id", guestIds);
+      // Update transactions
+      await supabase.from("point_transactions").update({ user_id: userId }).in("user_id", guestIds);
+      
+      // Delete obsolete guest profiles
+      await supabase.from("profiles").delete().in("id", guestIds);
+      
+      console.log(`[Reconciliation] Merged ${guestIds.length} guest profiles into User ${userId}`);
+    } catch (mergeErr) {
+      console.error("[createProfileWithReferral] Merge Error:", mergeErr);
+    }
   }
 
   return { ok: true, referralCode: referralCodeToSave };

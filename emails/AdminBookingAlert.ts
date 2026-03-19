@@ -9,6 +9,8 @@ import { getEmailLayoutHtml } from "./Layout";
 export type AdminBookingAlertOptions = {
   customerName: string;
   customerPhone: string;
+  customerEmail: string;
+  customerAddress?: string;
   vehicleYear: string;
   vehicleMake: string;
   vehicleModel: string;
@@ -30,6 +32,8 @@ export function getAdminBookingAlertHtml(options: AdminBookingAlertOptions): str
   const {
     customerName,
     customerPhone,
+    customerEmail,
+    customerAddress,
     vehicleYear,
     vehicleMake,
     vehicleModel,
@@ -48,6 +52,8 @@ export function getAdminBookingAlertHtml(options: AdminBookingAlertOptions): str
         <td style="color:#e4e4e7;font-size:14px;">
           <p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Customer</strong><br/><span style="color:#fafafa;">${esc(customerName)}</span></p>
           <p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Phone</strong><br/><span style="color:#fafafa;">${esc(customerPhone)}</span></p>
+          <p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Email</strong><br/><span style="color:#fafafa;">${esc(customerEmail)}</span></p>
+          ${customerAddress ? `<p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Address</strong><br/><span style="color:#fafafa;">${esc(customerAddress)}</span></p>` : ""}
           <p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Vehicle</strong><br/><span style="color:#fafafa;">${esc(vehicleLabel)}</span></p>
           <p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Service</strong><br/><span style="color:#fafafa;">${esc(serviceName)}</span></p>
           <p style="margin:0 0 12px;"><strong style="color:#a1a1aa;">Scheduled</strong><br/><span style="color:#fafafa;">${esc(bookingDate)} at ${esc(bookingTime)}</span></p>

@@ -109,57 +109,78 @@ export async function bookDetailing(
   const firstName = parts[0] ?? "";
   const lastName = parts.slice(1).join(" ") || null;
 
-  // ── 1. Resolve profile: logged-in or guest ──────────────────────────────────
+  // ── 1. Resolve profile: check by logged-in user, then email, then phone ──────────────────────────
   let profileId: string;
   const adminSupabase = createAdminClient();
+  const emailLower = payload.email.trim().toLowerCase();
 
+  // A. Check if user is logged in
   if (user) {
-    // Logged-in: use auth user id, but ensure profile exists
     profileId = user;
+    // Always update/upsert the logged-in user's profile with their latest info
     await adminSupabase.from("profiles").upsert({
       id: profileId,
+      email: emailLower,
       first_name: firstName || null,
       last_name: lastName || null,
       phone: phoneDigits.length >= 10 ? phoneDigits : null,
     }, { onConflict: "id" });
   } else {
-    // Guest: find or create profile by phone
-    const { data: existing } = await adminSupabase
+    // B. Guest Flow: Try to find existing profile by Email first
+    const { data: existingByEmail } = await adminSupabase
       .from("profiles")
-      .select("id")
-      .eq("phone", phoneDigits)
-      .limit(1);
+      .select("id, first_name, last_name, phone")
+      .eq("email", emailLower)
+      .maybeSingle();
 
-    if (existing && existing.length > 0) {
-      profileId = existing[0].id;
-      // Update name if guest provided a new one
+    if (existingByEmail) {
+      profileId = existingByEmail.id;
+      // Update info if they provided new details
       await adminSupabase.from("profiles").update({
-        first_name: firstName || null,
-        last_name: lastName || null,
+        first_name: firstName || existingByEmail.first_name,
+        last_name: lastName || existingByEmail.last_name,
+        phone: phoneDigits.length >= 10 ? phoneDigits : existingByEmail.phone,
       }).eq("id", profileId);
     } else {
-      const guestId = crypto.randomUUID();
-      const { data: created, error: profileErr } = await adminSupabase
+      // C. Try to find by Phone if no email match
+      const { data: existingByPhone } = await adminSupabase
         .from("profiles")
-        .insert({
-          id: guestId,
-          first_name: firstName || null,
-          last_name: lastName || null,
-          phone: phoneDigits.length >= 10 ? phoneDigits : null,
-          reward_points: 0,
-          lifetime_points: 0,
-        })
-        .select("id")
-        .single();
+        .select("id, email")
+        .eq("phone", phoneDigits)
+        .maybeSingle();
 
-      if (profileErr || !created) {
-        console.error("Profile Creation Error:", profileErr);
-        return {
-          success: false,
-          error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
-        };
+      if (existingByPhone) {
+        profileId = existingByPhone.id;
+        // Update email if it was missing
+        if (!existingByPhone.email) {
+          await adminSupabase.from("profiles").update({ email: emailLower }).eq("id", profileId);
+        }
+      } else {
+        // D. Truly new guest: create a random UUID profile
+        const guestId = crypto.randomUUID();
+        const { data: created, error: profileErr } = await adminSupabase
+          .from("profiles")
+          .insert({
+            id: guestId,
+            email: emailLower,
+            first_name: firstName || null,
+            last_name: lastName || null,
+            phone: phoneDigits.length >= 10 ? phoneDigits : null,
+            reward_points: 0,
+            lifetime_points: 0,
+          })
+          .select("id")
+          .single();
+
+        if (profileErr || !created) {
+          console.error("Profile Creation Error (Guest):", profileErr);
+          return {
+            success: false,
+            error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
+          };
+        }
+        profileId = created.id;
       }
-      profileId = created.id;
     }
   }
 
@@ -214,6 +235,7 @@ export async function bookDetailing(
     ? "💳 Payment: Pay Now (Stripe)"
     : "💳 Payment: Pay at Arrival";
   const notesBody = [
+    `👤 Customer: ${payload.name} (${payload.phone})`,
     paymentNote,
     payload.serviceAddress
       ? `📍 Service Location: ${payload.serviceAddress}`
@@ -452,6 +474,9 @@ export async function bookDetailing(
       customerEmail,
       bookingDetails: {
         customerName: payload.name,
+        customerPhone: payload.phone,
+        customerEmail: payload.email,
+        serviceAddress: payload.serviceAddress,
         serviceName: payload.serviceName,
         vehicleYear: payload.vehicleYear,
         vehicleMake: payload.vehicleMake,

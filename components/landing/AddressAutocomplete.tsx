@@ -57,15 +57,21 @@ export function AddressAutocomplete({
 
   // ── Load Google Maps Places once ─────────────────────────────────────────
   useEffect(() => {
+    console.log("[AddressAutocomplete] Initializing Maps with key:", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? "Present" : "MISSING");
     ensureMapsConfigured();
     importLibrary("places")
       .then(({ AutocompleteService }) => {
+        console.log("[AddressAutocomplete] Places library loaded successfully");
         serviceRef.current = new AutocompleteService();
         setIsReady(true);
       })
-      .catch((err) =>
-        console.error("[AddressAutocomplete] Maps failed to load:", err)
-      );
+      .catch((err) => {
+        console.error("[AddressAutocomplete] Maps failed to load:", err);
+        // Alert if it's a specific developer error
+        if (err instanceof Error) {
+          console.error("[AddressAutocomplete] Error name:", err.name, "Message:", err.message);
+        }
+      });
   }, []);
 
   // ── Close dropdown when clicking outside ─────────────────────────────────
@@ -91,6 +97,7 @@ export function AddressAutocomplete({
     }
 
     setIsSearching(true);
+    console.log("[AddressAutocomplete] Fetching predictions for:", query);
 
     serviceRef.current.getPlacePredictions(
       {
@@ -107,6 +114,8 @@ export function AddressAutocomplete({
       },
       (results, status) => {
         setIsSearching(false);
+        console.log("[AddressAutocomplete] Status:", status, "Results count:", results?.length || 0);
+
         if (
           status === window.google.maps.places.PlacesServiceStatus.OK &&
           results

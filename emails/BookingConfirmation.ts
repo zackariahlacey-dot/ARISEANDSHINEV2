@@ -7,6 +7,9 @@ export const LOGO_URL = "https://esgdlmvvjrduazdraewq.supabase.co/storage/v1/obj
 
 export type BookingConfirmationDetails = {
   customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  serviceAddress?: string;
   serviceName: string;
   vehicleYear: string;
   vehicleMake: string;
@@ -46,7 +49,7 @@ export function getBookingConfirmationHtml(details: BookingConfirmationDetails):
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Your Detail is Confirmed — Arise And Shine VT</title>
 </head>
 <body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-text-size-adjust:100%;">
@@ -73,6 +76,14 @@ export function getBookingConfirmationHtml(details: BookingConfirmationDetails):
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#27272a;border-radius:10px;overflow:hidden;">
                 <tr>
                   <td style="padding:14px 20px;border-bottom:1px solid #3f3f46;">
+                    <p style="margin:0;font-size:10px;font-weight:600;color:#71717a;letter-spacing:0.1em;text-transform:uppercase;">Customer</p>
+                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#fafafa;">${esc(details.customerName)}</p>
+                    ${details.customerPhone ? `<p style="margin:4px 0 0;font-size:13px;color:#a1a1aa;">${esc(details.customerPhone)}</p>` : ""}
+                    ${details.customerEmail ? `<p style="margin:2px 0 0;font-size:13px;color:#a1a1aa;">${esc(details.customerEmail)}</p>` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 20px;border-bottom:1px solid #3f3f46;">
                     <p style="margin:0;font-size:10px;font-weight:600;color:#71717a;letter-spacing:0.1em;text-transform:uppercase;">Service</p>
                     <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#fafafa;">${esc(details.serviceName)}</p>
                   </td>
@@ -89,6 +100,13 @@ export function getBookingConfirmationHtml(details: BookingConfirmationDetails):
                     <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#fafafa;">${esc(formattedDate)} at ${esc(details.bookingTime)}</p>
                   </td>
                 </tr>
+                ${details.serviceAddress ? `
+                <tr>
+                  <td style="padding:14px 20px;border-bottom:1px solid #3f3f46;">
+                    <p style="margin:0;font-size:10px;font-weight:600;color:#71717a;letter-spacing:0.1em;text-transform:uppercase;">Location</p>
+                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#fafafa;">${esc(details.serviceAddress)}</p>
+                  </td>
+                </tr>` : ""}
                 <tr>
                   <td style="padding:14px 20px;border-bottom:1px solid #3f3f46;">
                     <p style="margin:0;font-size:10px;font-weight:600;color:#71717a;letter-spacing:0.1em;text-transform:uppercase;">Travel Fee</p>

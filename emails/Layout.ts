@@ -6,8 +6,12 @@
 export const LOGO_URL =
   "https://esgdlmvvjrduazdraewq.supabase.co/storage/v1/object/public/public-assets/e.png";
 
-const PHONE = "802-585-5563";
-const PHONE_LINK = "tel:8025855563";
+export const PHONE = "802-585-5563";
+export const PHONE_LINK = "tel:8025855563";
+export const FOOTER_LINKS = `
+  <a href="https://www.ariseandshinevt.com" style="color:#d4af37;text-decoration:none;">Website</a> &nbsp;·&nbsp; 
+  <a href="https://www.ariseandshinevt.com/dashboard" style="color:#d4af37;text-decoration:none;">Rewards Dashboard</a>
+`;
 
 export type EmailLayoutOptions = {
   /** Page title (e.g. for <title>) */

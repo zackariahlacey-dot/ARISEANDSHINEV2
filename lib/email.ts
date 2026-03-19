@@ -2,6 +2,8 @@ import { Resend } from "resend";
 import { getAdminBookingAlertHtml } from "@/emails/AdminBookingAlert";
 import { getEmailLayoutHtml } from "@/emails/Layout";
 
+import { getReviewRequestHtml } from "@/emails/ReviewRequest";
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const BUSINESS_EMAIL = "contact@ariseandshinevt.com";
@@ -98,7 +100,7 @@ const esc = (s: string | number) =>
 const base = `
   margin:0;padding:0;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
-  background-color:#f0f0f0;
+  background-color:#09090b;
   -webkit-text-size-adjust:100%;
 `;
 
@@ -108,37 +110,41 @@ const logo = `
   <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 14px auto;">
     <tr>
       <td align="center">
-        <img src="${LOGO_URL}" alt="Arise And Shine VT" width="150" height="150" style="display:block;margin:0 auto;width:150px;height:auto;max-width:150px;" />
+        <img src="${LOGO_URL}" alt="Arise And Shine VT" width="120" height="120" style="display:block;margin:0 auto;width:120px;height:auto;max-width:120px;" />
       </td>
     </tr>
   </table>
-  <p style="color:#ffffff;font-size:17px;font-weight:700;margin:0;letter-spacing:-0.3px;">Arise And Shine VT</p>
-  <p style="color:#666666;font-size:12px;margin:5px 0 0;letter-spacing:0.2px;">Premium Mobile Auto Detailing</p>
+  <p style="color:#d4af37;font-size:17px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine VT</p>
+  <p style="color:#a1a1aa;font-size:11px;margin:5px 0 0;letter-spacing:0.2em;text-transform:uppercase;">Premium Mobile Auto Detailing</p>
 `;
 
 const footer = `
   <tr>
-    <td style="padding:24px 16px;text-align:center;">
-      <p style="font-size:12px;color:#999999;margin:0;">
-        Arise And Shine VT &middot; Mobile Auto Detailing &middot; Serving all of Vermont
+    <td style="padding:32px 16px;text-align:center;background-color:#18181b;border-top:1px solid #27272a;">
+      <p style="font-size:12px;color:#fafafa;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:0.1em;">
+        Arise And Shine VT
       </p>
-      <p style="font-size:11px;color:#bbbbbb;margin:6px 0 0;">
+      <p style="font-size:11px;color:#71717a;margin:6px 0 0;text-transform:uppercase;letter-spacing:0.05em;">
+        Mobile Auto Detailing &middot; Serving all of Vermont
+      </p>
+      <div style="margin:20px 0;height:1px;background-color:#27272a;width:60px;display:inline-block;"></div>
+      <p style="font-size:11px;color:#52525b;margin:0;">
         &copy; 2026 Arise And Shine VT. All rights reserved.
-        &nbsp;&bull;&nbsp;
-        <a href="mailto:${BUSINESS_EMAIL}" style="color:#999999;text-decoration:none;">${BUSINESS_EMAIL}</a>
+        <br/>
+        <a href="mailto:${BUSINESS_EMAIL}" style="color:#d4af37;text-decoration:none;font-weight:700;">${BUSINESS_EMAIL}</a>
       </p>
     </td>
   </tr>
 `;
 
 function detailRow(label: string, value: string, last = false): string {
-  const border = last ? "" : "border-bottom:1px solid #eeeeee;";
+  const border = last ? "" : "border-bottom:1px solid #27272a;";
   return `
     <tr>
-      <td style="padding:14px 24px;${border}">
-        <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0 0 3px;
-                  letter-spacing:0.12em;text-transform:uppercase;">${label}</p>
-        <p style="font-size:14px;font-weight:600;color:#111111;margin:0;">${value}</p>
+      <td style="padding:16px 24px;${border}">
+        <p style="font-size:10px;font-weight:900;color:#71717a;margin:0 0 4px;
+                  letter-spacing:0.15em;text-transform:uppercase;">${label}</p>
+        <p style="font-size:15px;font-weight:600;color:#fafafa;margin:0;line-height:1.4;">${value}</p>
       </td>
     </tr>
   `;
@@ -528,6 +534,58 @@ function adminEmailHtml(
 </html>`;
 }
 
+// ─── On My Way Email ──────────────────────────────────────────────────────────
+
+function onMyWayHtml(data: { customerName: string }): string {
+  const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>On My Way — Arise And Shine VT</title>
+</head>
+<body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#18181b;border:1px solid #d4af37;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 32px 16px;text-align:center;">
+              <img src="${LOGO_URL}" alt="Arise And Shine VT" width="120" height="120" style="display:block;margin:0 auto;" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 32px 32px;text-align:center;">
+              <h1 style="margin:0;font-size:24px;font-weight:700;color:#d4af37;">I'm on my way! 🚗</h1>
+              <p style="margin:16px 0 0;font-size:16px;color:#fafafa;line-height:1.6;">Hi ${firstName}, just wanted to let you know I'm headed your way for your detail.</p>
+              <p style="margin:8px 0 0;font-size:14px;color:#a1a1aa;">See you shortly!</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendOnMyWayEmailNotification(data: {
+  customerName: string;
+  customerEmail: string;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.customerEmail,
+    replyTo: REPLY_TO,
+    subject: `On My Way! 🚗 — Arise And Shine VT`,
+    html: onMyWayHtml(data),
+  });
+}
+
 // ─── Cancellation emails ─────────────────────────────────────────────────────
 
 export type CancellationEmailData = {
@@ -607,7 +665,7 @@ function adminCancellationHtml(customerName: string, formattedDate: string): str
       <td align="center" style="padding:40px 16px;">
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
           <tr>
-            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">${logo}</td>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">${logo}</td>
           </tr>
           <tr>
             <td style="background-color:#27272a;padding:28px 40px;border-radius:0 0 16px 16px;">
@@ -1012,36 +1070,13 @@ export async function sendReviewFollowupEmail(data: {
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
-
-  const bodyHtml = `
-    <div style="text-align:center;padding:40px;">
-      <h1 style="color:#111111;font-size:24px;font-weight:900;margin:0 0 16px;">How's the shine holding up? ✨</h1>
-      <p style="color:#555555;font-size:16px;line-height:1.6;margin:0 0 24px;">
-        Hi ${firstName}, it's been 24 hours since your detail with Arise And Shine VT. 
-        We hope you're loving how your vehicle looks!
-      </p>
-      <p style="color:#555555;font-size:16px;line-height:1.6;margin:0 0 32px;">
-        If you have a moment, would you mind sharing your experience? 
-        Reviews help our small business grow more than anything else.
-      </p>
-      <a href="https://g.page/r/your-google-review-link/review" style="display:inline-block;background-color:#D4AF37;color:#111111;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;">
-        Leave a Google Review
-      </a>
-    </div>
-  `;
-
-  const html = getEmailLayoutHtml({
-    title: "How was your detail? - Arise And Shine VT",
-    headline: "We'd love your feedback!",
-    bodyHtml
-  });
 
   await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.customerEmail,
-    subject: `How's the shine holding up? ✨`,
-    html,
+    replyTo: REPLY_TO,
+    subject: `How's the shine holding up? ✨ — Arise And Shine VT`,
+    html: getReviewRequestHtml(data.customerName),
   });
 }
 
@@ -1086,6 +1121,8 @@ export async function sendBookingEmails(
       html: getAdminBookingAlertHtml({
         customerName: data.customerName,
         customerPhone: data.customerPhone,
+        customerEmail: data.customerEmail,
+        customerAddress: data.serviceAddress,
         vehicleYear: data.vehicleYear,
         vehicleMake: data.vehicleMake,
         vehicleModel: data.vehicleModel,

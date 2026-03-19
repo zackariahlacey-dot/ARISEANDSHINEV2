@@ -616,8 +616,8 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
           </div>
 
-          {/* Stats row — no bottom padding/margin */}
-          <div className="flex flex-row items-start justify-center gap-4 md:gap-12 w-full">
+          {/* Stats row — added bottom padding for spacing */}
+          <div className="flex flex-row items-start justify-center gap-4 md:gap-12 w-full pb-12 md:pb-20">
             {[
               { value: "500+", label: "Vehicles Detailed" },
               { value: "5★", label: "Average Rating" },
@@ -635,28 +635,43 @@ export function LandingPage({ services }: { services: Service[] }) {
           </div>
         </div>
 
-        {/* Trust Bar — infinite scrolling marquee with edge fade */}
-        <section className="border-y border-white/[0.06] bg-zinc-950/80 py-12 md:py-20 lg:py-24 px-0 w-full mb-6 md:mb-8">
-          <div className="marquee-fade-edges w-full overflow-hidden relative flex items-center mt-6 md:mt-8 mb-6 md:mb-8">
-            <div className="marquee-container group flex w-max min-w-full gap-6 md:gap-8 pr-6 md:pr-8 marquee-scroll">
-              {(() => {
-                const badges = [
-                  { icon: ShieldCheck, label: "Fully Insured" },
-                  { icon: Leaf, label: "Eco-Friendly Products" },
-                  { icon: BadgeCheck, label: "Satisfaction Guaranteed" },
-                  { icon: MapPin, label: "VT Owned & Operated" },
-                ];
-                const duplicated = [...badges, ...badges];
-                return duplicated.map(({ icon: Icon, label }, i) => (
-                  <div
-                    key={`${label}-${i}`}
-                    className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-zinc-900/40 backdrop-blur-sm border border-white/5 px-6 py-3 text-sm font-medium text-zinc-300 transition-all hover:bg-zinc-800 hover:border-[#D4AF37]/30 cursor-default"
-                  >
-                    <Icon size={14} className="text-[#D4AF37] shrink-0" strokeWidth={1.75} />
-                    <span className="whitespace-nowrap">{label}</span>
+        {/* Trust Bar — Premium Infinite Scroll Marquee — reduced vertical padding */}
+        <section className="relative py-8 md:py-12 overflow-hidden border-y border-white/[0.03] bg-zinc-950/40">
+          {/* Subtle background glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(212,175,55,0.03)_0%,transparent_100%)] pointer-events-none" />
+          
+          <div className="relative">
+            {/* Edge Fading Masks */}
+            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10 pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none" />
+
+            <div className="flex overflow-hidden">
+              <div className="flex animate-marquee whitespace-nowrap gap-12 md:gap-24 items-center py-4">
+                {[...Array(3)].map((_, groupIdx) => (
+                  <div key={groupIdx} className="flex gap-12 md:gap-24 items-center">
+                    {[
+                      { icon: ShieldCheck, label: "Fully Insured" },
+                      { icon: Leaf, label: "Eco-Friendly Products" },
+                      { icon: BadgeCheck, label: "Satisfaction Guaranteed" },
+                      { icon: MapPin, label: "VT Owned & Operated" },
+                      { icon: Sparkles, label: "Professional Results" },
+                    ].map(({ icon: Icon, label }, i) => (
+                      <div
+                        key={`${label}-${i}`}
+                        className="flex items-center gap-3 group/badge cursor-default"
+                      >
+                        <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.02] border border-white/[0.05] group-hover/badge:border-[#D4AF37]/30 transition-all duration-500">
+                          <Icon size={18} className="text-[#D4AF37] group-hover/badge:scale-110 transition-transform duration-500" strokeWidth={1.5} />
+                          <div className="absolute inset-0 bg-[#D4AF37]/5 rounded-xl opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500 blur-sm" />
+                        </div>
+                        <span className="text-xs md:text-sm font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover/badge:text-zinc-200 transition-colors duration-500">
+                          {label}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ));
-              })()}
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -669,64 +684,103 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="pt-0 pb-12 md:pb-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="relative py-20 md:py-32 lg:py-40 px-4 sm:px-6 lg:px-8 border-t border-white/[0.03] overflow-hidden"
       >
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">
-              See the results
-            </p>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100">
-              Before & After
+        {/* Subtle background glow to anchor the section */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(212,175,55,0.02)_0%,transparent_100%)] pointer-events-none" />
+
+        <div className="w-full max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-16 md:mb-24">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/50 border border-white/5 text-[#D4AF37] text-[10px] font-bold tracking-[0.2em] uppercase mb-6">
+              <Sparkles size={12} className="shrink-0" />
+              The Transformation
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
+              Visible <span className="text-zinc-500">Perfection.</span>
             </h2>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+              Slide to reveal the Arise & Shine difference. We don&apos;t just clean; we restore your vehicle&apos;s soul through meticulous attention to detail.
+            </p>
           </div>
-          <div className="relative aspect-video rounded-xl overflow-hidden border border-white/[0.08] bg-[#0a0a0a]">
-            {/* Both images stacked; dimensions never change (below fold, lazy + sizes) */}
-            <Image
-              src={BEFORE_IMAGE}
-              alt="Interior before detail"
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
-            />
-            <Image
-              src={AFTER_IMAGE}
-              alt="Interior after detail"
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
-              style={{
-                clipPath: `inset(0 0 0 ${beforeAfterPosition}%)`,
-              }}
-            />
-            {/* Vertical line and handle at slider position (visual only) */}
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none z-[2] shadow-lg"
-              style={{ left: `${beforeAfterPosition}%`, transform: "translateX(-50%)" }}
-            >
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 border-zinc-800 shadow-md flex items-center justify-center">
-                <ChevronDown size={10} className="text-zinc-600 rotate-[-90deg]" />
+
+          <div className="relative max-w-5xl mx-auto group">
+            {/* Premium Frame Decor */}
+            <div className="absolute -inset-1 bg-gradient-to-b from-white/10 to-transparent rounded-[2rem] blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-700" />
+            
+            <div className="relative aspect-[16/10] md:aspect-video rounded-[2rem] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl">
+              {/* Images */}
+              <Image
+                src={BEFORE_IMAGE}
+                alt="Interior before detail"
+                fill
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover"
+              />
+              <Image
+                src={AFTER_IMAGE}
+                alt="Interior after detail"
+                fill
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover"
+                style={{
+                  clipPath: `inset(0 0 0 ${beforeAfterPosition}%)`,
+                }}
+              />
+
+              {/* Slider UI */}
+              <div
+                className="absolute top-0 bottom-0 w-px bg-white/40 pointer-events-none z-[10]"
+                style={{ left: `${beforeAfterPosition}%` }}
+              >
+                {/* Central Handle */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center group/handle transition-transform duration-300 scale-100 md:scale-110">
+                    <div className="flex gap-1">
+                      <div className="w-1 h-1 rounded-full bg-[#D4AF37]" />
+                      <div className="w-1 h-1 rounded-full bg-white" />
+                      <div className="w-1 h-1 rounded-full bg-[#D4AF37]" />
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Floating Labels */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div 
+                  className="absolute top-6 left-6 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 transition-opacity duration-300"
+                  style={{ 
+                    opacity: Math.min(1, Math.max(0, (beforeAfterPosition - 15) / 15)) 
+                  }}
+                >
+                  Before
+                </div>
+                <div 
+                  className="absolute top-6 right-6 px-4 py-2 rounded-full bg-[#D4AF37]/20 backdrop-blur-md border border-[#D4AF37]/30 text-[10px] font-black uppercase tracking-[0.2em] text-[#F3E5AB] transition-opacity duration-300"
+                  style={{ 
+                    opacity: Math.min(1, Math.max(0, (85 - beforeAfterPosition) / 15)) 
+                  }}
+                >
+                  After
+                </div>
+              </div>
+
+              {/* Invisible Range Input */}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={beforeAfterPosition}
+                onChange={(e) => setBeforeAfterPosition(Number(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-[20]"
+                aria-label="Compare before and after"
+              />
             </div>
-            {/* Native range input for smooth dragging; spans full container */}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={beforeAfterPosition}
-              onChange={(e) => setBeforeAfterPosition(Number(e.target.value))}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-[3]"
-              aria-label="Compare before and after"
-            />
-            {/* Labels */}
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-[9px] font-semibold uppercase tracking-wider text-zinc-300 pointer-events-none z-[1]">
-              Before
-            </div>
-            <div
-              className="absolute top-2 pointer-events-none px-2 py-0.5 rounded bg-black/60 text-[9px] font-semibold uppercase tracking-wider text-zinc-300 z-[1]"
-              style={{ left: `calc(${beforeAfterPosition}% + 10px)` }}
-            >
-              After
+
+            {/* Hint below slider */}
+            <div className="mt-8 flex justify-center items-center gap-3 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+              <div className="w-8 h-px bg-white/5" />
+              Slide to Compare
+              <div className="w-8 h-px bg-white/5" />
             </div>
           </div>
         </div>
@@ -739,34 +793,38 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-16 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
       >
         {/* Background Decorative Element */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none" />
         
         <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-12 md:mb-20">
+          <div className="text-center mb-10 md:mb-20">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6">
               <Crown size={10} fill="currentColor" />
               Member Exclusive
             </div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
+            <h2 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6">
               The Maintenance <span className="text-zinc-500">Club</span>
             </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed px-4">
               Experience the pinnacle of automotive care. Our recurring plans ensure your vehicle remains in showroom condition with effortless, scheduled maintenance.
             </p>
-            <div className="mt-10 inline-flex items-center gap-2 bg-zinc-900/80 border border-white/5 px-5 py-2.5 rounded-2xl text-zinc-400 text-xs font-medium backdrop-blur-sm">
-              <ShieldCheck size={14} className="text-[#D4AF37]" />
-              $100 Signup & Deep Clean Fee applies to all new memberships
+            <div className="mt-8 inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-zinc-900/80 border border-white/5 px-4 py-3 sm:px-5 sm:py-2.5 rounded-2xl text-zinc-400 text-[11px] sm:text-xs font-medium backdrop-blur-sm mx-auto">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={14} className="text-[#D4AF37]" />
+                <span className="text-white/90 font-bold">$100 Signup Fee</span>
+              </div>
+              <span className="hidden sm:inline text-zinc-700">•</span>
+              <span>Includes Deep Clean on first visit</span>
             </div>
           </div>
 
           {/* Desktop Grid / Mobile Tabs */}
           <div className="max-w-5xl mx-auto">
             {/* Mobile Tab Navigation */}
-            <div className="flex justify-center mb-10 md:hidden">
-              <div className="bg-zinc-900/50 p-1.5 rounded-full inline-flex gap-1 border border-white/5">
+            <div className="flex justify-center mb-8 md:hidden">
+              <div className="bg-zinc-900/50 p-1 rounded-full inline-flex gap-0.5 border border-white/5">
                 {monthlyPlanServices.map((plan) => {
                   const isActive = activeMonthlyPlanId === plan.id;
                   const label = plan.name.toLowerCase().includes("full") ? "Full Detail" : "Interior";
@@ -777,8 +835,8 @@ export function LandingPage({ services }: { services: Service[] }) {
                       onClick={() => setActiveMonthlyPlanId(plan.id)}
                       className={
                         isActive
-                          ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-6 py-2.5 text-sm font-bold transition-all"
-                          : "text-zinc-500 hover:text-zinc-300 px-6 py-2.5 text-sm font-semibold transition-all rounded-full"
+                          ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-5 py-2 text-xs font-bold transition-all"
+                          : "text-zinc-500 hover:text-zinc-300 px-5 py-2 text-xs font-semibold transition-all rounded-full"
                       }
                     >
                       {label}
@@ -846,7 +904,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-16 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
       >
         {/* Ambient background glow */}
         <div 
@@ -859,77 +917,77 @@ export function LandingPage({ services }: { services: Service[] }) {
 
         <div className="w-full max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col items-center text-center">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-4">
+            <p className="text-[11px] md:text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-4">
               Rewarding Your Trust
             </p>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6 md:mb-8 leading-[1.1]">
               Details that <br />
               <span className="text-zinc-500">Pay You Back.</span>
             </h2>
-            <p className="text-lg text-zinc-400 mb-12 leading-relaxed max-w-2xl mx-auto">
-              We believe in long-term relationships. That&apos;s why every dollar you spend with Arise & Shine helps you earn towards your next showroom-quality finish. No complicated tiers, just simple rewards for every customer.
+            <p className="text-base md:text-lg text-zinc-400 mb-10 md:mb-12 leading-relaxed max-w-2xl mx-auto px-4">
+              We believe in long-term relationships. That&apos;s why every dollar you spend with Arise & Shine helps you earn towards your next showroom-quality finish.
             </p>
 
             {/* Loyalty Visual Card — Centered */}
-            <div className="relative group w-full max-w-2xl mb-12">
-              <div className="absolute -inset-4 bg-gradient-to-r from-[#D4AF37]/20 to-amber-500/20 rounded-[2rem] blur-2xl opacity-50 transition-opacity duration-700" />
-              <div className="relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 md:p-12 shadow-2xl overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-20">
-                  <Sparkles size={64} className="text-[#D4AF37]" />
+            <div className="relative group w-full max-w-2xl mb-10 md:mb-12">
+              <div className="absolute -inset-2 md:-inset-4 bg-gradient-to-r from-[#D4AF37]/20 to-amber-500/20 rounded-[1.5rem] md:rounded-[2rem] blur-2xl opacity-50 transition-opacity duration-700" />
+              <div className="relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-12 shadow-2xl overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 md:p-8 opacity-10 md:opacity-20">
+                  <Sparkles size={48} className="md:size-[64px] text-[#D4AF37]" />
                 </div>
                 
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-8">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6 md:mb-8">
                   <Star size={10} fill="currentColor" />
                   Exclusive Program
                 </div>
                 
-                <h3 className="text-3xl md:text-4xl font-black text-white mb-10 leading-tight">
+                <h3 className="text-2xl md:text-4xl font-black text-white mb-8 md:mb-10 leading-tight">
                   Arise & Shine <br />
                   <span className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] bg-clip-text text-transparent">Loyalty Club</span>
                 </h3>
                 
-                <div className="grid md:grid-cols-2 gap-8 mb-10">
-                  <div className="flex flex-col items-center md:items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
-                      <Car className="w-6 h-6 text-[#D4AF37]" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
+                  <div className="flex flex-col items-center md:items-start gap-3 md:gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
+                      <Car className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
                     </div>
                     <div className="text-center md:text-left">
-                      <p className="text-zinc-100 font-bold">Earn Points</p>
-                      <p className="text-sm text-zinc-500">Get 1 point for every $1 spent on any detailing service.</p>
+                      <p className="text-zinc-100 font-bold text-sm md:text-base">Earn Points</p>
+                      <p className="text-xs md:text-sm text-zinc-500">Get 1 point for every $1 spent on any detailing service.</p>
                     </div>
                   </div>
                   
-                  <div className="flex flex-col items-center md:items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
-                      <BadgeCheck className="w-6 h-6 text-[#D4AF37]" />
+                  <div className="flex flex-col items-center md:items-start gap-3 md:gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
+                      <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
                     </div>
                     <div className="text-center md:text-left">
-                      <p className="text-zinc-100 font-bold">Redeem & Save</p>
-                      <p className="text-sm text-zinc-500">Every 10 points equals $1 off. Save them up for a free detail!</p>
+                      <p className="text-zinc-100 font-bold text-sm md:text-base">Redeem & Save</p>
+                      <p className="text-xs md:text-sm text-zinc-500">Every 10 points equals $1 off. Save them up for a free detail!</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-zinc-950/50 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="p-4 md:p-6 rounded-xl md:rounded-2xl bg-zinc-950/50 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Sign Up Bonus</p>
-                    <p className="text-2xl font-black text-white">+100 Points</p>
+                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Sign Up Bonus</p>
+                    <p className="text-xl md:text-2xl font-black text-white">+100 Points</p>
                   </div>
                   <div className="h-px w-8 bg-white/5 sm:hidden" />
                   <div className="text-center sm:text-right">
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Claim Today</p>
-                    <p className="text-[#D4AF37] font-bold">Instant Reward</p>
+                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Claim Today</p>
+                    <p className="text-[#D4AF37] font-bold text-sm md:text-base">Instant Reward</p>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full max-w-sm sm:max-w-none justify-center px-4">
               {authUserId ? (
                 <Button
                   variant="primary"
                   href="/protected"
-                  className="btn-primary-gold-shimmer px-10 py-6 rounded-2xl text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
+                  className="btn-primary-gold-shimmer w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl text-base md:text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
                 >
                   <span className="relative z-[1]">View My Dashboard</span>
                 </Button>
@@ -937,23 +995,23 @@ export function LandingPage({ services }: { services: Service[] }) {
                 <Button
                   variant="primary"
                   href="/auth/sign-up"
-                  className="btn-primary-gold-shimmer px-10 py-6 rounded-2xl text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
+                  className="btn-primary-gold-shimmer w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl text-base md:text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
                 >
                   <span className="relative z-[1]">Sign Up & Claim Points</span>
                 </Button>
               )}
               <button
                 onClick={() => openBooking()}
-                className="px-10 py-6 rounded-2xl border border-white/10 text-white hover:bg-white/5 transition-all text-lg font-bold active:scale-[0.98]"
+                className="w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl border border-white/10 text-white hover:bg-white/5 transition-all text-base md:text-lg font-bold active:scale-[0.98]"
               >
                 Book & Earn
               </button>
             </div>
 
-            <div className="mt-16 flex flex-col items-center gap-6">
-              <div className="flex -space-x-3">
+            <div className="mt-12 md:mt-16 flex flex-col items-center gap-4 md:gap-6">
+              <div className="flex -space-x-2 md:-space-x-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-12 h-12 rounded-full border-2 border-zinc-950 bg-zinc-800 overflow-hidden relative shadow-xl">
+                  <div key={i} className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-zinc-950 bg-zinc-800 overflow-hidden relative shadow-xl">
                     <Image 
                       src={`https://i.pravatar.cc/100?img=${i+15}`} 
                       alt="User"
@@ -963,7 +1021,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-zinc-500">
+              <p className="text-xs md:text-sm text-zinc-500">
                 <span className="text-zinc-200 font-bold">500+ members</span> already earning rewards.
               </p>
             </div>
@@ -974,7 +1032,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
       {/* ─── Trust Banner (Our Promise) — 2x2 grid on mobile ─────────────────── */}
       <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 w-full lg:max-w-7xl mx-auto mt-8 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 w-full lg:max-w-7xl mx-auto">
           {[
             { icon: Car,       title: "We Come To You",     desc: "Fully mobile — at home or work." },
             { icon: Shield,    title: "100% Satisfaction", desc: "We make it right, no questions asked." },
@@ -983,13 +1041,17 @@ export function LandingPage({ services }: { services: Service[] }) {
           ].map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
-              className="flex flex-col items-center justify-center text-center p-4 md:p-8 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl hover:bg-zinc-800/50 transition-colors group"
+              className="flex flex-col items-center justify-center text-center p-5 md:p-8 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl md:rounded-[2rem] hover:bg-zinc-800/50 hover:border-[#D4AF37]/20 transition-all duration-300 group relative overflow-hidden"
             >
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-4 border border-white/5 group-hover:border-[#D4AF37]/30 transition-colors">
-                <Icon className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" strokeWidth={1.75} />
+              {/* Subtle accent glow */}
+              <div className="absolute -inset-x-10 -top-10 h-20 bg-[#D4AF37]/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center mb-4 md:mb-6 border border-white/5 group-hover:border-[#D4AF37]/30 group-hover:bg-zinc-900 transition-all duration-300">
+                <Icon className="w-5 h-5 md:w-7 md:h-7 text-[#D4AF37] group-hover:scale-110 transition-transform duration-300" strokeWidth={1.5} />
               </div>
-              <p className="text-[10px] md:text-sm font-bold text-zinc-100 mb-1 uppercase tracking-wider">{title}</p>
-              <p className="text-[9px] md:text-xs text-zinc-500 leading-tight max-w-[120px] md:max-w-none">{desc}</p>
+              
+              <p className="text-xs md:text-sm font-bold text-zinc-100 mb-2 uppercase tracking-wider">{title}</p>
+              <p className="text-[10px] md:text-xs text-zinc-500 leading-relaxed max-w-[140px] md:max-w-none">{desc}</p>
             </div>
           ))}
         </div>
@@ -1099,103 +1161,85 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="relative py-20 md:py-32 lg:py-40 px-4 sm:px-6 lg:px-8 border-t border-white/[0.03] overflow-hidden"
       >
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="text-center mb-10">
-            <p className="text-sm font-semibold tracking-widest uppercase text-[#D4AF37] mb-2">
-              Client Experiences
-            </p>
-            <h2
-              className="text-3xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-              style={{ filter: "drop-shadow(0 2px 20px rgba(212,175,55,0.2))" }}
-            >
-              What Vermonters Are Saying.
+        {/* Cinematic background spotlight */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(212,175,55,0.03)_0%,transparent_100%)] pointer-events-none" />
+
+        <div className="w-full max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-16 md:mb-24">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/50 border border-white/5 text-[#D4AF37] text-[10px] font-bold tracking-[0.2em] uppercase mb-6">
+              <Star size={12} className="shrink-0" fill="currentColor" />
+              Customer Stories
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
+              What Vermonters <br />
+              <span className="text-zinc-500">Are Saying.</span>
             </h2>
           </div>
 
-          <div
-            ref={scrollRef}
-            className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-6 pb-8 pt-4 px-4 md:px-12 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-            onMouseEnter={() => {
-              if (reviewIntervalRef.current) {
-                clearInterval(reviewIntervalRef.current);
-                reviewIntervalRef.current = null;
-              }
-            }}
-            onTouchStart={() => {
-              if (reviewIntervalRef.current) {
-                clearInterval(reviewIntervalRef.current);
-                reviewIntervalRef.current = null;
-              }
-            }}
-            onScroll={() => {
-              if (reviewIntervalRef.current) {
-                clearInterval(reviewIntervalRef.current);
-                reviewIntervalRef.current = null;
-              }
-              const el = scrollRef.current;
-              if (el) {
-                const cardWidth = (cardRefs.current[0]?.offsetWidth ?? el.offsetWidth) + 24;
-                const index = Math.min(
-                  REVIEWS.length - 1,
-                  Math.round(el.scrollLeft / cardWidth)
-                );
-                setCurrentReviewIndex(index);
-              }
-            }}
-          >
-            {REVIEWS.map((r, i) => (
-              <div
-                key={`${r.name}-${i}`}
-                ref={(el) => { cardRefs.current[i] = el; }}
-                className="flex-shrink-0 snap-center w-[85vw] md:w-[600px] bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-8 flex flex-col"
-              >
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star
-                      key={j}
-                      size={14}
-                      className="text-[#D4AF37] fill-[#D4AF37]"
-                      strokeWidth={0}
-                    />
+          <div className="relative overflow-hidden marquee-fade-edges -mx-4 sm:-mx-6 lg:-mx-8">
+            <div className="flex animate-testimonials-marquee gap-8 py-4">
+              {[...Array(3)].map((_, groupIdx) => (
+                <div key={groupIdx} className="flex gap-8">
+                  {REVIEWS.map((r, i) => (
+                    <div
+                      key={`${groupIdx}-${r.name}-${i}`}
+                      className="flex-shrink-0 w-[85vw] md:w-[600px] group/card relative"
+                    >
+                      {/* Card Glow Effect */}
+                      <div className="absolute -inset-0.5 bg-gradient-to-b from-white/10 to-transparent rounded-[2rem] blur opacity-20 group-hover/card:opacity-40 transition-opacity duration-500" />
+                      
+                      <div className="relative h-full bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-10 flex flex-col shadow-2xl">
+                        {/* Rating & Verified Tag */}
+                        <div className="flex items-center justify-between mb-8">
+                          <div className="flex items-center gap-1.5">
+                            {Array.from({ length: 5 }).map((_, j) => (
+                              <div key={j} className="relative">
+                                <Star
+                                  size={16}
+                                  className="text-[#D4AF37] fill-[#D4AF37]"
+                                  strokeWidth={0}
+                                />
+                                <div className="absolute inset-0 blur-sm bg-[#D4AF37]/40 scale-125 -z-1" />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                            <CheckCircle size={10} className="text-[#D4AF37]" />
+                            Verified Service
+                          </div>
+                        </div>
+
+                        {/* Quote */}
+                        <div className="relative mb-10">
+                          <span className="absolute -top-6 -left-4 text-7xl font-serif text-white/5 pointer-events-none select-none">“</span>
+                          <p className="text-zinc-200 text-lg md:text-xl leading-relaxed font-medium italic">
+                            {r.review}
+                          </p>
+                        </div>
+
+                        {/* Author Info */}
+                        <div className="mt-auto pt-8 border-t border-white/5 flex items-center justify-between">
+                          <div>
+                            <p className="text-white font-bold text-base tracking-tight">
+                              {r.name}
+                            </p>
+                            <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mt-1">
+                              {r.location}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest mb-1">Service Provided</p>
+                            <p className="text-zinc-400 text-xs font-bold">{r.service}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <p className="text-zinc-400 text-sm md:text-base leading-relaxed mt-4 mb-6 flex-1">
-                  &ldquo;{r.review}&rdquo;
-                </p>
-                <div>
-                  <p className="text-zinc-100 font-semibold text-sm">
-                    {r.name}{" "}
-                    <span className="text-zinc-500 font-normal">— {r.location}</span>
-                  </p>
-                  <p className="text-zinc-500 text-xs mt-0.5">{r.service}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination dots */}
-          <div className="flex items-center justify-center gap-2 mt-2">
-            {REVIEWS.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  cardRefs.current[i]?.scrollIntoView({
-                    behavior: "smooth",
-                    inline: "center",
-                    block: "nearest",
-                  });
-                }}
-                aria-label={`Go to review ${i + 1}`}
-                className={`rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/50 ${
-                  i === currentReviewIndex
-                    ? "w-6 h-2 bg-[#D4AF37]"
-                    : "w-2 h-2 bg-zinc-700 hover:bg-zinc-600"
-                }`}
-              />
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </motion.section>
@@ -1575,42 +1619,42 @@ function MaintenanceCard({
 
   return (
     <div className="relative group h-full">
-      <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[2.5rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
-      <div className="relative h-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 lg:p-12 flex flex-col items-center text-center transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        <div className="mb-8 flex flex-col items-center w-full">
-          <div className="flex flex-col items-center mb-6 gap-4">
-            <div className="w-16 h-14 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
-              {isFull ? <Crown className="text-[#D4AF37]" size={32} /> : <Car className="text-[#D4AF37]" size={32} />}
+      <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[1.5rem] md:rounded-[2.5rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
+      <div className="relative h-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-6 sm:p-8 lg:p-12 flex flex-col items-center text-center transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="mb-6 md:mb-8 flex flex-col items-center w-full">
+          <div className="flex flex-col items-center mb-4 md:mb-6 gap-3 md:gap-4">
+            <div className="w-12 h-10 md:w-16 md:h-14 rounded-xl md:rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
+              {isFull ? <Crown className="text-[#D4AF37]" size={24} /> : <Car className="text-[#D4AF37]" size={24} />}
             </div>
             <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[#D4AF37] text-[10px] font-black uppercase tracking-widest">
               Limited Spots
             </div>
           </div>
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">{plan.name}</h3>
-          <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">
+          <h3 className="text-xl md:text-3xl font-bold text-white mb-2 md:mb-3 tracking-tight">{plan.name}</h3>
+          <p className="text-zinc-500 text-xs md:text-sm leading-relaxed max-w-xs px-2">
             {plan.description}
           </p>
         </div>
 
-        <div className="mb-10">
+        <div className="mb-8 md:mb-10">
           <div className="flex items-baseline justify-center gap-1">
-            <span className="text-5xl md:text-6xl font-black text-white">${plan.price_small}</span>
-            <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">/ mo</span>
+            <span className="text-4xl md:text-6xl font-black text-white">${plan.price_small}</span>
+            <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] md:text-xs">/ mo</span>
           </div>
-          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-3">
+          <p className="text-[9px] md:text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-2 md:mt-3">
             +$100 Initial Setup Fee
           </p>
         </div>
 
         {/* Features Preview */}
-        <ul className="space-y-4 mb-10 w-full max-w-xs mx-auto">
+        <ul className="space-y-3 md:space-y-4 mb-8 md:mb-10 w-full max-w-xs mx-auto">
           {[
             "Priority Scheduling",
             "Fixed Monthly Dates",
             "Premium Protectants Included",
           ].map((feature) => (
-            <li key={feature} className="flex items-center justify-center gap-3 text-sm text-zinc-300">
-              <CheckCircle size={16} className="text-[#D4AF37] shrink-0" />
+            <li key={feature} className="flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm text-zinc-300">
+              <CheckCircle size={14} className="text-[#D4AF37] shrink-0" />
               {feature}
             </li>
           ))}
@@ -1620,10 +1664,10 @@ function MaintenanceCard({
         {inclusions.length > 0 && (
           <details
             open={isIncludedOpen}
-            className="group/details mb-10 w-full"
+            className="group/details mb-8 md:mb-10 w-full"
           >
             <summary
-              className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-center gap-3 border-t border-white/5 pt-5 cursor-pointer text-sm font-bold text-zinc-500 hover:text-[#D4AF37] transition-colors"
+              className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-center gap-3 border-t border-white/5 pt-4 md:pt-5 cursor-pointer text-xs md:text-sm font-bold text-zinc-500 hover:text-[#D4AF37] transition-colors"
               onClick={(e) => {
                 e.preventDefault();
                 setIsIncludedOpen((prev) => !prev);
@@ -1631,13 +1675,13 @@ function MaintenanceCard({
             >
               Full Inclusions
               <ChevronDown
-                size={16}
+                size={14}
                 className={`transition-transform duration-300 ${isIncludedOpen ? "rotate-180" : ""}`}
               />
             </summary>
-            <ul className="mt-5 space-y-3 max-w-xs mx-auto">
+            <ul className="mt-4 md:mt-5 space-y-2 md:space-y-3 max-w-xs mx-auto">
               {inclusions.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-xs text-zinc-400 text-left">
+                <li key={item} className="flex items-start gap-2.5 md:gap-3 text-[11px] md:text-xs text-zinc-400 text-left">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-1.5 shrink-0" />
                   {item}
                 </li>
@@ -1649,7 +1693,7 @@ function MaintenanceCard({
         <button
           type="button"
           onClick={onBook}
-          className="btn-primary-gold-shimmer mt-auto w-full py-5 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-black hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden active:scale-[0.98]"
+          className="btn-primary-gold-shimmer mt-auto w-full py-4 md:py-5 rounded-xl md:rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-black hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden active:scale-[0.98]"
         >
           <span className="relative z-[1]">Join The Club</span>
         </button>
