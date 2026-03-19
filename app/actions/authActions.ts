@@ -172,6 +172,6 @@ export async function completeSignupAction(payload: {
     return { success: true, isReferral: !!referredByCode };
   } catch (err: any) {
     console.error("[completeSignupAction] Error:", err);
-    return { success: false, error: err.message || "Signup failed." };
+    return { success: false, error: err.message || "Signup failed.", isReferral: false };
   }
 }
