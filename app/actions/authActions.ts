@@ -127,7 +127,7 @@ export async function completeSignupAction(payload: {
 
   // 1. Final verification of OTP
   const verifyRes = await verifyOtpAction(email, code);
-  if (!verifyRes.success) return verifyRes;
+  if (!verifyRes.success) return { ...verifyRes, isReferral: false };
 
   try {
     // 2. Create Auth User
