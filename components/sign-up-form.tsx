@@ -245,7 +245,7 @@ export function SignUpForm({ className, refCode }: { className?: string; refCode
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center ml-1">
                       <label className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Password</label>
-                      <Link href="/auth/forgot-password" size="sm" className="text-[9px] text-[#D4AF37]/60 hover:text-[#D4AF37] uppercase font-bold tracking-widest">Forgot?</Link>
+                      <Link href="/auth/forgot-password" className="text-[9px] text-[#D4AF37]/60 hover:text-[#D4AF37] uppercase font-bold tracking-widest">Forgot?</Link>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
