@@ -205,9 +205,9 @@ async function getAvailableSlots(
   serviceName: string,
   vehicleSize: VehicleSizeSlug,
   existingBookings: BookingOnDate[] | null,
-  allSlots: { time: string; period: string }[]
+  allSlots: { time: string; period: string }[],
+  closingMinutes: number = 1080 // Default to 6:00 PM if not provided
 ): Promise<{ time: string; period: string }[]> {
-  const closingMinutes = await timeToMinutes("6:00 PM");
   const duration = getDurationForService(serviceName, vehicleSize);
   
   const bookedBlocks = await Promise.all((existingBookings ?? []).map(async (b) => {
@@ -943,26 +943,30 @@ export function BookingSection({
     ? availableSlots.filter((slot) => !isTimeSlotPassed(slot, selectedDate))
     : availableSlots;
 
-  // Clear selected time if it's no longer available (e.g. after date or bookings change)
-  useEffect(() => {
-    if (!selectedTime) return;
-    const available = getAvailableSlots(
-      selectedService?.name ?? "",
-      existingBookingsForDate,
-      slotsForSelectedDate,
-      closingMinutesForSelectedDate
-    );
-    if (available.length > 0 && !available.some((s) => s.time === selectedTime)) {
-      setSelectedTime("");
-    }
-  }, [selectedDate, existingBookingsForDate, selectedService?.name, selectedTime, slotsForSelectedDate, closingMinutesForSelectedDate]);
-
   // Auto-deselect if the chosen time has passed (e.g. user had a time, then switched calendar to today)
   useEffect(() => {
-    if (selectedTime && selectedDate && isTimeSlotPassed(selectedTime, selectedDate)) {
-      setSelectedTime("");
+    async function checkCurrentTime() {
+      if (selectedTime && selectedDate) {
+        if (isTimeSlotPassed(selectedTime, selectedDate)) {
+          setSelectedTime("");
+          return;
+        }
+        
+        // Also check if it's still available in the new slots
+        const available = await getAvailableSlots(
+          selectedService?.name ?? "",
+          vehicleSize || "compact",
+          existingBookingsForDate,
+          slotsForSelectedDate,
+          closingMinutesForSelectedDate
+        );
+        if (available.length > 0 && !available.some((s) => s.time === selectedTime)) {
+          setSelectedTime("");
+        }
+      }
     }
-  }, [selectedDate, selectedTime]);
+    checkCurrentTime();
+  }, [selectedDate, existingBookingsForDate, selectedService?.name, selectedTime, slotsForSelectedDate, closingMinutesForSelectedDate, vehicleSize]);
 
   // ── Navigation guards ────────────────────────────────────────────────────
   const canGoNext = (): boolean => {
