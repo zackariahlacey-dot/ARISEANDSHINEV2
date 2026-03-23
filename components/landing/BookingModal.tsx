@@ -79,12 +79,27 @@ const VEHICLE_SIZES: {
 ];
 
 // Service time + 30 min travel/buffer (minutes)
-const SERVICE_DURATIONS: Record<string, number> = {
-  "Interior Detail": 180,
-  "Exterior Detail": 120,
-  "Full Detail": 240,
-  "Interior Monthly Maintenance": 120,
-  "Full Detail Monthly Maintenance": 180,
+const SERVICE_DURATIONS: Record<string, Record<VehicleSizeSlug, number>> = {
+  "Interior Detail": {
+    compact: 180, sedan: 180,
+    suv: 240, xl: 240,
+  },
+  "Exterior Detail": {
+    compact: 120, sedan: 120,
+    suv: 180, xl: 180,
+  },
+  "Full Detail": {
+    compact: 240, sedan: 240,
+    suv: 330, xl: 330,
+  },
+  "Interior Monthly Maintenance": {
+    compact: 90, sedan: 90,
+    suv: 120, xl: 120,
+  },
+  "Full Detail Monthly Maintenance": {
+    compact: 150, sedan: 150,
+    suv: 210, xl: 210,
+  },
 };
 
 const WORKDAY_START = "1:00 PM";
@@ -154,12 +169,12 @@ function timeToMinutes(t: string): number {
 }
 
 /** Build slots from start/end time strings (HH:MM or HH:MM:SS). Interval 30 min. */
-function buildSlotsFromHours(
+async function buildSlotsFromHours(
   startTime: string,
   endTime: string
-): { time: string; period: string }[] {
-  const startMin = timeToMinutes(startTime);
-  let endMin = timeToMinutes(endTime);
+): Promise<{ time: string; period: string }[]> {
+  const startMin = await timeToMinutes(startTime);
+  let endMin = await timeToMinutes(endTime);
   if (endMin <= startMin) endMin = startMin + 60 * 12;
   const slots: { time: string; period: string }[] = [];
   for (let m = startMin; m < endMin; m += SLOT_INTERVAL_MIN) {
@@ -177,35 +192,41 @@ function buildSlotsFromHours(
   return slots;
 }
 
-const WORKDAY_END_MIN = timeToMinutes("6:00 PM"); // 1080
+async function getWORKDAY_END_MIN() { return await timeToMinutes("6:00 PM"); }
 
-function getDurationForService(serviceName: string): number {
-  return SERVICE_DURATIONS[serviceName] ?? 120;
+function getDurationForService(serviceName: string, vehicleSize: VehicleSizeSlug = "compact"): number {
+  const service = SERVICE_DURATIONS[serviceName];
+  if (!service) return 120;
+  return service[vehicleSize] ?? 120;
 }
 
 /** Slots that fit before closing and do not overlap existing bookings */
-function getAvailableSlots(
+async function getAvailableSlots(
   serviceName: string,
+  vehicleSize: VehicleSizeSlug,
   existingBookings: BookingOnDate[] | null,
-  allSlots: { time: string; period: string }[],
-  closingMinutes: number = WORKDAY_END_MIN
-): { time: string; period: string }[] {
-  const duration = getDurationForService(serviceName);
-  const bookedBlocks = (existingBookings ?? []).map((b) => {
-    const start = timeToMinutes(b.booking_time);
-    const dur = getDurationForService(b.service_name ?? "");
-    return { start, end: start + dur };
-  });
+  allSlots: { time: string; period: string }[]
+): Promise<{ time: string; period: string }[]> {
+  const closingMinutes = await timeToMinutes("6:00 PM");
+  const duration = getDurationForService(serviceName, vehicleSize);
+  
+  const bookedBlocks = await Promise.all((existingBookings ?? []).map(async (b) => {
+    const start = await timeToMinutes(b.booking_time);
+    return { start, end: start + 180 };
+  }));
 
-  return allSlots.filter((slot) => {
-    const start = timeToMinutes(slot.time);
+  const results = await Promise.all(allSlots.map(async (slot) => {
+    const start = await timeToMinutes(slot.time);
     const end = start + duration;
-    if (end > closingMinutes) return false;
+    if (end > closingMinutes) return null;
     const overlaps = bookedBlocks.some(
       (b) => start < b.end && end > b.start
     );
-    return !overlaps;
-  });
+    if (overlaps) return null;
+    return slot;
+  }));
+
+  return results.filter((s): s is { time: string; period: string } => s !== null);
 }
 
 /** True if the slot time has already passed today (only when selectedDate is today). Uses local date and regex so "8:00 AM Morning" parses correctly. */
@@ -870,34 +891,52 @@ export function BookingSection({
     [blockedDates, operatingHours.length, getResolvedForDate]
   );
 
-  const { slotsForSelectedDate, closingMinutesForSelectedDate } = useMemo(() => {
-    if (!selectedDate) {
-      return { slotsForSelectedDate: FALLBACK_SLOTS, closingMinutesForSelectedDate: WORKDAY_END_MIN };
+  const [slotsForSelectedDate, setSlotsForSelectedDate] = useState<{ time: string; period: string }[]>(FALLBACK_SLOTS);
+  const [closingMinutesForSelectedDate, setClosingMinutesForSelectedDate] = useState<number>(1080); // 6:00 PM
+
+  useEffect(() => {
+    async function updateSlots() {
+      if (!selectedDate || operatingHours.length === 0) {
+        setSlotsForSelectedDate(FALLBACK_SLOTS);
+        setClosingMinutesForSelectedDate(1080);
+        return;
+      }
+      const row = getResolvedForDate(selectedDate);
+      if (!row || row.isClosed) {
+        setSlotsForSelectedDate([]);
+        setClosingMinutesForSelectedDate(1080);
+        return;
+      }
+      const start = row.start_time?.trim() || "08:00";
+      const end = row.end_time?.trim() || "18:00";
+      const slots = await buildSlotsFromHours(start, end);
+      const closingMin = await timeToMinutes(end);
+      setSlotsForSelectedDate(slots);
+      setClosingMinutesForSelectedDate(closingMin);
     }
-    if (operatingHours.length === 0) {
-      return { slotsForSelectedDate: FALLBACK_SLOTS, closingMinutesForSelectedDate: WORKDAY_END_MIN };
-    }
-    const row = getResolvedForDate(selectedDate);
-    if (!row || row.isClosed) {
-      return { slotsForSelectedDate: [], closingMinutesForSelectedDate: WORKDAY_END_MIN };
-    }
-    const start = row.start_time?.trim() || "08:00";
-    const end = row.end_time?.trim() || "18:00";
-    const slots = buildSlotsFromHours(start, end);
-    const closingMin = timeToMinutes(end);
-    return { slotsForSelectedDate: slots, closingMinutesForSelectedDate: closingMin };
+    updateSlots();
   }, [selectedDate, operatingHours.length, getResolvedForDate]);
 
   // ── Available slots for selected date + service (no double-book, respect closing) ─
-  const availableSlots =
-    selectedService && selectedDate
-      ? getAvailableSlots(
+  const [availableSlots, setAvailableSlots] = useState<{ time: string; period: string }[]>([]);
+
+  useEffect(() => {
+    async function updateAvailable() {
+      if (selectedService && selectedDate) {
+        const slots = await getAvailableSlots(
           selectedService.name,
+          vehicleSize || "compact",
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate
-        )
-      : [];
+        );
+        setAvailableSlots(slots);
+      } else {
+        setAvailableSlots([]);
+      }
+    }
+    updateAvailable();
+  }, [selectedService, selectedDate, vehicleSize, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate]);
 
   // Remove past times for today so they don't render at all (pass full slot so regex can read .time or .label)
   const displaySlots = selectedDate

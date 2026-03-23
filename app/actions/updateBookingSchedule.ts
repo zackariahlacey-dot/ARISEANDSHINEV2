@@ -2,18 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendUpdatedBookingEmail } from "@/lib/email";
-
-/** Converts "9:00 AM" → "09:00:00" for PostgreSQL time */
-function to24h(time12: string): string {
-  const trimmed = time12.trim();
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!match) return trimmed;
-  let h = parseInt(match[1], 10);
-  const m = match[2];
-  if (match[3].toUpperCase() === "AM" && h === 12) h = 0;
-  if (match[3].toUpperCase() === "PM" && h !== 12) h += 12;
-  return `${String(h).padStart(2, "0")}:${m}:00`;
-}
+import { to24h } from "./bookDetailing";
 
 export async function updateBookingSchedule(
   bookingId: string,
@@ -40,7 +29,7 @@ export async function updateBookingSchedule(
     return { success: false, error: "Booking not found." };
   }
 
-  const time24 = to24h(newTime);
+  const time24 = await to24h(newTime);
 
   const { error: updateError } = await supabase
     .from("bookings")

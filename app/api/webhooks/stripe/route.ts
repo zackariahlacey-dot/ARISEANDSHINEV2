@@ -8,6 +8,14 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmails } from "@/lib/email";
+import { checkAvailability } from "@/app/actions/bookDetailing";
+
+const VEHICLE_SIZE_MAP = {
+  compact: "small",
+  sedan: "medium",
+  suv: "large",
+  xl: "extra_large",
+} as const;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
@@ -58,6 +66,21 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       return NextResponse.json({ received: true });
+    }
+
+    // FINAL AVAILABILITY CHECK: Ensure slot wasn't taken while customer was on Stripe
+    const isAvailable = await checkAvailability(
+      m.bookingDate,
+      m.bookingTime,
+      m.serviceName,
+      VEHICLE_SIZE_MAP[m.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium"
+    );
+
+    if (!isAvailable) {
+      console.warn(`[webhooks/stripe] OVERBOOKING DETECTED: ${m.bookingDate} at ${m.bookingTime} for ${m.customerName}. Payment was successful but slot is now taken. Manual resolution required.`);
+      // We still return 200 to Stripe so it doesn't retry, but we don't insert the booking.
+      // In a real production app, you might trigger a special "Overbooking Alert" email to the admin here.
+      return NextResponse.json({ received: true, warning: "overbooked" });
     }
 
     // Insert booking only after successful payment

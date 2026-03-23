@@ -69,13 +69,68 @@ export type BookingResult =
   | { success: false; error: string };
 
 /** Converts "9:00 AM" → "09:00:00" for PostgreSQL time columns */
-function to24h(time12: string): string {
+export async function to24h(time12: string): Promise<string> {
   const [timePart, period] = time12.split(" ");
   const [rawH, rawM = "00"] = timePart.split(":");
   let h = parseInt(rawH, 10);
   if (period === "AM" && h === 12) h = 0;
   if (period === "PM" && h !== 12) h += 12;
   return `${String(h).padStart(2, "0")}:${rawM}:00`;
+}
+
+/** "09:00:00" or "9:00 AM" → minutes from midnight */
+export async function timeToMinutes(t: string): Promise<number> {
+  const trimmed = t.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let h = parseInt(match12[1], 10);
+    const m = parseInt(match12[2], 10);
+    if (match12[3].toUpperCase() === "PM" && h !== 12) h += 12;
+    if (match12[3].toUpperCase() === "AM" && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (match24) {
+    const h = parseInt(match24[1], 10);
+    const m = parseInt(match24[2], 10);
+    return h * 60 + m;
+  }
+  return 0;
+}
+
+export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
+  "Interior Detail": { small: 180, medium: 180, large: 240, extra_large: 240 },
+  "Exterior Detail": { small: 120, medium: 120, large: 180, extra_large: 180 },
+  "Full Detail": { small: 240, medium: 240, large: 330, extra_large: 330 },
+  "Interior Monthly Maintenance": { small: 90, medium: 90, large: 120, extra_large: 120 },
+  "Full Detail Monthly Maintenance": { small: 150, medium: 150, large: 210, extra_large: 210 },
+};
+
+export async function checkAvailability(date: string, time: string, serviceName: string, size: string) {
+  const supabase = createAdminClient();
+  const { data: existing } = await supabase
+    .from("bookings")
+    .select("booking_time, services(name), vehicles(size)")
+    .eq("booking_date", date)
+    .neq("status", "cancelled");
+
+  if (!existing || existing.length === 0) return true;
+
+  const newStart = await timeToMinutes(time);
+  const newDur = SERVICE_DURATIONS[serviceName]?.[size] ?? 180;
+  const newEnd = newStart + newDur;
+
+  for (const b of existing) {
+    const bStart = await timeToMinutes(b.booking_time);
+    const bName = (b.services as any)?.name ?? "Interior Detail";
+    const bSize = (b.vehicles as any)?.size ?? "medium";
+    const bDur = SERVICE_DURATIONS[bName]?.[bSize] ?? 180;
+    const bEnd = bStart + bDur;
+
+    // Overlap if (start1 < end2) && (end1 > start2)
+    if (newStart < bEnd && newEnd > bStart) return false;
+  }
+  return true;
 }
 
 /** Normalize phone to raw 10 digits for database storage and lookups */
@@ -97,6 +152,21 @@ export async function bookDetailing(
   console.log("Current User during booking:", freshUser?.id ?? null, freshUser?.email ?? null);
   if (userError) {
     console.error("Auth error during booking:", userError);
+  }
+
+  // ── 0. Check Availability ──────────────────────────────────────────────
+  const isAvailable = await checkAvailability(
+    payload.bookingDate,
+    payload.bookingTime,
+    payload.serviceName,
+    VEHICLE_SIZE_MAP[payload.vehicleSize]
+  );
+
+  if (!isAvailable) {
+    return {
+      success: false,
+      error: "This time slot was just taken. Please go back and select a different time.",
+    };
   }
 
   // Use server-side session only; if no session, fall back to guest flow (do not error)
@@ -334,7 +404,7 @@ export async function bookDetailing(
           vehicleId: vehicle.id,
           serviceId: payload.serviceId,
           bookingDate: payload.bookingDate,
-          bookingTime: to24h(payload.bookingTime),
+          bookingTime: await to24h(payload.bookingTime),
           totalPrice: String(payload.totalPrice),
           notes: (notesBody ?? "").slice(0, 500),
           serviceName: payload.serviceName.slice(0, 499),
@@ -381,7 +451,7 @@ export async function bookDetailing(
       vehicle_id: vehicle.id,
       service_id: payload.serviceId,
       booking_date: payload.bookingDate,
-      booking_time: to24h(payload.bookingTime),
+      booking_time: await to24h(payload.bookingTime),
       status: "confirmed",
       total_price: payload.totalPrice,
       notes: notesBody,

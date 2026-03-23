@@ -6,6 +6,7 @@ import { sendBookingEmails } from "@/lib/email";
 import { Resend } from "resend";
 import Stripe from "stripe";
 import { getTravelFee } from "@/lib/travelFee";
+import { to24h } from "./bookDetailing";
 
 const VEHICLE_SIZE_MAP = {
   compact: "small",
@@ -13,15 +14,6 @@ const VEHICLE_SIZE_MAP = {
   suv: "large",
   xl: "extra_large",
 } as const;
-
-function to24h(time12: string): string {
-  const [timePart, period] = time12.split(" ");
-  const [rawH, rawM = "00"] = timePart.split(":");
-  let h = parseInt(rawH, 10);
-  if (period === "AM" && h === 12) h = 0;
-  if (period === "PM" && h !== 12) h += 12;
-  return `${String(h).padStart(2, "0")}:${rawM}:00`;
-}
 
 function toPhoneDigits(phone: string): string {
   return phone.replace(/\D/g, "").slice(0, 10);
@@ -151,7 +143,7 @@ export async function createAdminBooking(
       vehicle_id: vehicle.id,
       service_id: payload.serviceId,
       booking_date: payload.bookingDate,
-      booking_time: to24h(payload.bookingTime),
+      booking_time: await to24h(payload.bookingTime),
       status,
       total_price: payload.totalPrice,
       notes: notesBody,

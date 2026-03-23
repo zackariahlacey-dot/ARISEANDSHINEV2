@@ -11,6 +11,7 @@ import {
   sendReviewFollowupEmail
 } from "@/lib/email";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
+import { to24h } from "./bookDetailing";
 
 // Maps our UI vehicle size slugs to the DB enum values
 const VEHICLE_SIZE_MAP = {
@@ -19,15 +20,6 @@ const VEHICLE_SIZE_MAP = {
   suv: "large",
   xl: "extra_large",
 } as const;
-
-function to24h(time12: string): string {
-  const [timePart, period] = time12.split(" ");
-  const [rawH, rawM = "00"] = timePart.split(":");
-  let h = parseInt(rawH, 10);
-  if (period === "AM" && h === 12) h = 0;
-  if (period === "PM" && h !== 12) h += 12;
-  return `${String(h).padStart(2, "0")}:${rawM}:00`;
-}
 
 /**
  * NEW: Admin Quick Book Action
@@ -118,7 +110,7 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       vehicle_id: vehicle.id,
       service_id: payload.serviceId,
       booking_date: payload.bookingDate,
-      booking_time: to24h(payload.bookingTime),
+      booking_time: await to24h(payload.bookingTime),
       status: "confirmed",
       total_price: payload.totalPrice,
       notes: notesBody,
