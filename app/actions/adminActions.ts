@@ -33,7 +33,7 @@ function to24h(time12: string): string {
  * NEW: Admin Quick Book Action
  * Securely creates an Auth Account for the customer if one doesn't exist.
  */
-export async function adminQuickBookAction(payload: any) {
+export async function adminQuickBookAction(payload: any): Promise<{ success: boolean; bookingId?: string; error?: string }> {
   const supabase = createAdminClient();
   const email = payload.email?.toLowerCase().trim();
   const phoneDigits = payload.phone.replace(/\D/g, "").slice(0, 10);
@@ -80,12 +80,13 @@ export async function adminQuickBookAction(payload: any) {
     targetUserId = crypto.randomUUID();
   }
 
-  // 2. Ensure Profile exists and is updated
+  // 2. Ensure Profile exists and is updated (MUST include email so admin can contact client)
   await supabase.from("profiles").upsert({
     id: targetUserId,
     first_name: firstName,
     last_name: lastName,
     phone: phoneDigits,
+    ...(email ? { email } : {}),
   }, { onConflict: "id" });
 
   // 3. Insert Vehicle
@@ -125,7 +126,7 @@ export async function adminQuickBookAction(payload: any) {
     .select("id")
     .single();
 
-  if (bookingErr) throw new Error("Booking creation failed");
+  if (bookingErr) return { success: false, error: "Booking creation failed: " + bookingErr.message };
 
   // 5. Send Confirmation Emails
   if (email) {
@@ -212,6 +213,7 @@ export async function getAllBookings() {
 
 export async function getAllClients() {
   const supabase = createAdminClient();
+  const adminEmail = (process.env.ADMIN_EMAIL || "zackariahlacey04@gmail.com").toLowerCase();
   const { data, error } = await supabase
     .from("profiles")
     .select(`
@@ -223,7 +225,15 @@ export async function getAllClients() {
 
   if (error) throw new Error(error.message);
 
-  return (data || []).map((client: any) => {
+  // Filter out admin profile and orphan profiles with no name or bookings
+  const filtered = (data || []).filter((client: any) => {
+    if (client.email === adminEmail) return false;
+    const hasName = client.first_name || client.last_name;
+    const hasBookings = client.bookings && client.bookings.length > 0;
+    return hasName || hasBookings;
+  });
+
+  return filtered.map((client: any) => {
     // Sort bookings by date and time
     const sortedBookings = [...(client.bookings || [])].sort((a,b) => {
       const dateCompare = b.booking_date.localeCompare(a.booking_date);
@@ -555,3 +565,122 @@ export async function getDiagnostics() {
     timestamp: new Date().toISOString(),
   };
 }
+
+export async function getClientEmail(clientId: string): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.auth.admin.getUserById(clientId);
+  if (error || !data.user) return null;
+  return data.user.email || null;
+}
+
+export async function sendCustomEmailAction(
+  to: string,
+  subject: string,
+  bodyText: string
+): Promise<{ success: boolean; error?: string }> {
+  const { Resend } = await import("resend");
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { success: false, error: "RESEND_API_KEY not set" };
+
+  const resend = new Resend(key);
+  const fromAddr = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+
+  // Wrap plain text in a simple branded HTML template
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#18181b;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:24px 32px;text-align:center;border-bottom:1px solid #27272a;">
+              <p style="color:#d4af37;font-size:15px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine VT</p>
+              <p style="color:#71717a;font-size:10px;margin:4px 0 0;letter-spacing:0.15em;text-transform:uppercase;">Premium Mobile Auto Detailing</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;">
+              <div style="font-size:15px;color:#e4e4e7;line-height:1.7;white-space:pre-line;">${bodyText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px;text-align:center;border-top:1px solid #27272a;">
+              <p style="font-size:11px;color:#52525b;margin:0;">&copy; 2026 Arise And Shine VT. All rights reserved.</p>
+              <p style="font-size:11px;color:#52525b;margin:4px 0 0;">
+                <a href="mailto:contact@ariseandshinevt.com" style="color:#d4af37;text-decoration:none;">contact@ariseandshinevt.com</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    await resend.emails.send({
+      from: fromAddr,
+      to,
+      replyTo: "contact@ariseandshinevt.com",
+      subject,
+      html,
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error("Custom email send error:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function sendTestEmailAction(to: string) {
+  return sendCustomEmailAction(
+    to, 
+    "System Test - Arise & Shine", 
+    "If you are reading this, your email configuration is working perfectly!"
+  );
+}
+
+export async function updateCustomerProfile(id: string, payload: any) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("profiles").update(payload).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+// ── COUPONS ──
+export async function getCouponStats() {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  
+  // Calculate usage stats from bookings
+  const { data: bookings } = await supabase.from("bookings").select("coupon_id, total_price").not("coupon_id", "is", null);
+  
+  return data.map((c: any) => {
+    const usage = bookings?.filter((b: any) => b.coupon_id === c.id) || [];
+    return {
+      ...c,
+      usage_count: usage.length,
+      revenue_generated: usage.reduce((acc, b) => acc + Number(b.total_price || 0), 0)
+    };
+  });
+}
+
+export async function createCouponAction(payload: any) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("coupons").insert(payload);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function toggleCouponAction(id: string, is_active: boolean) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("coupons").update({ is_active }).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+

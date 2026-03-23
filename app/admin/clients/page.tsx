@@ -1,398 +1,301 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getAllClients } from "@/app/actions/adminActions";
-import { 
-  Search, 
-  MapPin, 
-  Phone, 
-  User, 
-  Star, 
-  Plus, 
-  ChevronRight, 
-  X, 
-  Loader2, 
-  AlertCircle, 
-  Car,
-  TrendingUp,
-  History,
-  Crown,
-  Mail,
-  Zap,
-  Calendar,
-  DollarSign,
-  MessageSquare,
-  Navigation,
-  Save,
-  Clock,
-  CheckCircle2,
-  Coins,
-  ShieldCheck,
-  UserPlus
-  } from "lucide-react";
-  import { cn } from "@/lib/utils";
-  import { format, differenceInMonths } from "date-fns";
-  import { updateCustomerProfile } from "@/app/actions/updateCustomerProfile";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAllClients, updateCustomerProfile } from "@/app/actions/adminActions";
+import { useToast } from "@/components/admin/Toast";
+import { Modal } from "@/components/admin/Modal";
+import { StatusBadge } from "@/components/admin/StatusBadge";
+import {
+  Users, Search, Filter, Phone, MessageSquare, Mail, Navigation,
+  Car, Calendar, Star, Crown, AlertTriangle, ShieldCheck, CreditCard,
+  History, Settings, PenTool, Save, CheckCircle2, ChevronRight, Loader2
+} from "lucide-react";
+import { format, differenceInMonths } from "date-fns";
+import { cn } from "@/lib/utils";
 
-  export default function ClientsTab() {
-  const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [search, setSearch] = useState("");
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [editedNotes, setEditedNotes] = useState("");
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [isAdjustingPoints, setIsAdjustingPoints] = useState(false);
-  const [pointsInput, setPointsInput] = useState("");
+type SortOptions = "az" | "ltv" | "recent";
 
-  const { data: clients, isLoading, error, refetch } = useQuery({
+export default function ClientsPage() {
+  const { data: clients, isLoading } = useQuery({
     queryKey: ["admin", "clients"],
-    queryFn: async () => await getAllClients()
+    queryFn: async () => await getAllClients(),
   });
 
-  useEffect(() => {
-    if (selectedClient) {
-      setEditedNotes(selectedClient.notes || "");
-      setPointsInput(selectedClient.reward_points?.toString() || "0");
-    }
-  }, [selectedClient]);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortOptions>("recent");
+  const [activeClient, setActiveClient] = useState<any>(null);
 
-  const handleUpdatePoints = async () => {
-    if (!selectedClient) return;
-    setIsAdjustingPoints(true);
-    try {
-      const res = await updateCustomerProfile(selectedClient.id, { reward_points: parseInt(pointsInput) });
-      if (res.success) {
-        showToast(`Points updated to ${pointsInput}`);
-        refetch();
-        setSelectedClient({ ...selectedClient, reward_points: parseInt(pointsInput) });
-      } else {
-        showToast("Failed to update points", "error");
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    let result = clients.filter((c: any) => {
+      const q = search.toLowerCase();
+      const nameMatch = `${c.first_name || ""} ${c.last_name || ""}`.toLowerCase().includes(q);
+      const phoneMatch = c.phone?.includes(q);
+      const vehicleMatch = c.vehicles?.some((v: any) => `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q));
+      return nameMatch || phoneMatch || vehicleMatch;
+    });
+
+    return result.sort((a: any, b: any) => {
+      if (sort === "az") return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+      if (sort === "ltv") return (b._ltv || 0) - (a._ltv || 0);
+      if (sort === "recent") {
+        if (!a._lastService) return 1;
+        if (!b._lastService) return -1;
+        return new Date(b._lastService).getTime() - new Date(a._lastService).getTime();
       }
-    } catch (err) {
-      showToast("An error occurred", "error");
-    } finally {
-      setIsAdjustingPoints(false);
-    }
-  };
+      return 0;
+    });
+  }, [clients, search, sort]);
 
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-  };
-
-  const handleSaveNotes = async () => {
-    if (!selectedClient) return;
-    setIsSavingNotes(true);
-    try {
-      const res = await updateCustomerProfile(selectedClient.id, { notes: editedNotes });
-      if (res.success) {
-        showToast("Notes updated successfully");
-        refetch();
-      } else {
-        showToast("Failed to save notes", "error");
-      }
-    } catch (err) {
-      showToast("An error occurred while saving notes", "error");
-    } finally {
-      setIsSavingNotes(false);
-    }
-  };
-
-  const handleWinBack = (client: any) => {
-    const lastVehicle = client.vehicles?.[0] ? `${client.vehicles[0].year} ${client.vehicles[0].make}` : "your vehicle";
-    const message = `Hey ${client.first_name}, it's been a few months since your last detail on ${lastVehicle}! Thinking about getting it back to showroom shine? Reply for 10% off your next booking! - Arise & Shine`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(message);
-    showToast("Win-back message copied!");
-
-    // Open SMS
-    window.location.href = `sms:${client.phone}&body=${encodeURIComponent(message)}`;
-  };
-
-  const filtered = clients?.filter((c: any) => 
-    `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone && c.phone.includes(search))
-  );
-
-  if (isLoading) return <div className="h-screen flex items-center justify-center bg-[#050505]"><Loader2 className="animate-spin text-amber-500" size={40} /></div>;
+  if (isLoading) {
+    return <div className="h-[80dvh] flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" size={28} /></div>;
+  }
 
   return (
-    <div className="flex h-full bg-[#050505] text-white selection:bg-amber-500/30">
-      {/* Client List */}
-      <div className={cn("flex-1 p-10 space-y-10 transition-all duration-500", selectedClient ? "pr-0 md:mr-[500px]" : "")}>
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-           <div>
-              <h1 className="text-5xl font-black uppercase tracking-tighter">Client CRM</h1>
-              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.5em] mt-2">Executive Database & LTV Tracker</p>
-           </div>
-           <div className="flex items-center gap-6 bg-white/[0.02] border border-white/[0.06] rounded-[32px] px-8 py-4 w-full md:w-[450px] focus-within:ring-1 ring-amber-500/50 transition-all shadow-2xl">
-              <Search size={20} className="text-zinc-600" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, phone, or vehicle..." className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-zinc-700 text-white font-medium" />
-           </div>
+    <div className="flex flex-col h-full bg-[#050505]">
+      {/* ── HEADER & SEARCH ── */}
+      <div className="shrink-0 p-3 md:p-6 border-b border-white/[0.03] space-y-4">
+        <header>
+          <h1 className="text-xl font-black uppercase tracking-tighter">Client CRM</h1>
+          <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em]">{clients?.length || 0} Total Entries</p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {filtered?.map((client: any) => {
-            const isVIP = client._ltv >= 500;
-            const monthsSinceLast = client._lastService ? differenceInMonths(new Date(), new Date(client._lastService)) : null;
-            const isAtRisk = monthsSinceLast !== null && monthsSinceLast >= 4; // Lowered to 4 months for proactive win-back
-
-            return (
-              <button key={client.id} onClick={() => setSelectedClient(client)} className="group p-8 rounded-[48px] border border-white/[0.06] bg-[#080808] hover:bg-white/[0.02] hover:border-amber-500/40 transition-all text-left relative overflow-hidden shadow-xl">
-                {isVIP && <div className="absolute top-6 right-8 text-amber-500"><Crown size={20} fill="currentColor" /></div>}
-                
-                <div className="flex items-center gap-6 mb-8">
-                   <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center font-black text-amber-500 text-2xl uppercase shadow-inner group-hover:scale-110 transition-transform">
-                      {client.first_name?.[0]}{client.last_name?.[0]}
-                   </div>
-                   <div>
-                      <p className="font-black text-2xl text-white group-hover:text-amber-500 transition-colors tracking-tighter">{client.first_name} {client.last_name}</p>
-                      <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase">{client.phone || "Unlisted"}</p>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/[0.04]">
-                   <div>
-                      <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Lifetime Value</p>
-                      <p className="text-xl font-black text-white">${client._ltv.toFixed(0)}</p>
-                   </div>
-                   <div className="text-right">
-                      <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Status</p>
-                      {isAtRisk ? (
-                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/20 animate-pulse">At Risk</span>
-                      ) : (
-                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">Active</span>
-                      )}
-                   </div>
-                </div>
+        <div className="flex flex-col md:flex-row gap-2">
+          <div className="flex-1 flex items-center gap-2 bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5 focus-within:ring-1 ring-amber-500/50 transition-all">
+            <Search size={14} className="text-zinc-600 shrink-0" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search names, phones, or vehicles..."
+              className="bg-transparent border-none text-xs w-full placeholder:text-zinc-700 text-white outline-none"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-1 shrink-0 p-1 bg-white/[0.02] border border-white/[0.04] rounded-xl">
+            {(["recent", "ltv", "az"] as const).map(s => (
+              <button key={s} onClick={() => setSort(s)}
+                className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  sort === s ? "bg-amber-500 text-black shadow-md" : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
+                )}>
+                {s === "recent" ? "New" : s === "ltv" ? "VIP" : "A-Z"}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* PLAYER CARD */}
-      {selectedClient && (
-        <aside className="fixed right-0 top-0 h-full w-full md:w-[500px] bg-[#0A0A0A] border-l border-white/[0.1] shadow-2xl z-50 overflow-y-auto animate-in slide-in-from-right duration-500">
-           <div className="p-12 space-y-12 pb-24">
-              <header className="flex justify-between items-center">
-                 <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600">Client Node Secured</span>
-                 </div>
-                 <button onClick={() => setSelectedClient(null)} className="p-4 rounded-[20px] hover:bg-white/[0.05] text-zinc-500 hover:text-white transition-all"><X size={28} /></button>
-              </header>
+      {/* ── LIST ── */}
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-2 pb-24 md:pb-6">
+        {filteredClients.map((client: any) => {
+          const ltv = client._ltv || 0;
+          const isVip = ltv >= 500;
+          const monthsSinceLast = client._lastService ? differenceInMonths(new Date(), new Date(client._lastService)) : 0;
+          const isAtRisk = monthsSinceLast >= 4;
 
-              {/* Identity Section */}
-              <div className="text-center space-y-6">
-                 <div className="w-32 h-32 rounded-[50px] bg-amber-500 mx-auto flex items-center justify-center text-5xl font-black text-black shadow-3xl shadow-amber-500/20">
-                    {selectedClient.first_name?.[0]}{selectedClient.last_name?.[0]}
-                 </div>
-                 <div>
-                    <h2 className="text-4xl font-black text-white tracking-tighter leading-none">{selectedClient.first_name} {selectedClient.last_name}</h2>
-                    <div className="flex items-center justify-center gap-3 mt-3">
-                       {selectedClient._ltv >= 500 && <span className="flex items-center gap-1 text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20"><Crown size={10} fill="currentColor" /> VIP</span>}
-                       <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Joined {format(new Date(selectedClient.created_at), "yyyy")}</span>
+          return (
+            <button key={client.id} onClick={() => setActiveClient(client)}
+              className="w-full relative overflow-hidden p-4 rounded-2xl bg-[#0A0A0A] border border-white/[0.04] hover:border-amber-500/30 transition-all flex items-center gap-4 text-left group active:scale-[0.98]">
+              
+              <div className="relative shrink-0">
+                <div className="w-12 h-12 rounded-[14px] bg-zinc-900 border border-white/[0.06] flex items-center justify-center text-sm font-black text-amber-500">
+                  {(client.first_name?.[0] || "?")}{(client.last_name?.[0] || "")}
+                </div>
+                {isVip && <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center border-2 border-[#0A0A0A]"><Crown size={10} className="text-black" /></div>}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-black text-sm truncate">{client.first_name} {client.last_name}</p>
+                  {isAtRisk && <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[8px] font-black uppercase tracking-wider">At Risk</span>}
+                </div>
+                {client.phone && <p className="text-[10px] text-zinc-600 font-mono mt-0.5">{client.phone.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3")}</p>}
+                <div className="flex gap-3 text-[9px] font-bold uppercase tracking-widest text-zinc-500 mt-2">
+                  <span className="flex items-center gap-1"><CreditCard size={10} />${ltv.toFixed(0)}</span>
+                  <span className="flex items-center gap-1"><History size={10} />{client._bookingCount} jobs</span>
+                </div>
+              </div>
+
+              <ChevronRight size={16} className="text-zinc-800 group-hover:text-amber-500 shrink-0 transition-colors" />
+            </button>
+          );
+        })}
+        {filteredClients.length === 0 && (
+          <div className="py-20 text-center space-y-2 text-zinc-600">
+            <Users size={32} className="mx-auto text-zinc-800" />
+            <p className="text-[10px] font-black uppercase tracking-widest">No clients found</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── CLIENT PROFILE MODAL ── */}
+      <Modal open={!!activeClient} onClose={() => setActiveClient(null)} className="h-[92dvh] md:max-h-[85dvh] max-w-2xl flex flex-col">
+        {activeClient && <ClientProfile client={activeClient} />}
+      </Modal>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLIENT PROFILE COMPONENT
+   ═══════════════════════════════════════════════════════ */
+function ClientProfile({ client }: { client: any }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"overview" | "history">("overview");
+  const [points, setPoints] = useState(client.reward_points?.toString() || "0");
+  const [notes, setNotes] = useState(client.notes || "");
+  const [saving, setSaving] = useState(false);
+
+  // Mutations
+  const updatePoints = useMutation({
+    mutationFn: async () => await updateCustomerProfile(client.id, { reward_points: parseInt(points) || 0 }),
+    onSuccess: () => { toast("Points updated"); queryClient.invalidateQueries({ queryKey: ["admin", "clients"] }); }
+  });
+
+  const updateNotes = useMutation({
+    mutationFn: async () => await updateCustomerProfile(client.id, { notes }),
+    onSuccess: () => { toast("Notes saved"); queryClient.invalidateQueries({ queryKey: ["admin", "clients"] }); }
+  });
+
+  const ltv = client._ltv || 0;
+  const isVip = ltv >= 500;
+  const addr = client._lastAddress;
+
+  const winBackText = `Hi ${client.first_name}, it's been a while since we detailed your vehicle! We'd love to see you again. Get 10% off your next detail by booking here: https://ariseandshinevt.com`;
+  const copyWinBack = () => { navigator.clipboard.writeText(winBackText); toast("SMS Copied!"); };
+
+  return (
+    <div className="flex flex-col h-full bg-[#080808] text-white">
+      {/* PROFILE HEADER */}
+      <div className="shrink-0 relative overflow-hidden pt-8 pb-4 px-4 text-center border-b border-white/[0.04]">
+        {/* BG Blurs */}
+        <div className={cn("absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 blur-[80px] opacity-20 pointer-events-none", isVip ? "bg-amber-500" : "bg-blue-500")} />
+        
+        <div className="relative z-10">
+          <div className={cn("w-20 h-20 mx-auto rounded-full bg-zinc-900 border-4 flex items-center justify-center text-2xl font-black shadow-2xl relative", isVip ? "border-amber-500/20 text-amber-500" : "border-white/[0.04] text-white")}>
+            {(client.first_name?.[0] || "?")}{(client.last_name?.[0] || "")}
+            {isVip && <div className="absolute -bottom-2 right-0 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center border-4 border-[#080808]"><Crown size={14} className="text-black" /></div>}
+          </div>
+          <h2 className="text-xl font-black mt-3">{client.first_name} {client.last_name}</h2>
+          <p className="text-[10px] text-zinc-500 font-mono mt-1">
+            {client.phone?.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3") || "No phone"} • {client.email || "No email"}
+          </p>
+        </div>
+
+        {/* Action Row */}
+        <div className="flex justify-center gap-2 mt-6">
+          {client.phone && <a href={`tel:${client.phone}`} className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-blue-500 hover:scale-110 transition-all"><Phone size={18} /></a>}
+          {client.phone && <a href={`sms:${client.phone}`} className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-emerald-500 hover:scale-110 transition-all"><MessageSquare size={18} /></a>}
+          <a href={`/admin/email?client=${client.id}`} className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-amber-500 hover:scale-110 transition-all"><Mail size={18} /></a>
+          {addr && addr !== "No address recorded" && <a href={`https://maps.google.com/?q=${encodeURIComponent(addr)}`} target="_blank" className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-violet-500 hover:scale-110 transition-all"><Navigation size={18} /></a>}
+        </div>
+      </div>
+
+      {/* TABS */}
+      <div className="flex items-center gap-6 px-6 border-b border-white/[0.04]">
+        {(["overview", "history"] as const).map(t => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            className={cn("py-4 text-[10px] font-black uppercase tracking-widest relative transition-colors", activeTab === t ? "text-amber-500" : "text-zinc-500")}>
+            {t}
+            {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        {activeTab === "overview" && (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">LTV Revenue</p>
+                <p className="text-xl font-black mt-1 text-emerald-500">${ltv.toFixed(0)}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Total Bookings</p>
+                <p className="text-xl font-black mt-1">{client._bookingCount}</p>
+              </div>
+            </div>
+
+            {/* Loyalty Points */}
+            <div className="p-5 rounded-2xl bg-[#0A0A0A] border border-white/[0.06] space-y-3">
+              <div className="flex items-center gap-2 text-amber-500">
+                <Star size={16} fill="currentColor" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-white">Loyalty Points</h3>
+              </div>
+              <div className="flex gap-2">
+                <input type="number" value={points} onChange={e => setPoints(e.target.value)}
+                  className="flex-1 bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 text-sm font-mono text-white focus:ring-1 ring-amber-500/50 outline-none" />
+                <button onClick={() => updatePoints.mutate()} disabled={updatePoints.isPending}
+                  className="px-6 py-3 rounded-xl bg-amber-500 text-black font-black text-[10px] uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-95 transition-all">
+                  {updatePoints.isPending ? <Loader2 size={14} className="animate-spin" /> : "Save"}
+                </button>
+              </div>
+            </div>
+
+            {/* Win-Back */}
+            <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-3">
+              <h3 className="text-xs font-black uppercase tracking-widest text-rose-500 flex items-center gap-2"><AlertTriangle size={14} /> SMS Win-Back</h3>
+              <p className="text-[10px] text-zinc-400 leading-relaxed font-mono p-3 bg-black/50 rounded-lg">{winBackText}</p>
+              <button onClick={copyWinBack} className="w-full py-3 rounded-xl border border-rose-500/30 text-rose-500 font-black text-[10px] uppercase tracking-widest hover:bg-rose-500/10 active:scale-95 transition-all">Copy to Clipboard</button>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Client Notes</label>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4}
+                className="w-full bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 text-sm text-zinc-300 focus:ring-1 ring-amber-500/50 outline-none resize-none" placeholder="Gate codes, preferences, pets..." />
+              <button onClick={() => updateNotes.mutate()} disabled={updateNotes.isPending}
+                className="w-full py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                {updateNotes.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Save Notes"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {activeTab === "history" && (
+          <div className="space-y-6">
+            {/* Vehicles Box */}
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-3 ml-1">Garage</h3>
+              {client.vehicles?.length > 0 ? (
+                <div className="space-y-2">
+                  {client.vehicles.map((v: any) => (
+                    <div key={v.id} className="p-3 rounded-xl bg-black border border-white/[0.03] flex items-center gap-3">
+                      <Car size={16} className="text-zinc-500" />
+                      <span className="text-sm font-bold uppercase tracking-wider">{v.year} {v.make} {v.model} ({v.size})</span>
                     </div>
-                 </div>
-              </div>
+                  ))}
+                </div>
+              ) : <p className="text-[10px] text-zinc-600">No vehicles on file</p>}
+            </div>
 
-              {/* Quick Actions (Call/SMS/Map) */}
-              <div className="grid grid-cols-3 gap-3">
-                 <a href={`tel:${selectedClient.phone}`} className="flex flex-col items-center gap-2 p-6 rounded-[32px] bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all group">
-                    <Phone size={20} className="text-emerald-500" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Call</span>
-                 </a>
-                 <a href={`sms:${selectedClient.phone}`} className="flex flex-col items-center gap-2 p-6 rounded-[32px] bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all group">
-                    <MessageSquare size={20} className="text-blue-500" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">Text</span>
-                 </a>
-                 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedClient._lastAddress)}`} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-2 p-6 rounded-[32px] bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all group">
-                    <Navigation size={20} className="text-amber-500" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-amber-500">Map</span>
-                 </a>
-              </div>
-
-              {/* HUD GRID */}
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="p-8 rounded-[40px] border border-white/[0.04] bg-white/[0.01] space-y-2">
-                    <span className="flex items-center gap-2 text-[9px] font-black text-zinc-600 uppercase tracking-widest"><DollarSign size={12} className="text-emerald-500" /> Revenue</span>
-                    <span className="text-3xl font-black text-white tracking-tighter">${selectedClient._ltv.toFixed(0)}</span>
-                 </div>
-                 <div className="p-8 rounded-[40px] border border-white/[0.04] bg-white/[0.01] space-y-2">
-                    <span className="flex items-center gap-2 text-[9px] font-black text-zinc-600 uppercase tracking-widest"><History size={12} className="text-blue-500" /> Frequency</span>
-                    <span className="text-3xl font-black text-white tracking-tighter">{selectedClient._bookingCount}x</span>
-                 </div>
-              </div>
-
-              {/* Loyalty & Account Status */}
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="p-8 rounded-[40px] border border-amber-500/10 bg-amber-500/[0.02] space-y-3 relative overflow-hidden group">
-                    <div className="absolute -right-2 -top-2 opacity-[0.05] group-hover:rotate-12 transition-transform">
-                       <Coins size={48} className="text-amber-500" />
-                    </div>
-                    <span className="flex items-center gap-2 text-[9px] font-black text-amber-600 uppercase tracking-widest">Loyalty Points</span>
-                    <div className="flex items-center gap-2">
-                       <span className="text-3xl font-black text-white tracking-tighter">{selectedClient.reward_points || 0}</span>
-                       <span className="text-[10px] font-black text-zinc-500 uppercase">XP</span>
-                    </div>
-                 </div>
-                 <div className="p-8 rounded-[40px] border border-white/[0.04] bg-white/[0.01] space-y-3">
-                    <span className="flex items-center gap-2 text-[9px] font-black text-zinc-600 uppercase tracking-widest">Account Status</span>
-                    {selectedClient.reward_points >= 100 ? (
-                       <div className="flex items-center gap-2 text-emerald-500">
-                          <ShieldCheck size={16} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Verified User</span>
-                       </div>
-                    ) : (
-                       <div className="flex items-center gap-2 text-zinc-500">
-                          <UserPlus size={16} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Lead Profile</span>
-                       </div>
-                    )}
-                    <p className="text-[8px] text-zinc-700 font-bold uppercase tracking-tight">
-                       {selectedClient.reward_points >= 100 ? "Has Signed Up Online" : "Admin-Created Profile"}
-                    </p>
-                 </div>
-              </div>
-
-              {/* Point Adjustment (New) */}
-              <div className="p-8 rounded-[40px] bg-white/[0.02] border border-white/[0.04] space-y-6">
-                 <div className="flex justify-between items-center">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700">Point Override</h3>
-                    <button 
-                      onClick={handleUpdatePoints}
-                      disabled={isAdjustingPoints || pointsInput === selectedClient.reward_points?.toString()}
-                      className="text-[9px] font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500/10 px-3 py-1 rounded-full transition-all disabled:opacity-30"
-                    >
-                      {isAdjustingPoints ? <Loader2 size={12} className="animate-spin" /> : "Apply Change"}
-                    </button>
-                 </div>
-                 <div className="flex items-center gap-4">
-                    <div className="flex-1 bg-black/40 rounded-2xl px-6 py-3 border border-white/[0.06] flex items-center gap-3">
-                       <Coins size={14} className="text-zinc-500" />
-                       <input 
-                          type="number" 
-                          value={pointsInput}
-                          onChange={(e) => setPointsInput(e.target.value)}
-                          className="bg-transparent border-none focus:ring-0 text-sm font-black text-white w-full"
-                       />
-                    </div>
-                    <div className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Total XP</div>
-                 </div>
-              </div>
-
-              {/* Internal Notes (The "Intelligence" field) */}
-              <div className="space-y-4">
-                 <div className="flex justify-between items-center px-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700">Client Intelligence</h3>
-                    <button 
-                      onClick={handleSaveNotes}
-                      disabled={isSavingNotes || editedNotes === selectedClient.notes}
-                      className="text-[9px] font-black uppercase tracking-widest text-amber-500 disabled:opacity-30 flex items-center gap-2 hover:bg-amber-500/10 px-3 py-1 rounded-full transition-all"
-                    >
-                      {isSavingNotes ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                      Save
-                    </button>
-                 </div>
-                 <textarea 
-                    value={editedNotes}
-                    onChange={(e) => setEditedNotes(e.target.value)}
-                    placeholder="Add personal notes, gate codes, or preferences..."
-                    className="w-full h-32 bg-white/[0.02] border border-white/[0.04] rounded-[32px] p-6 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/40 transition-all resize-none font-medium"
-                 />
-              </div>
-
-              {/* Win-Back (Conditional) */}
-              {differenceInMonths(new Date(), new Date(selectedClient._lastService || 0)) >= 4 && (
-                <div className="p-8 rounded-[40px] bg-rose-500/5 border border-rose-500/10 space-y-4 border-dashed">
-                   <div className="flex items-center gap-3">
-                      <Zap size={18} className="text-rose-500" fill="currentColor" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">Retention Opportunity</p>
-                   </div>
-                   <p className="text-sm text-zinc-400 leading-relaxed">It&apos;s been over 4 months since their last visit. Send a win-back offer to secure another booking.</p>
-                   <button 
-                    onClick={() => handleWinBack(selectedClient)}
-                    className="w-full py-4 rounded-2xl bg-rose-500 hover:bg-rose-400 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-rose-500/20"
-                   >
-                     Deploy Win-Back SMS
-                   </button>
+            {/* Booking Listing */}
+            <div className="space-y-2">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2 ml-1">Service History</h3>
+              {client.bookings?.map((b: any) => (
+                <div key={b.id} className="p-4 rounded-2xl bg-[#0A0A0A] border border-white/[0.04] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-amber-500">
+                      {format(new Date(b.booking_date + "T12:00:00"), "MMM d, yyyy")} • {b.booking_time.substring(0,5)}
+                    </span>
+                    <StatusBadge status={b.status} />
+                  </div>
+                  <div className="flex items-center justify-between border-t border-white/[0.04] pt-2 mt-2">
+                    <span className="text-xs font-bold text-zinc-300">{b.services?.name || "Service"}</span>
+                    <span className="text-xs font-black text-emerald-500">${Number(b.total_price).toFixed(0)}</span>
+                  </div>
+                </div>
+              ))}
+              {(!client.bookings || client.bookings.length === 0) && (
+                <div className="p-8 text-center border border-dashed border-white/[0.06] rounded-2xl">
+                  <Calendar size={24} className="mx-auto text-zinc-700 mb-2" />
+                  <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">No past bookings</p>
                 </div>
               )}
-
-              {/* Service History Timeline */}
-              <div className="space-y-6">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700 px-2">Deployment History</h3>
-                 <div className="space-y-4">
-                    {selectedClient.bookings?.sort((a: any, b: any) => b.booking_date.localeCompare(a.booking_date)).slice(0, 5).map((b: any) => (
-                       <div key={b.id} className="flex items-start gap-4 p-6 rounded-[32px] bg-white/[0.02] border border-white/[0.04]">
-                          <div className="w-10 h-10 rounded-2xl bg-white/[0.03] flex items-center justify-center text-zinc-500 shrink-0">
-                             <Clock size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                             <div className="flex justify-between items-start">
-                                <p className="font-bold text-white tracking-tight">{b.services?.name || "Service"}</p>
-                                <p className="text-xs font-black text-amber-500">${b.total_price}</p>
-                             </div>
-                             <p className="text-[10px] text-zinc-600 font-mono uppercase mt-1">
-                                {(() => {
-                                  const [y, m, d] = b.display_date.split("-");
-                                  return `${m}/${d}/${y}`;
-                                })()}
-                             </p>
-                          </div>
-                       </div>
-                    ))}
-                    {selectedClient.bookings?.length === 0 && (
-                      <p className="text-center text-zinc-700 text-xs py-8 italic">No previous deployments found</p>
-                    )}
-                 </div>
-              </div>
-
-              {/* Garage */}
-              <div className="space-y-6">
-                 <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700 px-2">Garage Assets</h3>
-                 <div className="space-y-3">
-                    {selectedClient.vehicles?.map((v: any) => (
-                       <div key={v.id} className="p-8 rounded-[40px] bg-[#080808] border border-white/[0.04] flex items-center justify-between shadow-2xl">
-                          <div className="space-y-1">
-                             <p className="font-black text-xl text-white tracking-tighter leading-none">{v.year} {v.make} {v.model}</p>
-                             <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest bg-white/[0.03] px-2 py-1 rounded-md inline-block">{v.size} Platform</p>
-                          </div>
-                          <div className="w-12 h-12 rounded-2xl bg-white/[0.03] flex items-center justify-center text-zinc-700"><Car size={24} /></div>
-                       </div>
-                    ))}
-                 </div>
-              </div>
-
-              {/* CTAs */}
-              <div className="fixed bottom-0 right-0 w-full md:w-[500px] p-6 bg-[#0A0A0A]/80 backdrop-blur-xl border-t border-white/[0.1] z-[60]">
-                 <button className="w-full flex items-center justify-center gap-3 p-6 rounded-[32px] bg-amber-500 hover:bg-amber-400 text-black transition-all group shadow-2xl shadow-amber-500/20">
-                    <Zap size={24} className="group-hover:scale-110 transition-transform" fill="currentColor" />
-                    <span className="text-xs font-black uppercase tracking-[0.2em]">Initiate New Order</span>
-                 </button>
-              </div>
-           </div>
-        </aside>
-      )}
-
-      {/* CUSTOM TOAST */}
-      {toast && (
-        <div className={cn(
-          "fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300",
-          toast.type === 'success' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"
-        )}>
-          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-          <span className="text-xs font-bold uppercase tracking-widest">{toast.message}</span>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
