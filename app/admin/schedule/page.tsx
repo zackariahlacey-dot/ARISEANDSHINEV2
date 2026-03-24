@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   useAdminBookings,
   useUpdateBookingStatus,
@@ -10,7 +10,7 @@ import {
   useServices,
   useDeleteBooking,
 } from "@/hooks/use-admin-data";
-import { adminQuickBookAction } from "@/app/actions/adminActions";
+import { adminQuickBookAction, getBookedSlotsAction } from "@/app/actions/adminActions";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
@@ -523,6 +523,7 @@ function NewBookingForm({ date, services, onClose }: { date: Date; services: any
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: "", email: "", phone: "", address: "",
     serviceId: services[0]?.id || "", serviceName: services[0]?.name || "",
@@ -531,6 +532,30 @@ function NewBookingForm({ date, services, onClose }: { date: Date; services: any
     bookingTime: "09:00 AM",
     totalPrice: Number(services[0]?.price_small) || 0,
     notes: "",
+  });
+
+  // Load already-booked slots when the form opens
+  useEffect(() => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    getBookedSlotsAction(dateStr).then(raw => {
+      // convert HH:MM:SS from DB to "HH:MM AM/PM" to match TIME_SLOTS
+      const converted = raw.map(t => {
+        const [h, m] = t.split(":").map(Number);
+        const period = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+      });
+      setBookedSlots(converted);
+      // Auto-select first available slot
+      const firstOpen = TIME_SLOTS.find(s => !converted.includes(s));
+      if (firstOpen) setForm(p => ({ ...p, bookingTime: firstOpen }));
+    });
+  }, [date]);
+
+  const isSlotTaken = (slot: string) => bookedSlots.some(taken => {
+    // block slots within ±3 hours (180 min) of a taken slot
+    const toMins = (t: string) => { const [tp, per] = t.split(" "); const [h, m] = tp.split(":").map(Number); let hh = h; if (per === "PM" && h !== 12) hh += 12; if (per === "AM" && h === 12) hh = 0; return hh * 60 + m; };
+    return Math.abs(toMins(slot) - toMins(taken)) < 180;
   });
 
   const up = (f: Partial<typeof form>) => setForm(p => ({ ...p, ...f }));
@@ -621,13 +646,22 @@ function NewBookingForm({ date, services, onClose }: { date: Date; services: any
             <div className="space-y-1">
               <label className="text-[8px] font-black uppercase tracking-widest text-zinc-600 ml-1">Time Slot</label>
               <div className="grid grid-cols-4 gap-1">
-                {TIME_SLOTS.map(s => (
-                  <button key={s} onClick={() => up({ bookingTime: s })}
-                    className={cn("py-2 rounded-lg text-[9px] font-bold transition-all",
-                      form.bookingTime === s ? "bg-amber-500 text-black" : "bg-white/[0.03] border border-white/[0.04] text-zinc-500 hover:text-white")}>
-                    {s}
-                  </button>
-                ))}
+                {TIME_SLOTS.map(s => {
+                  const taken = isSlotTaken(s);
+                  return (
+                    <button key={s} onClick={() => !taken && up({ bookingTime: s })} disabled={taken}
+                      title={taken ? "Already booked" : ""}
+                      className={cn("py-2 rounded-lg text-[9px] font-bold transition-all relative",
+                        taken
+                          ? "bg-red-500/10 border border-red-500/15 text-red-900 cursor-not-allowed line-through"
+                          : form.bookingTime === s
+                            ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
+                            : "bg-white/[0.03] border border-white/[0.04] text-zinc-500 hover:text-white")}>
+                      {s}
+                      {taken && <span className="absolute inset-0 flex items-center justify-center text-[6px] text-red-700/60 font-black mt-4">TAKEN</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <Input label="Notes" value={form.notes} onChange={v => up({ notes: v })} placeholder="Special instructions..." />

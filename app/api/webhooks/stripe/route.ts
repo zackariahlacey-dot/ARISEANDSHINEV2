@@ -9,13 +9,7 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmails } from "@/lib/email";
 import { checkAvailability } from "@/app/actions/bookDetailing";
-
-const VEHICLE_SIZE_MAP = {
-  compact: "small",
-  sedan: "medium",
-  suv: "large",
-  xl: "extra_large",
-} as const;
+import { VEHICLE_SIZE_MAP } from "@/lib/constants";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",

@@ -43,6 +43,7 @@ import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
 import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
+import { SERVICE_DURATIONS } from "@/lib/constants";
 
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
@@ -77,30 +78,6 @@ const VEHICLE_SIZES: {
     sizeKey: "price_large",
   },
 ];
-
-// Service time + 30 min travel/buffer (minutes)
-const SERVICE_DURATIONS: Record<string, Record<VehicleSizeSlug, number>> = {
-  "Interior Detail": {
-    compact: 180, sedan: 180,
-    suv: 240, xl: 240,
-  },
-  "Exterior Detail": {
-    compact: 120, sedan: 120,
-    suv: 180, xl: 180,
-  },
-  "Full Detail": {
-    compact: 240, sedan: 240,
-    suv: 330, xl: 330,
-  },
-  "Interior Monthly Maintenance": {
-    compact: 90, sedan: 90,
-    suv: 120, xl: 120,
-  },
-  "Full Detail Monthly Maintenance": {
-    compact: 150, sedan: 150,
-    suv: 210, xl: 210,
-  },
-};
 
 const WORKDAY_START = "1:00 PM";
 const WORKDAY_END = "6:30 PM";

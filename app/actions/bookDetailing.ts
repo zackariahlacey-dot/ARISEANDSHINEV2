@@ -5,14 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmails } from "@/lib/email";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 import Stripe from "stripe";
-
-// Maps our UI vehicle size slugs to the DB enum values
-const VEHICLE_SIZE_MAP = {
-  compact: "small",
-  sedan: "medium",
-  suv: "large",
-  xl: "extra_large",
-} as const;
+import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
 
@@ -97,14 +90,6 @@ export async function timeToMinutes(t: string): Promise<number> {
   }
   return 0;
 }
-
-export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
-  "Interior Detail": { small: 180, medium: 180, large: 240, extra_large: 240 },
-  "Exterior Detail": { small: 120, medium: 120, large: 180, extra_large: 180 },
-  "Full Detail": { small: 240, medium: 240, large: 330, extra_large: 330 },
-  "Interior Monthly Maintenance": { small: 90, medium: 90, large: 120, extra_large: 120 },
-  "Full Detail Monthly Maintenance": { small: 150, medium: 150, large: 210, extra_large: 210 },
-};
 
 export async function checkAvailability(date: string, time: string, serviceName: string, size: string) {
   const supabase = createAdminClient();

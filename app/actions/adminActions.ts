@@ -11,7 +11,6 @@ import {
   sendReviewFollowupEmail
 } from "@/lib/email";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
-import { to24h } from "./bookDetailing";
 
 // Maps our UI vehicle size slugs to the DB enum values
 const VEHICLE_SIZE_MAP = {
@@ -20,6 +19,32 @@ const VEHICLE_SIZE_MAP = {
   suv: "large",
   xl: "extra_large",
 } as const;
+
+function to24h(time12: string): string {
+  const [timePart, period] = time12.split(" ");
+  const [rawH, rawM = "00"] = timePart.split(":");
+  let h = parseInt(rawH, 10);
+  if (period === "AM" && h === 12) h = 0;
+  if (period === "PM" && h !== 12) h += 12;
+  return `${String(h).padStart(2, "0")}:${rawM}:00`;
+}
+
+function timeToMins(t: string): number {
+  const m = t.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return 0;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+/** Returns an array of start-time strings (HH:MM:SS) already booked on a date */
+export async function getBookedSlotsAction(date: string): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("bookings")
+    .select("booking_time")
+    .eq("booking_date", date)
+    .neq("status", "cancelled");
+  return (data ?? []).map(r => String(r.booking_time ?? ""));
+}
 
 /**
  * NEW: Admin Quick Book Action
@@ -96,7 +121,25 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   if (vehicleErr) throw new Error("Vehicle creation failed");
 
-  // 4. Insert Booking
+  // 4. Check Availability First — prevent double booking
+  const { data: existingOnDate } = await supabase
+    .from("bookings")
+    .select("booking_time")
+    .eq("booking_date", payload.bookingDate)
+    .neq("status", "cancelled");
+
+  const bookedTime24 = to24h(payload.bookingTime);
+  const requestedSlot = timeToMins(bookedTime24);
+  const SERVICE_DURATION_MINS = 180; // 3 hour default block
+
+  for (const row of existingOnDate ?? []) {
+    const takenSlot = timeToMins(String(row.booking_time ?? ""));
+    if (Math.abs(requestedSlot - takenSlot) < SERVICE_DURATION_MINS) {
+      return { success: false, error: "That time is already booked. Please pick a different time slot." };
+    }
+  }
+
+  // 5. Insert Booking
   const notesBody = [
     `💳 Payment: Pay at Arrival (Quick Book)`,
     payload.address ? `📍 Service Location: ${payload.address}` : null,
@@ -110,7 +153,7 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       vehicle_id: vehicle.id,
       service_id: payload.serviceId,
       booking_date: payload.bookingDate,
-      booking_time: await to24h(payload.bookingTime),
+      booking_time: to24h(payload.bookingTime),
       status: "confirmed",
       total_price: payload.totalPrice,
       notes: notesBody,
