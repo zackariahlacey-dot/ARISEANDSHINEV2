@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:UsersZackARISEANDSHINEV2 -name *adminActions* -o -name *admin*actions*)",
+      "Bash(find C:UsersZackARISEANDSHINEV2appactions -name *.ts -type f)",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

@@ -3,13 +3,14 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllClients, updateCustomerProfile } from "@/app/actions/adminActions";
+import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
 import { Modal } from "@/components/admin/Modal";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import {
   Users, Search, Filter, Phone, MessageSquare, Mail, Navigation,
   Car, Calendar, Star, Crown, AlertTriangle, ShieldCheck, CreditCard,
-  History, Settings, PenTool, Save, CheckCircle2, ChevronRight, Loader2
+  History, Settings, PenTool, Save, CheckCircle2, ChevronRight, Loader2, Link
 } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -144,6 +145,36 @@ function ClientProfile({ client }: { client: any }) {
   const [points, setPoints] = useState(client.reward_points?.toString() || "0");
   const [notes, setNotes] = useState(client.notes || "");
   const [saving, setSaving] = useState(false);
+  const [sendingPaymentLinkId, setSendingPaymentLinkId] = useState<string | null>(null);
+
+  const handleSendPaymentLink = async (b: any) => {
+    setSendingPaymentLinkId(b.id);
+    try {
+      const vehicle = client.vehicles?.[0];
+      const result = await sendStripePaymentLink(b.id, {
+        serviceName: b.services?.name ?? "Detail Service",
+        totalPrice: Number(b.total_price),
+        vehicleYear: vehicle?.year ?? "",
+        vehicleMake: vehicle?.make ?? "",
+        vehicleModel: vehicle?.model ?? "",
+        vehicleSize: vehicle?.size ?? "",
+        bookingDate: b.booking_date,
+        bookingTime: b.booking_time?.substring(0, 5) ?? "",
+        customerEmail: client.email ?? "",
+        customerName: `${client.first_name || ""} ${client.last_name || ""}`.trim(),
+      });
+      if ("error" in result) {
+        toast(result.error, "error");
+      } else {
+        await navigator.clipboard.writeText(result.url);
+        toast("Payment link copied!");
+      }
+    } catch {
+      toast("Failed to create payment link", "error");
+    } finally {
+      setSendingPaymentLinkId(null);
+    }
+  };
 
   // Mutations
   const updatePoints = useMutation({
@@ -284,6 +315,18 @@ function ClientProfile({ client }: { client: any }) {
                     <span className="text-xs font-bold text-zinc-300">{b.services?.name || "Service"}</span>
                     <span className="text-xs font-black text-emerald-500">${Number(b.total_price).toFixed(0)}</span>
                   </div>
+                  <button
+                    onClick={() => handleSendPaymentLink(b)}
+                    disabled={sendingPaymentLinkId === b.id}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/30 text-[9px] font-black uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {sendingPaymentLinkId === b.id ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Link size={12} />
+                    )}
+                    Send Payment Link
+                  </button>
                 </div>
               ))}
               {(!client.bookings || client.bookings.length === 0) && (

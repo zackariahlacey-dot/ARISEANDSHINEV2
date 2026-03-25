@@ -11,6 +11,7 @@ import {
   useDeleteBooking,
 } from "@/hooks/use-admin-data";
 import { adminQuickBookAction, getBookedSlotsAction } from "@/app/actions/adminActions";
+import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
@@ -35,6 +36,7 @@ import {
   DollarSign,
   User,
   CalendarDays,
+  Link,
 } from "lucide-react";
 import {
   format,
@@ -80,6 +82,7 @@ export default function SchedulePage() {
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("09:00 AM");
+  const [sendingPaymentLink, setSendingPaymentLink] = useState(false);
 
   const weekDays = useMemo(() => eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) }), [weekStart]);
 
@@ -160,6 +163,35 @@ export default function SchedulePage() {
       await reschedule.mutateAsync({ id: activeBooking.id, date: rescheduleDate, time: time24 });
       toast("Rescheduled!"); setShowReschedule(false); setActiveBooking(null); refetch();
     } catch { toast("Error", "error"); }
+  };
+
+  const handleSendPaymentLink = async (b: any) => {
+    setSendingPaymentLink(true);
+    try {
+      const vehicles = b.vehicles;
+      const result = await sendStripePaymentLink(b.id, {
+        serviceName: b.services?.name ?? "Detail Service",
+        totalPrice: Number(b.total_price),
+        vehicleYear: vehicles?.year ?? "",
+        vehicleMake: vehicles?.make ?? "",
+        vehicleModel: vehicles?.model ?? "",
+        vehicleSize: vehicles?.size ?? "",
+        bookingDate: b.booking_date,
+        bookingTime: formatTime(b.booking_time),
+        customerEmail: b.profiles?.email ?? "",
+        customerName: b.profiles ? `${b.profiles.first_name || ""} ${b.profiles.last_name || ""}`.trim() : "",
+      });
+      if ("error" in result) {
+        toast(result.error, "error");
+      } else {
+        await navigator.clipboard.writeText(result.url);
+        toast("Payment link copied to clipboard!");
+      }
+    } catch {
+      toast("Failed to create payment link", "error");
+    } finally {
+      setSendingPaymentLink(false);
+    }
   };
 
   if (isLoading) {
@@ -439,6 +471,19 @@ export default function SchedulePage() {
                 <button onClick={() => setShowReschedule(true)} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:scale-95 transition-all group">
                   <RotateCcw size={20} className="text-amber-500 group-hover:scale-110 transition-transform" />
                   <span className="text-[9px] font-black uppercase tracking-widest">Reschedule</span>
+                </button>
+
+                <button
+                  onClick={() => handleSendPaymentLink(b)}
+                  disabled={sendingPaymentLink}
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:scale-95 transition-all group disabled:opacity-50"
+                >
+                  {sendingPaymentLink ? (
+                    <Loader2 size={20} className="text-emerald-500 animate-spin" />
+                  ) : (
+                    <Link size={20} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                  )}
+                  <span className="text-[9px] font-black uppercase tracking-widest">Payment Link</span>
                 </button>
               </div>
 

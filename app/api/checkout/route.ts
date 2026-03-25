@@ -75,8 +75,10 @@ export async function POST(req: NextRequest) {
     const isSubscription = serviceName.toLowerCase().includes("monthly");
     const mode = isSubscription ? "subscription" : "payment";
 
-    // Setup fee for subscriptions ($100)
-    const setupFee = isSubscription ? 100 : 0;
+    // Setup fee: Interior Monthly = $75, Full Detail Monthly = $100
+    const setupFee = isSubscription
+      ? serviceName.toLowerCase().includes("full detail") ? 100 : 75
+      : 0;
     
     // The totalPrice from modal already includes setup fee + travel fee - points.
     // For subscriptions, we want Stripe to charge:

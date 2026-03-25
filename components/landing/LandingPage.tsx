@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -150,6 +150,9 @@ export function LandingPage({ services }: { services: Service[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const bottomCtaRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const maintenanceCarouselRef = useRef<HTMLDivElement>(null);
+  const [maintenanceCarouselActiveIdx, setMaintenanceCarouselActiveIdx] = useState(0);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
 
   useEffect(() => {
@@ -262,6 +265,17 @@ export function LandingPage({ services }: { services: Service[] }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Scroll service carousel to Full Detail on first mount (no animation so it's instant)
+  useEffect(() => {
+    if (!mounted || !carouselRef.current) return;
+    const idx = carouselServices.findIndex((s) => s.name === "Full Detail");
+    if (idx > 0) {
+      carouselRef.current.scrollLeft = idx * carouselRef.current.clientWidth;
+      setCarouselActiveIdx(idx);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
+
   // Review carousel: native scroll auto-advance every 5s, clear on unmount
   useEffect(() => {
     const CARD_GAP = 24;
@@ -284,10 +298,43 @@ export function LandingPage({ services }: { services: Service[] }) {
   const mainGridServices = services.filter((s) => !s.is_subscription);
   const monthlyPlanServices = services.filter((s) => s.is_subscription);
 
+  // Fixed display order: Interior | Full Detail | Exterior
+  const CAROUSEL_ORDER = ["Interior Detail", "Full Detail", "Exterior Detail"];
+  const carouselServices = useMemo(
+    () => [...mainGridServices].sort((a, b) => {
+      const ai = CAROUSEL_ORDER.indexOf(a.name);
+      const bi = CAROUSEL_ORDER.indexOf(b.name);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mainGridServices]
+  );
+
+  const fullDetailIdx = carouselServices.findIndex((s) => s.name === "Full Detail");
+  const [carouselActiveIdx, setCarouselActiveIdx] = useState(fullDetailIdx >= 0 ? fullDetailIdx : 1);
+
   const [activeServiceId, setActiveServiceId] = useState<string | null>(() => {
-    return mainGridServices[0]?.id ?? null;
+    const full = mainGridServices.find((s) => s.name === "Full Detail");
+    return full?.id ?? mainGridServices[0]?.id ?? null;
   });
-  const activeService = mainGridServices.find((s) => s.id === activeServiceId) ?? mainGridServices[0];
+  const scrollToCard = useCallback((idx: number) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
+    setCarouselActiveIdx(idx);
+    const svc = carouselServices[idx];
+    if (svc) setActiveServiceId(svc.id);
+  }, [carouselServices]);
+
+  const handleCarouselScroll = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    const clamped = Math.min(Math.max(0, idx), carouselServices.length - 1);
+    setCarouselActiveIdx(clamped);
+    const svc = carouselServices[clamped];
+    if (svc) setActiveServiceId(svc.id);
+  }, [carouselServices]);
 
   const [activeMonthlyPlanId, setActiveMonthlyPlanId] = useState<string | null>(() => {
     return monthlyPlanServices[0]?.id ?? null;
@@ -786,113 +833,110 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ─── Membership / Maintenance Club ────────────────────────── */}
+      {/* ─── Services ───────────────────────────────────────────── */}
       <motion.section
-        id="maintenance-club"
+        id="services"
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"
       >
-        {/* Background Decorative Element */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none" />
-        
-        <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-10 md:mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6">
-              <Crown size={10} fill="currentColor" />
-              Member Exclusive
-            </div>
-            <h2 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6">
-              The Maintenance <span className="text-zinc-500">Club</span>
-            </h2>
-            <p className="text-base md:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed px-4">
-              Experience the pinnacle of automotive care. Our recurring plans ensure your vehicle remains in showroom condition with effortless, scheduled maintenance.
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="text-center mb-10 md:mb-16">
+            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+              What We Offer
             </p>
-            <div className="mt-8 inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-zinc-900/80 border border-white/5 px-4 py-3 sm:px-5 sm:py-2.5 rounded-2xl text-zinc-400 text-[11px] sm:text-xs font-medium backdrop-blur-sm mx-auto">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={14} className="text-[#D4AF37]" />
-                <span className="text-white/90 font-bold">$100 Signup Fee</span>
-              </div>
-              <span className="hidden sm:inline text-zinc-700">•</span>
-              <span>Includes Deep Clean on first visit</span>
-            </div>
+            <h2
+              className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
+              style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.2))" }}
+            >
+              Our Services
+            </h2>
           </div>
 
-          {/* Desktop Grid / Mobile Tabs */}
-          <div className="max-w-5xl mx-auto">
-            {/* Mobile Tab Navigation */}
-            <div className="flex justify-center mb-8 md:hidden">
-              <div className="bg-zinc-900/50 p-1 rounded-full inline-flex gap-0.5 border border-white/5">
-                {monthlyPlanServices.map((plan) => {
-                  const isActive = activeMonthlyPlanId === plan.id;
-                  const label = plan.name.toLowerCase().includes("full") ? "Full Detail" : "Interior";
-                  return (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => setActiveMonthlyPlanId(plan.id)}
-                      className={
-                        isActive
-                          ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-5 py-2 text-xs font-bold transition-all"
-                          : "text-zinc-500 hover:text-zinc-300 px-5 py-2 text-xs font-semibold transition-all rounded-full"
-                      }
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+          {mainGridServices.length === 0 ? (
+            <div className="text-center py-24 text-zinc-600">
+              <Car size={40} className="mx-auto mb-4 opacity-30" />
+              <p className="text-sm">Services coming soon — check back shortly.</p>
             </div>
-
-            {/* Desktop Grid Display */}
-            <div className="hidden md:grid md:grid-cols-2 gap-8 lg:gap-12">
-              {monthlyPlanServices.map((plan) => (
-                <MaintenanceCard 
-                  key={plan.id} 
-                  plan={plan} 
-                  onBook={() => openBooking(plan)} 
-                />
-              ))}
-            </div>
-
-            {/* Mobile Single Card Display with Animation */}
-            <div className="md:hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeMonthlyPlanId}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {activeMonthlyPlan && (
-                    <MaintenanceCard 
-                      plan={activeMonthlyPlan} 
-                      onBook={() => openBooking(activeMonthlyPlan)} 
+          ) : (
+            <>
+              {/* Desktop: 3-column grid of all cards */}
+              <div className="hidden lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start w-full max-w-7xl mx-auto">
+                {mainGridServices.map((service) => (
+                  <div key={service.id} className="h-fit pt-5">
+                    <ServiceCard
+                      service={service}
+                      onBook={() => openBooking(service)}
                     />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
+                  </div>
+                ))}
+              </div>
+              {/* Mobile/tablet: swipeable carousel — Interior | Full Detail | Exterior */}
+              <div className="flex flex-col items-center w-full lg:hidden">
+                {/* Scroll track — each slide is full viewport width so snap is perfect */}
+                <div
+                  ref={carouselRef}
+                  onScroll={handleCarouselScroll}
+                  className="w-full flex overflow-x-auto snap-x snap-mandatory"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+                >
+                  {carouselServices.map((service) => (
+                    <div
+                      key={service.id}
+                      className="snap-center shrink-0 w-full flex justify-center px-5 pt-5 pb-3"
+                    >
+                      <div className="w-full max-w-[370px]">
+                        <ServiceCard
+                          service={service}
+                          onBook={() => openBooking(service)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-          {/* Inline booking dropdown (Maintenance Club) */}
-          {mounted && expandedBookingId === "club" && (
-            <div className="w-full max-w-3xl mx-auto mt-12 animate-in fade-in slide-in-from-top-4 duration-500">
-              <BookingSection
-                isVisible={true}
-                onClose={() => setExpandedBookingId(null)}
-                selectedService={selectedService}
-                services={services}
-                onSelectService={setSelectedService}
-                onBookingSuccess={handleBookingSuccess}
-                initialRewardPoints={authRewardPoints}
-                initialDraft={initialDraft}
-                onDraftRestored={() => setInitialDraft(null)}
-              />
-            </div>
+                {/* Dot indicators + label */}
+                <div className="flex items-center gap-3 mt-4">
+                  {carouselServices.map((service, i) => (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => scrollToCard(i)}
+                      aria-label={service.name}
+                      className="flex flex-col items-center gap-1.5 group"
+                    >
+                      <div className={`h-1.5 rounded-full transition-all duration-300 ${
+                        carouselActiveIdx === i
+                          ? "w-6 bg-[#D4AF37]"
+                          : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"
+                      }`} />
+                    </button>
+                  ))}
+                </div>
+                {/* Active service label */}
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 mt-2">
+                  {carouselServices[carouselActiveIdx]?.name ?? ""}
+                </p>
+              </div>
+              {/* Inline booking dropdown (Services) — client-only */}
+              {mounted && expandedBookingId === "services" && (
+                <div className="w-full max-w-[450px] lg:max-w-7xl mx-auto mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <BookingSection
+                    isVisible={true}
+                    onClose={() => setExpandedBookingId(null)}
+                    selectedService={selectedService}
+                    services={services}
+                    onSelectService={setSelectedService}
+                    onBookingSuccess={handleBookingSuccess}
+                    initialRewardPoints={authRewardPoints}
+                    initialDraft={initialDraft}
+                    onDraftRestored={() => setInitialDraft(null)}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </motion.section>
@@ -1029,6 +1073,114 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
+      {/* ─── Membership / Maintenance Club ────────────────────────── */}
+      <motion.section
+        id="maintenance-club"
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        variants={sectionVariants}
+        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+      >
+        {/* Background Decorative Element */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="w-full max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-10 md:mb-20">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6">
+              <Crown size={10} fill="currentColor" />
+              Member Exclusive
+            </div>
+            <h2 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6">
+              The Maintenance <span className="text-zinc-500">Club</span>
+            </h2>
+            <p className="text-base md:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed px-4">
+              Experience the pinnacle of automotive care. Our recurring plans ensure your vehicle remains in showroom condition with effortless, scheduled maintenance.
+            </p>
+            <div className="mt-8 inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-zinc-900/80 border border-white/5 px-4 py-3 sm:px-5 sm:py-2.5 rounded-2xl text-zinc-400 text-[11px] sm:text-xs font-medium backdrop-blur-sm mx-auto">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={14} className="text-[#D4AF37]" />
+                <span className="text-white/90 font-bold">$75–$100 One-Time Setup Fee</span>
+              </div>
+              <span className="hidden sm:inline text-zinc-700">•</span>
+              <span>Includes Deep Clean on first visit</span>
+            </div>
+          </div>
+
+          {/* Mobile swipeable carousel */}
+          <div className="md:hidden relative">
+            <div
+              ref={maintenanceCarouselRef}
+              onScroll={() => {
+                const el = maintenanceCarouselRef.current;
+                if (!el) return;
+                const idx = Math.round(el.scrollLeft / el.clientWidth);
+                setMaintenanceCarouselActiveIdx(Math.min(Math.max(0, idx), monthlyPlanServices.length - 1));
+              }}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide -mx-4 px-4"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {monthlyPlanServices.map((plan) => (
+                <div
+                  key={plan.id}
+                  className="snap-center shrink-0 w-full flex justify-center px-2"
+                >
+                  <div className="w-full max-w-[370px]">
+                    <MaintenanceCard plan={plan} onBook={() => openBooking(plan)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Dot indicators */}
+            {monthlyPlanServices.length > 1 && (
+              <div className="flex justify-center gap-2 mt-6">
+                {monthlyPlanServices.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={`Plan ${i + 1}`}
+                    onClick={() => {
+                      const el = maintenanceCarouselRef.current;
+                      if (!el) return;
+                      el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+                      setMaintenanceCarouselActiveIdx(i);
+                    }}
+                    className={`rounded-full transition-all duration-300 ${
+                      maintenanceCarouselActiveIdx === i
+                        ? "w-6 h-2 bg-[#D4AF37]"
+                        : "w-2 h-2 bg-zinc-600 hover:bg-zinc-400"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Grid */}
+          <div className="hidden md:grid md:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto">
+            {monthlyPlanServices.map((plan) => (
+              <MaintenanceCard key={plan.id} plan={plan} onBook={() => openBooking(plan)} />
+            ))}
+          </div>
+
+          {/* Inline booking dropdown (Maintenance Club) */}
+          {mounted && expandedBookingId === "club" && (
+            <div className="w-full max-w-3xl mx-auto mt-12 animate-in fade-in slide-in-from-top-4 duration-500">
+              <BookingSection
+                isVisible={true}
+                onClose={() => setExpandedBookingId(null)}
+                selectedService={selectedService}
+                services={services}
+                onSelectService={setSelectedService}
+                onBookingSuccess={handleBookingSuccess}
+                initialRewardPoints={authRewardPoints}
+                initialDraft={initialDraft}
+                onDraftRestored={() => setInitialDraft(null)}
+              />
+            </div>
+          )}
+        </div>
+      </motion.section>
 
       {/* ─── Trust Banner (Our Promise) — 2x2 grid on mobile ─────────────────── */}
       <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
@@ -1056,104 +1208,6 @@ export function LandingPage({ services }: { services: Service[] }) {
           ))}
         </div>
       </section>
-
-      {/* ─── Services ───────────────────────────────────────────── */}
-      <motion.section
-        id="services"
-        initial="hidden"
-        whileInView="visible"
-        viewport={sectionViewport}
-        variants={sectionVariants}
-        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"
-      >
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="text-center mb-10 md:mb-16">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
-              What We Offer
-            </p>
-            <h2
-              className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-              style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.2))" }}
-            >
-              Our Services
-            </h2>
-          </div>
-
-          {mainGridServices.length === 0 ? (
-            <div className="text-center py-24 text-zinc-600">
-              <Car size={40} className="mx-auto mb-4 opacity-30" />
-              <p className="text-sm">Services coming soon — check back shortly.</p>
-            </div>
-          ) : (
-            <>
-              {/* Desktop: 3-column grid of all cards */}
-              <div className="hidden lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start w-full max-w-7xl mx-auto">
-                {mainGridServices.map((service) => (
-                  <div key={service.id} className="h-fit">
-                    <ServiceCard
-                      service={service}
-                      onBook={() => openBooking(service)}
-                    />
-                  </div>
-                ))}
-              </div>
-              {/* Mobile/tablet: pill nav + single card */}
-              <div className="flex flex-col items-center max-w-7xl mx-auto lg:hidden">
-                <div className="bg-zinc-900/50 p-1.5 rounded-full inline-flex gap-1 border border-white/5 mb-8">
-                  {mainGridServices.map((service) => {
-                    const isActive = activeServiceId === service.id;
-                    const label = service.name === "Full Detail" ? "Full Detail" : service.name.replace(" Detail", "");
-                    return (
-                      <button
-                        key={service.id}
-                        type="button"
-                        onClick={() => setActiveServiceId(service.id)}
-                        className={
-                          isActive
-                            ? "bg-zinc-800 text-[#D4AF37] shadow-lg rounded-full px-6 py-2 text-sm font-semibold transition-all"
-                            : "text-zinc-400 hover:text-zinc-200 px-6 py-2 text-sm font-medium transition-all rounded-full"
-                        }
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <motion.div
-                  key={activeServiceId}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-full max-w-[450px] mx-auto flex justify-center"
-                >
-                  {activeService && (
-                    <ServiceCard
-                      service={activeService}
-                      onBook={() => openBooking(activeService)}
-                    />
-                  )}
-                </motion.div>
-              </div>
-              {/* Inline booking dropdown (Services) — client-only */}
-              {mounted && expandedBookingId === "services" && (
-                <div className="w-full max-w-[450px] lg:max-w-7xl mx-auto mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                  <BookingSection
-                    isVisible={true}
-                    onClose={() => setExpandedBookingId(null)}
-                    selectedService={selectedService}
-                    services={services}
-                    onSelectService={setSelectedService}
-                    onBookingSuccess={handleBookingSuccess}
-                    initialRewardPoints={authRewardPoints}
-                    initialDraft={initialDraft}
-                    onDraftRestored={() => setInitialDraft(null)}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </motion.section>
 
       {/* ─── Testimonials Carousel ───────────────────────────────── */}
       <motion.section
@@ -1536,8 +1590,8 @@ export function LandingPage({ services }: { services: Service[] }) {
         <LegalSection title="5. Maintenance Club — Setup Fee">
           <p>
             All Monthly Maintenance Club subscriptions require a one-time{" "}
-            <strong className="text-zinc-200">$100 Deep Clean &amp; Reset Detail</strong>{" "}
-            before the recurring monthly service begins. This fee is{" "}
+            <strong className="text-zinc-200">Deep Clean &amp; Reset Detail</strong>{" "}
+            ($75 for Interior, $100 for Full Detail) before the recurring monthly service begins. This fee is{" "}
             <strong className="text-zinc-200">non-refundable</strong>{" "}
             once the initial detail has been completed. Subscriptions may be cancelled at any time before the next billing cycle with no further charges.
           </p>
@@ -1573,20 +1627,16 @@ export function LandingPage({ services }: { services: Service[] }) {
 // ─── Service inclusions data ───────────────────────────────────────────────────
 
 const EXTERIOR_ITEMS = [
-  "Hand wash & dry",
-  "Wheel faces & barrel cleaning",
-  "Tire dressing",
-  "Bug & tar spot removal",
-  "Streak-free exterior glass",
-  "High-quality spray wax finish",
+  "Full handwash and foam bath",
+  "Deep clean wheel wells, rims, and tires",
+  "3 Month Ceramic Sealant",
 ];
 
 const INTERIOR_ITEMS = [
-  "Thorough vacuuming (seats, carpets, mats)",
-  "Complete dash & console wipe-down",
-  "Interior glass cleaning",
-  "Door jamb wipe-down",
-  "Light spot-treatment for stains",
+  "Full wipe down & vacuum of every surface, crack, and crevice",
+  "Clean and protect plastics and leathers",
+  "Floor mats & carpet cleaning (shampoo not included)",
+  "Interior glass cleaned and protected",
 ];
 
 const MAINTENANCE_ITEMS = [
@@ -1642,7 +1692,7 @@ function MaintenanceCard({
             <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] md:text-xs">/ mo</span>
           </div>
           <p className="text-[9px] md:text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-2 md:mt-3">
-            +$100 Initial Setup Fee
+            +${plan.name.toLowerCase().includes("full") ? 100 : 75} Initial Setup Fee
           </p>
         </div>
 
@@ -1711,95 +1761,91 @@ function ServiceCard({
   service: Service;
   onBook: () => void;
 }) {
-  const [isIncludedOpen, setIsIncludedOpen] = useState(false);
-  const samePrice = service.price_small === service.price_large;
-  const priceDisplay = samePrice
-    ? `$${service.price_small}`
-    : `$${service.price_small} – $${service.price_large}`;
-
+  const isPopular = service.name === "Full Detail";
   const inclusions = SERVICE_INCLUSIONS[service.name] ?? [];
 
   return (
-    <div className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 md:p-10 flex flex-col h-fit transition-all duration-300 hover:-translate-y-1 hover:border-[#D4AF37]/30 hover:shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-      {/* Service name */}
-      <div className="mb-5">
-        <h3 className="text-xl font-bold text-zinc-100 leading-snug">
-          {service.name}
-        </h3>
-        {service.is_subscription && (
-          <span className="text-[10px] text-[#D4AF37]/70 font-semibold uppercase tracking-widest mt-1 block">
-            Subscription
-          </span>
+    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+      isPopular
+        ? "border border-[#D4AF37]/45 shadow-[0_0_40px_rgba(212,175,55,0.1)] bg-zinc-900/70 hover:shadow-[0_16px_50px_rgba(212,175,55,0.15)]"
+        : "border border-white/[0.07] bg-zinc-900/50 hover:border-[#D4AF37]/25 hover:shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+    }`}>
+
+      {/* Top gold accent line for popular */}
+      {isPopular && (
+        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent shrink-0" />
+      )}
+
+      <div className="p-7 flex flex-col flex-1">
+
+        {/* Header: badge + name */}
+        <div className="mb-6">
+          {isPopular && (
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Crown size={11} className="text-[#D4AF37]" strokeWidth={2} />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">
+                Most Popular
+              </span>
+            </div>
+          )}
+          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+            {service.name}
+          </h3>
+          {service.description && (
+            <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{service.description}</p>
+          )}
+        </div>
+
+        {/* Pricing — Normal / Large side-by-side */}
+        <div className={`flex rounded-xl mb-7 overflow-hidden border ${isPopular ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
+          <div className="flex-1 py-4 text-center bg-white/[0.02]">
+            <div className="text-2xl font-black text-white tabular-nums">${service.price_small}</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
+          </div>
+          <div className="w-px bg-white/[0.06]" />
+          <div className={`flex-1 py-4 text-center ${isPopular ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+            <div className={`text-2xl font-black tabular-nums ${isPopular ? "text-[#D4AF37]" : "text-zinc-200"}`}>${service.price_large}</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
+          </div>
+        </div>
+
+        {/* Inclusions — always visible */}
+        {inclusions.length > 0 && (
+          <div className="mb-7 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">What&apos;s Included</p>
+            <ul className="space-y-2.5">
+              {inclusions.map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
+                  <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
+                    <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
-      </div>
+        {inclusions.length === 0 && <div className="flex-1" />}
 
-      {/* Price — Champagne Gold gradient */}
-      <div className="mb-1">
-        <span className="text-3xl font-bold bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent tabular-nums">
-          {priceDisplay}
-        </span>
-      </div>
-      {!samePrice && (
-        <p className="text-sm text-zinc-500 mt-1 mb-5">by vehicle size</p>
-      )}
-      {samePrice && <div className="mb-5" />}
-
-      {/* Description */}
-      {service.description && (
-        <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-          {service.description}
-        </p>
-      )}
-
-      {/* Reward points badge */}
-      <div className="inline-flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-medium px-4 py-1.5 rounded-full mb-6 w-fit">
-        <Sparkles size={11} className="shrink-0" />
-        Earn {service.price_small}–{service.price_large} Reward Points
-      </div>
-
-      {/* What's Included dropdown — each card has its own open state */}
-      {inclusions.length > 0 && (
-        <details
-          open={isIncludedOpen}
-          className="group/details mb-6 mt-auto"
+        {/* CTA */}
+        <button
+          onClick={onBook}
+          className={`w-full py-3.5 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
+            isPopular
+              ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_20px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_28px_rgba(212,175,55,0.5)]"
+              : "btn-primary-gold-shimmer bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] hover:scale-[1.02]"
+          }`}
         >
-          <summary
-            className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between border-t border-white/5 pt-4 pb-0.5 cursor-pointer text-sm font-medium text-zinc-400 hover:text-[#D4AF37] outline-none transition-colors duration-200 select-none"
-            onClick={(e) => {
-              e.preventDefault();
-              setIsIncludedOpen((prev) => !prev);
-            }}
-          >
-            What&apos;s Included
-            <ChevronDown
-              size={15}
-              className={`shrink-0 transition-transform duration-300 ${isIncludedOpen ? "rotate-180" : ""}`}
-            />
-          </summary>
-          <ul className="mt-4 space-y-2 ml-1">
-            {inclusions.map((item) => (
-              <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-400">
-                <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
-                  <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
-                </span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {inclusions.length === 0 && <div className="mt-auto" />}
-
-      {/* CTA — Obsidian & Gold */}
-      <button
-        onClick={onBook}
-        className="btn-primary-gold-shimmer w-full bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] py-3 rounded-lg font-semibold flex justify-center items-center gap-2 hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
-      >
-        <span className="relative z-[1] flex items-center justify-center gap-2">
           Book This Service
           <Sparkles size={13} className="shrink-0" />
-        </span>
-      </button>
+        </button>
+
+        {/* Reward points hint */}
+        <p className="text-center text-[11px] text-zinc-600 mt-3">
+          <Sparkles size={9} className="inline mr-1" />
+          Earn {service.price_small}–{service.price_large} reward points
+        </p>
+      </div>
     </div>
   );
 }

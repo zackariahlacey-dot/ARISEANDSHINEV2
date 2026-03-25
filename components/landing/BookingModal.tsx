@@ -48,14 +48,20 @@ import { SERVICE_DURATIONS } from "@/lib/constants";
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
 const MAX_REDEEMABLE_POINTS = 1000;
-const MAINTENANCE_SETUP_FEE = 100;
+/** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $100 */
+function getMaintenanceSetupFee(serviceName: string): number {
+  return serviceName.toLowerCase().includes("full") ? 100 : 75;
+}
 
 const ADD_ONS = [
-  { id: "pet_hair", label: "Heavy Pet Hair Removal", price: 25, desc: "Deep extraction for severe pet hair accumulation" },
-  { id: "odor", label: "Odor Elimination", price: 60, desc: "Chemical-free treatment to neutralize deep-seated smells" },
-  { id: "stain_2", label: "Difficult Stain Removal (2 Stains)", price: 30, desc: "Targeted deep cleaning for 2 challenging spots" },
-  { id: "stain_3plus", label: "Difficult Stain Removal (3+ Stains)", price: 45, desc: "Comprehensive treatment for 3 or more stubborn stains" },
+  { id: "engine_bay", label: "Engine Bay Detail", price: 50, desc: "Deep clean and degrease the engine bay" },
+  { id: "floor_1", label: "Floorboard Shampoo – 1 Section", price: 30, desc: "Deep shampoo for one section of floorboards" },
+  { id: "floor_2", label: "Floorboard Shampoo – 2 Sections", price: 45, desc: "Deep shampoo for two sections of floorboards" },
+  { id: "floor_all", label: "Floorboard Shampoo – All Sections", price: 60, desc: "Full deep shampoo for all floorboard sections" },
+  { id: "clay_bar", label: "Clay Bar Treatment", price: 40, desc: "Remove embedded contaminants for a glass-smooth finish" },
 ];
+
+const FLOOR_ADDON_IDS = ["floor_1", "floor_2", "floor_all"];
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -492,10 +498,11 @@ export function BookingSection({
       if (isSelected) {
         return prev.filter(a => a.id !== addon.id);
       } else {
-        // Handle mutually exclusive stains
+        // Floorboard shampoo tiers are mutually exclusive
         let filtered = prev;
-        if (addon.id === 'stain_2') filtered = prev.filter(a => a.id !== 'stain_3plus');
-        if (addon.id === 'stain_3plus') filtered = prev.filter(a => a.id !== 'stain_2');
+        if (FLOOR_ADDON_IDS.includes(addon.id)) {
+          filtered = prev.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
+        }
         return [...filtered, { id: addon.id, label: addon.label, price: addon.price }];
       }
     });
@@ -581,7 +588,7 @@ export function BookingSection({
 
   // Price/points derived values (declared early so useEffect below can reference maxRedeemablePoints)
   const isMonthlyPlan = selectedService?.name.toLowerCase().includes("monthly maintenance");
-  const setupFee = isMonthlyPlan ? MAINTENANCE_SETUP_FEE : 0;
+  const setupFee = isMonthlyPlan ? getMaintenanceSetupFee(selectedService?.name ?? "") : 0;
   const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
   const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const referralDiscountAmount = referralEligible
@@ -1369,7 +1376,7 @@ export function BookingSection({
                           ${service.price_small} / Month
                         </div>
                         <div className="text-[10px] text-zinc-500 mt-1">
-                          +$100 Initial Setup Fee
+                          +${getMaintenanceSetupFee(service.name)} Initial Setup Fee
                         </div>
                       </button>
                     ))}
@@ -1575,8 +1582,9 @@ export function BookingSection({
                           Enhance Your Detail
                         </label>
                       </div>
-                      <div className="grid grid-cols-1 gap-2.5">
-                        {ADD_ONS.map((addon) => {
+                      <div className="space-y-2.5">
+                        {/* Standalone add-ons (non-floor) */}
+                        {ADD_ONS.filter((a) => !FLOOR_ADDON_IDS.includes(a.id)).map((addon) => {
                           const isSelected = selectedAddons.some(a => a.id === addon.id);
                           return (
                             <button
@@ -1584,8 +1592,8 @@ export function BookingSection({
                               type="button"
                               onClick={() => toggleAddon(addon)}
                               className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
-                                isSelected 
-                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]" 
+                                isSelected
+                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
                                   : "bg-zinc-950/40 border-white/5 hover:border-white/20"
                               }`}
                             >
@@ -1596,7 +1604,7 @@ export function BookingSection({
                                   </span>
                                   {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
                                 </div>
-                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed truncate">
+                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
                                   {addon.desc}
                                 </p>
                               </div>
@@ -1606,6 +1614,45 @@ export function BookingSection({
                             </button>
                           );
                         })}
+
+                        {/* Floorboard Shampoo — tiered selector */}
+                        <div className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
+                          selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
+                            ? "border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+                            : "border-white/5"
+                        }`}>
+                          <div className={`px-4 py-3 border-b border-white/[0.06] ${
+                            selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
+                              ? "bg-[#D4AF37]/10"
+                              : "bg-zinc-950/40"
+                          }`}>
+                            <p className="text-sm font-bold text-zinc-200">Sectional Floorboard Shampoo</p>
+                            <p className="text-[11px] text-zinc-500 mt-0.5">Deep shampoo — pick how many sections</p>
+                          </div>
+                          <div className="flex divide-x divide-white/[0.06] bg-zinc-950/40">
+                            {ADD_ONS.filter((a) => FLOOR_ADDON_IDS.includes(a.id)).map((addon) => {
+                              const isSelected = selectedAddons.some(a => a.id === addon.id);
+                              const shortLabel = addon.id === "floor_1" ? "1 Section" : addon.id === "floor_2" ? "2 Sections" : "All";
+                              return (
+                                <button
+                                  key={addon.id}
+                                  type="button"
+                                  onClick={() => toggleAddon(addon)}
+                                  className={`flex-1 py-3.5 text-center transition-all duration-200 ${
+                                    isSelected ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.03]"
+                                  }`}
+                                >
+                                  <div className={`text-xs font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-400"}`}>
+                                    {shortLabel}
+                                  </div>
+                                  <div className={`text-sm font-black mt-0.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                    +${addon.price}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -1628,7 +1675,7 @@ export function BookingSection({
                           Schedule Your Initial Deep Clean
                         </h3>
                         <p className="text-xs text-zinc-400 leading-relaxed">
-                          Pick the date for your mandatory $100 reset detail. Your monthly maintenance schedule will be locked in after this.
+                          Pick the date for your mandatory ${setupFee > 0 ? `$${setupFee}` : ""} reset detail. Your monthly maintenance schedule will be locked in after this.
                         </p>
                       </div>
                     )}
@@ -1790,7 +1837,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           <div className="space-y-2 text-sm">
                             <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                               <span className="text-zinc-400">Initial Deep Clean & Setup Fee</span>
-                              <span className="font-semibold text-white">$100.00</span>
+                              <span className="font-semibold text-white">${setupFee.toFixed(2)}</span>
                             </div>
                             <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
                               <span className="text-zinc-400">First Month (Based on Vehicle Size)</span>
@@ -1973,7 +2020,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 Initial Setup & Reset Fee
                               </span>
                               <span className="font-semibold text-white">
-                                $100.00
+                                ${setupFee.toFixed(2)}
                               </span>
                             </div>
                           )}
