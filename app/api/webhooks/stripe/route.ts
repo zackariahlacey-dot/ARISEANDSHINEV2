@@ -78,6 +78,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert booking only after successful payment
+    // Parse add-ons JSON stored in Stripe metadata
+    let addonsJson: { id: string; label: string; price: number }[] | null = null;
+    if (m.addonsJson) {
+      try { addonsJson = JSON.parse(m.addonsJson); } catch { addonsJson = null; }
+    }
+
     const { data: booking, error: insertErr } = await supabase
       .from("bookings")
       .insert({
@@ -89,6 +95,17 @@ export async function POST(req: NextRequest) {
         status: "confirmed",
         total_price: Number(m.totalPrice) || 0,
         notes: m.notes ?? null,
+        // ── Direct lead capture snapshot ──────────────────────────────────
+        customer_name:   m.customerName ?? null,
+        customer_email:  m.customerEmail ?? null,
+        customer_phone:  m.customerPhone ?? null,
+        service_address: m.serviceAddress ?? null,
+        vehicle_make:    m.vehicleMake ?? null,
+        vehicle_model:   m.vehicleModel ?? null,
+        vehicle_year:    m.vehicleYear ?? null,
+        vehicle_size:    m.vehicleSize ?? null,
+        service_name:    m.serviceName ?? null,
+        addons_json:     addonsJson,
         ...(m.couponId ? { coupon_id: m.couponId } : {}),
         stripe_checkout_session_id: session.id,
       })

@@ -141,10 +141,12 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   // 5. Insert Booking
   const notesBody = [
-    `💳 Payment: Pay at Arrival (Quick Book)`,
+    `💳 Payment: Pay at Arrival (Admin Quick Book)`,
     payload.address ? `📍 Service Location: ${payload.address}` : null,
-    payload.notes
+    payload.notes,
   ].filter(Boolean).join("\n\n");
+
+  const dbVehicleSize = VEHICLE_SIZE_MAP[payload.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
 
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
@@ -157,6 +159,17 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       status: "confirmed",
       total_price: payload.totalPrice,
       notes: notesBody,
+      // ── Direct lead capture snapshot ──────────────────────────────────────
+      customer_name:   payload.name,
+      customer_email:  email ?? null,
+      customer_phone:  phoneDigits,
+      service_address: payload.address ?? null,
+      vehicle_make:    payload.vehicleMake || "Unknown",
+      vehicle_model:   payload.vehicleModel || "Unknown",
+      vehicle_year:    String(payload.vehicleYear || ""),
+      vehicle_size:    dbVehicleSize,
+      service_name:    payload.serviceName,
+      addons_json:     null,
     })
     .select("id")
     .single();
@@ -220,7 +233,7 @@ export async function getAllServices() {
 
 export async function getAllBookings() {
   const supabase = createAdminClient();
-  
+
   const { data, error } = await supabase
     .from("bookings")
     .select(`
@@ -229,7 +242,8 @@ export async function getAllBookings() {
       vehicles:vehicle_id(id, make, model, year, size),
       services:service_id(name, description)
     `)
-    .order("booking_date", { ascending: false });
+    .order("booking_date", { ascending: false })
+    .order("booking_time", { ascending: false });
 
   if (error) {
     console.error("[adminActions] Fetch Error:", error);
@@ -279,9 +293,15 @@ export async function getAllClients() {
     const ltv = client.bookings?.reduce((sum: number, b: any) => sum + (Number(b.total_price) || 0), 0) || 0;
     
     let lastAddress = "No address recorded";
-    const latestWithNotes = sortedBookings.find(b => b.notes && b.notes.includes("📍 Service Location:"));
-    if (latestWithNotes) {
-      lastAddress = latestWithNotes.notes.split("📍 Service Location:")[1]?.trim() || "See Notes";
+    // Try the direct service_address column first, fall back to parsing notes
+    const latestWithAddress = sortedBookings.find((b: any) => b.service_address);
+    if (latestWithAddress) {
+      lastAddress = (latestWithAddress as any).service_address;
+    } else {
+      const latestWithNotes = sortedBookings.find((b: any) => b.notes && b.notes.includes("📍 Service Location:"));
+      if (latestWithNotes) {
+        lastAddress = (latestWithNotes as any).notes.split("📍 Service Location:")[1]?.trim() || "See Notes";
+      }
     }
 
     return {

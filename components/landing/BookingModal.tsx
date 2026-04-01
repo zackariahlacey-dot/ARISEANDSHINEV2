@@ -20,6 +20,8 @@ import {
   HelpCircle,
   Crown,
   Sparkles,
+  Gem,
+  Layers,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
@@ -53,15 +55,76 @@ function getMaintenanceSetupFee(serviceName: string): number {
   return serviceName.toLowerCase().includes("full") ? 100 : 75;
 }
 
-const ADD_ONS = [
-  { id: "engine_bay", label: "Engine Bay Detail", price: 50, desc: "Deep clean and degrease the engine bay" },
-  { id: "floor_1", label: "Floorboard Shampoo – 1 Section", price: 30, desc: "Deep shampoo for one section of floorboards" },
-  { id: "floor_2", label: "Floorboard Shampoo – 2 Sections", price: 45, desc: "Deep shampoo for two sections of floorboards" },
-  { id: "floor_all", label: "Floorboard Shampoo – All Sections", price: 60, desc: "Full deep shampoo for all floorboard sections" },
-  { id: "clay_bar", label: "Clay Bar Treatment", price: 40, desc: "Remove embedded contaminants for a glass-smooth finish" },
-];
+const ALL_ADD_ONS = [
+  { id: "engine_bay", label: "Engine Bay Detail",                    price: 50, desc: "Deep clean and degrease the engine bay" },
+  { id: "floor_1",   label: "Floorboard Shampoo – 1 Section",       price: 30, desc: "Deep shampoo for one section of floorboards" },
+  { id: "floor_2",   label: "Floorboard Shampoo – 2 Sections",      price: 45, desc: "Deep shampoo for two sections of floorboards" },
+  { id: "floor_all", label: "Floorboard Shampoo – All Sections",     price: 60, desc: "Full deep shampoo for all floorboard sections" },
+  { id: "clay_bar",  label: "Clay Bar Treatment",                    price: 40, desc: "Remove embedded contaminants for a glass-smooth finish" },
+] as const;
+
+type AddonItem = typeof ALL_ADD_ONS[number];
 
 const FLOOR_ADDON_IDS = ["floor_1", "floor_2", "floor_all"];
+
+/**
+ * Returns add-ons relevant to a given service.
+ * Hides options that are redundant (already included) or irrelevant (wrong scope).
+ */
+function getAddonsForService(serviceName: string): readonly AddonItem[] {
+  const n = serviceName.toLowerCase();
+
+  // Paint correction: exterior-only work; clay bar already part of the process
+  if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage")) {
+    return ALL_ADD_ONS.filter(a => a.id === "engine_bay");
+  }
+
+  // Ultimate Showroom: clay bar & decontamination already included; has full interior
+  if (n.includes("ultimate showroom")) {
+    return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
+  }
+
+  // Exterior Detail: no floorboard shampoo (exterior only)
+  if (n.includes("exterior") && !n.includes("full")) {
+    return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || a.id === "clay_bar");
+  }
+
+  // Interior Detail (standalone, not maintenance): no clay bar (exterior treatment)
+  if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance") && !n.includes("ultimate")) {
+    return ALL_ADD_ONS.filter(a => a.id !== "clay_bar");
+  }
+
+  // Maintenance plans: engine bay + floor shampoo (quick recurring visits)
+  if (n.includes("maintenance")) {
+    return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
+  }
+
+  // Ultimate Interior Reset, Full Detail, default → all add-ons
+  return ALL_ADD_ONS;
+}
+
+/**
+ * Returns a note when a feature the customer might add is already included in the service.
+ */
+function getIncludedNote(serviceName: string): string | null {
+  const n = serviceName.toLowerCase();
+  if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage") || n.includes("ultimate showroom")) {
+    return "Clay Bar Treatment is already included in this service.";
+  }
+  return null;
+}
+
+/**
+ * Returns a display label for the service category.
+ */
+function getServiceCategory(service: Service): { label: string; color: string } {
+  const n = service.name.toLowerCase();
+  if (service.is_subscription) return { label: "Maintenance Club",          color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+  if (n.includes("ultimate"))   return { label: "Ultimate Series",           color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
+  if (n.includes("paint") || n.includes("correction") || n.includes("single-stage") || n.includes("two-stage"))
+                                return { label: "Paint Correction",           color: "text-violet-400 bg-violet-500/10 border-violet-500/20" };
+  return                               { label: "One-Time Detailing",         color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20" };
+}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -456,6 +519,8 @@ export interface BookingSectionProps {
   selectedService: Service | null;
   services: Service[];
   onSelectService: (service: Service) => void;
+  /** Clears the currently selected service (returns to service picker). */
+  onClearService?: () => void;
   /** Called when booking succeeds; parent should close dropdown and show success modal */
   onBookingSuccess?: (data: BookingSuccessData) => void;
   /** Initial reward points (e.g. from auth) for display until phone-based balance is fetched */
@@ -472,6 +537,7 @@ export function BookingSection({
   selectedService,
   services,
   onSelectService,
+  onClearService,
   onBookingSuccess,
   initialRewardPoints = null,
   initialDraft = null,
@@ -482,6 +548,8 @@ export function BookingSection({
   const [step, setStep] = useState(1);
   /** 1 = forward (Next), -1 = back; used for step slide direction */
   const [stepDirection, setStepDirection] = useState(1);
+  /** True when a service was pre-selected from a card — shows the confirm-then-continue screen. */
+  const [showServiceConfirm, setShowServiceConfirm] = useState(false);
 
   // Step 1 — Vehicle
   const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug | "">("");
@@ -492,7 +560,7 @@ export function BookingSection({
   // Add-ons
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; label: string; price: number }[]>([]);
 
-  const toggleAddon = (addon: typeof ADD_ONS[number]) => {
+  const toggleAddon = (addon: AddonItem) => {
     setSelectedAddons(prev => {
       const isSelected = prev.some(a => a.id === addon.id);
       if (isSelected) {
@@ -668,9 +736,18 @@ export function BookingSection({
     };
   }, [isSubmittingAny]);
 
+  // Clear add-ons that are no longer valid when the service changes
+  useEffect(() => {
+    if (!selectedService) return;
+    const available = getAddonsForService(selectedService.name);
+    const availableIds = available.map(a => a.id) as string[];
+    setSelectedAddons(prev => prev.filter(a => availableIds.includes(a.id)));
+  }, [selectedService?.id]);
+
   // Reset form state each time the booking section is opened (inline section — no body scroll lock)
   useEffect(() => {
     if (isVisible) {
+      setShowServiceConfirm(!!selectedService);
       setStep(1);
       setVehicleSize("");
       setVehicleYear("");
@@ -1314,6 +1391,75 @@ export function BookingSection({
                 })}
               </div>
             </div>
+          ) : showServiceConfirm && selectedService ? (
+            /* ── Service pre-selected: confirm or change ── */
+            (() => {
+              const cat = getServiceCategory(selectedService);
+              const includedNote = getIncludedNote(selectedService.name);
+              return (
+                <div className="px-6 py-8 flex flex-col gap-6">
+                  {/* Category badge */}
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${cat.color}`}>
+                      {cat.label}
+                    </span>
+                  </div>
+
+                  {/* Service name + price */}
+                  <div>
+                    <h2 className="text-2xl font-black text-white leading-tight">
+                      {selectedService.name}
+                    </h2>
+                    <p className="text-[#D4AF37] font-bold mt-1.5 text-base">
+                      ${selectedService.price_small}
+                      {selectedService.price_large !== selectedService.price_small && (
+                        <> – ${selectedService.price_large}</>
+                      )}
+                      <span className="text-zinc-500 font-normal text-xs ml-1">/ depending on vehicle size</span>
+                    </p>
+                  </div>
+
+                  {/* Description */}
+                  {selectedService.description && (
+                    <p className="text-sm text-zinc-400 leading-relaxed -mt-2">
+                      {selectedService.description}
+                    </p>
+                  )}
+
+                  {/* Included note */}
+                  {includedNote && (
+                    <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                      <Check size={14} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
+                      <p className="text-xs text-emerald-300/80 leading-relaxed">{includedNote}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowServiceConfirm(false);
+                      }}
+                      className="w-full py-4 rounded-xl bg-[#D4AF37] text-black font-black text-sm tracking-wide hover:bg-amber-400 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      Continue to Booking
+                      <ChevronRight size={16} strokeWidth={3} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowServiceConfirm(false);
+                        onClearService?.();
+                      }}
+                      className="w-full py-3 rounded-xl border border-white/[0.06] text-zinc-400 text-sm font-medium hover:text-white hover:border-white/20 transition-colors"
+                    >
+                      Choose a Different Service
+                    </button>
+                  </div>
+                </div>
+              );
+            })()
           ) : !selectedService && services.length > 0 ? (
             /* ── Choose Your Service (when opened via Book Now / Schedule Now) ── */
             <div className="px-6 py-6">
@@ -1326,62 +1472,156 @@ export function BookingSection({
 
               <div className="space-y-8">
                 {/* 1. One-Time Detailing */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={14} className="text-[#D4AF37]" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">One-Time Detailing</h3>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {services.filter(s => !s.is_subscription).map((service) => (
-                      <button
-                        key={service.id}
-                        type="button"
-                        onClick={() => onSelectService(service)}
-                        className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-white/[0.02] active:scale-[0.99] group"
-                      >
-                        <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
-                          {service.name}
-                        </div>
-                        <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
-                          From ${service.price_small}
-                        </div>
-                        {service.description && (
-                          <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
-                            {service.description}
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {(() => {
+                  const oneTime = services.filter(s =>
+                    !s.is_subscription &&
+                    !s.name.toLowerCase().includes("ultimate") &&
+                    !s.name.toLowerCase().includes("paint") &&
+                    !s.name.toLowerCase().includes("correction")
+                  );
+                  if (!oneTime.length) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={14} className="text-[#D4AF37]" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">One-Time Detailing</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {oneTime.map((service) => (
+                          <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => onSelectService(service)}
+                            className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-white/[0.02] active:scale-[0.99] group"
+                          >
+                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                              {service.name}
+                            </div>
+                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
+                              From ${service.price_small}
+                            </div>
+                            {service.description && (
+                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                {service.description}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                {/* 2. Monthly Maintenance Plans */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Crown size={14} className="text-[#D4AF37]" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Maintenance Club</h3>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {services.filter(s => s.is_subscription).map((service) => (
-                      <button
-                        key={service.id}
-                        type="button"
-                        onClick={() => onSelectService(service)}
-                        className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-amber-500/[0.04] active:scale-[0.99] group"
-                      >
-                        <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
-                          {service.name}
-                        </div>
-                        <div className="text-[11px] text-[#D4AF37] font-bold mt-0.5 uppercase tracking-tighter">
-                          ${service.price_small} / Month
-                        </div>
-                        <div className="text-[10px] text-zinc-500 mt-1">
-                          +${getMaintenanceSetupFee(service.name)} Initial Setup Fee
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* 2. Ultimate Series */}
+                {(() => {
+                  const ultimate = services.filter(s =>
+                    !s.is_subscription && s.name.toLowerCase().includes("ultimate")
+                  );
+                  if (!ultimate.length) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Gem size={14} className="text-[#D4AF37]" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Ultimate Series</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {ultimate.map((service) => (
+                          <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => onSelectService(service)}
+                            className="p-4 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/50 hover:text-zinc-200 hover:bg-[#D4AF37]/[0.06] active:scale-[0.99] group"
+                          >
+                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                              {service.name}
+                            </div>
+                            <div className="text-[11px] text-[#D4AF37] font-bold mt-0.5">
+                              ${service.price_small} – ${service.price_large}
+                            </div>
+                            {service.description && (
+                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                {service.description}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 3. Paint Correction & Restoration */}
+                {(() => {
+                  const paint = services.filter(s =>
+                    !s.is_subscription &&
+                    (s.name.toLowerCase().includes("paint") || s.name.toLowerCase().includes("correction"))
+                  );
+                  if (!paint.length) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Layers size={14} className="text-[#D4AF37]" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Paint Correction & Restoration</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {paint.map((service) => (
+                          <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => onSelectService(service)}
+                            className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-white/[0.02] active:scale-[0.99] group"
+                          >
+                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                              {service.name}
+                            </div>
+                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
+                              ${service.price_small} – ${service.price_large}
+                            </div>
+                            {service.description && (
+                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                {service.description}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 4. Monthly Maintenance Plans */}
+                {(() => {
+                  const subs = services.filter(s => s.is_subscription);
+                  if (!subs.length) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Crown size={14} className="text-[#D4AF37]" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Maintenance Club</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {subs.map((service) => (
+                          <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => onSelectService(service)}
+                            className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-amber-500/[0.04] active:scale-[0.99] group"
+                          >
+                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                              {service.name}
+                            </div>
+                            <div className="text-[11px] text-[#D4AF37] font-bold mt-0.5 uppercase tracking-tighter">
+                              ${service.price_small} / Month
+                            </div>
+                            <div className="text-[10px] text-zinc-500 mt-1">
+                              +${getMaintenanceSetupFee(service.name)} Initial Setup Fee
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <button
@@ -1524,137 +1764,161 @@ export function BookingSection({
                       </div>
                     </div>
 
-                    {/* Vehicle Size — read-only summary: pending until Year/Make/Model auto-detects */}
+
+                    {/* Vehicle Size — always-interactive; auto-selects on model pick, can override */}
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">
-                        Vehicle Size
-                      </label>
-                      <div
-                        className={`w-full rounded-2xl border text-left transition-all duration-300 overflow-hidden cursor-default ${
-                          vehicleSize
-                            ? "bg-zinc-900/80 border-white/10"
-                            : "bg-zinc-950/40 border border-white/5"
-                        }`}
-                      >
-                        {!vehicleSize ? (
-                          <div className="p-5 flex flex-col items-center justify-center gap-2 min-h-[100px]">
-                            <HelpCircle className="w-10 h-10 text-zinc-500 shrink-0" />
-                            <span className="text-zinc-300 font-medium">
-                              Vehicle Type: Pending
-                            </span>
-                            <span className="text-zinc-500 text-sm">
-                              Enter Year / Make / Model to auto-detect
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-white font-semibold">
-                                  {VEHICLE_SIZES.find((s) => s.id === vehicleSize)?.label ?? vehicleSize}
-                                </span>
-                                {autoDetected && (
-                                  <span className="inline-flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/50 text-[#D4AF37] px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.15)]">
-                                    <Zap size={9} className="fill-[#D4AF37]" />
-                                    Auto-detected
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-zinc-500 text-sm mt-0.5">
-                                {VEHICLE_SIZES.find((s) => s.id === vehicleSize)?.desc ?? ""}
-                              </p>
-                              {selectedService && (
-                                <p className="text-[#D4AF37] font-bold mt-1.5">
-                                  ${selectedService[VEHICLE_SIZES.find((s) => s.id === vehicleSize)?.sizeKey ?? "price_small"]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                          Vehicle Size
+                        </label>
+                        {autoDetected && vehicleSize && (
+                          <span className="inline-flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                            <Zap size={8} className="fill-[#D4AF37]" /> Auto-detected
+                          </span>
                         )}
                       </div>
-                    </div>
 
-                    {/* Enhance Your Detail (Add-ons Section) */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles size={14} className="text-[#D4AF37]" />
-                        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
-                          Enhance Your Detail
-                        </label>
-                      </div>
-                      <div className="space-y-2.5">
-                        {/* Standalone add-ons (non-floor) */}
-                        {ADD_ONS.filter((a) => !FLOOR_ADDON_IDS.includes(a.id)).map((addon) => {
-                          const isSelected = selectedAddons.some(a => a.id === addon.id);
+                      <div className="grid grid-cols-2 gap-3">
+                        {VEHICLE_SIZES.map((size) => {
+                          const isSelected = vehicleSize === size.id;
                           return (
                             <button
-                              key={addon.id}
+                              key={size.id}
                               type="button"
-                              onClick={() => toggleAddon(addon)}
-                              className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
+                              onClick={() => {
+                                setVehicleSize(size.id);
+                                setAutoDetected(false);
+                              }}
+                              className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
                                 isSelected
-                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
-                                  : "bg-zinc-950/40 border-white/5 hover:border-white/20"
+                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 shadow-[0_0_18px_rgba(212,175,55,0.12)]"
+                                  : "bg-zinc-950/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]"
                               }`}
                             >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
-                                    {addon.label}
-                                  </span>
-                                  {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
-                                </div>
-                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
-                                  {addon.desc}
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                  {size.label}
+                                </span>
+                                {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                              </div>
+                              <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
+                              {selectedService && (
+                                <p className={`text-sm font-black mt-2 ${isSelected ? "text-white" : "text-zinc-400"}`}>
+                                  ${selectedService[size.sizeKey]}
                                 </p>
-                              </div>
-                              <div className={`shrink-0 font-black text-sm tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                +${addon.price}
-                              </div>
+                              )}
                             </button>
                           );
                         })}
+                      </div>
 
-                        {/* Floorboard Shampoo — tiered selector */}
-                        <div className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
-                          selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
-                            ? "border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
-                            : "border-white/5"
-                        }`}>
-                          <div className={`px-4 py-3 border-b border-white/[0.06] ${
-                            selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
-                              ? "bg-[#D4AF37]/10"
-                              : "bg-zinc-950/40"
-                          }`}>
-                            <p className="text-sm font-bold text-zinc-200">Sectional Floorboard Shampoo</p>
-                            <p className="text-[11px] text-zinc-500 mt-0.5">Deep shampoo — pick how many sections</p>
+                      {!vehicleSize && vehicleMake.trim() && vehicleModel.trim() && (
+                        <p className="text-[11px] text-zinc-500 mt-2.5 text-center">
+                          Vehicle not found in our database — please select your size above
+                        </p>
+                      )}
+                    </div>
+
+
+                    {/* Enhance Your Detail (Smart per-service Add-ons) */}
+                    {(() => {
+                      const available = getAddonsForService(selectedService?.name ?? "");
+                      const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
+                      const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
+                      const note       = getIncludedNote(selectedService?.name ?? "");
+                      return (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Sparkles size={14} className="text-[#D4AF37]" />
+                            <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
+                              Enhance Your Detail
+                            </label>
                           </div>
-                          <div className="flex divide-x divide-white/[0.06] bg-zinc-950/40">
-                            {ADD_ONS.filter((a) => FLOOR_ADDON_IDS.includes(a.id)).map((addon) => {
+
+                          {note && (
+                            <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 mb-3">
+                              <Check size={12} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
+                              <p className="text-[11px] text-emerald-300/80 leading-relaxed">{note}</p>
+                            </div>
+                          )}
+
+                          <div className="space-y-2.5">
+                            {/* Standalone add-ons (non-floor) */}
+                            {standAlone.map((addon) => {
                               const isSelected = selectedAddons.some(a => a.id === addon.id);
-                              const shortLabel = addon.id === "floor_1" ? "1 Section" : addon.id === "floor_2" ? "2 Sections" : "All";
                               return (
                                 <button
                                   key={addon.id}
                                   type="button"
                                   onClick={() => toggleAddon(addon)}
-                                  className={`flex-1 py-3.5 text-center transition-all duration-200 ${
-                                    isSelected ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.03]"
+                                  className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
+                                    isSelected
+                                      ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+                                      : "bg-zinc-950/40 border-white/5 hover:border-white/20"
                                   }`}
                                 >
-                                  <div className={`text-xs font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-400"}`}>
-                                    {shortLabel}
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
+                                        {addon.label}
+                                      </span>
+                                      {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                    </div>
+                                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                                      {addon.desc}
+                                    </p>
                                   </div>
-                                  <div className={`text-sm font-black mt-0.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                  <div className={`shrink-0 font-black text-sm tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
                                     +${addon.price}
                                   </div>
                                 </button>
                               );
                             })}
+
+                            {/* Floorboard Shampoo — tiered selector (only for services with interior work) */}
+                            {floorOpts.length > 0 && (
+                              <div className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
+                                selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
+                                  ? "border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+                                  : "border-white/5"
+                              }`}>
+                                <div className={`px-4 py-3 border-b border-white/[0.06] ${
+                                  selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
+                                    ? "bg-[#D4AF37]/10"
+                                    : "bg-zinc-950/40"
+                                }`}>
+                                  <p className="text-sm font-bold text-zinc-200">Sectional Floorboard Shampoo</p>
+                                  <p className="text-[11px] text-zinc-500 mt-0.5">Deep shampoo — pick how many sections</p>
+                                </div>
+                                <div className="flex divide-x divide-white/[0.06] bg-zinc-950/40">
+                                  {floorOpts.map((addon) => {
+                                    const isSelected = selectedAddons.some(a => a.id === addon.id);
+                                    const shortLabel = addon.id === "floor_1" ? "1 Section" : addon.id === "floor_2" ? "2 Sections" : "All";
+                                    return (
+                                      <button
+                                        key={addon.id}
+                                        type="button"
+                                        onClick={() => toggleAddon(addon)}
+                                        className={`flex-1 py-3.5 text-center transition-all duration-200 ${
+                                          isSelected ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.03]"
+                                        }`}
+                                      >
+                                        <div className={`text-xs font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-400"}`}>
+                                          {shortLabel}
+                                        </div>
+                                        <div className={`text-sm font-black mt-0.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                          +${addon.price}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </motion.div>
                   )}
 

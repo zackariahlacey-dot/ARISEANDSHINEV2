@@ -24,7 +24,24 @@ export const AdminBookingSchema = z.object({
   total_price: z.number(),
   notes: z.string().nullable(),
   created_at: z.string(),
-  // Relationship Mappings
+
+  // ── Direct lead capture columns (source of truth) ───────────────────────
+  // Stored at booking time — never changes even if profile is updated later.
+  customer_name:   z.string().nullable().optional(),
+  customer_email:  z.string().nullable().optional(),
+  customer_phone:  z.string().nullable().optional(),
+  service_address: z.string().nullable().optional(),
+  vehicle_make:    z.string().nullable().optional(),
+  vehicle_model:   z.string().nullable().optional(),
+  vehicle_year:    z.string().nullable().optional(),
+  vehicle_size:    z.string().nullable().optional(),
+  service_name:    z.string().nullable().optional(),
+  addons_json: z
+    .array(z.object({ id: z.string(), label: z.string(), price: z.number() }))
+    .nullable()
+    .optional(),
+
+  // ── Relationship joins (used for account linking badge + points display) ─
   profiles: AdminProfileSchema.nullable(),
   vehicles: AdminVehicleSchema.nullable(),
   services: z.object({ name: z.string() }).nullable(),

@@ -35,25 +35,17 @@ export type BookingPayload = {
   distanceMiles?: number;
   /** Optional add-ons (included in totalPrice) */
   selectedAddons?: { id: string; label: string; price: number }[];
-  /** When "pay_now", booking is created as pending and a Stripe Checkout URL is returned; emails sent after payment via webhook */
+  /** When "pay_now", booking is created as pending and a Stripe Checkout URL is returned */
   paymentMethod?: "pay_at_arrival" | "pay_now";
   /** Required when paymentMethod is "pay_now" for Stripe redirect URLs */
   successUrl?: string;
   cancelUrl?: string;
-  /** Points to redeem (10 pts = $1 off). totalPrice is already discounted. Deducted from booking profile. */
+  /** Points to redeem (10 pts = $1 off). totalPrice is already discounted. */
   pointsToRedeem?: number;
-  /**
-   * When true, the 10% referral welcome discount has been applied to totalPrice.
-   * The backend will mark the auth user's has_used_referral = true and credit the
-   * referrer with 200 reward points.
-   * Requires authUserId to be set.
-   */
   isApplyingReferralDiscount?: boolean;
   /** The auth user's UUID — needed to look up referred_by and mark discount as used. */
   authUserId?: string;
-  /** The UUID of the applied coupon row in the coupons table. */
   couponId?: string;
-  /** Dollar amount discounted via the promo code (already reflected in totalPrice). */
   couponDiscount?: number;
 };
 
@@ -95,7 +87,7 @@ export async function checkAvailability(date: string, time: string, serviceName:
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("bookings")
-    .select("booking_time, services(name), vehicles(size)")
+    .select("booking_time, service_name, vehicle_size, services(name), vehicles(size)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
 
@@ -107,12 +99,11 @@ export async function checkAvailability(date: string, time: string, serviceName:
 
   for (const b of existing) {
     const bStart = await timeToMinutes(b.booking_time);
-    const bName = (b.services as any)?.name ?? "Interior Detail";
-    const bSize = (b.vehicles as any)?.size ?? "medium";
+    // Use direct column first, fall back to join
+    const bName = (b as any).service_name ?? (b.services as any)?.name ?? "Interior Detail";
+    const bSize = (b as any).vehicle_size ?? (b.vehicles as any)?.size ?? "medium";
     const bDur = SERVICE_DURATIONS[bName]?.[bSize] ?? 180;
     const bEnd = bStart + bDur;
-
-    // Overlap if (start1 < end2) && (end1 > start2)
     if (newStart < bEnd && newEnd > bStart) return false;
   }
   return true;
@@ -128,7 +119,7 @@ export async function bookDetailing(
 ): Promise<BookingResult> {
   const supabase = await createClient();
 
-  // ── Fresh session check: do not rely on client-passed authUserId ───────
+  // ── Fresh session check ─────────────────────────────────────────────────
   const {
     data: { user: freshUser },
     error: userError,
@@ -139,14 +130,13 @@ export async function bookDetailing(
     console.error("Auth error during booking:", userError);
   }
 
-  // ── 0. Check Availability ──────────────────────────────────────────────
+  // ── 0. Check Availability ───────────────────────────────────────────────
   const isAvailable = await checkAvailability(
     payload.bookingDate,
     payload.bookingTime,
     payload.serviceName,
     VEHICLE_SIZE_MAP[payload.vehicleSize]
   );
-
   if (!isAvailable) {
     return {
       success: false,
@@ -154,25 +144,26 @@ export async function bookDetailing(
     };
   }
 
-  // Use server-side session only; if no session, fall back to guest flow (do not error)
   const user = freshUser?.id ?? null;
-
   const phoneDigits = toPhoneDigits(payload.phone);
+  const emailLower = payload.email.trim().toLowerCase();
 
-  // ── Split full name into first / last ──────────────────────────────────
+  // ── Split full name ──────────────────────────────────────────────────────
   const parts = payload.name.trim().split(/\s+/);
   const firstName = parts[0] ?? "";
   const lastName = parts.slice(1).join(" ") || null;
 
-  // ── 1. Resolve profile: check by logged-in user, then email, then phone ──────────────────────────
+  // ── 1. Resolve profile ──────────────────────────────────────────────────
+  // Priority: logged-in session → auth.users by email → profiles by email
+  //           → profiles by phone → new guest profile
+  // If email matches an auth account the booking links to that account
+  // and the customer earns points even if they didn't log in.
   let profileId: string;
   const adminSupabase = createAdminClient();
-  const emailLower = payload.email.trim().toLowerCase();
 
-  // A. Check if user is logged in
   if (user) {
+    // A. Already authenticated — use session UUID
     profileId = user;
-    // Always update/upsert the logged-in user's profile with their latest info
     await adminSupabase.from("profiles").upsert({
       id: profileId,
       email: emailLower,
@@ -181,7 +172,9 @@ export async function bookDetailing(
       phone: phoneDigits.length >= 10 ? phoneDigits : null,
     }, { onConflict: "id" });
   } else {
-    // B. Guest Flow: Try to find existing profile by Email first
+    // B. Guest flow ─────────────────────────────────────────────────────────
+    // Step 1: Check profiles table by email (fast path — covers returning guests
+    //         AND auth users who have booked before)
     const { data: existingByEmail } = await adminSupabase
       .from("profiles")
       .select("id, first_name, last_name, phone")
@@ -190,65 +183,98 @@ export async function bookDetailing(
 
     if (existingByEmail) {
       profileId = existingByEmail.id;
-      // Update info if they provided new details
       await adminSupabase.from("profiles").update({
         first_name: firstName || existingByEmail.first_name,
         last_name: lastName || existingByEmail.last_name,
         phone: phoneDigits.length >= 10 ? phoneDigits : existingByEmail.phone,
       }).eq("id", profileId);
     } else {
-      // C. Try to find by Phone if no email match
-      const { data: existingByPhone } = await adminSupabase
-        .from("profiles")
-        .select("id, email")
-        .eq("phone", phoneDigits)
-        .maybeSingle();
+      // Step 2: Check auth.users by email — catches account holders who exist
+      //         in auth but whose profile email hasn't been written yet
+      let foundAuthUserId: string | null = null;
+      try {
+        const { data: authData } = await adminSupabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        });
+        const match = authData?.users?.find(
+          (u) => u.email?.toLowerCase() === emailLower
+        );
+        if (match) foundAuthUserId = match.id;
+      } catch (e) {
+        console.warn("[bookDetailing] auth.admin.listUsers error (non-fatal):", e);
+      }
 
-      if (existingByPhone) {
-        profileId = existingByPhone.id;
-        // Update email if it was missing
-        if (!existingByPhone.email) {
-          await adminSupabase.from("profiles").update({ email: emailLower }).eq("id", profileId);
-        }
+      if (foundAuthUserId) {
+        profileId = foundAuthUserId;
+        // Ensure the profile row exists and has current info
+        await adminSupabase.from("profiles").upsert({
+          id: profileId,
+          email: emailLower,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          phone: phoneDigits.length >= 10 ? phoneDigits : null,
+        }, { onConflict: "id" });
       } else {
-        // D. Truly new guest: create a random UUID profile
-        const guestId = crypto.randomUUID();
-        const { data: created, error: profileErr } = await adminSupabase
+        // Step 3: Check profiles by phone
+        const { data: existingByPhone } = await adminSupabase
           .from("profiles")
-          .insert({
-            id: guestId,
-            email: emailLower,
-            first_name: firstName || null,
-            last_name: lastName || null,
-            phone: phoneDigits.length >= 10 ? phoneDigits : null,
-            reward_points: 0,
-            lifetime_points: 0,
-          })
-          .select("id")
-          .single();
+          .select("id, email")
+          .eq("phone", phoneDigits)
+          .maybeSingle();
 
-        if (profileErr || !created) {
-          console.error("Profile Creation Error (Guest):", profileErr);
-          return {
-            success: false,
-            error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
-          };
+        if (existingByPhone) {
+          profileId = existingByPhone.id;
+          if (!existingByPhone.email) {
+            await adminSupabase
+              .from("profiles")
+              .update({ email: emailLower })
+              .eq("id", profileId);
+          }
+        } else {
+          // Step 4: Brand-new guest — create profile
+          const guestId = crypto.randomUUID();
+          const { data: created, error: profileErr } = await adminSupabase
+            .from("profiles")
+            .insert({
+              id: guestId,
+              email: emailLower,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              phone: phoneDigits.length >= 10 ? phoneDigits : null,
+              reward_points: 0,
+              lifetime_points: 0,
+            })
+            .select("id")
+            .single();
+
+          if (profileErr || !created) {
+            console.error("Profile Creation Error (Guest):", profileErr);
+            return {
+              success: false,
+              error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
+            };
+          }
+          profileId = created.id;
         }
-        profileId = created.id;
       }
     }
   }
 
   const isPayNow = payload.paymentMethod === "pay_now";
 
-  // ── 1b. Redeem points (Pay at Arrival only; Pay Now redeems in webhook after payment) ───────────
+  // ── 1b. Redeem points (Pay at Arrival only) ─────────────────────────────
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
     const { data: profileRow } = await adminSupabase
       .from("profiles")
       .select("reward_points")
       .eq("id", profileId)
       .single();
-    if (!profileRow || typeof profileRow.reward_points !== "number" || profileRow.reward_points < payload.pointsToRedeem) {
+    if (
+      !profileRow ||
+      typeof profileRow.reward_points !== "number" ||
+      profileRow.reward_points < payload.pointsToRedeem
+    ) {
       return {
         success: false,
         error: "You don't have enough reward points to redeem. Please adjust or continue without redeeming.",
@@ -260,7 +286,7 @@ export async function bookDetailing(
       .eq("id", profileId);
   }
 
-  // ── 2. Insert vehicle ──────────────────────────────────────────────────
+  // ── 2. Insert vehicle ───────────────────────────────────────────────────
   const vehicleYearInt = parseInt(payload.vehicleYear, 10);
   const { data: vehicle, error: vehicleErr } = await adminSupabase
     .from("vehicles")
@@ -282,55 +308,56 @@ export async function bookDetailing(
     };
   }
 
-  const addonsNote = payload.selectedAddons && payload.selectedAddons.length > 0
-    ? `✨ Add-ons:\n${payload.selectedAddons.map(a => `• ${a.label} ($${a.price})`).join("\n")}`
-    : null;
-
+  // ── Build notes body (human-readable for internal reference) ────────────
+  const addonsNote =
+    payload.selectedAddons && payload.selectedAddons.length > 0
+      ? `✨ Add-ons:\n${payload.selectedAddons.map((a) => `• ${a.label} ($${a.price})`).join("\n")}`
+      : null;
   const paymentNote = isPayNow
     ? "💳 Payment: Pay Now (Stripe)"
     : "💳 Payment: Pay at Arrival";
-  const notesBody = [
-    `👤 Customer: ${payload.name} (${payload.phone})`,
-    paymentNote,
-    payload.serviceAddress
-      ? `📍 Service Location: ${payload.serviceAddress}`
-      : null,
-    addonsNote,
-    payload.travelFee != null && payload.travelFee > 0
-      ? `🚗 Travel Fee: $${payload.travelFee.toFixed(2)}`
-      : null,
-    payload.setupFee != null && payload.setupFee > 0
-      ? `🧹 One-time Setup & Reset: $${payload.setupFee.toFixed(2)}`
-      : null,
-    payload.pointsToRedeem != null && payload.pointsToRedeem > 0
-      ? `🎁 Redeemed ${payload.pointsToRedeem} pts for ${payload.pointsToRedeem / 10}% off`
-      : null,
-    payload.couponDiscount != null && payload.couponDiscount > 0
-      ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
-      : null,
-    payload.notes || null,
-  ]
-    .filter(Boolean)
-    .join("\n\n") || null;
+  const notesBody =
+    [
+      `👤 Customer: ${payload.name} (${payload.phone})`,
+      paymentNote,
+      payload.serviceAddress ? `📍 Service Location: ${payload.serviceAddress}` : null,
+      addonsNote,
+      payload.travelFee != null && payload.travelFee > 0
+        ? `🚗 Travel Fee: $${payload.travelFee.toFixed(2)}`
+        : null,
+      payload.setupFee != null && payload.setupFee > 0
+        ? `🧹 One-time Setup & Reset: $${payload.setupFee.toFixed(2)}`
+        : null,
+      payload.pointsToRedeem != null && payload.pointsToRedeem > 0
+        ? `🎁 Redeemed ${payload.pointsToRedeem} pts for ${payload.pointsToRedeem / 10}% off`
+        : null,
+      payload.couponDiscount != null && payload.couponDiscount > 0
+        ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
+        : null,
+      payload.notes || null,
+    ]
+      .filter(Boolean)
+      .join("\n\n") || null;
 
-  // ── Pay Now: create Stripe session with full booking payload in metadata; no DB booking yet ───
+  // ── Pay Now: create Stripe session; no DB booking until webhook ─────────
   if (isPayNow) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) {
       console.error("[bookDetailing] STRIPE_SECRET_KEY missing");
       return { success: false, error: "Payment is not configured. Please try Pay at Arrival." };
     }
-    const origin = payload.successUrl ?? payload.cancelUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
+    const origin =
+      payload.successUrl ??
+      payload.cancelUrl ??
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      "https://ariseandshinevt.com";
     const stripe = new Stripe(stripeKey, { apiVersion: "2026-02-25.clover" });
     const isSubscription = payload.serviceName.toLowerCase().includes("monthly");
     const mode = isSubscription ? "subscription" : "payment";
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
     if (isSubscription) {
-      // 1. Recurring Monthly Price (The base service price)
-      // Interior Monthly is $100, Full Detail Monthly is $150
       const monthlyPrice = payload.serviceName.toLowerCase().includes("full detail") ? 150 : 100;
-      
       line_items.push({
         price_data: {
           currency: "usd",
@@ -343,9 +370,6 @@ export async function bookDetailing(
         },
         quantity: 1,
       });
-
-      // 2. One-time Setup + Travel + Add-ons - Points
-      // payload.totalPrice already includes (monthlyPrice + setupFee + travel + addons - points)
       const initialOneTimeCharge = payload.totalPrice - monthlyPrice;
       if (initialOneTimeCharge > 0) {
         line_items.push({
@@ -365,7 +389,6 @@ export async function bookDetailing(
         });
       }
     } else {
-      // Standard one-off payment
       line_items.push({
         price_data: {
           currency: "usd",
@@ -392,23 +415,33 @@ export async function bookDetailing(
           bookingTime: await to24h(payload.bookingTime),
           totalPrice: String(payload.totalPrice),
           notes: (notesBody ?? "").slice(0, 500),
+          // Direct lead fields (written to booking by webhook)
           serviceName: payload.serviceName.slice(0, 499),
-          vehicleSize: payload.vehicleSize,
+          customerName: payload.name.slice(0, 200),
+          customerPhone: phoneDigits,
+          customerEmail: emailLower.slice(0, 200),
+          serviceAddress: (payload.serviceAddress ?? "").slice(0, 499),
+          vehicleSize: VEHICLE_SIZE_MAP[payload.vehicleSize] || "small",
           vehicleYear: payload.vehicleYear,
           vehicleMake: payload.vehicleMake.slice(0, 100),
           vehicleModel: payload.vehicleModel.slice(0, 100),
-          serviceAddress: (payload.serviceAddress ?? "").slice(0, 499),
-          customerName: payload.name.slice(0, 200),
-          customerPhone: phoneDigits,
-          customerEmail: payload.email.slice(0, 200),
+          addonsJson: payload.selectedAddons && payload.selectedAddons.length > 0
+            ? JSON.stringify(payload.selectedAddons).slice(0, 400)
+            : "",
           ...(payload.couponId ? { couponId: payload.couponId } : {}),
-          ...(payload.pointsToRedeem != null && payload.pointsToRedeem > 0 && { pointsToRedeem: String(payload.pointsToRedeem) }),
-          ...(payload.travelFee != null && payload.travelFee > 0 && { travelFee: String(payload.travelFee) }),
-          ...(payload.setupFee != null && payload.setupFee > 0 && { setupFee: String(payload.setupFee) }),
-          ...(payload.isApplyingReferralDiscount && user && {
-            isApplyingReferralDiscount: "true",
-            authUserId: user,
-          }),
+          ...(payload.pointsToRedeem != null &&
+            payload.pointsToRedeem > 0 && {
+              pointsToRedeem: String(payload.pointsToRedeem),
+            }),
+          ...(payload.travelFee != null &&
+            payload.travelFee > 0 && { travelFee: String(payload.travelFee) }),
+          ...(payload.setupFee != null &&
+            payload.setupFee > 0 && { setupFee: String(payload.setupFee) }),
+          ...(payload.isApplyingReferralDiscount &&
+            user && {
+              isApplyingReferralDiscount: "true",
+              authUserId: user,
+            }),
         },
         success_url: `${origin}/?stripe=success`,
         cancel_url: `${origin}/?stripe=cancelled`,
@@ -416,19 +449,22 @@ export async function bookDetailing(
       });
       return {
         success: true,
-        bookingId: "", // No booking until webhook confirms payment
+        bookingId: "",
         checkoutUrl: session.url ?? undefined,
       };
     } catch (stripeErr) {
       console.error("[bookDetailing] Stripe session error:", stripeErr);
       return {
         success: false,
-        error: stripeErr instanceof Error ? stripeErr.message : "Could not start checkout. Please try Pay at Arrival.",
+        error:
+          stripeErr instanceof Error
+            ? stripeErr.message
+            : "Could not start checkout. Please try Pay at Arrival.",
       };
     }
   }
 
-  // ── 3. Insert booking (Pay at Arrival only) ─────────────────────────────
+  // ── 3. Insert booking (Pay at Arrival) ──────────────────────────────────
   const { data: booking, error: bookingErr } = await adminSupabase
     .from("bookings")
     .insert({
@@ -440,6 +476,20 @@ export async function bookDetailing(
       status: "confirmed",
       total_price: payload.totalPrice,
       notes: notesBody,
+      // ── Direct lead capture snapshot ──────────────────────────────────────
+      customer_name:   payload.name,
+      customer_email:  emailLower,
+      customer_phone:  phoneDigits,
+      service_address: payload.serviceAddress || null,
+      vehicle_make:    (payload.vehicleMake || "Unknown").trim(),
+      vehicle_model:   (payload.vehicleModel || "Unknown").trim(),
+      vehicle_year:    payload.vehicleYear || null,
+      vehicle_size:    VEHICLE_SIZE_MAP[payload.vehicleSize] || null,
+      service_name:    payload.serviceName,
+      addons_json:
+        payload.selectedAddons && payload.selectedAddons.length > 0
+          ? payload.selectedAddons
+          : null,
       ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
     })
     .select("id")
@@ -453,7 +503,7 @@ export async function bookDetailing(
     };
   }
 
-  // ── 3b. Earn: add 1 point per $1 spent on service (Pay at Arrival only) ─────
+  // ── 3b. Earn points (1 pt per $1 of service cost, excluding travel) ─────
   const serviceSubtotal =
     payload.totalPrice +
     (payload.pointsToRedeem ?? 0) / 10 -
@@ -466,7 +516,8 @@ export async function bookDetailing(
       .eq("id", profileId)
       .single();
     if (prof && typeof prof.reward_points === "number") {
-      const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
+      const currentLifetime =
+        typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
       await adminSupabase
         .from("profiles")
         .update({
@@ -475,7 +526,6 @@ export async function bookDetailing(
         })
         .eq("id", profileId);
 
-      // Add transaction entry so it shows in dashboard
       await adminSupabase.from("point_transactions").insert({
         user_id: profileId,
         amount: earnedPoints,
@@ -484,8 +534,7 @@ export async function bookDetailing(
     }
   }
 
-  // ── 3c. Referral: mark discount used + award referrer 200 pts ────────────
-  // Only runs when the modal signals referral discount AND we have a fresh session (user).
+  // ── 3c. Referral: mark discount used + award referrer 200 pts ───────────
   if (payload.isApplyingReferralDiscount && user) {
     try {
       const { data: authProfile } = await supabase
@@ -500,7 +549,6 @@ export async function bookDetailing(
           .update({ has_used_referral: true })
           .eq("id", user);
 
-        // 2. Credit 200 points to the referrer
         const { data: referrerProfile } = await adminSupabase
           .from("profiles")
           .select("reward_points")
@@ -517,12 +565,11 @@ export async function bookDetailing(
         }
       }
     } catch (refErr) {
-      // Non-fatal — log but don't fail the booking
       console.error("[bookDetailing] referral reward error:", refErr);
     }
   }
 
-  // ── 4b. Send emails only after booking was successfully created ─────────
+  // ── 4. Send emails ──────────────────────────────────────────────────────
   const customerEmail = payload.email?.trim();
   if (customerEmail) {
     sendBookingEmail({
@@ -542,7 +589,9 @@ export async function bookDetailing(
         totalPrice: payload.totalPrice,
       },
       totalPrice: payload.totalPrice,
-    }).catch((err) => console.error("[bookDetailing] premium confirmation email error:", err));
+    }).catch((err) =>
+      console.error("[bookDetailing] confirmation email error:", err)
+    );
   }
 
   sendBookingEmails(

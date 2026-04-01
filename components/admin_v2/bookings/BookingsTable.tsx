@@ -1,43 +1,125 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useAdminBookings, useUpdateBookingStatus } from "@/hooks/use-admin-data";
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  MoreHorizontal,
-  ChevronRight,
+import { sendTestReviewEmail } from "@/app/actions/sendTestReviewEmail";
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ChevronDown,
   User,
   Car,
   CalendarDays,
-  Briefcase
+  Briefcase,
+  MapPin,
+  Mail,
+  Phone,
+  StickyNote,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { AdminBooking } from "@/types/admin";
 
 const STATUS_CONFIG = {
-  confirmed: { color: "text-emerald-400 bg-emerald-500/10", icon: CheckCircle2 },
-  completed: { color: "text-blue-400 bg-blue-500/10", icon: CheckCircle2 },
-  cancelled: { color: "text-rose-400 bg-rose-500/10", icon: XCircle },
-  "no-show": { color: "text-zinc-400 bg-zinc-500/10", icon: Clock },
+  confirmed:  { color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
+  completed:  { color: "text-blue-400 bg-blue-500/10 border-blue-500/20",           icon: CheckCircle2 },
+  cancelled:  { color: "text-rose-400 bg-rose-500/10 border-rose-500/20",           icon: XCircle },
+  "no-show":  { color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",           icon: Clock },
 };
+
+/** Resolve a field: prefer the direct lead column, fall back to join */
+function displayName(b: AdminBooking) {
+  if (b.customer_name) return b.customer_name;
+  const p = b.profiles;
+  if (!p) return "—";
+  return [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+}
+
+function displayInitials(b: AdminBooking) {
+  const name = displayName(b);
+  const parts = name.split(" ").filter(Boolean);
+  return parts.length >= 2
+    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+    : (parts[0]?.[0] ?? "?").toUpperCase();
+}
+
+function displayPhone(b: AdminBooking) {
+  return b.customer_phone ?? b.profiles?.phone ?? null;
+}
+
+function displayEmail(b: AdminBooking) {
+  return b.customer_email ?? null;
+}
+
+function displayVehicle(b: AdminBooking) {
+  const year  = b.vehicle_year  ?? b.vehicles?.year  ?? "";
+  const make  = b.vehicle_make  ?? b.vehicles?.make  ?? "";
+  const model = b.vehicle_model ?? b.vehicles?.model ?? "";
+  return [year, make, model].filter(Boolean).join(" ") || "—";
+}
+
+function displayService(b: AdminBooking) {
+  return b.service_name ?? b.services?.name ?? "—";
+}
+
+function displayAddress(b: AdminBooking) {
+  return b.service_address ?? null;
+}
+
+function hasLinkedAccount(b: AdminBooking) {
+  return !!b.profiles;
+}
 
 export default function BookingsTable() {
   const { data: bookings, isLoading, error } = useAdminBookings();
   const updateStatus = useUpdateBookingStatus();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [testEmailPending, startTestEmail] = useTransition();
+  const [testEmailMsg, setTestEmailMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function handleTestEmail() {
+    setTestEmailMsg(null);
+    startTestEmail(async () => {
+      const result = await sendTestReviewEmail();
+      setTestEmailMsg(
+        result.success
+          ? { ok: true,  text: "Test email sent to zackariahlacey@gmail.com!" }
+          : { ok: false, text: result.error ?? "Failed to send." }
+      );
+      setTimeout(() => setTestEmailMsg(null), 5000);
+    });
+  }
 
   if (isLoading) return <BookingsSkeleton />;
-  if (error) return <div className="text-rose-500">Failed to load bookings</div>;
+  if (error) return <div className="text-rose-500 px-6 py-4">Failed to load bookings</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-         <h1 className="text-xl font-bold text-white tracking-tight">Recent Bookings</h1>
-         <div className="flex gap-2">
-            <button className="px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-xs font-medium text-zinc-400 hover:text-white transition-colors">Export CSV</button>
-            <button className="px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-all">New Booking</button>
-         </div>
+        <h1 className="text-xl font-bold text-white tracking-tight">Recent Bookings</h1>
+        <div className="flex items-center gap-2">
+          {testEmailMsg && (
+            <span className={cn("text-xs font-medium", testEmailMsg.ok ? "text-emerald-400" : "text-rose-400")}>
+              {testEmailMsg.text}
+            </span>
+          )}
+          <button
+            onClick={handleTestEmail}
+            disabled={testEmailPending}
+            className="px-3 py-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-xs font-medium text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testEmailPending ? "Sending…" : "✉ Test Review Email"}
+          </button>
+          <button className="px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-xs font-medium text-zinc-400 hover:text-white transition-colors">
+            Export CSV
+          </button>
+          <button className="px-3 py-1.5 rounded-lg bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-all">
+            New Booking
+          </button>
+        </div>
       </div>
 
       <div className="border border-white/[0.06] rounded-2xl bg-[#050505] overflow-hidden">
@@ -49,67 +131,255 @@ export default function BookingsTable() {
               <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Date & Time</th>
               <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Status</th>
               <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-zinc-500 font-bold text-right">Price</th>
-              <th className="px-6 py-4"></th>
+              <th className="px-6 py-4 w-10" />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
             {bookings?.map((booking) => (
-              <tr key={booking.id} className="group hover:bg-white/[0.01] transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-zinc-900 border border-white/[0.06] flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                      {booking.profiles?.first_name?.[0]}{booking.profiles?.last_name?.[0]}
+              <>
+                {/* ── Main row ── */}
+                <tr
+                  key={booking.id}
+                  className="group hover:bg-white/[0.01] transition-colors cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === booking.id ? null : booking.id)}
+                >
+                  {/* Customer */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-9 h-9 rounded-full bg-zinc-900 border border-white/[0.06] flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0">
+                          {displayInitials(booking)}
+                        </div>
+                        {hasLinkedAccount(booking) && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center">
+                            <ShieldCheck size={7} className="text-[#D4AF37]" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {displayName(booking)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {displayPhone(booking) && (
+                            <span className="text-[10px] text-zinc-500 font-mono">
+                              {displayPhone(booking)}
+                            </span>
+                          )}
+                          {displayEmail(booking) && (
+                            <span className="text-[10px] text-zinc-600 truncate max-w-[160px]">
+                              {displayEmail(booking)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {booking.profiles?.first_name} {booking.profiles?.last_name}
+                  </td>
+
+                  {/* Vehicle & Service */}
+                  <td className="px-6 py-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Car size={12} className="text-zinc-500 shrink-0" />
+                        <span className="text-xs text-zinc-300 font-medium truncate">
+                          {displayVehicle(booking)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Briefcase size={12} className="text-amber-500/60 shrink-0" />
+                        <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-tight">
+                          {displayService(booking)}
+                        </span>
+                      </div>
+                      {displayAddress(booking) && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin size={11} className="text-zinc-600 shrink-0" />
+                          <span className="text-[10px] text-zinc-600 truncate max-w-[180px]">
+                            {displayAddress(booking)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Date & Time */}
+                  <td className="px-6 py-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDays size={12} className="text-zinc-500" />
+                        <span className="text-xs text-zinc-300">
+                          {format(new Date(booking.booking_date + "T12:00:00"), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 pl-[18px] font-mono">
+                        {booking.booking_time}
                       </p>
-                      <p className="text-[10px] text-zinc-500 font-mono">{booking.profiles?.phone}</p>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Car size={12} className="text-zinc-500" />
-                      <span className="text-xs text-zinc-300 font-medium">
-                        {booking.vehicles?.year} {booking.vehicles?.make} {booking.vehicles?.model}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Briefcase size={12} className="text-amber-500/60" />
-                      <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-tight">
-                        {booking.services?.name}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <CalendarDays size={12} className="text-zinc-500" />
-                      <span className="text-xs text-zinc-300">
-                        {format(new Date(booking.booking_date), "MMM d, yyyy")}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 pl-4.5 font-mono">{booking.booking_time}</p>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                   <StatusBadge status={booking.status} />
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="text-sm font-bold text-white">${booking.total_price}</span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                   <button className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.05] transition-all opacity-0 group-hover:opacity-100">
-                      <ChevronRight size={18} />
-                   </button>
-                </td>
-              </tr>
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-6 py-4">
+                    <StatusBadge status={booking.status} />
+                  </td>
+
+                  {/* Price */}
+                  <td className="px-6 py-4 text-right">
+                    <span className="text-sm font-bold text-white">${booking.total_price}</span>
+                  </td>
+
+                  {/* Expand chevron */}
+                  <td className="px-3 py-4 text-right">
+                    <ChevronDown
+                      size={16}
+                      className={cn(
+                        "text-zinc-600 transition-transform duration-200",
+                        expandedId === booking.id && "rotate-180 text-zinc-400"
+                      )}
+                    />
+                  </td>
+                </tr>
+
+                {/* ── Expanded detail row ── */}
+                {expandedId === booking.id && (
+                  <tr key={`${booking.id}-detail`} className="bg-white/[0.015]">
+                    <td colSpan={6} className="px-6 py-5">
+                      <BookingDetail booking={booking} onUpdateStatus={updateStatus.mutate} />
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
+
+        {bookings?.length === 0 && (
+          <div className="text-center py-16 text-zinc-600">
+            <CalendarDays size={28} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No bookings yet.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Expanded detail panel ──────────────────────────────────────────────────────
+
+function BookingDetail({
+  booking,
+  onUpdateStatus,
+}: {
+  booking: AdminBooking;
+  onUpdateStatus: (args: { id: string; status: AdminBooking["status"] }) => void;
+}) {
+  const statuses: AdminBooking["status"][] = ["confirmed", "completed", "cancelled", "no-show"];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      {/* Column 1: Customer info */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Lead Info</p>
+        <InfoRow icon={User} label="Name" value={displayName(booking)} />
+        <InfoRow icon={Phone} label="Phone" value={displayPhone(booking)} mono />
+        <InfoRow icon={Mail} label="Email" value={displayEmail(booking)} mono />
+        <InfoRow icon={MapPin} label="Address" value={displayAddress(booking)} />
+        {hasLinkedAccount(booking) ? (
+          <div className="flex items-center gap-2 mt-2">
+            <ShieldCheck size={12} className="text-[#D4AF37]" />
+            <span className="text-[10px] text-[#D4AF37] font-bold">
+              Linked Account · {booking.profiles?.reward_points ?? 0} pts
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mt-2">
+            <AlertCircle size={12} className="text-zinc-600" />
+            <span className="text-[10px] text-zinc-600">Guest booking — no account</span>
+          </div>
+        )}
+      </div>
+
+      {/* Column 2: Service + vehicle */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Service Details</p>
+        <InfoRow icon={Briefcase} label="Service" value={displayService(booking)} />
+        <InfoRow icon={Car} label="Vehicle" value={displayVehicle(booking)} />
+        {(booking.vehicle_size ?? booking.vehicles?.size) && (
+          <InfoRow icon={Car} label="Size" value={booking.vehicle_size ?? booking.vehicles?.size ?? null} />
+        )}
+        {booking.addons_json && booking.addons_json.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Add-ons</p>
+            {booking.addons_json.map((a) => (
+              <div key={a.id} className="flex justify-between text-xs">
+                <span className="text-zinc-400">{a.label}</span>
+                <span className="text-zinc-500 font-mono">${a.price}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="pt-1 border-t border-white/[0.04] flex justify-between text-sm font-bold">
+          <span className="text-zinc-400">Total</span>
+          <span className="text-white">${booking.total_price}</span>
+        </div>
+      </div>
+
+      {/* Column 3: Notes + status update */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Notes & Status</p>
+        {booking.notes ? (
+          <div className="flex items-start gap-2">
+            <StickyNote size={12} className="text-zinc-600 mt-0.5 shrink-0" />
+            <pre className="text-[10px] text-zinc-500 leading-relaxed whitespace-pre-wrap font-sans">
+              {booking.notes}
+            </pre>
+          </div>
+        ) : (
+          <p className="text-[10px] text-zinc-700 italic">No notes</p>
+        )}
+
+        <div className="pt-3 space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Update Status</p>
+          <div className="flex flex-wrap gap-2">
+            {statuses.map((s) => (
+              <button
+                key={s}
+                onClick={() => onUpdateStatus({ id: booking.id, status: s })}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border transition-all",
+                  booking.status === s
+                    ? STATUS_CONFIG[s].color + " opacity-100"
+                    : "border-white/[0.06] text-zinc-600 hover:text-zinc-300"
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  mono = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-2">
+      <Icon size={12} className="text-zinc-600 mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[9px] uppercase tracking-widest text-zinc-700 font-bold">{label}</p>
+        <p className={cn("text-xs text-zinc-300 break-words", mono && "font-mono")}>{value}</p>
       </div>
     </div>
   );
@@ -119,7 +389,12 @@ function StatusBadge({ status }: { status: AdminBooking["status"] }) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
   return (
-    <div className={cn("inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight", config.color)}>
+    <div
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight border",
+        config.color
+      )}
+    >
       <Icon size={12} />
       {status}
     </div>

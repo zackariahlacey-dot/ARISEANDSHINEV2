@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,6 +16,8 @@ import {
   ChevronDown,
   Sparkles,
   Car,
+  Brush,
+  LayoutDashboard,
   CalendarClock,
   CalendarRange,
   CircleSlash,
@@ -23,6 +26,8 @@ import {
   X,
   CheckCircle,
   Phone,
+  Gem,
+  AlertTriangle,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { Service } from "@/app/page";
@@ -48,6 +53,7 @@ import { RecentActivityToast } from "./RecentActivityToast";
 import { Button } from "@/components/ui/button";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { LegalModal, LegalSection, LegalList } from "./LegalModal";
+import { BeforeAfterSlider } from "./BeforeAfterSlider";
 
 const sectionViewport = { once: true, margin: "-100px" };
 const sectionVariants = {
@@ -65,8 +71,12 @@ const staggerItem = {
 
 const HERO_SCROLL_THRESHOLD = 0.8; // Show sticky CTA after 80% of viewport scrolled
 
-const BEFORE_IMAGE = "/JEEP INT BEFORE.jpg";
-const AFTER_IMAGE = "/JEEP INT AFTER.jpg";
+const SERVICE_LINKS = [
+  { href: "/detailing", label: "Auto Detailing", icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
+  { href: "/paint-correction", label: "Paint Correction", icon: Brush, desc: "Swirl removal & restoration" },
+  { href: "/maintenance-club", label: "Maintenance Club", icon: Crown, desc: "Monthly recurring plans" },
+  { href: "/services", label: "All Services", icon: Shield, desc: "Browse everything we offer" },
+];
 
 const REVIEWS = [
   {
@@ -113,7 +123,7 @@ const REVIEWS = [
   },
 ] as const;
 
-type ExpandedBookingId = "hero" | "club" | "services" | null;
+type ExpandedBookingId = "hero" | "club" | "services" | "ultimate" | null;
 
 export function LandingPage({ services }: { services: Service[] }) {
   const searchParams = useSearchParams();
@@ -125,26 +135,32 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPastHero, setIsPastHero] = useState(false);
-  const [beforeAfterPosition, setBeforeAfterPosition] = useState(50);
   const [authRewardPoints, setAuthRewardPoints] = useState<number | null>(null);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setAuthUserId(user?.id ?? null);
+      setAuthEmail(user?.email ?? null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthUserId(session?.user?.id ?? null);
+      setAuthEmail(session?.user?.email ?? null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const isAdmin = authEmail?.toLowerCase() === "zackariahlacey@gmail.com";
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const reviewIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -154,6 +170,16 @@ export function LandingPage({ services }: { services: Service[] }) {
   const maintenanceCarouselRef = useRef<HTMLDivElement>(null);
   const [maintenanceCarouselActiveIdx, setMaintenanceCarouselActiveIdx] = useState(0);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setServicesDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -252,6 +278,28 @@ export function LandingPage({ services }: { services: Service[] }) {
     setSelectedService(null);
   }, []);
 
+  const openUltimateBooking = useCallback((serviceName: string) => {
+    const match = services.find(s => s.name === serviceName) ?? null;
+    setSelectedService(match);
+    setExpandedBookingId("ultimate");
+  }, [services]);
+
+  // Ultimate Series carousel
+  const ultimateCarouselRef = useRef<HTMLDivElement>(null);
+  const [ultimateCarouselActiveIdx, setUltimateCarouselActiveIdx] = useState(0);
+  const scrollToUltimateCard = useCallback((idx: number) => {
+    const el = ultimateCarouselRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
+    setUltimateCarouselActiveIdx(idx);
+  }, []);
+  const handleUltimateCarouselScroll = useCallback(() => {
+    const el = ultimateCarouselRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    setUltimateCarouselActiveIdx(Math.min(Math.max(0, idx), 1));
+  }, []);
+
   // Lock body scroll when mobile menu is open
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
@@ -298,14 +346,16 @@ export function LandingPage({ services }: { services: Service[] }) {
   const mainGridServices = services.filter((s) => !s.is_subscription);
   const monthlyPlanServices = services.filter((s) => s.is_subscription);
 
-  // Fixed display order: Interior | Full Detail | Exterior
+  // Fixed display order: Interior | Full Detail | Exterior — home page shows only these 3
   const CAROUSEL_ORDER = ["Interior Detail", "Full Detail", "Exterior Detail"];
   const carouselServices = useMemo(
-    () => [...mainGridServices].sort((a, b) => {
-      const ai = CAROUSEL_ORDER.indexOf(a.name);
-      const bi = CAROUSEL_ORDER.indexOf(b.name);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    }),
+    () => [...mainGridServices]
+      .filter((s) => CAROUSEL_ORDER.includes(s.name))
+      .sort((a, b) => {
+        const ai = CAROUSEL_ORDER.indexOf(a.name);
+        const bi = CAROUSEL_ORDER.indexOf(b.name);
+        return ai - bi;
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [mainGridServices]
   );
@@ -396,11 +446,80 @@ export function LandingPage({ services }: { services: Service[] }) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
-          <button onClick={scrollToServices} className="hover:text-white transition-colors">
-            Services
-          </button>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+              className={`flex items-center gap-1 hover:text-white transition-colors py-2 ${
+                servicesDropdownOpen ? "text-white" : ""
+              }`}
+            >
+              Services
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-300 ${
+                  servicesDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            <AnimatePresence>
+              {servicesDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute top-full left-0 mt-2 w-80 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[60]"
+                >
+                  <div className="p-2">
+                    {SERVICE_LINKS.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setServicesDropdownOpen(false)}
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-all group"
+                      >
+                        <div className="mt-1 w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5 group-hover:border-[#D4AF37]/30 transition-colors">
+                          <item.icon size={16} className="text-[#D4AF37]" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-white group-hover:text-[#D4AF37] transition-colors">
+                            {item.label}
+                          </div>
+                          <div className="text-[11px] text-zinc-500 line-clamp-1">
+                            {item.desc}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="p-3 bg-white/[0.02] border-t border-white/5">
+                    <button
+                      onClick={() => {
+                        setServicesDropdownOpen(false);
+                        scrollToServices();
+                      }}
+                      className="text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] hover:text-[#F3E5AB] transition-colors flex items-center gap-2"
+                    >
+                      Compare Packages
+                      <ChevronDown size={12} className="-rotate-90" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <a href="#why-us" className="hover:text-white transition-colors">Why Us</a>
           <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-all text-xs font-bold uppercase tracking-wider"
+            >
+              <LayoutDashboard size={13} />
+              Admin
+            </Link>
+          )}
         </nav>
 
         {/* Right: desktop (call + loyalty + book) and mobile (call + hamburger) */}
@@ -452,10 +571,70 @@ export function LandingPage({ services }: { services: Service[] }) {
         aria-hidden={!mobileMenuOpen}
       >
         {/* Content: vertically centered links */}
-        <div className="flex flex-col items-center justify-center flex-1 gap-2 px-8">
+        <div className="flex flex-col items-center justify-center flex-1 gap-2 px-8 overflow-y-auto">
           <nav className="flex flex-col items-center gap-1 w-full">
+            {/* Services Dropdown (Mobile) */}
+            <div className="w-full flex flex-col items-center">
+              <button
+                onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+                className={`w-full text-center text-3xl font-black tracking-tight py-4 transition-all duration-200 flex items-center justify-center gap-3 ${
+                  mobileMenuOpen ? "text-zinc-100 hover:text-[#D4AF37]" : "text-transparent"
+                }`}
+              >
+                Services
+                <ChevronDown
+                  size={24}
+                  className={`transition-transform duration-300 ${
+                    servicesDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {servicesDropdownOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="w-full overflow-hidden"
+                  >
+                    <div className="grid grid-cols-1 gap-2 py-4">
+                      {SERVICE_LINKS.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={closeMobileMenu}
+                          className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5">
+                            <item.icon size={20} className="text-[#D4AF37]" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-bold text-white">
+                              {item.label}
+                            </div>
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">
+                              {item.desc}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                      <button
+                        onClick={() => {
+                          closeMobileMenu();
+                          scrollToServices();
+                        }}
+                        className="w-full p-4 rounded-xl border border-dashed border-[#D4AF37]/30 text-[#D4AF37] text-sm font-bold uppercase tracking-widest"
+                      >
+                        Compare All Packages
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {[
-              { label: "Services", action: scrollToServices },
               {
                 label: "Why Us",
                 action: () => {
@@ -484,6 +663,18 @@ export function LandingPage({ services }: { services: Service[] }) {
               </button>
             ))}
           </nav>
+
+          {/* Admin shortcut — only shown to the admin account */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-center gap-2 w-full max-w-xs px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-sm uppercase tracking-wider hover:bg-amber-500/20 transition-all"
+            >
+              <LayoutDashboard size={15} />
+              Admin Dashboard
+            </Link>
+          )}
 
           {/* Divider */}
           <div className="w-16 h-px bg-white/10 my-4" />
@@ -628,6 +819,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 selectedService={expandedBookingId === "hero" ? selectedService : null}
                 services={services}
                 onSelectService={setSelectedService}
+                onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
                 initialRewardPoints={authRewardPoints}
                 initialDraft={initialDraft}
@@ -726,125 +918,23 @@ export function LandingPage({ services }: { services: Service[] }) {
       </motion.section>
 
       {/* ─── Before & After Slider ───────────────────────────────── */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={sectionViewport}
-        variants={sectionVariants}
-        className="relative py-20 md:py-32 lg:py-40 px-4 sm:px-6 lg:px-8 border-t border-white/[0.03] overflow-hidden"
-      >
-        {/* Subtle background glow to anchor the section */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(212,175,55,0.02)_0%,transparent_100%)] pointer-events-none" />
+      <BeforeAfterSlider />
 
-        <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-16 md:mb-24">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/50 border border-white/5 text-[#D4AF37] text-[10px] font-bold tracking-[0.2em] uppercase mb-6">
-              <Sparkles size={12} className="shrink-0" />
-              The Transformation
-            </div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
-              Visible <span className="text-zinc-500">Perfection.</span>
-            </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Slide to reveal the Arise & Shine difference. We don&apos;t just clean; we restore your vehicle&apos;s soul through meticulous attention to detail.
-            </p>
-          </div>
 
-          <div className="relative max-w-5xl mx-auto group">
-            {/* Premium Frame Decor */}
-            <div className="absolute -inset-1 bg-gradient-to-b from-white/10 to-transparent rounded-[2rem] blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-700" />
-            
-            <div className="relative aspect-[16/10] md:aspect-video rounded-[2rem] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl">
-              {/* Images */}
-              <Image
-                src={BEFORE_IMAGE}
-                alt="Interior before detail"
-                fill
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                className="object-cover"
-              />
-              <Image
-                src={AFTER_IMAGE}
-                alt="Interior after detail"
-                fill
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                className="object-cover"
-                style={{
-                  clipPath: `inset(0 0 0 ${beforeAfterPosition}%)`,
-                }}
-              />
-
-              {/* Slider UI */}
-              <div
-                className="absolute top-0 bottom-0 w-px bg-white/40 pointer-events-none z-[10]"
-                style={{ left: `${beforeAfterPosition}%` }}
-              >
-                {/* Central Handle */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center group/handle transition-transform duration-300 scale-100 md:scale-110">
-                    <div className="flex gap-1">
-                      <div className="w-1 h-1 rounded-full bg-[#D4AF37]" />
-                      <div className="w-1 h-1 rounded-full bg-white" />
-                      <div className="w-1 h-1 rounded-full bg-[#D4AF37]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Labels */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div 
-                  className="absolute top-6 left-6 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 transition-opacity duration-300"
-                  style={{ 
-                    opacity: Math.min(1, Math.max(0, (beforeAfterPosition - 15) / 15)) 
-                  }}
-                >
-                  Before
-                </div>
-                <div 
-                  className="absolute top-6 right-6 px-4 py-2 rounded-full bg-[#D4AF37]/20 backdrop-blur-md border border-[#D4AF37]/30 text-[10px] font-black uppercase tracking-[0.2em] text-[#F3E5AB] transition-opacity duration-300"
-                  style={{ 
-                    opacity: Math.min(1, Math.max(0, (85 - beforeAfterPosition) / 15)) 
-                  }}
-                >
-                  After
-                </div>
-              </div>
-
-              {/* Invisible Range Input */}
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={beforeAfterPosition}
-                onChange={(e) => setBeforeAfterPosition(Number(e.target.value))}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-[20]"
-                aria-label="Compare before and after"
-              />
-            </div>
-
-            {/* Hint below slider */}
-            <div className="mt-8 flex justify-center items-center gap-3 text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-              <div className="w-8 h-px bg-white/5" />
-              Slide to Compare
-              <div className="w-8 h-px bg-white/5" />
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* ─── Services ───────────────────────────────────────────── */}
+      {/* ─── Our Services ─────────────────────────────────────────────────────────────── */}
       <motion.section
         id="services"
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"
+        className="py-14 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="w-full max-w-7xl mx-auto">
-          <div className="text-center mb-10 md:mb-16">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+
+          {/* Section header */}
+          <div className="text-center mb-8 md:mb-14">
+            <p className="text-xs font-bold tracking-[0.22em] uppercase text-[#D4AF37] mb-3">
               What We Offer
             </p>
             <h2
@@ -853,91 +943,142 @@ export function LandingPage({ services }: { services: Service[] }) {
             >
               Our Services
             </h2>
+            <p className="text-sm text-zinc-500 mt-3 max-w-xl mx-auto leading-relaxed">
+              From everyday detailing to full paint restoration — every service is performed on location at your schedule.
+            </p>
           </div>
 
-          {mainGridServices.length === 0 ? (
-            <div className="text-center py-24 text-zinc-600">
-              <Car size={40} className="mx-auto mb-4 opacity-30" />
-              <p className="text-sm">Services coming soon — check back shortly.</p>
-            </div>
-          ) : (
-            <>
-              {/* Desktop: 3-column grid of all cards */}
-              <div className="hidden lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start w-full max-w-7xl mx-auto">
-                {mainGridServices.map((service) => (
-                  <div key={service.id} className="h-fit pt-5">
-                    <ServiceCard
-                      service={service}
-                      onBook={() => openBooking(service)}
-                    />
+          {/* ── Mobile/tablet: single carousel ──────────────────────── */}
+          {mounted && <div className="lg:hidden">
+            <div className="flex flex-col items-center w-full">
+              <div
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="w-full flex overflow-x-auto snap-x snap-mandatory"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+              >
+                {carouselServices.map((service) => (
+                  <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-2 pb-3">
+                    <div className="w-full max-w-[360px]">
+                      <ServiceCard service={service} onBook={() => openBooking(service)} />
+                    </div>
                   </div>
                 ))}
               </div>
-              {/* Mobile/tablet: swipeable carousel — Interior | Full Detail | Exterior */}
-              <div className="flex flex-col items-center w-full lg:hidden">
-                {/* Scroll track — each slide is full viewport width so snap is perfect */}
-                <div
-                  ref={carouselRef}
-                  onScroll={handleCarouselScroll}
-                  className="w-full flex overflow-x-auto snap-x snap-mandatory"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-                >
-                  {carouselServices.map((service) => (
-                    <div
-                      key={service.id}
-                      className="snap-center shrink-0 w-full flex justify-center px-5 pt-5 pb-3"
-                    >
-                      <div className="w-full max-w-[370px]">
-                        <ServiceCard
-                          service={service}
-                          onBook={() => openBooking(service)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Dot indicators + label */}
-                <div className="flex items-center gap-3 mt-4">
-                  {carouselServices.map((service, i) => (
-                    <button
-                      key={service.id}
-                      type="button"
-                      onClick={() => scrollToCard(i)}
-                      aria-label={service.name}
-                      className="flex flex-col items-center gap-1.5 group"
-                    >
-                      <div className={`h-1.5 rounded-full transition-all duration-300 ${
-                        carouselActiveIdx === i
-                          ? "w-6 bg-[#D4AF37]"
-                          : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"
-                      }`} />
-                    </button>
-                  ))}
-                </div>
-                {/* Active service label */}
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 mt-2">
-                  {carouselServices[carouselActiveIdx]?.name ?? ""}
-                </p>
+              <div className="flex items-center gap-2.5 mt-4">
+                {carouselServices.map((service, i) => (
+                  <button key={service.id} type="button" onClick={() => scrollToCard(i)} aria-label={service.name} className="group">
+                    <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
+                  </button>
+                ))}
               </div>
-              {/* Inline booking dropdown (Services) — client-only */}
-              {mounted && expandedBookingId === "services" && (
-                <div className="w-full max-w-[450px] lg:max-w-7xl mx-auto mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                  <BookingSection
-                    isVisible={true}
-                    onClose={() => setExpandedBookingId(null)}
-                    selectedService={selectedService}
-                    services={services}
-                    onSelectService={setSelectedService}
-                    onBookingSuccess={handleBookingSuccess}
-                    initialRewardPoints={authRewardPoints}
-                    initialDraft={initialDraft}
-                    onDraftRestored={() => setInitialDraft(null)}
-                  />
-                </div>
-              )}
-            </>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
+            </div>
+          </div>}
+
+          {/* ── Desktop: standard services grid ──────────────────── */}
+          {carouselServices.length > 0 && (
+            <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
+              {carouselServices.map((service) => (
+                <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
+              ))}
+            </div>
           )}
+
+          {/* ── Inline booking for standard services ── */}
+          {mounted && expandedBookingId === "services" && (
+            <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+              <BookingSection
+                isVisible={true}
+                onClose={() => setExpandedBookingId(null)}
+                selectedService={selectedService}
+                services={services}
+                onSelectService={setSelectedService}
+                onClearService={() => setSelectedService(null)}
+                onBookingSuccess={handleBookingSuccess}
+                initialRewardPoints={authRewardPoints}
+                initialDraft={initialDraft}
+                onDraftRestored={() => setInitialDraft(null)}
+              />
+            </div>
+          )}
+
+          {/* ── Ultimate Series ──────────────────────────────────────── */}
+          <div className="mt-14 md:mt-20">
+            <div className="flex items-center gap-3 mb-8">
+              <Gem size={14} className="text-[#D4AF37]" />
+              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Ultimate Series</h3>
+              <div className="flex-1 h-px bg-white/[0.05]" />
+            </div>
+
+            {/* Mobile: Ultimate carousel */}
+            {mounted && <div className="lg:hidden flex flex-col items-center w-full">
+              <div
+                ref={ultimateCarouselRef}
+                onScroll={handleUltimateCarouselScroll}
+                className="w-full flex overflow-x-auto snap-x snap-mandatory"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+              >
+                {ULTIMATE_CARDS.map((card) => (
+                  <div key={card.name} className="snap-center shrink-0 w-full flex justify-center px-4 pt-2 pb-3">
+                    <div className="w-full max-w-[360px]">
+                      <UltimateServiceCard {...card} onBook={openUltimateBooking} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2.5 mt-4">
+                {ULTIMATE_CARDS.map((card, i) => (
+                  <button key={card.name} type="button" onClick={() => scrollToUltimateCard(i)} aria-label={card.name} className="group">
+                    <div className={`h-1.5 rounded-full transition-all duration-300 ${ultimateCarouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{ULTIMATE_CARDS[ultimateCarouselActiveIdx]?.name ?? ""}</p>
+              <div className="flex items-start gap-2 mt-4 max-w-sm mx-auto">
+                <AlertTriangle size={12} className="text-amber-500/60 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-zinc-600 leading-relaxed"><span className="text-zinc-500 font-semibold">Heavy Soil:</span> Vehicles with mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.</p>
+              </div>
+            </div>}
+
+            {/* Desktop: Ultimate grid */}
+            <div className="hidden lg:grid lg:grid-cols-2 gap-6 items-start">
+              {ULTIMATE_CARDS.map((card) => (
+                <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} />
+              ))}
+            </div>
+            <div className="hidden lg:flex items-center gap-2 mt-5">
+              <AlertTriangle size={12} className="text-amber-500/60 shrink-0" />
+              <p className="text-[11px] text-zinc-600"><span className="text-zinc-500 font-semibold">Heavy Soil:</span> Vehicles with mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.</p>
+            </div>
+          </div>
+
+          {/* View More Services */}
+          <div className="mt-10 text-center">
+            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#F3E5AB] transition-colors group">
+              View More Services
+              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+            </Link>
+          </div>
+
+          {/* ── Inline booking for ultimate ── */}
+          {mounted && expandedBookingId === "ultimate" && (
+            <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+              <BookingSection
+                isVisible={true}
+                onClose={() => setExpandedBookingId(null)}
+                selectedService={selectedService}
+                services={services}
+                onSelectService={setSelectedService}
+                onClearService={() => setSelectedService(null)}
+                onBookingSuccess={handleBookingSuccess}
+                initialRewardPoints={authRewardPoints}
+                initialDraft={initialDraft}
+                onDraftRestored={() => setInitialDraft(null)}
+              />
+            </div>
+          )}
+
         </div>
       </motion.section>
 
@@ -1172,6 +1313,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 selectedService={selectedService}
                 services={services}
                 onSelectService={setSelectedService}
+                onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
                 initialRewardPoints={authRewardPoints}
                 initialDraft={initialDraft}
@@ -1624,6 +1766,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   );
 }
 
+
 // ─── Service inclusions data ───────────────────────────────────────────────────
 
 const EXTERIOR_ITEMS = [
@@ -1849,3 +1992,120 @@ function ServiceCard({
     </div>
   );
 }
+
+// ─── Ultimate Cards data ───────────────────────────────────────────────────────
+
+const ULTIMATE_CARDS = [
+  {
+    name: "Ultimate Interior Reset + Wash",
+    tagline: "The total restoration for daily drivers.",
+    priceNormal: 375, priceLarge: 425, pointsNormal: 395, pointsLarge: 495,
+    badge: { label: "Best for Families", icon: "star" as const },
+    features: [
+      "Everything in Full Detail",
+      "Hot Water Extraction & Shampooing (Carpets & Seats)",
+      "High-Pressure Steam Sanitation (Vents, Cup Holders, Crevices)",
+      "Vermont Road Salt & Calcium Neutralization",
+      "Engine Bay Deep Clean & Dressing (Add-On Available)",
+      "6-Month Ceramic Sealant Upgrade",
+    ],
+    isFlagship: false,
+  },
+  {
+    name: "Ultimate Showroom Restoration",
+    tagline: "Our flagship service for a true mirror finish.",
+    priceNormal: 525, priceLarge: 650, pointsNormal: 595, pointsLarge: 725,
+    badge: { label: "Flagship Service", icon: "gem" as const },
+    features: [
+      "Everything in Ultimate Interior Reset",
+      "Mechanical Clay Bar & Iron Decontamination",
+      "1-Step Machine Paint Correction (Swirl & Scratch Reduction)",
+      "IPA Paint Prep & Surface Cleansing",
+      "Premium 12-Month Ceramic Coating Lite",
+      "Exhaust Tip & Wheel Barrel Polishing",
+    ],
+    isFlagship: true,
+  },
+] as const;
+
+// ─── Ultimate Service Card ─────────────────────────────────────────────────────
+
+function UltimateServiceCard({
+  name, tagline, priceNormal, priceLarge, pointsNormal, pointsLarge,
+  badge, features, onBook, isFlagship,
+}: {
+  name: string; tagline: string; priceNormal: number; priceLarge: number;
+  pointsNormal: number; pointsLarge: number;
+  badge: { label: string; icon: "star" | "gem" };
+  features: readonly string[];
+  onBook: (name: string) => void;
+  isFlagship: boolean;
+}) {
+  return (
+    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+      isFlagship
+        ? "border border-[#D4AF37]/60 shadow-[0_0_50px_rgba(212,175,55,0.2)] bg-zinc-900/70 hover:shadow-[0_16px_60px_rgba(212,175,55,0.3)]"
+        : "border border-white/[0.08] bg-zinc-900/50 hover:border-[#D4AF37]/30 hover:shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+    }`}>
+      <div className={`h-[2px] w-full shrink-0 ${
+        isFlagship
+          ? "bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40"
+          : "bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent"
+      }`} />
+      {isFlagship && (
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.07) 0%, transparent 60%)" }} />
+      )}
+      <div className="p-7 flex flex-col flex-1 relative">
+        <div className="mb-6">
+          <div className="flex items-center gap-1.5 mb-2.5">
+            {badge.icon === "gem"
+              ? <Gem size={11} className="text-[#D4AF37]" strokeWidth={2} />
+              : <Star size={11} className="text-[#D4AF37]" strokeWidth={2} fill="currentColor" />
+            }
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">{badge.label}</span>
+          </div>
+          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{name}</h3>
+          <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{tagline}</p>
+        </div>
+        <div className={`flex rounded-xl mb-7 overflow-hidden border ${isFlagship ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
+          <div className="flex-1 py-4 text-center bg-white/[0.02]">
+            <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
+          </div>
+          <div className="w-px bg-white/[0.06]" />
+          <div className={`flex-1 py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+            <div className={`text-2xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
+          </div>
+        </div>
+        <div className="mb-7 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">What&apos;s Included</p>
+          <ul className="space-y-2.5">
+            {features.map((item) => (
+              <li key={item} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
+                <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
+                  <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <button
+          onClick={() => onBook(name)}
+          className={`w-full py-3.5 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
+            isFlagship
+              ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_20px_rgba(212,175,55,0.35)]"
+              : "btn-primary-gold-shimmer bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:scale-[1.02]"
+          }`}
+        >
+          Book This Service <Sparkles size={13} className="shrink-0" />
+        </button>
+        <p className="text-center text-[11px] text-zinc-600 mt-3">
+          <Sparkles size={9} className="inline mr-1" />Earn {pointsNormal}–{pointsLarge} reward points
+        </p>
+      </div>
+    </div>
+  );
+}
+

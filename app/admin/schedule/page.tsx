@@ -62,6 +62,37 @@ const TIME_SLOTS = [
   "12:00 PM","01:00 PM","02:00 PM","03:00 PM","04:00 PM","05:00 PM","06:00 PM","07:00 PM",
 ];
 
+// ── Booking field helpers: prefer direct lead columns, fall back to joins ──
+function bName(b: any): string {
+  if (b.customer_name) return b.customer_name;
+  const p = b.profiles;
+  if (!p) return "Unknown";
+  return [p.first_name, p.last_name].filter(Boolean).join(" ") || "Unknown";
+}
+function bInitials(b: any): string {
+  const name = bName(b);
+  if (name === "Unknown") return "?";
+  const parts = name.split(" ").filter(Boolean);
+  return parts.length >= 2
+    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+    : (parts[0]?.[0] ?? "?").toUpperCase();
+}
+function bPhone(b: any): string | null { return b.customer_phone ?? b.profiles?.phone ?? null; }
+function bEmail(b: any): string | null { return b.customer_email ?? b.profiles?.email ?? null; }
+function bVehicle(b: any): string {
+  const year  = b.vehicle_year  ?? b.vehicles?.year  ?? "";
+  const make  = b.vehicle_make  ?? b.vehicles?.make  ?? "";
+  const model = b.vehicle_model ?? b.vehicles?.model ?? "";
+  return [year, make, model].filter(Boolean).join(" ");
+}
+function bService(b: any): string { return b.service_name ?? b.services?.name ?? "Standard Detail"; }
+function bAddress(b: any): string | null {
+  if (b.service_address) return b.service_address;
+  if (!b.notes) return null;
+  const match = b.notes.match(/📍 Service Location:\s*(.+)/);
+  return match ? match[1].trim() : null;
+}
+
 export default function SchedulePage() {
   const { data: bookings, isLoading, refetch } = useAdminBookings();
   const { data: services } = useServices();
@@ -111,12 +142,6 @@ export default function SchedulePage() {
     return bookings.filter(b => b.booking_date === dateStr && b.status !== "cancelled");
   }, [bookings]);
 
-  const extractAddress = (notes: string) => {
-    if (!notes) return null;
-    const match = notes.match(/📍 Service Location:\s*(.+)/);
-    return match ? match[1].trim() : null;
-  };
-
   const formatTime = (t: string) => {
     if (!t) return "";
     const [h, m] = t.split(":");
@@ -128,7 +153,7 @@ export default function SchedulePage() {
 
   // ── Actions ──
   const handleNavigateAndOmw = async (b: any) => {
-    const addr = extractAddress(b.notes || "");
+    const addr = bAddress(b);
     if (addr) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`, "_blank");
     try { await sendOmw.mutateAsync(b.id); toast("On My Way email sent!"); } catch { toast("Failed to send", "error"); }
   };
@@ -169,23 +194,31 @@ export default function SchedulePage() {
     setSendingPaymentLink(true);
     try {
       const vehicles = b.vehicles;
+      const customerEmail = bEmail(b);
+      const customerName = bName(b);
       const result = await sendStripePaymentLink(b.id, {
-        serviceName: b.services?.name ?? "Detail Service",
+        serviceName: bService(b),
         totalPrice: Number(b.total_price),
-        vehicleYear: vehicles?.year ?? "",
-        vehicleMake: vehicles?.make ?? "",
-        vehicleModel: vehicles?.model ?? "",
-        vehicleSize: vehicles?.size ?? "",
+        vehicleYear: vehicles?.year ?? b.vehicle_year ?? "",
+        vehicleMake: vehicles?.make ?? b.vehicle_make ?? "",
+        vehicleModel: vehicles?.model ?? b.vehicle_model ?? "",
+        vehicleSize: vehicles?.size ?? b.vehicle_size ?? "",
         bookingDate: b.booking_date,
         bookingTime: formatTime(b.booking_time),
-        customerEmail: b.profiles?.email ?? "",
-        customerName: b.profiles ? `${b.profiles.first_name || ""} ${b.profiles.last_name || ""}`.trim() : "",
+        customerEmail: customerEmail ?? "",
+        customerName: customerName,
       });
       if ("error" in result) {
         toast(result.error, "error");
       } else {
-        await navigator.clipboard.writeText(result.url);
-        toast("Payment link copied to clipboard!");
+        await navigator.clipboard.writeText(result.url).catch(() => {});
+        if (result.emailSent) {
+          toast(`Payment link emailed to ${customerEmail} & copied!`);
+        } else if (customerEmail) {
+          toast("Payment link copied — email failed, send manually.", "error");
+        } else {
+          toast("Payment link copied (no email on file for this client).");
+        }
       }
     } catch {
       toast("Failed to create payment link", "error");
@@ -309,8 +342,8 @@ export default function SchedulePage() {
             </div>
           ) : (
             dayBookings.map(b => {
-              const clientName = b.profiles ? `${b.profiles.first_name || ""} ${b.profiles.last_name || ""}`.trim() : "Unknown";
-              const vehicleInfo = b.vehicles ? `${b.vehicles.year || ""} ${b.vehicles.make || ""} ${b.vehicles.model || ""}`.trim() : "";
+              const clientName = bName(b);
+              const vehicleInfo = bVehicle(b);
               return (
                 <button key={b.id} onClick={() => setActiveBooking(b)}
                   className="w-full p-3.5 rounded-2xl bg-[#0A0A0A] border border-white/[0.05] hover:border-amber-500/20 transition-all text-left group active:scale-[0.98]">
@@ -358,7 +391,6 @@ export default function SchedulePage() {
             </div>
           ) : (
             getBookingsForDate(selectedDay).map(b => {
-              const clientName = b.profiles ? `${b.profiles.first_name || ""} ${b.profiles.last_name || ""}`.trim() : "Unknown";
               return (
                 <button key={b.id} onClick={() => setActiveBooking(b)}
                   className="w-full p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-amber-500/30 transition-all text-left group">
@@ -368,8 +400,8 @@ export default function SchedulePage() {
                         <span className="text-[10px] font-mono font-bold text-amber-500">{formatTime(b.booking_time)}</span>
                         <StatusBadge status={b.status} />
                       </div>
-                      <p className="font-black text-sm mt-1">{clientName}</p>
-                      <p className="text-[9px] text-zinc-500 mt-0.5">{b.services?.name || "Standard Detail"}</p>
+                      <p className="font-black text-sm mt-1">{bName(b)}</p>
+                      <p className="text-[9px] text-zinc-500 mt-0.5">{bService(b)}</p>
                     </div>
                     <ChevronRight size={16} className="text-zinc-700 group-hover:text-amber-500" />
                   </div>
@@ -384,10 +416,10 @@ export default function SchedulePage() {
       <Modal open={!!activeBooking} onClose={() => setActiveBooking(null)} title="Booking Details">
         {activeBooking && (() => {
           const b = activeBooking;
-          const clientName = b.profiles ? `${b.profiles.first_name || ""} ${b.profiles.last_name || ""}`.trim() : "Unknown";
-          const phone = b.profiles?.phone;
-          const vehicleInfo = b.vehicles ? `${b.vehicles.year || ""} ${b.vehicles.make || ""} ${b.vehicles.model || ""}`.trim() : "";
-          const addr = extractAddress(b.notes || "");
+          const clientName = bName(b);
+          const phone = bPhone(b);
+          const vehicleInfo = bVehicle(b);
+          const addr = bAddress(b);
           return (
             <div className="p-4 space-y-4">
               {/* PRIMARY STAT CARD */}
@@ -395,7 +427,7 @@ export default function SchedulePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-black font-black text-lg shadow-lg shadow-amber-500/20">
-                      {(b.profiles?.first_name?.[0] || "?")}{(b.profiles?.last_name?.[0] || "")}
+                      {bInitials(b)}
                     </div>
                     <div>
                       <p className="font-black text-lg tracking-tight leading-tight">{clientName}</p>
@@ -409,7 +441,7 @@ export default function SchedulePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Service</p>
-                    <p className="font-bold text-xs truncate text-zinc-200">{b.services?.name || "Standard Detail"}</p>
+                    <p className="font-bold text-xs truncate text-zinc-200">{bService(b)}</p>
                   </div>
                   <div>
                     <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Total Price</p>
@@ -483,7 +515,7 @@ export default function SchedulePage() {
                   ) : (
                     <Link size={20} className="text-emerald-500 group-hover:scale-110 transition-transform" />
                   )}
-                  <span className="text-[9px] font-black uppercase tracking-widest">Payment Link</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest">Send Payment Link</span>
                 </button>
               </div>
 
