@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminBookingSchema } from "@/types/admin";
+import { SERVICE_DURATIONS } from "@/lib/constants";
 import { 
   sendOnMyWayEmailNotification, 
   sendBookingCancellationEmails,
@@ -130,11 +131,11 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   const bookedTime24 = to24h(payload.bookingTime);
   const requestedSlot = timeToMins(bookedTime24);
-  const SERVICE_DURATION_MINS = 180; // 3 hour default block
+  const newDur = SERVICE_DURATIONS[payload.serviceName]?.["sedan"] ?? 180;
 
   for (const row of existingOnDate ?? []) {
     const takenSlot = timeToMins(String(row.booking_time ?? ""));
-    if (Math.abs(requestedSlot - takenSlot) < SERVICE_DURATION_MINS) {
+    if (Math.abs(requestedSlot - takenSlot) < newDur) {
       return { success: false, error: "That time is already booked. Please pick a different time slot." };
     }
   }

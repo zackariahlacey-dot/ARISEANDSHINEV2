@@ -1,44 +1,44 @@
 import { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 
-// Service time + 30 min travel/buffer (minutes)
+// Service durations in minutes (pure service time, no travel)
 export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
-  "Interior Detail": { 
-    small: 180, medium: 180, large: 240, extra_large: 240,
-    compact: 180, sedan: 180, suv: 240, xl: 240 
+  "Interior Detail": {
+    small: 180, medium: 180, large: 180, extra_large: 180,
+    compact: 180, sedan: 180, suv: 180, xl: 180,
   },
-  "Exterior Detail": { 
-    small: 120, medium: 120, large: 180, extra_large: 180,
-    compact: 120, sedan: 120, suv: 180, xl: 180 
+  "Exterior Detail": {
+    small: 120, medium: 120, large: 120, extra_large: 120,
+    compact: 120, sedan: 120, suv: 120, xl: 120,
   },
-  "Full Detail": { 
-    small: 240, medium: 240, large: 330, extra_large: 330,
-    compact: 240, sedan: 240, suv: 330, xl: 330 
+  "Full Detail": {
+    small: 210, medium: 210, large: 210, extra_large: 210,
+    compact: 210, sedan: 210, suv: 210, xl: 210,
   },
-  "Interior Monthly Maintenance": { 
+  "Interior Monthly Maintenance": {
     small: 90, medium: 90, large: 120, extra_large: 120,
-    compact: 90, sedan: 90, suv: 120, xl: 120 
+    compact: 90, sedan: 90, suv: 120, xl: 120,
   },
   "Full Detail Monthly Maintenance": {
     small: 150, medium: 150, large: 210, extra_large: 210,
-    compact: 150, sedan: 150, suv: 210, xl: 210
+    compact: 150, sedan: 150, suv: 210, xl: 210,
   },
-  // Ultimate Series — block 5 hrs for Interior Reset, 8 hrs for Showroom Restoration
+  // Ultimate Series
   "Ultimate Interior Reset + Wash": {
-    small: 300, medium: 300, large: 300, extra_large: 300,
-    compact: 300, sedan: 300, suv: 300, xl: 300,
+    small: 270, medium: 270, large: 270, extra_large: 270,
+    compact: 270, sedan: 270, suv: 270, xl: 270,
   },
   "Ultimate Showroom Restoration": {
-    small: 480, medium: 480, large: 480, extra_large: 480,
-    compact: 480, sedan: 480, suv: 480, xl: 480,
+    small: 360, medium: 360, large: 360, extra_large: 360,
+    compact: 360, sedan: 360, suv: 360, xl: 360,
   },
-  // Paint Correction — block larger amount: 4 hrs normal / 8 hrs large for L1, 6 hrs normal / 8 hrs large for L2
+  // Paint Correction
   "Single-Stage Paint Enhancement": {
-    small: 240, medium: 240, large: 480, extra_large: 480,
-    compact: 240, sedan: 240, suv: 480, xl: 480,
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    compact: 240, sedan: 240, suv: 240, xl: 240,
   },
   "Two-Stage Paint Correction": {
-    small: 360, medium: 360, large: 480, extra_large: 480,
-    compact: 360, sedan: 360, suv: 480, xl: 480,
+    small: 480, medium: 480, large: 480, extra_large: 480,
+    compact: 480, sedan: 480, suv: 480, xl: 480,
   },
 };
 
