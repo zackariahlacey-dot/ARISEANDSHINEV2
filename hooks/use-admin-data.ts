@@ -12,7 +12,11 @@ import {
   getOperatingHours,
   updateOperatingHoursAction,
   getBlockedDates,
-  toggleBlockedDateAction
+  toggleBlockedDateAction,
+  getRevenueBreakdown,
+  getAllTimeStats,
+  getSettingAction,
+  setSettingAction,
 } from "@/app/actions/adminActions";
 import type { AdminBooking } from "@/types/admin";
 
@@ -106,5 +110,39 @@ export function useToggleBlockedDate() {
     mutationFn: async ({ date, isBlocked, reason }: { date: string; isBlocked: boolean; reason?: string }) => 
       await toggleBlockedDateAction(date, isBlocked, reason),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "blocked-dates"] }),
+  });
+}
+
+export function useRevenueBreakdown(monthOffset = 0) {
+  return useQuery({
+    queryKey: ["admin", "revenue", monthOffset],
+    queryFn: async () => await getRevenueBreakdown(monthOffset),
+    staleTime: 60_000,
+  });
+}
+
+export function useAllTimeStats() {
+  return useQuery({
+    queryKey: ["admin", "all-time-stats"],
+    queryFn: async () => await getAllTimeStats(),
+    staleTime: 60_000,
+  });
+}
+
+export function useMonthlyGoal() {
+  return useQuery({
+    queryKey: ["admin", "monthly-goal"],
+    queryFn: async () => {
+      const v = await getSettingAction("monthly_goal");
+      return v ? Number(v) : 5000;
+    },
+  });
+}
+
+export function useSetMonthlyGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (goal: number) => setSettingAction("monthly_goal", String(goal)),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "monthly-goal"] }),
   });
 }

@@ -346,11 +346,13 @@ export async function bookDetailing(
       console.error("[bookDetailing] STRIPE_SECRET_KEY missing");
       return { success: false, error: "Payment is not configured. Please try Pay at Arrival." };
     }
-    const origin =
+    // Strip trailing slash so appending ?stripe=... never produces double-slash
+    const origin = (
       payload.successUrl ??
       payload.cancelUrl ??
       process.env.NEXT_PUBLIC_SITE_URL ??
-      "https://ariseandshinevt.com";
+      "https://ariseandshinevt.com"
+    ).replace(/\/$/, "");
     const stripe = new Stripe(stripeKey, { apiVersion: "2026-02-25.clover" });
     const isSubscription = payload.serviceName.toLowerCase().includes("monthly");
     const mode = isSubscription ? "subscription" : "payment";

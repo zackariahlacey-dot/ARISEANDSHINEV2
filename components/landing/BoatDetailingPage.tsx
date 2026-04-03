@@ -3,91 +3,128 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  MapPin, Sparkles, CheckCircle, Star, ShieldCheck,
+  Sparkles, CheckCircle, Star, ShieldCheck,
   BadgeCheck, Phone, ArrowRight, Anchor, Waves,
   Droplets, Leaf, AlertTriangle, Calculator, ChevronRight,
+  Minus, Plus, Zap, FlaskConical, Eye, Wrench, Snowflake,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
+import type { DraftBooking } from "./BookingModal";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
-  { ssr: true, loading: () => <div className="min-h-[400px] rounded-xl bg-zinc-900/30 animate-pulse" /> }
+  { ssr: false, loading: () => <div className="min-h-[400px] rounded-xl bg-zinc-900/30 animate-pulse" /> }
 );
-const SuccessModal = dynamic(() => import("./SuccessModal").then((m) => ({ default: m.SuccessModal })), { ssr: false });
+const SuccessModal = dynamic(
+  () => import("./SuccessModal").then((m) => ({ default: m.SuccessModal })),
+  { ssr: false }
+);
 
 const sv = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const vp = { once: true, margin: "-80px" };
 
-// ── Per-foot rates (match service names exactly) ──────────────────────────────
-const BOAT_RATE: Record<string, number> = {
-  "Boat Interior Detail": 18,
-  "Boat Exterior Detail": 20,
-  "Full Boat Detail": 32,
-};
-const BOAT_MIN_FEET = 18;
+const BOAT_MIN_FEET = 15;
 
-// ── Static service details (used when DB services aren't loaded yet) ──────────
+// ── Waterline Up packages — DB name is used for booking, displayName for UI ──
 const BOAT_SERVICES_STATIC = [
   {
-    name: "Boat Interior Detail",
-    ratePerFoot: 18,
-    tagline: "Deep clean for the inside of your boat.",
-    icon: Droplets,
+    dbName: "Boat Interior Detail",   // matches Supabase service name
+    displayName: "Marine Express",
+    ratePerFoot: 20,
+    badge: null as string | null,
+    tagline: "Maintenance detail — keep the shine between deep cleans.",
+    icon: Zap,
     features: [
-      "Vinyl seat & upholstery cleaning",
-      "Full interior vacuum & wipe-down",
-      "Dashboard & electronics cleaning",
-      "Cup holders, storage & compartments",
-      "Odor neutralizer treatment",
-      "Floor & carpet cleaning",
+      "Full decontamination wash & rinse",
+      "Window & windscreen clarity treatment",
+      "Cockpit vacuum & full wipe-down",
+      "UV-protectant applied to all vinyl surfaces",
+      "Metal brightening & chrome polish",
+      "Quick-dry marine spray wax",
     ],
-    accent: "text-sky-300",
-    border: "border-sky-400/20",
-    bg: "bg-sky-400/[0.04]",
+    accent: "text-[#D4AF37]",
+    border: "border-[#D4AF37]/20",
+    bg: "bg-[#D4AF37]/[0.03]",
     popular: false,
   },
   {
-    name: "Boat Exterior Detail",
-    ratePerFoot: 20,
-    tagline: "Restore the hull. Protect against Vermont UV.",
-    icon: Sparkles,
+    dbName: "Boat Exterior Detail",
+    displayName: "The Deep Reset",
+    ratePerFoot: 30,
+    badge: "Most Popular" as string | null,
+    tagline: "Our flagship full deep clean — inside and out.",
+    icon: Droplets,
     features: [
-      "Full hull hand wash & rinse",
+      "Full steam sanitation of all surfaces",
+      "Hot water extraction (deep shampoo)",
+      "Mold & mildew removal treatment",
       "Hull, waterline & transom scrub",
       "Light oxidation removal",
-      "Marine paste wax or ceramic sealant",
-      "Metal & chrome brightening",
-      "Cockpit wipe-down & glass cleaned",
+      "Premium marine paste wax applied",
     ],
-    accent: "text-sky-300",
-    border: "border-sky-400/40",
-    bg: "bg-sky-400/[0.06]",
+    accent: "text-[#D4AF37]",
+    border: "border-[#D4AF37]/40",
+    bg: "bg-[#D4AF37]/[0.05]",
     popular: true,
   },
   {
-    name: "Full Boat Detail",
-    ratePerFoot: 32,
-    tagline: "Inside and out — the complete treatment.",
-    icon: Star,
+    dbName: "Full Boat Detail",
+    displayName: "Showroom Restoration",
+    ratePerFoot: 55,
+    badge: "Best for VT Winters" as string | null,
+    tagline: "Total restoration — everything in Deep Reset plus machine polish.",
+    icon: Sparkles,
     features: [
-      "Everything in Interior + Exterior Detail",
-      "Bilge area wipe-down",
-      "Cooler & storage compartment detail",
-      "Wire brushing around hardware",
-      "Marine polymer finish applied",
-      "Mold & mildew treatment included",
+      "Everything in The Deep Reset",
+      "1-Step Machine Polish (heavy oxidation removal)",
+      "Full gel coat gloss restoration",
+      "Bilge area detail & deodorize",
+      "Wire brush hardware & fittings",
+      "Ceramic-grade marine sealant applied",
     ],
-    accent: "text-amber-300",
-    border: "border-amber-400/30",
-    bg: "bg-amber-400/[0.04]",
+    accent: "text-[#F3E5AB]",
+    border: "border-[#D4AF37]/30",
+    bg: "bg-[#D4AF37]/[0.04]",
     popular: false,
   },
-];
+] as const;
+
+// ── Marine Specialist Add-ons ─────────────────────────────────────────────────
+const MARINE_ADDONS = [
+  {
+    icon: Waves,
+    label: "Pontoon Tube Polish",
+    price: "$20 / ft",
+    isPerFoot: true,
+    desc: "Aluminum oxide and oxidation removed from every tube. Restores mirror-like shine.",
+  },
+  {
+    icon: FlaskConical,
+    label: "Hull Acid Wash",
+    price: "$10 / ft",
+    isPerFoot: true,
+    desc: "Removes zebra mussel scars, algae staining, and heavy waterline deposits.",
+  },
+  {
+    icon: Eye,
+    label: "Isinglass & Vinyl Window Clarity",
+    price: "$100",
+    isPerFoot: false,
+    desc: "Scratch removal, haze elimination, and UV sealant on all isinglass & enclosure windows.",
+  },
+  {
+    icon: Wrench,
+    label: "Engine Bay Deep Clean",
+    price: "$150",
+    isPerFoot: false,
+    desc: "Full degreasing and detailing of the engine compartment, bilge included.",
+  },
+] as const;
 
 const LAKES = [
   "Lake Champlain", "Lake Memphremagog", "Lake Willoughby",
@@ -95,60 +132,86 @@ const LAKES = [
   "Lake Morey", "Caspian Lake",
 ];
 
-// ── Live Price Calculator ──────────────────────────────────────────────────────
-function PriceCalculator() {
-  const [feet, setFeet] = useState<number | "">(22);
-
-  const calc = (rate: number) => {
-    const length = typeof feet === "number" ? Math.max(BOAT_MIN_FEET, feet) : BOAT_MIN_FEET;
-    return Math.round(rate * length);
-  };
+// ── Touch-friendly Price Calculator ──────────────────────────────────────────
+function PriceCalculator({ onBook }: { onBook: () => void }) {
+  const [feet, setFeet] = useState<number>(22);
+  const clamp = (v: number) => Math.min(80, Math.max(BOAT_MIN_FEET, v));
+  const adjust = (d: number) => setFeet((f) => clamp(f + d));
+  const calc = (rate: number) => Math.round(rate * Math.max(feet, BOAT_MIN_FEET));
 
   return (
-    <div className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.03] p-5 md:p-7">
-      <div className="flex items-center gap-2 mb-5">
-        <Calculator size={16} className="text-sky-400 shrink-0" />
-        <h3 className="text-sm font-black uppercase tracking-widest text-sky-400">Price Calculator</h3>
-      </div>
-
-      {/* Length input */}
-      <div className="mb-6">
-        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
-          Boat Length (feet)
-        </label>
-        <div className="relative max-w-[180px]">
-          <input
-            type="number"
-            min={BOAT_MIN_FEET}
-            max={80}
-            value={feet}
-            onChange={(e) => {
-              const v = e.target.value;
-              setFeet(v === "" ? "" : Math.max(1, parseInt(v, 10) || 1));
-            }}
-            className="w-full text-center bg-zinc-950/60 border border-white/10 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30 text-white rounded-xl px-4 py-3 outline-none text-xl font-black tabular-nums"
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">ft</span>
+    <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] p-5 md:p-7">
+      <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="flex items-center gap-2">
+          <Calculator size={16} className="text-[#D4AF37] shrink-0" />
+          <h3 className="text-sm font-black uppercase tracking-widest text-[#D4AF37]">Price Calculator</h3>
         </div>
-        {typeof feet === "number" && feet < BOAT_MIN_FEET && (
-          <p className="text-[11px] text-amber-400/80 mt-1.5">{BOAT_MIN_FEET}ft minimum applies</p>
-        )}
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Min {BOAT_MIN_FEET}ft</span>
       </div>
 
-      {/* Results */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="mb-6">
+        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">
+          Boat Length
+        </label>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => adjust(-1)}
+            disabled={feet <= BOAT_MIN_FEET}
+            className="w-12 h-12 rounded-xl border border-white/10 bg-zinc-900/60 flex items-center justify-center text-zinc-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+            aria-label="Decrease length"
+          >
+            <Minus size={16} />
+          </button>
+          <div className="relative flex-1">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={BOAT_MIN_FEET}
+              max={80}
+              value={feet}
+              onChange={(e) => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) setFeet(clamp(v)); }}
+              className="w-full text-center bg-zinc-950/60 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/30 text-white rounded-xl px-4 py-3 outline-none text-2xl font-black tabular-nums"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm pointer-events-none">ft</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => adjust(1)}
+            disabled={feet >= 80}
+            className="w-12 h-12 rounded-xl border border-white/10 bg-zinc-900/60 flex items-center justify-center text-zinc-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+            aria-label="Increase length"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-5">
         {BOAT_SERVICES_STATIC.map((svc) => (
-          <div key={svc.name} className={`rounded-xl border p-4 text-center ${svc.popular ? "border-sky-400/40 bg-sky-400/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1 truncate">{svc.name.replace("Boat ", "")}</p>
-            <p className={`text-2xl font-black tabular-nums ${svc.popular ? "text-sky-300" : "text-white"}`}>
+          <div
+            key={svc.dbName}
+            className={`rounded-xl border p-3 text-center ${svc.popular ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}
+          >
+            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
+            <p className={`text-xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
               ${calc(svc.ratePerFoot).toLocaleString()}
             </p>
-            <p className="text-[10px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
+            <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
           </div>
         ))}
       </div>
-      <p className="text-[11px] text-zinc-600 mt-4 text-center">
-        Minimum {BOAT_MIN_FEET}ft · Final price confirmed on-site
+
+      <button
+        onClick={onBook}
+        className="btn-primary-gold-shimmer w-full py-3.5 rounded-xl font-bold text-sm bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 overflow-hidden flex items-center justify-center"
+      >
+        <span className="relative z-[1] flex items-center gap-2">
+          Book at This Length <ChevronRight size={14} />
+        </span>
+      </button>
+      <p className="text-[10px] text-zinc-600 mt-3 text-center">
+        Final price confirmed on-site after inspection
       </p>
     </div>
   );
@@ -156,24 +219,68 @@ function PriceCalculator() {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export function BoatDetailingPage({ services }: { services: Service[] }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
+  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  const [initialDraft, setInitialDraft] = useState<DraftBooking | null>(null);
+  const [showRestoreToast, setShowRestoreToast] = useState(false);
   const bookingRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (searchParams.get("book") === "1") setBookingOpen(true);
   }, [searchParams]);
+
+  // Restore booking draft when returning from a cancelled Stripe checkout
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return;
+    const stripe = searchParams.get("stripe");
+    if (stripe !== "cancelled" && stripe !== "success") return;
+    const raw = sessionStorage.getItem("draftBooking");
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw) as DraftBooking;
+      sessionStorage.removeItem("draftBooking");
+      const matchedService = services.find((s) => s.id === draft.serviceId);
+      if (matchedService) setSelectedService(matchedService);
+      setInitialDraft(draft);
+      setBookingOpen(true);
+      setShowRestoreToast(true);
+      window.history.replaceState(null, "", window.location.pathname);
+      setTimeout(() => {
+        bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } catch {
+      // invalid draft
+    }
+  }, [mounted, searchParams, services]);
+
+  useEffect(() => {
+    if (!showRestoreToast) return;
+    const t = setTimeout(() => setShowRestoreToast(false), 5000);
+    return () => clearTimeout(t);
+  }, [showRestoreToast]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolledPastHero((heroRef.current?.getBoundingClientRect().bottom ?? 0) < 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const openBooking = useCallback((svc?: Service) => {
     if (svc) setSelectedService(svc);
     setBookingOpen(true);
     setTimeout(() => {
       bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
+    }, 80);
   }, []);
 
   const closeBooking = useCallback(() => {
@@ -181,127 +288,171 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
     setSelectedService(null);
   }, []);
 
-  // Merge DB services with static data for display
-  const displayServices = BOAT_SERVICES_STATIC.map((staticSvc) => {
-    const dbSvc = services.find((s) => s.name === staticSvc.name);
-    return { ...staticSvc, dbService: dbSvc ?? null };
-  });
+  // Match display services to DB services for booking
+  const displayServices = BOAT_SERVICES_STATIC.map((s) => ({
+    ...s,
+    dbService: services.find((db) => db.name === s.dbName) ?? null,
+  }));
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
-      {/* Grain overlay */}
+      {/* Grain */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-[25]"
         style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px 256px", opacity: 0.035, mixBlendMode: "overlay" }} />
 
       <SiteHeader />
 
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <section className="relative pt-28 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <section ref={heroRef} className="relative pt-28 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56,189,248,0.10) 0%, transparent 65%)" }} />
+          style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,55,0.10) 0%, transparent 65%)" }} />
         <div className="relative z-10 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-sky-400 border border-sky-400/30 rounded-full px-4 py-2 mb-6">
-            <Anchor size={10} className="shrink-0" />Vermont Mobile Boat Detailing
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-6">
+            <Anchor size={10} className="shrink-0" />Waterline Up · Dockside Specialist
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight bg-gradient-to-r from-sky-300 via-white to-sky-300 bg-clip-text text-transparent mb-5"
-            style={{ filter: "drop-shadow(0 2px 24px rgba(56,189,248,0.2))" }}>
+
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent mb-5"
+            style={{ filter: "drop-shadow(0 2px 24px rgba(212,175,55,0.25))" }}>
             Mobile Boat<br />Detailing Vermont
           </h1>
+
           <p className="text-base md:text-xl text-zinc-400 leading-relaxed mb-3 max-w-2xl mx-auto">
-            We come to your marina, driveway, or storage yard — anywhere in Vermont. Simple per-foot pricing, no surprises.
+            We come to your marina, driveway, or storage yard — anywhere in Vermont. Per-foot dockside pricing with no trailering required.
           </p>
-          <p className="text-sm font-bold text-sky-400 mb-8">
-            Interior from $18/ft · Exterior from $20/ft · Full Detail from $32/ft
+
+          {/* Rates */}
+          <p className="text-sm font-bold text-[#D4AF37] mb-6">
+            Marine Express $20/ft · Deep Reset $30/ft · Showroom Restoration $55/ft
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+
+          {/* Waterline Up disclaimer */}
+          <div className="inline-flex items-start gap-2.5 text-left bg-zinc-900/60 border border-[#D4AF37]/20 rounded-2xl px-4 py-3 mb-8 max-w-xl mx-auto">
+            <Anchor size={14} className="text-[#D4AF37] shrink-0 mt-0.5" />
+            <p className="text-[12px] text-zinc-400 leading-relaxed">
+              <span className="font-bold text-zinc-200">Mobile Dockside Service:</span>{" "}
+              We specialize in detailing from the waterline up. No haul-out or lift required.
+            </p>
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
             <button
               onClick={() => openBooking()}
-              className="h-13 px-8 py-3.5 rounded-xl font-bold tracking-wide w-full sm:w-auto min-w-[220px] bg-sky-500 text-white hover:bg-sky-400 hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 text-base"
+              className="btn-primary-gold-shimmer h-14 px-8 rounded-xl font-bold tracking-wide w-full sm:w-auto min-w-[220px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden text-base"
             >
-              Book Your Boat Detail
+              <span className="relative z-[1]">Book Your Boat Detail</span>
             </button>
-            <a href="tel:8025855563" className="flex items-center gap-2 text-zinc-400 hover:text-sky-400 font-medium transition-colors text-sm">
+            <a href="tel:8025855563" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
               <Phone size={15} />Call 802-585-5563
             </a>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-zinc-500">
+
+          {/* Trust badges */}
+          <div className="flex flex-wrap items-center justify-center gap-y-3 text-xs text-zinc-500">
             {[
-              { icon: ShieldCheck, label: "Fully Insured" },
-              { icon: Leaf, label: "Eco-Friendly Products" },
-              { icon: BadgeCheck, label: "Gelcoat Safe" },
               { icon: Star, label: "5★ Rated" },
-            ].map(({ icon: Icon, label }) => (
-              <span key={label} className="flex items-center gap-1.5">
-                <Icon size={13} className="text-sky-400" />{label}
+              { icon: ShieldCheck, label: "Fully Insured" },
+              { icon: Leaf, label: "100% Lake-Safe" },
+              { icon: BadgeCheck, label: "Gelcoat Safe" },
+            ].map(({ icon: Icon, label }, i, arr) => (
+              <span key={label} className="flex items-center">
+                <span className="flex items-center gap-1">
+                  <Icon size={13} className="text-[#D4AF37]" />{label}
+                </span>
+                {i < arr.length - 1 && (
+                  <span className="mx-16 text-zinc-700">·</span>
+                )}
               </span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Live Price Calculator ──────────────────────────────────────── */}
-      <section className="py-8 px-4 sm:px-6 lg:px-8">
+      {/* ── Price Calculator ──────────────────────────────────────────── */}
+      <section className="py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
-          <PriceCalculator />
+          <PriceCalculator onBook={() => openBooking()} />
         </div>
       </section>
 
       {/* ── Booking Section ───────────────────────────────────────────── */}
-      <div ref={bookingRef} className="px-4 sm:px-6 lg:px-8 pb-4 scroll-mt-20">
+      <div ref={bookingRef} className="px-4 sm:px-6 lg:px-8 py-4 scroll-mt-20">
         <div className="max-w-2xl mx-auto">
-          <BookingSection
-            isVisible={bookingOpen}
-            onClose={closeBooking}
-            selectedService={selectedService}
-            services={services}
-            onSelectService={setSelectedService}
-            onClearService={() => setSelectedService(null)}
-            onBookingSuccess={(data) => {
-              closeBooking();
-              setSuccessData(data);
-              setShowSuccess(true);
-            }}
-          />
+          {/* Restore toast */}
+          {showRestoreToast && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3 text-sm text-[#D4AF37]">
+              <span className="text-lg">⚓</span>
+              <span>Your booking details have been restored — pick up right where you left off.</span>
+              <button onClick={() => setShowRestoreToast(false)} className="ml-auto text-[#D4AF37]/60 hover:text-[#D4AF37]">✕</button>
+            </div>
+          )}
+          {mounted && (
+            <BookingSection
+              isVisible={bookingOpen}
+              onClose={closeBooking}
+              selectedService={selectedService}
+              services={services}
+              onSelectService={setSelectedService}
+              onClearService={() => setSelectedService(null)}
+              onBookingSuccess={(data) => {
+                closeBooking();
+                setSuccessData(data);
+                setShowSuccess(true);
+              }}
+              initialDraft={initialDraft}
+              onDraftRestored={() => setInitialDraft(null)}
+            />
+          )}
         </div>
       </div>
 
-      {/* ── Service Cards ─────────────────────────────────────────────── */}
+      {/* ── Waterline Up Packages ─────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
+        className="py-10 md:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-sky-400 mb-3">Our Services</p>
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">Boat Detailing Packages</h2>
+          <div className="text-center mb-8">
+            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Waterline Up Packages</p>
+            <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">Dockside Detailing Tiers</h2>
             <p className="text-zinc-500 mt-3 max-w-xl mx-auto text-sm">
-              All services at your marina, driveway, or storage yard — no trailering required.
+              Every service performed at your dock, marina, or driveway. No trailering. No lift.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {displayServices.map((svc) => {
               const Icon = svc.icon;
               return (
-                <div key={svc.name} className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-1 ${svc.border} ${svc.bg} ${svc.popular ? "shadow-[0_0_40px_rgba(56,189,248,0.08)]" : ""}`}>
-                  {svc.popular && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-sky-400 to-transparent shrink-0" />}
-                  <div className="p-6 sm:p-7 flex flex-col flex-1">
-                    <div className="mb-5">
+                <div key={svc.dbName} className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-1 ${svc.border} ${svc.bg} ${svc.popular ? "shadow-[0_0_40px_rgba(212,175,55,0.08)]" : ""}`}>
+                  {svc.popular && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />}
+
+                  <div className="p-5 sm:p-6 flex flex-col flex-1">
+                    {/* Badges row */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3 min-h-[22px]">
                       {svc.popular && (
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Star size={11} className="text-sky-400" fill="currentColor" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-sky-400">Most Popular</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">
+                          <Star size={9} fill="currentColor" />Most Popular
+                        </span>
                       )}
-                      <div className="flex items-center gap-2 mb-2">
-                        <Icon size={18} className={svc.accent} />
-                        <h3 className="text-xl font-black text-white tracking-tight">{svc.name}</h3>
-                      </div>
-                      <p className="text-sm text-zinc-500 leading-relaxed">{svc.tagline}</p>
+                      {svc.badge && !svc.popular && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#F3E5AB] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
+                          <Snowflake size={9} />
+                          {svc.badge}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Per-foot pricing badge */}
-                    <div className={`rounded-xl mb-6 py-4 text-center border ${svc.popular ? "border-sky-400/20 bg-sky-400/[0.05]" : "border-white/[0.06] bg-white/[0.02]"}`}>
-                      <div className={`text-3xl font-black tabular-nums ${svc.popular ? "text-sky-300" : "text-white"}`}>
+                    {/* Icon + name */}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Icon size={18} className={svc.accent} />
+                      <h3 className="text-lg font-black text-white tracking-tight">{svc.displayName}</h3>
+                    </div>
+                    <p className="text-sm text-zinc-500 leading-relaxed mb-4">{svc.tagline}</p>
+
+                    {/* Price badge */}
+                    <div className={`rounded-xl mb-5 py-3 text-center border ${svc.popular ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.05]" : "border-white/[0.06] bg-white/[0.02]"}`}>
+                      <div className={`text-3xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
                         ${svc.ratePerFoot}<span className="text-lg font-bold text-zinc-500">/ft</span>
                       </div>
                       <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">
@@ -309,12 +460,12 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
                       </div>
                     </div>
 
-                    {/* Features */}
-                    <ul className="space-y-2.5 flex-1 mb-6">
+                    {/* Feature list */}
+                    <ul className="space-y-2 flex-1 mb-5">
                       {svc.features.map((f) => (
                         <li key={f} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
-                          <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-sky-400/15 border border-sky-400/30 flex items-center justify-center shrink-0">
-                            <span className="w-1 h-1 rounded-full bg-sky-400" />
+                          <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
+                            <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
                           </span>
                           {f}
                         </li>
@@ -323,13 +474,15 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
 
                     <button
                       onClick={() => openBooking(svc.dbService ?? undefined)}
-                      className={`w-full py-3.5 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
+                      className={`w-full py-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] min-h-[52px] ${
                         svc.popular
-                          ? "bg-sky-500 text-white hover:bg-sky-400 shadow-[0_4px_20px_rgba(56,189,248,0.25)]"
-                          : "bg-zinc-950 border border-sky-400/30 text-sky-400 hover:bg-sky-500/10 hover:scale-[1.02]"
+                          ? "btn-primary-gold-shimmer bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] overflow-hidden"
+                          : "bg-zinc-950 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10"
                       }`}
                     >
-                      Book This Service <ChevronRight size={14} className="shrink-0" />
+                      <span className="relative z-[1] flex items-center gap-2">
+                        Book {svc.displayName} <ChevronRight size={14} className="shrink-0" />
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -339,47 +492,94 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
+      {/* ── Marine Specialist Add-ons ─────────────────────────────────── */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="py-10 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+      >
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Upsells</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Marine Specialist Add-ons</h2>
+            <p className="text-zinc-500 mt-2 text-sm">
+              Add any of these when booking — mention them in the notes field or call to confirm.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {MARINE_ADDONS.map((addon) => {
+              const Icon = addon.icon;
+              return (
+                <div
+                  key={addon.label}
+                  className="flex items-start gap-4 p-5 rounded-2xl border border-[#D4AF37]/15 bg-zinc-900/50 hover:border-[#D4AF37]/30 hover:bg-zinc-900/80 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                    <Icon size={17} className="text-[#D4AF37]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <h3 className="font-bold text-sm text-white">{addon.label}</h3>
+                      <span className="text-sm font-black text-[#D4AF37] tabular-nums whitespace-nowrap">{addon.price}</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{addon.desc}</p>
+                    {addon.isPerFoot && (
+                      <span className="inline-block mt-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-600 bg-zinc-800/60 border border-white/5 px-2 py-0.5 rounded-full">
+                        Per foot — based on boat length
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-center text-[11px] text-zinc-600 mt-5">
+            All add-ons confirmed on-site. Per-foot pricing based on measured boat length.
+          </p>
+        </div>
+      </motion.section>
+
       {/* ── Vermont Lakes ─────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
         <div className="max-w-3xl mx-auto text-center">
-          <p className="text-sm font-semibold tracking-[0.2em] uppercase text-sky-400 mb-3">We Serve Vermont's Lakes</p>
-          <h2 className="text-2xl md:text-3xl font-black text-white mb-6">Marinas & Lake Communities We Reach</h2>
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">We Serve Vermont&apos;s Lakes</p>
+          <h2 className="text-2xl md:text-3xl font-black text-white mb-5">Marinas & Lake Communities We Reach</h2>
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
             {LAKES.map((lake) => (
-              <span key={lake} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sky-400/20 bg-sky-400/[0.05] text-sky-300/80 text-xs font-semibold">
+              <span key={lake} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/[0.05] text-[#D4AF37]/80 text-xs font-semibold">
                 <Waves size={10} />{lake}
               </span>
             ))}
           </div>
           <p className="text-zinc-500 text-sm leading-relaxed">
-            Don't see your lake?{" "}
-            <a href="tel:8025855563" className="text-sky-400 hover:text-sky-300 transition-colors">Call us</a>{" "}
-            and we'll confirm availability for your location.
+            Don&apos;t see your lake?{" "}
+            <a href="tel:8025855563" className="text-[#D4AF37] hover:text-[#F3E5AB] transition-colors">Call us</a>{" "}
+            — we cover all of Vermont and service remote boat storage yards by request.
           </p>
         </div>
       </motion.section>
 
       {/* ── Why Choose Us ────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10">
+          <div className="text-center mb-8">
             <h2 className="text-2xl md:text-4xl font-black text-white">Why Vermont Boaters Choose Us</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { title: "We Come to You", desc: "Marina, driveway, storage yard — we bring everything needed. No trailering required." },
-              { title: "Transparent Per-Foot Pricing", desc: "No guesswork. Enter your boat length and know your price before we arrive." },
-              { title: "Gelcoat-Safe Chemistry", desc: "Marine-grade eco-friendly soaps and polymers safe for fiberglass, aluminum, and Bimini tops." },
-              { title: "Vermont UV-Ready", desc: "Vermont summers hit gelcoat hard. Our sealants provide serious UV and oxidation protection." },
-              { title: "Fully Insured", desc: "We carry full liability insurance on every job so your investment is always protected." },
-              { title: "5★ Local Service", desc: "Locally owned and operated. We treat your boat like we own it." },
+              { title: "True Dockside Service", desc: "Marina, driveway, or storage yard — fully self-contained rig. No haul-out. No lift. No trailering." },
+              { title: "Per-Foot Transparent Pricing", desc: "Enter your boat length and know your price upfront. No surprise fees after arrival." },
+              { title: "100% Lake-Safe Chemicals", desc: "All products are biodegradable and compliant with Vermont environmental standards. Safe for runoff near any VT waterway." },
+              { title: "Vermont UV & Winter Ready", desc: "Our sealants and ceramic treatments protect against Vermont's harsh UV summers and freeze-thaw winters." },
+              { title: "Fully Insured & Certified", desc: "Full marine liability coverage on every job. Your boat is protected from start to finish." },
+              { title: "5★ Local Reputation", desc: "Locally owned and operated in Vermont. We treat your boat like we own it — because our reputation depends on it." },
             ].map(({ title, desc }) => (
-              <div key={title} className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 p-5">
-                <CheckCircle size={18} className="text-sky-400 mb-3" />
+              <div key={title} className="rounded-2xl border border-[#D4AF37]/10 bg-zinc-900/40 p-5 hover:border-[#D4AF37]/25 transition-colors">
+                <CheckCircle size={18} className="text-[#D4AF37] mb-3" />
                 <h3 className="font-bold text-sm text-white mb-1.5">{title}</h3>
                 <p className="text-xs text-zinc-500 leading-relaxed">{desc}</p>
               </div>
@@ -388,54 +588,84 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ── Mold/bilge surcharge note ─────────────────────────────────── */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-6 max-w-2xl mx-auto">
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3">
-          <AlertTriangle size={14} className="text-amber-500/70 shrink-0 mt-0.5" />
+      {/* ── Notices ───────────────────────────────────────────────────── */}
+      <div className="px-4 sm:px-6 lg:px-8 pb-4 max-w-2xl mx-auto space-y-3">
+        <div className="flex items-start gap-2.5 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] px-4 py-3">
+          <AlertTriangle size={14} className="text-[#D4AF37]/60 shrink-0 mt-0.5" />
           <p className="text-[11px] text-zinc-500 leading-relaxed">
-            <span className="font-bold text-zinc-400">Severe Mold / Bilge Odor:</span> Boats with heavy mold, mildew, or persistent odor may require a $75–$150 remediation surcharge. We always confirm before starting.
+            <span className="font-bold text-zinc-400">Severe Mold / Bilge Odor:</span>{" "}
+            Boats with heavy mold, mildew, or persistent odor may require a $75–$150 remediation surcharge. We always confirm before starting.
+          </p>
+        </div>
+        <div className="flex items-start gap-2.5 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] px-4 py-3">
+          <Leaf size={14} className="text-[#D4AF37]/60 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-zinc-500 leading-relaxed">
+            <span className="font-bold text-zinc-400">Eco Commitment:</span>{" "}
+            We use only biodegradable, phosphate-free marine soaps and sealants compliant with Vermont Department of Environmental Conservation standards.
           </p>
         </div>
       </div>
 
-      {/* ── Bottom CTA ───────────────────────────────────────────────── */}
+      {/* ── Bottom CTA ────────────────────────────────────────────────── */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05] text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(56,189,248,0.07) 0%, transparent 70%)" }} />
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
         <div className="relative z-10 max-w-2xl mx-auto">
-          <h2 className="text-2xl md:text-4xl font-black text-white mb-3">Ready to Book?</h2>
+          <h2 className="text-2xl md:text-4xl font-black text-white mb-3">Ready for the Waterline Up Treatment?</h2>
           <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
-            Enter your boat length above to get your price — then book in under 2 minutes.
+            Calculate your price above, pick your package, and book in under 2 minutes.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={() => openBooking()}
-              className="h-12 px-8 rounded-xl font-bold text-sm bg-sky-500 text-white hover:bg-sky-400 hover:shadow-[0_0_24px_rgba(56,189,248,0.35)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 w-full sm:w-auto"
+              className="btn-primary-gold-shimmer h-14 px-8 rounded-xl font-bold tracking-wide bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden w-full sm:w-auto text-base"
             >
-              Book Your Boat Detail
+              <span className="relative z-[1]">Book Your Boat Detail</span>
             </button>
-            <a href="tel:8025855563" className="flex items-center gap-2 text-zinc-400 hover:text-sky-400 font-medium transition-colors text-sm">
+            <a href="tel:8025855563" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
               <Phone size={15} />802-585-5563
             </a>
           </div>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/detailing" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-sky-400/40 hover:text-white transition-all text-sm font-semibold">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/detailing" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold min-h-[44px]">
               Auto Detailing <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-            <Link href="/paint-correction" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-sky-400/40 hover:text-white transition-all text-sm font-semibold">
-              Paint Correction <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            <Link href="/rv-detailing" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold min-h-[44px]">
+              RV Detailing <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6">
+      <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-28 md:pb-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-          <span>© 2025 Arise And Shine VT · Mobile Boat & Auto Detailing · Vermont</span>
-          <Link href="/" className="hover:text-sky-400 transition-colors">← Back to Home</Link>
+          <span>© 2025 Arise And Shine VT · Waterline Up Marine Detailing · Vermont</span>
+          <Link href="/" className="hover:text-[#D4AF37] transition-colors">← Back to Home</Link>
         </div>
       </footer>
+
+      {/* ── Sticky mobile Book Now bar ─────────────────────────────────── */}
+      <AnimatePresence>
+        {scrolledPastHero && !bookingOpen && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed bottom-0 inset-x-0 z-40 md:hidden px-4 pb-5 pt-3 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent"
+          >
+            <button
+              onClick={() => openBooking()}
+              className="btn-primary-gold-shimmer w-full h-14 rounded-xl font-bold text-base bg-zinc-900/90 border border-[#D4AF37]/60 text-[#D4AF37] hover:text-black active:scale-[0.98] transition-all duration-300 overflow-hidden shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+            >
+              <span className="relative z-[1] flex items-center justify-center gap-2">
+                <Anchor size={16} />Book Your Boat Detail
+              </span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SuccessModal
         isOpen={showSuccess}

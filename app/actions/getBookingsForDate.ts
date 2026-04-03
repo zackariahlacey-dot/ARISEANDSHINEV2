@@ -1,24 +1,25 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type BookingOnDate = {
   booking_time: string;
   service_name: string | null;
+  vehicle_size: string | null;
 };
 
 /**
- * Fetches all bookings for a given date with their service name,
- * for use in schedule step to prevent double-booking and compute overlap.
+ * Fetches all bookings for a given date with their service name and vehicle
+ * size, for use in schedule step to prevent double-booking and compute overlap.
  */
 export async function getBookingsForDate(
   date: string
 ): Promise<BookingOnDate[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("booking_time, services(name)")
+    .select("booking_time, vehicle_size, services(name)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
 
@@ -38,6 +39,7 @@ export async function getBookingsForDate(
     return {
       booking_time: String(row.booking_time ?? ""),
       service_name: serviceName,
+      vehicle_size: (row as any).vehicle_size ?? null,
     };
   });
 }

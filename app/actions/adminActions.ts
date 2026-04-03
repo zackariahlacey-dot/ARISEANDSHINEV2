@@ -9,7 +9,8 @@ import {
   sendUpdatedBookingEmail,
   sendBookingEmails,
   sendJobCompletedEmail,
-  sendReviewFollowupEmail
+  sendReviewFollowupEmail,
+  sendPriceUpdatedEmail,
 } from "@/lib/email";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 
@@ -36,15 +37,25 @@ function timeToMins(t: string): number {
   return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
 }
 
-/** Returns an array of start-time strings (HH:MM:SS) already booked on a date */
-export async function getBookedSlotsAction(date: string): Promise<string[]> {
+export type BookedSlot = {
+  booking_time: string;
+  service_name: string | null;
+  vehicle_size: string | null;
+};
+
+/** Returns booked slots for a date with service name and vehicle size for accurate duration overlap. */
+export async function getBookedSlotsAction(date: string): Promise<BookedSlot[]> {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("bookings")
-    .select("booking_time")
+    .select("booking_time, service_name, vehicle_size")
     .eq("booking_date", date)
     .neq("status", "cancelled");
-  return (data ?? []).map(r => String(r.booking_time ?? ""));
+  return (data ?? []).map(r => ({
+    booking_time: String(r.booking_time ?? ""),
+    service_name: (r as any).service_name ?? null,
+    vehicle_size: (r as any).vehicle_size ?? null,
+  }));
 }
 
 /**
@@ -264,61 +275,162 @@ export async function getAllBookings() {
 export async function getAllClients() {
   const supabase = createAdminClient();
   const adminEmail = (process.env.ADMIN_EMAIL || "zackariahlacey04@gmail.com").toLowerCase();
-  const { data, error } = await supabase
+
+  // 1. All profiles with vehicles + bookings (including snapshot columns)
+  const { data: profiles, error } = await supabase
     .from("profiles")
     .select(`
       *,
       vehicles(*),
-      bookings:bookings(id, total_price, booking_date, booking_time, notes, status, services:service_id(name))
+      bookings:bookings(
+        id, total_price, booking_date, booking_time, status, notes,
+        customer_name, customer_email, customer_phone, service_address, service_name,
+        vehicle_make, vehicle_model, vehicle_year, vehicle_size,
+        services:service_id(name)
+      )
     `)
-    .order("first_name", { ascending: true });
+    .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
 
-  // Filter out admin profile and orphan profiles with no name or bookings
-  const filtered = (data || []).filter((client: any) => {
-    if (client.email === adminEmail) return false;
-    const hasName = client.first_name || client.last_name;
-    const hasBookings = client.bookings && client.bookings.length > 0;
-    return hasName || hasBookings;
-  });
+  // 2. Get all auth users to determine who has actually signed up
+  const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const signedUpIds = new Set((authData?.users ?? []).map(u => u.id));
 
-  return filtered.map((client: any) => {
-    // Sort bookings by date and time
-    const sortedBookings = [...(client.bookings || [])].sort((a,b) => {
-      const dateCompare = b.booking_date.localeCompare(a.booking_date);
-      if (dateCompare !== 0) return dateCompare;
-      return (b.booking_time || "").localeCompare(a.booking_time || "");
+  // 3. Also fetch any bookings with customer info that have NO profile (orphan bookings)
+  // These are rare but can happen if a booking's user_id UUID was never persisted to profiles
+  const { data: orphanBookings } = await supabase
+    .from("bookings")
+    .select("id, user_id, customer_name, customer_email, customer_phone, service_address, service_name, total_price, booking_date, booking_time, status, notes, vehicle_make, vehicle_model, vehicle_year, vehicle_size")
+    .neq("status", "cancelled")
+    .not("customer_name", "is", null);
+
+  const profileIds = new Set((profiles || []).map((p: any) => p.id));
+
+  // Orphan = has customer_name but user_id not in profiles (or user_id is null)
+  const orphans = (orphanBookings ?? []).filter((b: any) =>
+    b.customer_name && b.customer_name !== "Admin Block" && (!b.user_id || !profileIds.has(b.user_id))
+  );
+
+  // Group orphans by phone or email into pseudo-clients
+  const orphanMap = new Map<string, any>();
+  for (const b of orphans) {
+    const key = b.customer_phone || b.customer_email || b.id;
+    if (!orphanMap.has(key)) {
+      const nameParts = (b.customer_name ?? "").trim().split(/\s+/);
+      orphanMap.set(key, {
+        id: "orphan-" + key,
+        first_name: nameParts[0] ?? "",
+        last_name: nameParts.slice(1).join(" ") || "",
+        phone: b.customer_phone,
+        email: b.customer_email,
+        reward_points: 0,
+        vehicles: [],
+        bookings: [],
+        _is_orphan: true,
+      });
+    }
+    orphanMap.get(key).bookings.push(b);
+  }
+
+  const adminFilter = adminEmail;
+
+  // 4. Process profiles
+  const processedProfiles = (profiles || [])
+    .filter((client: any) => {
+      if (client.email?.toLowerCase() === adminFilter) return false;
+      const hasName = client.first_name || client.last_name;
+      const hasBookings = client.bookings && client.bookings.length > 0;
+      // Also accept if they have a phone (admin-quick-booked guest with no name)
+      return hasName || hasBookings || client.phone;
+    })
+    .map((client: any) => {
+      const sortedBookings = [...(client.bookings || [])].sort((a: any, b: any) => {
+        const dc = b.booking_date.localeCompare(a.booking_date);
+        return dc !== 0 ? dc : (b.booking_time || "").localeCompare(a.booking_time || "");
+      });
+
+      // Best display name: prefer profile name; fall back to customer_name snapshot
+      const profileName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim();
+      const snapshotName = sortedBookings.find((b: any) => b.customer_name)?.customer_name ?? "";
+      const displayName = profileName || snapshotName || "Unknown";
+      const [displayFirst, ...rest] = displayName.split(/\s+/);
+      const displayLast = rest.join(" ");
+
+      // Best phone/email
+      const displayPhone = client.phone
+        || sortedBookings.find((b: any) => b.customer_phone)?.customer_phone
+        || null;
+      const displayEmail = client.email
+        || sortedBookings.find((b: any) => b.customer_email)?.customer_email
+        || null;
+
+      const ltv = sortedBookings
+        .filter((b: any) => b.status !== "cancelled")
+        .reduce((sum: number, b: any) => sum + (Number(b.total_price) || 0), 0);
+
+      // Last service address
+      let lastAddress = "No address recorded";
+      const latestWithAddr = sortedBookings.find((b: any) => b.service_address);
+      if (latestWithAddr) {
+        lastAddress = latestWithAddr.service_address;
+      } else {
+        const latestWithNotes = sortedBookings.find((b: any) => b.notes?.includes("📍 Service Location:"));
+        if (latestWithNotes) {
+          lastAddress = latestWithNotes.notes.split("📍 Service Location:")[1]?.trim() || "See Notes";
+        }
+      }
+
+      const isSignedUp = signedUpIds.has(client.id);
+
+      return {
+        ...client,
+        first_name: displayFirst || client.first_name || "",
+        last_name: displayLast || client.last_name || "",
+        phone: displayPhone,
+        email: displayEmail,
+        _display_name: displayName,
+        _ltv: ltv,
+        _lastAddress: lastAddress,
+        _lastService: sortedBookings[0]?.booking_date || null,
+        _bookingCount: sortedBookings.filter((b: any) => b.status !== "cancelled").length,
+        _is_signed_up: isSignedUp,
+        _is_orphan: false,
+        bookings: sortedBookings.map((b: any) => ({
+          ...b,
+          display_date: b.booking_date,
+          _service_name: b.service_name || b.services?.name || "Detail",
+        })),
+      };
     });
 
-    const ltv = client.bookings?.reduce((sum: number, b: any) => sum + (Number(b.total_price) || 0), 0) || 0;
-    
-    let lastAddress = "No address recorded";
-    // Try the direct service_address column first, fall back to parsing notes
-    const latestWithAddress = sortedBookings.find((b: any) => b.service_address);
-    if (latestWithAddress) {
-      lastAddress = (latestWithAddress as any).service_address;
-    } else {
-      const latestWithNotes = sortedBookings.find((b: any) => b.notes && b.notes.includes("📍 Service Location:"));
-      if (latestWithNotes) {
-        lastAddress = (latestWithNotes as any).notes.split("📍 Service Location:")[1]?.trim() || "See Notes";
-      }
-    }
-
+  // 5. Process orphan pseudo-clients
+  const processedOrphans = Array.from(orphanMap.values()).map((client: any) => {
+    const sortedBookings = [...client.bookings].sort((a: any, b: any) => {
+      const dc = b.booking_date.localeCompare(a.booking_date);
+      return dc !== 0 ? dc : (b.booking_time || "").localeCompare(a.booking_time || "");
+    });
+    const ltv = sortedBookings
+      .filter((b: any) => b.status !== "cancelled")
+      .reduce((sum: number, b: any) => sum + (Number(b.total_price) || 0), 0);
+    const displayName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim() || "Unknown";
     return {
       ...client,
+      _display_name: displayName,
       _ltv: ltv,
-      _lastAddress: lastAddress,
+      _lastAddress: sortedBookings.find((b: any) => b.service_address)?.service_address || "No address recorded",
       _lastService: sortedBookings[0]?.booking_date || null,
-      _bookingCount: client.bookings?.length || 0,
-      // Map bookings to ensure dates don't shift due to timezone
-      bookings: sortedBookings.map(b => ({
+      _bookingCount: sortedBookings.filter((b: any) => b.status !== "cancelled").length,
+      _is_signed_up: false,
+      bookings: sortedBookings.map((b: any) => ({
         ...b,
-        // Ensure date is treated as a local string YYYY-MM-DD
-        display_date: b.booking_date 
-      }))
+        display_date: b.booking_date,
+        _service_name: b.service_name || "Detail",
+      })),
     };
   });
+
+  return [...processedProfiles, ...processedOrphans];
 }
 
 async function getUserEmail(userId: string) {
@@ -328,30 +440,48 @@ async function getUserEmail(userId: string) {
   return data.user.email;
 }
 
+/** Resolves the best available contact info from a booking row.
+ *  Priority: auth account email > customer_email snapshot > profile email */
+async function getBookingContact(booking: any): Promise<{ name: string; email: string | null }> {
+  // Name: prefer profile, fall back to snapshot
+  const profileName = [booking.profiles?.first_name, booking.profiles?.last_name].filter(Boolean).join(" ").trim();
+  const name = profileName || booking.customer_name || "Customer";
+  // Email: prefer auth account email, fall back to customer_email snapshot
+  let email: string | null = booking.customer_email ?? null;
+  if (booking.user_id) {
+    const authEmail = await getUserEmail(booking.user_id);
+    if (authEmail) email = authEmail;
+  }
+  return { name, email };
+}
+
 export async function rescheduleBookingAction(id: string, date: string, time: string) {
   const supabase = createAdminClient();
-  const { data: booking } = await supabase.from("bookings").select("*, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", id).single();
+  const { data: booking } = await supabase.from("bookings").select("*, customer_name, customer_email, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", id).single();
   const { error } = await supabase.from("bookings").update({ booking_date: date, booking_time: time }).eq("id", id);
   if (error) throw new Error(error.message);
-  const email = booking?.user_id ? await getUserEmail(booking.user_id) : null;
-  if (email && booking?.profiles) {
-    await sendUpdatedBookingEmail({
-      customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(),
-      customerEmail: email,
-      serviceName: booking.services?.name || "Detailing Service",
-      newDate: date,
-      newTime: time
-    }).catch(e => console.error("Email fail:", e));
+  if (booking) {
+    const { name, email } = await getBookingContact(booking);
+    if (email) {
+      await sendUpdatedBookingEmail({
+        customerName: name,
+        customerEmail: email,
+        serviceName: booking.service_name || booking.services?.name || "Detailing Service",
+        newDate: date,
+        newTime: time,
+      }).catch(e => console.error("Reschedule email fail:", e));
+    }
   }
   return { success: true };
 }
 
 export async function sendOnMyWayEmail(bookingId: string) {
   const supabase = createAdminClient();
-  const { data: booking, error } = await supabase.from("bookings").select("*, profiles:user_id(id, first_name, last_name)").eq("id", bookingId).single();
-  const email = booking?.user_id ? await getUserEmail(booking.user_id) : null;
-  if (email && booking?.profiles) {
-    await sendOnMyWayEmailNotification({ customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(), customerEmail: email });
+  const { data: booking } = await supabase.from("bookings").select("*, customer_name, customer_email, profiles:user_id(id, first_name, last_name)").eq("id", bookingId).single();
+  if (!booking) return { success: false, error: "Booking not found" };
+  const { name, email } = await getBookingContact(booking);
+  if (email) {
+    await sendOnMyWayEmailNotification({ customerName: name, customerEmail: email });
     return { success: true };
   }
   return { success: false, error: "No email found" };
@@ -359,71 +489,100 @@ export async function sendOnMyWayEmail(bookingId: string) {
 
 export async function handleNoShowAction(bookingId: string) {
   const supabase = createAdminClient();
-  const { data: booking } = await supabase.from("bookings").select("*, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", bookingId).single();
-  
+  const { data: booking } = await supabase.from("bookings").select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", bookingId).single();
   await supabase.from("bookings").update({ status: "no-show" }).eq("id", bookingId);
-  
-  const email = booking?.user_id ? await getUserEmail(booking.user_id) : null;
-  if (email && booking?.profiles) {
-    await sendBookingCancellationEmails({
-      customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(),
-      customerEmail: email,
-      bookingDate: booking.booking_date,
-      bookingTime: booking.booking_time,
-      serviceName: `NO-SHOW: ${booking.services?.name || "Detailing Service"}`
-    }).catch(e => console.error("No-show email fail:", e));
+  if (booking) {
+    const { name, email } = await getBookingContact(booking);
+    if (email) {
+      await sendBookingCancellationEmails({
+        customerName: name,
+        customerEmail: email,
+        bookingDate: booking.booking_date,
+        bookingTime: booking.booking_time,
+        serviceName: booking.service_name || booking.services?.name || "Detailing Service",
+      }).catch(e => console.error("No-show email fail:", e));
+    }
+  }
+  return { success: true };
+}
+
+export async function updateBookingDetailsAction(id: string, updates: {
+  total_price?: number;
+  notes?: string;
+  service_address?: string;
+}, notifyPriceChange?: { oldPrice: number }) {
+  const supabase = createAdminClient();
+  // Fetch booking before update if we need to send email
+  let booking: any = null;
+  if (notifyPriceChange && updates.total_price !== undefined) {
+    const { data } = await supabase.from("bookings").select("*, customer_name, customer_email, service_name, booking_date, booking_time, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", id).single();
+    booking = data;
+  }
+  const { error } = await supabase.from("bookings").update(updates).eq("id", id);
+  if (error) throw new Error(error.message);
+  // Send price-change email if price was updated
+  if (notifyPriceChange && updates.total_price !== undefined && booking) {
+    const { name, email } = await getBookingContact(booking);
+    if (email) {
+      await sendPriceUpdatedEmail({
+        customerName: name,
+        customerEmail: email,
+        serviceName: booking.service_name || booking.services?.name || "Detailing Service",
+        bookingDate: booking.booking_date,
+        bookingTime: booking.booking_time,
+        oldPrice: notifyPriceChange.oldPrice,
+        newPrice: updates.total_price,
+      }).catch(e => console.error("Price update email fail:", e));
+    }
   }
   return { success: true };
 }
 
 export async function updateBookingStatusAction(id: string, status: string) {
   const supabase = createAdminClient();
-  
-  // Fetch details BEFORE update to have info for email if needed
   const { data: booking } = await supabase
     .from("bookings")
-    .select("*, profiles:user_id(id, first_name, last_name, reward_points), services:service_id(name)")
+    .select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name, reward_points), services:service_id(name)")
     .eq("id", id)
     .single();
 
   const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
 
-  const email = booking?.user_id ? await getUserEmail(booking.user_id) : null;
-  
-  if (status === "completed" && booking && booking.profiles) {
-    const pointsAwarded = Math.floor(Math.max(0, Number(booking.total_price)));
-    
-    // Award Points
-    await supabase.from("profiles").update({ 
-      reward_points: (booking.profiles.reward_points || 0) + pointsAwarded 
-    }).eq("id", booking.user_id);
+  if (!booking) return { success: true };
+  const { name, email } = await getBookingContact(booking);
+  const serviceName = booking.service_name || booking.services?.name || "Detailing Service";
 
+  if (status === "completed") {
+    const pointsAwarded = Math.floor(Math.max(0, Number(booking.total_price)));
+    // Award loyalty points if linked profile
+    if (booking.user_id && booking.profiles) {
+      await supabase.from("profiles").update({
+        reward_points: (booking.profiles.reward_points || 0) + pointsAwarded,
+      }).eq("id", booking.user_id);
+    }
     if (email) {
       await sendJobCompletedEmail({
-        customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(),
+        customerName: name,
         customerEmail: email,
-        serviceName: booking.services?.name || "Detailing Service",
+        serviceName,
         amountPaid: Number(booking.total_price),
         pointsEarned: pointsAwarded,
       }).catch(e => console.error("Completion email fail:", e));
-
-      // 24 Hour Follow-up Review Request
+      // 24-hour follow-up review + maintenance upsell
       setTimeout(() => {
-        sendReviewFollowupEmail({
-          customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(),
-          customerEmail: email
-        }).catch(e => console.error("Follow-up email fail:", e));
+        sendReviewFollowupEmail({ customerName: name, customerEmail: email! })
+          .catch(e => console.error("Follow-up email fail:", e));
       }, 24 * 60 * 60 * 1000);
     }
-  } else if (status === "cancelled" && booking && booking.profiles) {
+  } else if (status === "cancelled") {
     if (email) {
       await sendBookingCancellationEmails({
-        customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(),
+        customerName: name,
         customerEmail: email,
         bookingDate: booking.booking_date,
         bookingTime: booking.booking_time,
-        serviceName: booking.services?.name || "Detailing Service"
+        serviceName,
       }).catch(e => console.error("Cancel email fail:", e));
     }
   }
@@ -433,18 +592,20 @@ export async function updateBookingStatusAction(id: string, status: string) {
 
 export async function deleteBookingAction(id: string) {
   const supabase = createAdminClient();
-  const { data: booking } = await supabase.from("bookings").select("*, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", id).single();
-  const { error } = await supabase.from('bookings').delete().eq('id', id);
+  const { data: booking } = await supabase.from("bookings").select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name), services:service_id(name)").eq("id", id).single();
+  const { error } = await supabase.from("bookings").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  const email = booking?.user_id ? await getUserEmail(booking.user_id) : null;
-  if (email && booking?.profiles) {
-    await sendBookingCancellationEmails({
-      customerName: `${booking.profiles.first_name || ""} ${booking.profiles.last_name || ""}`.trim(),
-      customerEmail: email,
-      bookingDate: booking.booking_date,
-      bookingTime: booking.booking_time,
-      serviceName: booking.services?.name || "Detailing Service"
-    }).catch(e => console.error("Email fail:", e));
+  if (booking && booking.status !== "cancelled") {
+    const { name, email } = await getBookingContact(booking);
+    if (email) {
+      await sendBookingCancellationEmails({
+        customerName: name,
+        customerEmail: email,
+        bookingDate: booking.booking_date,
+        bookingTime: booking.booking_time,
+        serviceName: booking.service_name || booking.services?.name || "Detailing Service",
+      }).catch(e => console.error("Delete email fail:", e));
+    }
   }
   return { success: true };
 }
@@ -738,5 +899,267 @@ export async function toggleCouponAction(id: string, is_active: boolean) {
   const { error } = await supabase.from("coupons").update({ is_active }).eq("id", id);
   if (error) throw new Error(error.message);
   return { success: true };
+}
+
+// ── Personal time blocks (stored as special bookings) ──────────────────────
+
+export async function blockPersonalTimeAction(payload: {
+  date: string;
+  startTime: string; // "HH:MM:00"
+  durationMins: number;
+  label: string;
+}): Promise<{ success: boolean; id?: string; error?: string }> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .insert({
+      user_id: null,
+      vehicle_id: null,
+      service_id: null,
+      booking_date: payload.date,
+      booking_time: payload.startTime,
+      status: "blocked",
+      total_price: 0,
+      notes: payload.label || "Personal Block",
+      customer_name: "Admin Block",
+      service_name: "Personal Block",
+      vehicle_size: String(payload.durationMins),
+    })
+    .select("id")
+    .single();
+  if (error) return { success: false, error: error.message };
+  return { success: true, id: data.id };
+}
+
+export async function deletePersonalBlockAction(id: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("bookings").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+// ── Money / revenue breakdown ───────────────────────────────────────────────
+
+export async function getRevenueBreakdown(monthOffset = 0) {
+  const supabase = createAdminClient();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + monthOffset;
+  const first = new Date(y, m, 1).toISOString().split("T")[0];
+  const last  = new Date(y, m + 1, 0).toISOString().split("T")[0];
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, total_price, status, notes, service_name, booking_date, booking_time, customer_name, payment_method")
+    .gte("booking_date", first)
+    .lte("booking_date", last);
+
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
+  const completed = rows.filter((b: any) => b.status === "completed");
+  const confirmed = rows.filter((b: any) => b.status === "confirmed");
+
+  // Stripe vs Cash: check payment_method column first, then parse notes
+  function isStripe(b: any): boolean {
+    if (b.payment_method === "pay_now") return true;
+    if (b.payment_method === "pay_on_arrival") return false;
+    const n = (b.notes ?? "").toLowerCase();
+    return n.includes("stripe") || n.includes("pay now") || n.includes("card");
+  }
+
+  const stripeRevenue = completed.filter(isStripe).reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+  const cashRevenue   = completed.filter((b: any) => !isStripe(b)).reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+  const totalRevenue  = stripeRevenue + cashRevenue;
+  const jobCount      = completed.length;
+  const avgTicket     = jobCount > 0 ? totalRevenue / jobCount : 0;
+
+  // Per-service breakdown
+  const byService: Record<string, { name: string; revenue: number; count: number }> = {};
+  for (const b of completed) {
+    const svc = b.service_name || "Unknown";
+    if (!byService[svc]) byService[svc] = { name: svc, revenue: 0, count: 0 };
+    byService[svc].revenue += Number(b.total_price || 0);
+    byService[svc].count += 1;
+  }
+
+  // Unpaid: confirmed bookings (cash / not yet processed)
+  const unpaid = confirmed.map((b: any) => ({
+    id: b.id,
+    customer_name: b.customer_name,
+    service_name: b.service_name,
+    booking_date: b.booking_date,
+    booking_time: b.booking_time,
+    total_price: Number(b.total_price || 0),
+    is_stripe: isStripe(b),
+  }));
+
+  return {
+    period: { first, last },
+    stripeRevenue,
+    cashRevenue,
+    totalRevenue,
+    jobCount,
+    avgTicket,
+    byService: Object.values(byService).sort((a, b) => b.revenue - a.revenue),
+    unpaid,
+  };
+}
+
+// ── All-time stats (for money page header) ─────────────────────────────────
+export async function getAllTimeStats() {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("bookings")
+    .select("total_price, status, notes, payment_method")
+    .eq("status", "completed");
+  const rows = data ?? [];
+  const total = rows.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+  return { totalRevenue: total, jobCount: rows.length };
+}
+
+// ── Settings key/value store ────────────────────────────────────────────────
+export async function getSettingAction(key: string): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("settings").select("value").eq("key", key).maybeSingle();
+  return (data as any)?.value ?? null;
+}
+
+export async function setSettingAction(key: string, value: string): Promise<{ success: boolean }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("settings")
+    .upsert({ key, value }, { onConflict: "key" });
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+// ── Mass email ──────────────────────────────────────────────────────────────
+export async function massEmailAction(
+  recipients: { email: string; name: string }[],
+  subject: string,
+  bodyText: string
+): Promise<{ success: boolean; sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+  for (const r of recipients) {
+    const personalised = bodyText.replace(/{{name}}/g, r.name.split(" ")[0] ?? "there");
+    const res = await sendCustomEmailAction(r.email, subject, personalised);
+    if (res.success) sent++; else failed++;
+    // Small rate-limit pause
+    await new Promise(res => setTimeout(res, 120));
+  }
+  return { success: true, sent, failed };
+}
+
+// ── Fix adminQuickBookAction availability check (uses unified logic) ────────
+// (The existing adminQuickBookAction above has been superseded; new bookings
+//  created from the redesigned schedule page will call the fixed version below.)
+export async function adminQuickBookV2(payload: any): Promise<{ success: boolean; bookingId?: string; error?: string }> {
+  const { checkSlotConflict, timeToMins, getDurationMins, to24h } = await import("@/lib/availability");
+  const supabase = createAdminClient();
+
+  // Check operating hours
+  const { data: opHours } = await supabase
+    .from("operating_hours")
+    .select("*")
+    .eq("day_of_week", new Date(payload.bookingDate + "T12:00:00").getDay())
+    .maybeSingle();
+
+  // Check blocked dates
+  const { data: blocked } = await supabase
+    .from("blocked_dates")
+    .select("id")
+    .eq("blocked_date", payload.bookingDate)
+    .maybeSingle();
+  if (blocked) return { success: false, error: "That date is blocked." };
+
+  // Fetch existing bookings for that date
+  const { data: existing } = await supabase
+    .from("bookings")
+    .select("booking_time, service_name, vehicle_size, status")
+    .eq("booking_date", payload.bookingDate)
+    .neq("status", "cancelled");
+
+  const bookedTime24 = to24h(payload.bookingTime);
+  const newStartMins = timeToMins(bookedTime24);
+  const newDuration  = getDurationMins(payload.serviceName, payload.vehicleSize);
+  const hasConflict  = checkSlotConflict(existing ?? [], newStartMins, newDuration);
+  if (hasConflict) return { success: false, error: "That time slot conflicts with an existing booking." };
+
+  // Delegate the rest to the existing action (profile/vehicle/booking/emails)
+  return adminQuickBookAction({ ...payload, bookingTime: to24h(payload.bookingTime).slice(0,5) });
+}
+
+// ── Test booking (creates + immediately deletes, sends all emails) ─────────
+export async function runTestBookingAction(adminEmail: string): Promise<{ success: boolean; error?: string; log: string[] }> {
+  const log: string[] = [];
+  const supabase = createAdminClient();
+  const sampleData = {
+    customerName: "Test Client",
+    customerEmail: adminEmail,
+    customerPhone: "8025550199",
+    serviceName: "Full Interior Detail",
+    servicePrice: 250,
+    bookingDate: new Date().toISOString().split("T")[0],
+    bookingTime: "10:00 AM",
+    vehicleYear: "2024",
+    vehicleMake: "Toyota",
+    vehicleModel: "Camry",
+    vehicleSize: "sedan",
+    rewardPointsEarned: 250,
+    serviceAddress: "123 Test St, Burlington, VT",
+    bookingId: "test-" + Date.now(),
+  };
+
+  try {
+    await sendBookingEmails(sampleData);
+    log.push("✅ Customer confirmation email sent");
+  } catch (e: any) { log.push("❌ Customer confirmation: " + e.message); }
+
+  try {
+    await sendOnMyWayEmailNotification({ customerName: sampleData.customerName, customerEmail: adminEmail });
+    log.push("✅ On My Way email sent");
+  } catch (e: any) { log.push("❌ On My Way: " + e.message); }
+
+  try {
+    await sendJobCompletedEmail({
+      customerName: sampleData.customerName,
+      customerEmail: adminEmail,
+      serviceName: sampleData.serviceName,
+      amountPaid: sampleData.servicePrice,
+      pointsEarned: sampleData.rewardPointsEarned,
+    });
+    log.push("✅ Job Completed email sent");
+  } catch (e: any) { log.push("❌ Job Completed: " + e.message); }
+
+  try {
+    await sendReviewFollowupEmail({ customerName: sampleData.customerName, customerEmail: adminEmail });
+    log.push("✅ Review + Maintenance upsell email sent");
+  } catch (e: any) { log.push("❌ Review email: " + e.message); }
+
+  try {
+    await sendUpdatedBookingEmail({
+      customerName: sampleData.customerName,
+      customerEmail: adminEmail,
+      serviceName: sampleData.serviceName,
+      newDate: sampleData.bookingDate,
+      newTime: "02:00 PM",
+    });
+    log.push("✅ Reschedule email sent");
+  } catch (e: any) { log.push("❌ Reschedule: " + e.message); }
+
+  try {
+    await sendBookingCancellationEmails({
+      customerName: sampleData.customerName,
+      customerEmail: adminEmail,
+      bookingDate: sampleData.bookingDate,
+      bookingTime: sampleData.bookingTime,
+      serviceName: sampleData.serviceName,
+    });
+    log.push("✅ Cancellation email sent");
+  } catch (e: any) { log.push("❌ Cancellation: " + e.message); }
+
+  return { success: true, log };
 }
 

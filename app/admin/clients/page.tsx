@@ -2,343 +2,580 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllClients, updateCustomerProfile } from "@/app/actions/adminActions";
+import {
+  getAllClients, updateCustomerProfile, sendCustomEmailAction, massEmailAction,
+} from "@/app/actions/adminActions";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
 import { Modal } from "@/components/admin/Modal";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import {
-  Users, Search, Filter, Phone, MessageSquare, Mail, Navigation,
-  Car, Calendar, Star, Crown, AlertTriangle, ShieldCheck, CreditCard,
-  History, Settings, PenTool, Save, CheckCircle2, ChevronRight, Loader2, Link
+  Users, Search, Phone, MessageSquare, Mail, Navigation,
+  Car, Star, Crown, AlertTriangle,
+  Save, CheckCircle2, ChevronRight,
+  Loader2, Send, X, ArrowLeft, UserCheck, UserX,
 } from "lucide-react";
-import { format, differenceInMonths } from "date-fns";
+import { format, differenceInMonths, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { to12h } from "@/lib/availability";
 
-type SortOptions = "az" | "ltv" | "recent";
+// ── Email templates ─────────────────────────────────────────────────────────
+const EMAIL_TEMPLATES = [
+  {
+    id: "review",
+    label: "⭐ Google Review",
+    subject: "How did we do? Leave us a review!",
+    body: "Hi {{name}},\n\nThank you so much for choosing Arise & Shine VT! We hope your vehicle is looking absolutely perfect.\n\nIf you have a minute, we'd love it if you could leave us a Google review — it means the world to a small local business:\n\nhttps://g.page/r/YOUR_GOOGLE_REVIEW_LINK\n\nThank you!\n– Zack\nArise & Shine VT",
+  },
+  {
+    id: "maintenance",
+    label: "🔄 Maintenance Plan",
+    subject: "Keep the shine — monthly maintenance plan",
+    body: "Hi {{name}},\n\nWant to keep that showroom shine all year round? Our Monthly Maintenance Plan keeps your vehicle looking its best without the hassle.\n\n✅ Interior Monthly Plan — $75/mo\n✅ Full Detail Monthly Plan — $125/mo\n\nReply to this email or visit ariseandshinevt.com to sign up. First month is on us if you book this week!\n\n– Zack\nArise & Shine VT",
+  },
+  {
+    id: "promo",
+    label: "💰 Seasonal Promo",
+    subject: "Exclusive offer just for you",
+    body: "Hi {{name}},\n\nSpring is here and your car deserves a refresh! Book this month and save 15% on any detail service.\n\nUse code SPRING15 at checkout or reply to this email.\n\n– Zack\nArise & Shine VT",
+  },
+  {
+    id: "winback",
+    label: "👋 Win-Back",
+    subject: "We miss you — come back for a detail!",
+    body: "Hi {{name}},\n\nIt's been a while since we last detailed your vehicle, and we want to earn your business back!\n\nReply to this email to book, or visit ariseandshinevt.com. We'll take $20 off your next detail as a thank you.\n\n– Zack\nArise & Shine VT",
+  },
+  {
+    id: "fpf",
+    label: "📰 FPF Post",
+    subject: "Book your spring detail!",
+    body: "Hi {{name}},\n\nI'd love to come detail your vehicle this spring! I'm a mobile detailer serving all of Vermont — I come to you.\n\nBook online at ariseandshinevt.com or reply here.\n\n– Zack\nArise & Shine VT",
+  },
+  {
+    id: "custom",
+    label: "✏️ Custom",
+    subject: "",
+    body: "",
+  },
+];
 
+function formatTime(t: string): string {
+  if (!t) return "";
+  return to12h(t.slice(0, 5));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: clients, isLoading } = useQuery({
     queryKey: ["admin", "clients"],
     queryFn: async () => await getAllClients(),
   });
 
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortOptions>("recent");
-  const [activeClient, setActiveClient] = useState<any>(null);
+  const [search, setSearch]       = useState("");
+  const [sort, setSort]           = useState<"recent" | "ltv" | "az">("recent");
+  const [accountFilter, setAccountFilter] = useState<"all" | "signed_up" | "guest">("all");
+  const [activeClient, setActiveClient]   = useState<any>(null);
+  const [clientTab, setClientTab]         = useState<"overview" | "history">("overview");
+  const [editingNotes, setEditingNotes]   = useState(false);
+  const [notesValue, setNotesValue]       = useState("");
+  const [savingNotes, setSavingNotes]     = useState(false);
+  const [view, setView]           = useState<"list" | "email">("list");
+
+  // Email state
+  const [emailMode, setEmailMode]   = useState<"individual" | "mass">("individual");
+  const [selectedTemplate, setSelectedTemplate] = useState(EMAIL_TEMPLATES[0]);
+  const [emailSubject, setEmailSubject] = useState(EMAIL_TEMPLATES[0].subject);
+  const [emailBody, setEmailBody]   = useState(EMAIL_TEMPLATES[0].body);
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
+  const [singleRecipient, setSingleRecipient] = useState<any>(null);
+  const [sending, setSending]       = useState(false);
+  const [massFilter, setMassFilter] = useState<"all" | "at_risk" | "vip">("all");
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
+    const q = search.toLowerCase();
     let result = clients.filter((c: any) => {
-      const q = search.toLowerCase();
-      const nameMatch = `${c.first_name || ""} ${c.last_name || ""}`.toLowerCase().includes(q);
-      const phoneMatch = c.phone?.includes(q);
-      const vehicleMatch = c.vehicles?.some((v: any) => `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q));
-      return nameMatch || phoneMatch || vehicleMatch;
+      // Account type filter
+      if (accountFilter === "signed_up" && !c._is_signed_up) return false;
+      if (accountFilter === "guest" && c._is_signed_up) return false;
+      // Search
+      if (!q) return true;
+      const name = (c._display_name ?? `${c.first_name ?? ""} ${c.last_name ?? ""}`).toLowerCase();
+      return name.includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q);
     });
-
     return result.sort((a: any, b: any) => {
-      if (sort === "az") return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-      if (sort === "ltv") return (b._ltv || 0) - (a._ltv || 0);
-      if (sort === "recent") {
-        if (!a._lastService) return 1;
-        if (!b._lastService) return -1;
-        return new Date(b._lastService).getTime() - new Date(a._lastService).getTime();
-      }
-      return 0;
+      if (sort === "az") return (a._display_name ?? "").localeCompare(b._display_name ?? "");
+      if (sort === "ltv") return (b._ltv ?? 0) - (a._ltv ?? 0);
+      const da = a._lastService ? new Date(a._lastService).getTime() : 0;
+      const db = b._lastService ? new Date(b._lastService).getTime() : 0;
+      return db - da;
     });
-  }, [clients, search, sort]);
+  }, [clients, search, sort, accountFilter]);
 
-  if (isLoading) {
-    return <div className="h-[80dvh] flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" size={28} /></div>;
+  const massRecipients = useMemo(() => {
+    if (!clients) return [];
+    return clients.filter((c: any) => {
+      if (!c.email) return false;
+      if (massFilter === "at_risk") {
+        if (!c._lastService) return true;
+        return differenceInMonths(new Date(), parseISO(c._lastService + "T12:00:00")) >= 3;
+      }
+      if (massFilter === "vip") return (c._ltv ?? 0) >= 500;
+      return true;
+    }).filter((c: any) => {
+      if (!recipientSearch) return true;
+      return `${c.first_name ?? ""} ${c.last_name ?? ""}`.toLowerCase().includes(recipientSearch.toLowerCase())
+        || c.email?.toLowerCase().includes(recipientSearch.toLowerCase());
+    });
+  }, [clients, massFilter, recipientSearch]);
+
+  function selectTemplate(t: typeof EMAIL_TEMPLATES[0]) {
+    setSelectedTemplate(t);
+    setEmailSubject(t.subject);
+    setEmailBody(t.body);
   }
 
-  return (
-    <div className="flex flex-col h-full bg-[#050505]">
-      {/* ── HEADER & SEARCH ── */}
-      <div className="shrink-0 p-3 md:p-6 border-b border-white/[0.03] space-y-4">
-        <header>
-          <h1 className="text-xl font-black uppercase tracking-tighter">Client CRM</h1>
-          <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em]">{clients?.length || 0} Total Entries</p>
-        </header>
+  async function handleSendSingle() {
+    const to = singleRecipient?.email;
+    if (!to) { toast("Select a recipient first", "error"); return; }
+    if (!emailSubject || !emailBody) { toast("Subject and body required", "error"); return; }
+    setSending(true);
+    try {
+      const personalised = emailBody.replace(/{{name}}/g, (singleRecipient.first_name ?? "there"));
+      const r = await sendCustomEmailAction(to, emailSubject, personalised);
+      if (r.success) toast("Email sent! ✅");
+      else toast(r.error ?? "Failed", "error");
+    } catch { toast("Failed to send", "error"); }
+    setSending(false);
+  }
 
-        <div className="flex flex-col md:flex-row gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5 focus-within:ring-1 ring-amber-500/50 transition-all">
-            <Search size={14} className="text-zinc-600 shrink-0" />
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search names, phones, or vehicles..."
-              className="bg-transparent border-none text-xs w-full placeholder:text-zinc-700 text-white outline-none"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-1 shrink-0 p-1 bg-white/[0.02] border border-white/[0.04] rounded-xl">
-            {(["recent", "ltv", "az"] as const).map(s => (
-              <button key={s} onClick={() => setSort(s)}
-                className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                  sort === s ? "bg-amber-500 text-black shadow-md" : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
-                )}>
-                {s === "recent" ? "New" : s === "ltv" ? "VIP" : "A-Z"}
+  async function handleSendMass() {
+    const recipients = massRecipients.filter((c: any) =>
+      selectedRecipients.size === 0 ? true : selectedRecipients.has(c.id)
+    );
+    if (recipients.length === 0) { toast("No recipients selected", "error"); return; }
+    if (!emailSubject || !emailBody) { toast("Subject and body required", "error"); return; }
+    if (!confirm(`Send to ${recipients.length} client${recipients.length !== 1 ? "s" : ""}?`)) return;
+    setSending(true);
+    try {
+      const res = await massEmailAction(
+        recipients.map((c: any) => ({ email: c.email, name: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() })),
+        emailSubject,
+        emailBody,
+      );
+      toast(`Sent to ${res.sent} clients${res.failed > 0 ? ` (${res.failed} failed)` : ""}!`);
+      setSelectedRecipients(new Set());
+    } catch { toast("Failed", "error"); }
+    setSending(false);
+  }
+
+  async function saveNotes() {
+    if (!activeClient) return;
+    setSavingNotes(true);
+    try {
+      await updateCustomerProfile(activeClient.id, { notes: notesValue });
+      toast("Notes saved");
+      setEditingNotes(false);
+      queryClient.invalidateQueries({ queryKey: ["admin", "clients"] });
+    } catch { toast("Failed", "error"); }
+    setSavingNotes(false);
+  }
+
+  const isAtRisk = (c: any) => {
+    if (!c._lastService) return c._bookingCount > 0;
+    return differenceInMonths(new Date(), parseISO(c._lastService + "T12:00:00")) >= 3;
+  };
+  const isVIP = (c: any) => (c._ltv ?? 0) >= 500;
+
+  // ── Email view ────────────────────────────────────────────────────────────
+  if (view === "email") {
+    return (
+      <div className="px-4 pt-4 pb-6 max-w-2xl mx-auto space-y-4">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setView("list")}
+            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] transition-all active:scale-90">
+            <ArrowLeft size={16} />
+          </button>
+          <h1 className="text-xl font-black">Email Marketing</h1>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex gap-1 bg-white/[0.03] rounded-xl p-1">
+          <button onClick={() => setEmailMode("individual")}
+            className={cn("flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+              emailMode === "individual" ? "bg-amber-500 text-black" : "text-zinc-500")}>Individual</button>
+          <button onClick={() => setEmailMode("mass")}
+            className={cn("flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+              emailMode === "mass" ? "bg-amber-500 text-black" : "text-zinc-500")}>Mass Send</button>
+        </div>
+
+        {/* Template picker */}
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Template</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {EMAIL_TEMPLATES.map(t => (
+              <button key={t.id} onClick={() => selectTemplate(t)}
+                className={cn("py-2 px-3 rounded-xl border text-xs font-bold text-left transition-all",
+                  selectedTemplate.id === t.id ? "bg-amber-500/10 border-amber-500/40 text-amber-400" : "border-white/[0.08] text-zinc-500")}>
+                {t.label}
               </button>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ── LIST ── */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-2 pb-24 md:pb-6">
-        {filteredClients.map((client: any) => {
-          const ltv = client._ltv || 0;
-          const isVip = ltv >= 500;
-          const monthsSinceLast = client._lastService ? differenceInMonths(new Date(), new Date(client._lastService)) : 0;
-          const isAtRisk = monthsSinceLast >= 4;
-
-          return (
-            <button key={client.id} onClick={() => setActiveClient(client)}
-              className="w-full relative overflow-hidden p-4 rounded-2xl bg-[#0A0A0A] border border-white/[0.04] hover:border-amber-500/30 transition-all flex items-center gap-4 text-left group active:scale-[0.98]">
-              
-              <div className="relative shrink-0">
-                <div className="w-12 h-12 rounded-[14px] bg-zinc-900 border border-white/[0.06] flex items-center justify-center text-sm font-black text-amber-500">
-                  {(client.first_name?.[0] || "?")}{(client.last_name?.[0] || "")}
-                </div>
-                {isVip && <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center border-2 border-[#0A0A0A]"><Crown size={10} className="text-black" /></div>}
+        {/* Recipient section */}
+        {emailMode === "individual" ? (
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Recipient</p>
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+              <input
+                value={recipientSearch}
+                onChange={e => setRecipientSearch(e.target.value)}
+                placeholder="Search client…"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
+            {recipientSearch && (
+              <div className="mt-1 bg-zinc-900 border border-white/[0.08] rounded-xl overflow-hidden">
+                {filteredClients.filter((c: any) => c.email).slice(0, 5).map((c: any) => (
+                  <button key={c.id} onClick={() => { setSingleRecipient(c); setRecipientSearch(`${c.first_name ?? ""} ${c.last_name ?? ""} <${c.email}>`); }}
+                    className="w-full text-left px-3 py-2.5 hover:bg-white/[0.04] border-b border-white/[0.04] last:border-0 text-sm text-zinc-300">
+                    {c.first_name} {c.last_name} <span className="text-zinc-600 text-xs">· {c.email}</span>
+                  </button>
+                ))}
               </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-black text-sm truncate">{client.first_name} {client.last_name}</p>
-                  {isAtRisk && <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[8px] font-black uppercase tracking-wider">At Risk</span>}
-                </div>
-                {client.phone && <p className="text-[10px] text-zinc-600 font-mono mt-0.5">{client.phone.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3")}</p>}
-                <div className="flex gap-3 text-[9px] font-bold uppercase tracking-widest text-zinc-500 mt-2">
-                  <span className="flex items-center gap-1"><CreditCard size={10} />${ltv.toFixed(0)}</span>
-                  <span className="flex items-center gap-1"><History size={10} />{client._bookingCount} jobs</span>
-                </div>
-              </div>
-
-              <ChevronRight size={16} className="text-zinc-800 group-hover:text-amber-500 shrink-0 transition-colors" />
-            </button>
-          );
-        })}
-        {filteredClients.length === 0 && (
-          <div className="py-20 text-center space-y-2 text-zinc-600">
-            <Users size={32} className="mx-auto text-zinc-800" />
-            <p className="text-[10px] font-black uppercase tracking-widest">No clients found</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1">Audience</p>
+            <div className="flex gap-1.5">
+              {(["all", "at_risk", "vip"] as const).map(f => (
+                <button key={f} onClick={() => setMassFilter(f)}
+                  className={cn("flex-1 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all",
+                    massFilter === f ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-500")}>
+                  {f === "all" ? "All" : f === "at_risk" ? "At Risk" : "VIP"}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-zinc-600">{massRecipients.filter((c: any) => c.email).length} recipients with email</p>
           </div>
         )}
+
+        {/* Subject */}
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1">Subject</p>
+          <input value={emailSubject} onChange={e => setEmailSubject(e.target.value)} placeholder="Subject line…"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+        </div>
+
+        {/* Body */}
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1">Body <span className="text-zinc-700 normal-case font-medium">· use {`{{name}}`} for first name</span></p>
+          <textarea value={emailBody} onChange={e => setEmailBody(e.target.value)} rows={8} placeholder="Email body…"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 resize-none" />
+        </div>
+
+        <button
+          onClick={emailMode === "individual" ? handleSendSingle : handleSendMass}
+          disabled={sending}
+          className="w-full flex items-center justify-center gap-2 bg-amber-500 text-black font-black text-sm uppercase tracking-wider py-4 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+        >
+          {sending ? <Loader2 className="animate-spin" size={18} /> : <><Send size={16} /> {emailMode === "individual" ? "Send Email" : `Send to ${massRecipients.length} Clients`}</>}
+        </button>
+      </div>
+    );
+  }
+
+  // ── Client list view ──────────────────────────────────────────────────────
+  return (
+    <div className="px-4 pt-4 pb-6 max-w-2xl mx-auto space-y-4">
+
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-black">Clients</h1>
+        <button
+          onClick={() => setView("email")}
+          className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-white/[0.07] transition-all active:scale-95"
+        >
+          <Mail size={13} /> Email
+        </button>
       </div>
 
-      {/* ── CLIENT PROFILE MODAL ── */}
-      <Modal open={!!activeClient} onClose={() => setActiveClient(null)} className="h-[92dvh] md:max-h-[85dvh] max-w-2xl flex flex-col">
-        {activeClient && <ClientProfile client={activeClient} />}
+      {/* Search + sort */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, phone…"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Account type filter */}
+        <div className="flex gap-1.5">
+          {([
+            { id: "all",       label: "All" },
+            { id: "signed_up", label: "Signed Up" },
+            { id: "guest",     label: "Guest" },
+          ] as const).map(f => (
+            <button key={f.id} onClick={() => setAccountFilter(f.id)}
+              className={cn("flex-1 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all",
+                accountFilter === f.id ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-600")}>
+              {f.label}
+              {clients && f.id !== "all" && (
+                <span className="ml-1 opacity-60">
+                  {f.id === "signed_up"
+                    ? clients.filter((c: any) => c._is_signed_up).length
+                    : clients.filter((c: any) => !c._is_signed_up).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Sort */}
+        <div className="flex gap-1.5">
+          {(["recent", "ltv", "az"] as const).map(s => (
+            <button key={s} onClick={() => setSort(s)}
+              className={cn("flex-1 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all",
+                sort === s ? "bg-white/[0.12] border-white/[0.15] text-white" : "border-white/[0.06] text-zinc-600")}>
+              {s === "recent" ? "Recent" : s === "ltv" ? "VIP $" : "A–Z"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats strip */}
+      {clients && (
+        <div className="grid grid-cols-4 gap-2 text-center">
+          <MiniStat label="Total" value={String(clients.length)} />
+          <MiniStat label="Accounts" value={String(clients.filter((c: any) => c._is_signed_up).length)} color="text-emerald-400" />
+          <MiniStat label="VIP" value={String(clients.filter((c: any) => isVIP(c)).length)} color="text-amber-400" />
+          <MiniStat label="At Risk" value={String(clients.filter((c: any) => isAtRisk(c)).length)} color="text-orange-400" />
+        </div>
+      )}
+
+      {/* List */}
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="animate-spin text-amber-500" size={24} /></div>
+      ) : filteredClients.length === 0 ? (
+        <p className="text-sm text-zinc-600 text-center py-6">No clients found.</p>
+      ) : (
+        <div className="space-y-2">
+          {filteredClients.map((c: any) => {
+            const vip = isVIP(c);
+            const atRisk = isAtRisk(c);
+            return (
+              <button
+                key={c.id}
+                onClick={() => { setActiveClient(c); setClientTab("overview"); setNotesValue(c.notes ?? ""); setEditingNotes(false); }}
+                className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
+              >
+                {/* Avatar */}
+                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shrink-0",
+                  vip ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.06] text-zinc-400")}>
+                  {((c._display_name ?? c.first_name ?? "")[0] ?? "?").toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-bold truncate">{c._display_name ?? `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim()}</span>
+                    {vip && <Crown size={11} className="text-amber-500 shrink-0" />}
+                    {atRisk && <AlertTriangle size={11} className="text-orange-400 shrink-0" />}
+                    {c._is_signed_up
+                      ? <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                          <UserCheck size={8} /> Account
+                        </span>
+                      : <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider text-zinc-500 bg-white/[0.04] px-1.5 py-0.5 rounded-full">
+                          <UserX size={8} /> Guest
+                        </span>
+                    }
+                  </div>
+                  <p className="text-xs text-zinc-500">{c._bookingCount} job{c._bookingCount !== 1 ? "s" : ""}{c._lastService ? ` · Last: ${format(parseISO(c._lastService + "T12:00:00"), "MMM d")}` : ""}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-black text-amber-500">${(c._ltv ?? 0).toFixed(0)}</p>
+                  <p className="text-[9px] text-zinc-600">lifetime</p>
+                </div>
+                <ChevronRight size={14} className="text-zinc-700 shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Client Detail Modal ─────────────────────────────────────────────── */}
+      <Modal open={!!activeClient} onClose={() => setActiveClient(null)}>
+        {activeClient && (
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center text-base font-black shrink-0",
+                isVIP(activeClient) ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.06] text-zinc-400")}>
+                {((activeClient.first_name?.[0] ?? "") + (activeClient.last_name?.[0] ?? "")).toUpperCase() || "?"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h2 className="text-lg font-black">{activeClient._display_name ?? `${activeClient.first_name ?? ""} ${activeClient.last_name ?? ""}`.trim()}</h2>
+                  {isVIP(activeClient) && <Crown size={14} className="text-amber-500" />}
+                  {isAtRisk(activeClient) && <AlertTriangle size={14} className="text-orange-400" />}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-zinc-500">{activeClient._bookingCount} job{activeClient._bookingCount !== 1 ? "s" : ""} · LTV: <span className="text-amber-500 font-black">${(activeClient._ltv ?? 0).toFixed(0)}</span></p>
+                  {activeClient._is_signed_up
+                    ? <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                        <UserCheck size={8} /> Account
+                      </span>
+                    : <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider text-zinc-500 bg-white/[0.04] px-1.5 py-0.5 rounded-full">
+                        <UserX size={8} /> Guest Booking
+                      </span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 bg-white/[0.03] rounded-xl p-1">
+              <button onClick={() => setClientTab("overview")}
+                className={cn("flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  clientTab === "overview" ? "bg-amber-500 text-black" : "text-zinc-500")}>Overview</button>
+              <button onClick={() => setClientTab("history")}
+                className={cn("flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  clientTab === "history" ? "bg-amber-500 text-black" : "text-zinc-500")}>History</button>
+            </div>
+
+            {clientTab === "overview" && (
+              <div className="space-y-3">
+                {/* Contact */}
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
+                  {activeClient.phone && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-zinc-300">
+                        <Phone size={13} className="text-zinc-600" />
+                        <span>{activeClient.phone}</span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <a href={`tel:${activeClient.phone}`} className="p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all"><Phone size={12} /></a>
+                        <a href={`sms:${activeClient.phone}`} className="p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all"><MessageSquare size={12} /></a>
+                      </div>
+                    </div>
+                  )}
+                  {activeClient.email && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-zinc-300 min-w-0 flex-1">
+                        <Mail size={13} className="text-zinc-600 shrink-0" />
+                        <span className="truncate">{activeClient.email}</span>
+                      </div>
+                      <button
+                        onClick={() => { setSingleRecipient(activeClient); setView("email"); setActiveClient(null); }}
+                        className="ml-2 p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all shrink-0"
+                      ><Send size={12} /></button>
+                    </div>
+                  )}
+                  {activeClient._lastAddress && activeClient._lastAddress !== "No address recorded" && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-zinc-300 min-w-0 flex-1">
+                        <Navigation size={13} className="text-zinc-600 shrink-0" />
+                        <span className="truncate text-xs">{activeClient._lastAddress}</span>
+                      </div>
+                      <a href={`https://maps.google.com/?q=${encodeURIComponent(activeClient._lastAddress)}`} target="_blank" className="ml-2 p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all shrink-0">
+                        <Navigation size={12} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Loyalty points */}
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Star size={13} className="text-amber-500" />
+                    <span className="text-sm font-bold">Loyalty Points</span>
+                  </div>
+                  <span className="text-amber-500 font-black text-base">{activeClient.reward_points ?? 0}</span>
+                </div>
+
+                {/* Vehicles */}
+                {activeClient.vehicles?.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Garage</p>
+                    {activeClient.vehicles.map((v: any) => (
+                      <div key={v.id} className="flex items-center gap-2 text-sm text-zinc-300">
+                        <Car size={13} className="text-zinc-600 shrink-0" />
+                        <span>{[v.year, v.make, v.model].filter(Boolean).join(" ")}</span>
+                        <span className="text-zinc-600 text-xs capitalize">{v.size?.replace("_", " ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Notes</p>
+                    <button onClick={() => { setNotesValue(activeClient.notes ?? ""); setEditingNotes(!editingNotes); }}
+                      className="text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-amber-500">
+                      {editingNotes ? "Cancel" : "Edit"}
+                    </button>
+                  </div>
+                  {editingNotes ? (
+                    <div className="space-y-2">
+                      <textarea value={notesValue} onChange={e => setNotesValue(e.target.value)} rows={4}
+                        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 resize-none" />
+                      <button onClick={saveNotes} disabled={savingNotes}
+                        className="w-full py-2.5 rounded-xl bg-amber-500 text-black text-sm font-black uppercase tracking-wider active:scale-95 flex items-center justify-center gap-2">
+                        {savingNotes ? <Loader2 className="animate-spin" size={14} /> : <><Save size={13} /> Save Notes</>}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500 italic">{activeClient.notes || "No notes yet."}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {clientTab === "history" && (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {!activeClient.bookings?.length ? (
+                  <p className="text-sm text-zinc-600 text-center py-4">No bookings yet.</p>
+                ) : activeClient.bookings.map((b: any) => (
+                  <div key={b.id} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-amber-500">{b.display_date ?? b.booking_date}</p>
+                        <p className="text-sm font-bold truncate">{b._service_name ?? b.services?.name ?? b.service_name ?? "Detail"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black">${Number(b.total_price ?? 0).toFixed(0)}</p>
+                        <StatusBadge status={b.status} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   CLIENT PROFILE COMPONENT
-   ═══════════════════════════════════════════════════════ */
-function ClientProfile({ client }: { client: any }) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"overview" | "history">("overview");
-  const [points, setPoints] = useState(client.reward_points?.toString() || "0");
-  const [notes, setNotes] = useState(client.notes || "");
-  const [saving, setSaving] = useState(false);
-  const [sendingPaymentLinkId, setSendingPaymentLinkId] = useState<string | null>(null);
-
-  const handleSendPaymentLink = async (b: any) => {
-    setSendingPaymentLinkId(b.id);
-    try {
-      const vehicle = client.vehicles?.[0];
-      const result = await sendStripePaymentLink(b.id, {
-        serviceName: b.services?.name ?? "Detail Service",
-        totalPrice: Number(b.total_price),
-        vehicleYear: vehicle?.year ?? "",
-        vehicleMake: vehicle?.make ?? "",
-        vehicleModel: vehicle?.model ?? "",
-        vehicleSize: vehicle?.size ?? "",
-        bookingDate: b.booking_date,
-        bookingTime: b.booking_time?.substring(0, 5) ?? "",
-        customerEmail: client.email ?? "",
-        customerName: `${client.first_name || ""} ${client.last_name || ""}`.trim(),
-      });
-      if ("error" in result) {
-        toast(result.error, "error");
-      } else {
-        await navigator.clipboard.writeText(result.url);
-        toast("Payment link copied!");
-      }
-    } catch {
-      toast("Failed to create payment link", "error");
-    } finally {
-      setSendingPaymentLinkId(null);
-    }
-  };
-
-  // Mutations
-  const updatePoints = useMutation({
-    mutationFn: async () => await updateCustomerProfile(client.id, { reward_points: parseInt(points) || 0 }),
-    onSuccess: () => { toast("Points updated"); queryClient.invalidateQueries({ queryKey: ["admin", "clients"] }); }
-  });
-
-  const updateNotes = useMutation({
-    mutationFn: async () => await updateCustomerProfile(client.id, { notes }),
-    onSuccess: () => { toast("Notes saved"); queryClient.invalidateQueries({ queryKey: ["admin", "clients"] }); }
-  });
-
-  const ltv = client._ltv || 0;
-  const isVip = ltv >= 500;
-  const addr = client._lastAddress;
-
-  const winBackText = `Hi ${client.first_name}, it's been a while since we detailed your vehicle! We'd love to see you again. Get 10% off your next detail by booking here: https://ariseandshinevt.com`;
-  const copyWinBack = () => { navigator.clipboard.writeText(winBackText); toast("SMS Copied!"); };
-
+function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="flex flex-col h-full bg-[#080808] text-white">
-      {/* PROFILE HEADER */}
-      <div className="shrink-0 relative overflow-hidden pt-8 pb-4 px-4 text-center border-b border-white/[0.04]">
-        {/* BG Blurs */}
-        <div className={cn("absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 blur-[80px] opacity-20 pointer-events-none", isVip ? "bg-amber-500" : "bg-blue-500")} />
-        
-        <div className="relative z-10">
-          <div className={cn("w-20 h-20 mx-auto rounded-full bg-zinc-900 border-4 flex items-center justify-center text-2xl font-black shadow-2xl relative", isVip ? "border-amber-500/20 text-amber-500" : "border-white/[0.04] text-white")}>
-            {(client.first_name?.[0] || "?")}{(client.last_name?.[0] || "")}
-            {isVip && <div className="absolute -bottom-2 right-0 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center border-4 border-[#080808]"><Crown size={14} className="text-black" /></div>}
-          </div>
-          <h2 className="text-xl font-black mt-3">{client.first_name} {client.last_name}</h2>
-          <p className="text-[10px] text-zinc-500 font-mono mt-1">
-            {client.phone?.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3") || "No phone"} • {client.email || "No email"}
-          </p>
-        </div>
-
-        {/* Action Row */}
-        <div className="flex justify-center gap-2 mt-6">
-          {client.phone && <a href={`tel:${client.phone}`} className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-blue-500 hover:scale-110 transition-all"><Phone size={18} /></a>}
-          {client.phone && <a href={`sms:${client.phone}`} className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-emerald-500 hover:scale-110 transition-all"><MessageSquare size={18} /></a>}
-          <a href={`/admin/email?client=${client.id}`} className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-amber-500 hover:scale-110 transition-all"><Mail size={18} /></a>
-          {addr && addr !== "No address recorded" && <a href={`https://maps.google.com/?q=${encodeURIComponent(addr)}`} target="_blank" className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-violet-500 hover:scale-110 transition-all"><Navigation size={18} /></a>}
-        </div>
-      </div>
-
-      {/* TABS */}
-      <div className="flex items-center gap-6 px-6 border-b border-white/[0.04]">
-        {(["overview", "history"] as const).map(t => (
-          <button key={t} onClick={() => setActiveTab(t)}
-            className={cn("py-4 text-[10px] font-black uppercase tracking-widest relative transition-colors", activeTab === t ? "text-amber-500" : "text-zinc-500")}>
-            {t}
-            {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        {activeTab === "overview" && (
-          <>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">LTV Revenue</p>
-                <p className="text-xl font-black mt-1 text-emerald-500">${ltv.toFixed(0)}</p>
-              </div>
-              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Total Bookings</p>
-                <p className="text-xl font-black mt-1">{client._bookingCount}</p>
-              </div>
-            </div>
-
-            {/* Loyalty Points */}
-            <div className="p-5 rounded-2xl bg-[#0A0A0A] border border-white/[0.06] space-y-3">
-              <div className="flex items-center gap-2 text-amber-500">
-                <Star size={16} fill="currentColor" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-white">Loyalty Points</h3>
-              </div>
-              <div className="flex gap-2">
-                <input type="number" value={points} onChange={e => setPoints(e.target.value)}
-                  className="flex-1 bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 text-sm font-mono text-white focus:ring-1 ring-amber-500/50 outline-none" />
-                <button onClick={() => updatePoints.mutate()} disabled={updatePoints.isPending}
-                  className="px-6 py-3 rounded-xl bg-amber-500 text-black font-black text-[10px] uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-95 transition-all">
-                  {updatePoints.isPending ? <Loader2 size={14} className="animate-spin" /> : "Save"}
-                </button>
-              </div>
-            </div>
-
-            {/* Win-Back */}
-            <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-3">
-              <h3 className="text-xs font-black uppercase tracking-widest text-rose-500 flex items-center gap-2"><AlertTriangle size={14} /> SMS Win-Back</h3>
-              <p className="text-[10px] text-zinc-400 leading-relaxed font-mono p-3 bg-black/50 rounded-lg">{winBackText}</p>
-              <button onClick={copyWinBack} className="w-full py-3 rounded-xl border border-rose-500/30 text-rose-500 font-black text-[10px] uppercase tracking-widest hover:bg-rose-500/10 active:scale-95 transition-all">Copy to Clipboard</button>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Client Notes</label>
-              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4}
-                className="w-full bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 text-sm text-zinc-300 focus:ring-1 ring-amber-500/50 outline-none resize-none" placeholder="Gate codes, preferences, pets..." />
-              <button onClick={() => updateNotes.mutate()} disabled={updateNotes.isPending}
-                className="w-full py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-white font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">
-                {updateNotes.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Save Notes"}
-              </button>
-            </div>
-          </>
-        )}
-
-        {activeTab === "history" && (
-          <div className="space-y-6">
-            {/* Vehicles Box */}
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-3 ml-1">Garage</h3>
-              {client.vehicles?.length > 0 ? (
-                <div className="space-y-2">
-                  {client.vehicles.map((v: any) => (
-                    <div key={v.id} className="p-3 rounded-xl bg-black border border-white/[0.03] flex items-center gap-3">
-                      <Car size={16} className="text-zinc-500" />
-                      <span className="text-sm font-bold uppercase tracking-wider">{v.year} {v.make} {v.model} ({v.size})</span>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-[10px] text-zinc-600">No vehicles on file</p>}
-            </div>
-
-            {/* Booking Listing */}
-            <div className="space-y-2">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2 ml-1">Service History</h3>
-              {client.bookings?.map((b: any) => (
-                <div key={b.id} className="p-4 rounded-2xl bg-[#0A0A0A] border border-white/[0.04] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-amber-500">
-                      {format(new Date(b.booking_date + "T12:00:00"), "MMM d, yyyy")} • {b.booking_time.substring(0,5)}
-                    </span>
-                    <StatusBadge status={b.status} />
-                  </div>
-                  <div className="flex items-center justify-between border-t border-white/[0.04] pt-2 mt-2">
-                    <span className="text-xs font-bold text-zinc-300">{b.services?.name || "Service"}</span>
-                    <span className="text-xs font-black text-emerald-500">${Number(b.total_price).toFixed(0)}</span>
-                  </div>
-                  <button
-                    onClick={() => handleSendPaymentLink(b)}
-                    disabled={sendingPaymentLinkId === b.id}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/30 text-[9px] font-black uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {sendingPaymentLinkId === b.id ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Link size={12} />
-                    )}
-                    Send Payment Link
-                  </button>
-                </div>
-              ))}
-              {(!client.bookings || client.bookings.length === 0) && (
-                <div className="p-8 text-center border border-dashed border-white/[0.06] rounded-2xl">
-                  <Calendar size={24} className="mx-auto text-zinc-700 mb-2" />
-                  <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">No past bookings</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl py-2 px-3 text-center">
+      <p className={cn("text-lg font-black", color ?? "text-white")}>{value}</p>
+      <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mt-0.5">{label}</p>
     </div>
   );
 }

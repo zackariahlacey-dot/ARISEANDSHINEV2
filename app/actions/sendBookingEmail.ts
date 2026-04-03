@@ -38,11 +38,18 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
       totalPrice,
     });
 
+    const sn = bookingDetails.serviceName.toLowerCase();
+    const subjectPrefix = sn.includes("boat")
+      ? "Your Boat Detail is Confirmed — Waterline Up"
+      : sn.includes("rv") || sn.includes("motorhome")
+      ? "Your RV Detail is Confirmed"
+      : "Your Detail is Confirmed";
+
     const { data, error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: customerEmail.trim(),
       replyTo: REPLY_TO,
-      subject: `Your Detail is Confirmed — Arise And Shine VT`,
+      subject: `${subjectPrefix} — Arise And Shine VT`,
       html,
     });
 

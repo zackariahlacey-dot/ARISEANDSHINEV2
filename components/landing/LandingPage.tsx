@@ -17,6 +17,8 @@ import {
   Sparkles,
   Car,
   Brush,
+  Anchor,
+  Truck,
   LayoutDashboard,
   CalendarClock,
   CalendarRange,
@@ -73,10 +75,9 @@ const staggerItem = {
 const HERO_SCROLL_THRESHOLD = 0.8; // Show sticky CTA after 80% of viewport scrolled
 
 const SERVICE_LINKS = [
-  { href: "/detailing", label: "Auto Detailing", icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
-  { href: "/paint-correction", label: "Paint Correction", icon: Brush, desc: "Swirl removal & restoration" },
-  { href: "/maintenance-club", label: "Maintenance Club", icon: Crown, desc: "Monthly recurring plans" },
-  { href: "/services", label: "All Services", icon: Shield, desc: "Browse everything we offer" },
+  { href: "/detailing", label: "Vehicle Detailing", icon: Car, desc: "Interior, Exterior & Full Detail" },
+  { href: "/boat-detailing", label: "Boat Detailing", icon: Anchor, desc: "Marine interior, exterior & full detail" },
+  { href: "/rv-detailing", label: "RV Detailing", icon: Truck, desc: "Per-foot pricing for motorhomes & trailers" },
 ];
 
 const REVIEWS = [
@@ -537,7 +538,10 @@ export function LandingPage({ services }: { services: Service[] }) {
           <LoyaltyHeaderButton />
           <button
             type="button"
-            onClick={() => setFlowSelectorOpen(true)}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              openBooking();
+            }}
             className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden"
           >
             <span className="relative z-[1]">Book Now</span>
@@ -688,7 +692,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           {/* Full-width Book Now CTA */}
           <button
-            onClick={() => { closeMobileMenu(); setFlowSelectorOpen(true); }}
+            onClick={() => { closeMobileMenu(); openBooking(); }}
             className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
           >
             <span className="relative z-[1]">Book Your Detail</span>
@@ -797,7 +801,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* CTAs — content-fit width, centered, side-by-side on desktop */}
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
             <button
-              onClick={() => setFlowSelectorOpen(true)}
+              onClick={() => openBooking()}
               className="btn-primary-gold-shimmer h-12 px-8 rounded-xl font-semibold tracking-wide w-fit min-w-[180px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
             >
               <span className="relative z-[1]">Book Your Detail</span>

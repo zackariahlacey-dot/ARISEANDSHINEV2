@@ -40,18 +40,19 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 480, medium: 480, large: 480, extra_large: 480,
     compact: 480, sedan: 480, suv: 480, xl: 480,
   },
-  // Boat Detailing
+  // Boat Detailing — durations scale by length bracket
+  // compact/small = 15–20ft, sedan/medium = 21–30ft, suv/large = 31–45ft, xl/extra_large = 46ft+
   "Boat Interior Detail": {
-    small: 240, medium: 240, large: 240, extra_large: 240,
-    compact: 240, sedan: 240, suv: 240, xl: 240,
+    small: 180, medium: 240, large: 300, extra_large: 360,
+    compact: 180, sedan: 240, suv: 300, xl: 360,
   },
   "Boat Exterior Detail": {
-    small: 240, medium: 240, large: 240, extra_large: 240,
-    compact: 240, sedan: 240, suv: 240, xl: 240,
+    small: 150, medium: 180, large: 240, extra_large: 300,
+    compact: 150, sedan: 180, suv: 240, xl: 300,
   },
   "Full Boat Detail": {
-    small: 480, medium: 480, large: 480, extra_large: 480,
-    compact: 480, sedan: 480, suv: 480, xl: 480,
+    small: 300, medium: 390, large: 480, extra_large: 600,
+    compact: 300, sedan: 390, suv: 480, xl: 600,
   },
   // RV Detailing
   "RV Interior Detail": {

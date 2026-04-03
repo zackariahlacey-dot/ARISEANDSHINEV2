@@ -17,7 +17,7 @@ import {
   CreditCard,
   Lock,
   HandCoins,
-  HelpCircle,
+  CircleHelp,
   Crown,
   Sparkles,
   Gem,
@@ -57,11 +57,19 @@ function getMaintenanceSetupFee(serviceName: string): number {
 }
 
 const ALL_ADD_ONS = [
-  { id: "engine_bay", label: "Engine Bay Detail",                    price: 50, desc: "Deep clean and degrease the engine bay" },
-  { id: "floor_1",   label: "Floorboard Shampoo – 1 Section",       price: 30, desc: "Deep shampoo for one section of floorboards" },
-  { id: "floor_2",   label: "Floorboard Shampoo – 2 Sections",      price: 45, desc: "Deep shampoo for two sections of floorboards" },
-  { id: "floor_all", label: "Floorboard Shampoo – All Sections",     price: 60, desc: "Full deep shampoo for all floorboard sections" },
-  { id: "clay_bar",  label: "Clay Bar Treatment",                    price: 40, desc: "Remove embedded contaminants for a glass-smooth finish" },
+  { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay" },
+  { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
+  { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
+  { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
+  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 40,  desc: "Remove embedded contaminants for a glass-smooth finish" },
+  { id: "marine_isinglass",  label: "Isinglass & Vinyl Window Clarity",      price: 100, desc: "Haze/scratch removal + UV sealant on all enclosure windows" },
+  { id: "marine_engine_bay", label: "Marine Engine Bay Deep Clean",          price: 150, desc: "Full degreasing and detail of engine compartment & bilge" },
+  // RV-specific add-ons
+  { id: "rv_awning",         label: "Awning Deep Clean",                     price: 60,  desc: "Remove mold, mildew & road grime from awning fabric, arms & housing. UV protectant applied." },
+  { id: "rv_slide_seal",     label: "Slide-Out Seal Conditioning",           price: 50,  desc: "Condition & lubricate all rubber slide seals. Prevents cracking, water intrusion & leaks." },
+  { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",              price: 80,  desc: "UV-protective EPDM/TPO sealant applied to roof membrane. Extends life & prevents seam leaks." },
+  { id: "rv_generator",      label: "Generator Bay Detail",                  price: 75,  desc: "Full degreasing & detailing of generator housing, exhaust housing & bay surrounds." },
+  { id: "rv_step",           label: "Entry Step & Threshold Detail",         price: 30,  desc: "Deep scrub of all entry steps, grip treads & door threshold — the dirtiest spot on most rigs." },
 ] as const;
 
 type AddonItem = typeof ALL_ADD_ONS[number];
@@ -75,8 +83,15 @@ const FLOOR_ADDON_IDS = ["floor_1", "floor_2", "floor_all"];
 function getAddonsForService(serviceName: string): readonly AddonItem[] {
   const n = serviceName.toLowerCase();
 
-  // Footage-based services (boat/RV): no car-specific add-ons
-  if (n.includes("boat") || n.includes("rv") || n.includes("motorhome")) return [];
+  // Boat services: marine-specific flat-fee add-ons only
+  if (n.includes("boat")) {
+    return ALL_ADD_ONS.filter(a => a.id === "marine_isinglass" || a.id === "marine_engine_bay");
+  }
+  // RV services: RV-specific add-ons
+  if (n.includes("rv") || n.includes("motorhome")) {
+    const RV_ADDON_IDS = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
+    return ALL_ADD_ONS.filter(a => RV_ADDON_IDS.includes(a.id));
+  }
 
   // Paint correction: exterior-only work; clay bar already part of the process
   if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage")) {
@@ -140,7 +155,7 @@ function getServiceCategory(service: Service): { label: string; color: string } 
   if (n.includes("ultimate"))   return { label: "Ultimate Series",           color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
   if (n.includes("paint") || n.includes("correction") || n.includes("single-stage") || n.includes("two-stage"))
                                 return { label: "Paint Correction",           color: "text-violet-400 bg-violet-500/10 border-violet-500/20" };
-  if (n.includes("boat"))       return { label: "Marine Detailing",          color: "text-blue-400 bg-blue-500/10 border-blue-500/20" };
+  if (n.includes("boat"))       return { label: "Marine Detailing",          color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
   if (n.includes("rv") || n.includes("motorhome"))
                                 return { label: "RV Detailing",              color: "text-green-400 bg-green-500/10 border-green-500/20" };
   return                               { label: "One-Time Detailing",         color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20" };
@@ -150,10 +165,10 @@ function getServiceCategory(service: Service): { label: string; color: string } 
 
 /** Per-foot rates for footage-based services (boat / RV) */
 const FOOTAGE_RATE: Record<string, number> = {
-  // Boats — 15 ft minimum
-  "Boat Interior Detail": 18,
-  "Boat Exterior Detail": 20,
-  "Full Boat Detail":     32,
+  // Boats — 15 ft minimum (Waterline Up model)
+  "Boat Interior Detail": 20,   // Marine Express
+  "Boat Exterior Detail": 30,   // The Deep Reset
+  "Full Boat Detail":     55,   // Showroom Restoration
   // RVs — 20 ft minimum
   "RV Interior Detail":   20,
   "RV Exterior Detail":   22,
@@ -171,6 +186,13 @@ const FOOTAGE_MIN_FEET: Record<string, number> = {
 // backward-compat aliases used in a few inline JSX references
 const BOAT_RATE = FOOTAGE_RATE;
 const BOAT_MIN_FEET = 15;
+
+/** Maps DB service names → Waterline Up marketing display names */
+const BOAT_DISPLAY_NAMES: Record<string, { name: string; tagline: string }> = {
+  "Boat Interior Detail": { name: "Marine Express",        tagline: "Maintenance detail — decontamination wash, UV vinyl protect & window clarity" },
+  "Boat Exterior Detail": { name: "The Deep Reset",        tagline: "Flagship deep clean — steam sanitation, hot-water extraction & marine wax" },
+  "Full Boat Detail":     { name: "Showroom Restoration",  tagline: "Total restoration — everything in Deep Reset + machine polish & gel coat gloss" },
+};
 
 const VEHICLE_SIZES: {
   id: VehicleSizeSlug;
@@ -302,7 +324,11 @@ async function getAvailableSlots(
   
   const bookedBlocks = await Promise.all((existingBookings ?? []).map(async (b) => {
     const start = await timeToMinutes(b.booking_time);
-    return { start, end: start + 180 };
+    const dur = getDurationForService(
+      b.service_name ?? "",
+      (b.vehicle_size as VehicleSizeSlug) ?? "compact"
+    );
+    return { start, end: start + dur };
   }));
 
   const results = await Promise.all(allSlots.map(async (slot) => {
@@ -552,6 +578,10 @@ export interface DraftBooking {
     discountPercentage: number | null;
   } | null;
   pointsToRedeemInput: number;
+  /** Footage (boat/RV length in feet) */
+  boatLength?: number | "";
+  /** IDs of selected add-ons to restore */
+  selectedAddonIds?: string[];
 }
 
 const DRAFT_STORAGE_KEY = "draftBooking";
@@ -864,6 +894,16 @@ export function BookingSection({
     setCouponCode(initialDraft.couponCode);
     setAppliedCoupon(initialDraft.appliedCoupon);
     setPointsToRedeemInput(initialDraft.pointsToRedeemInput);
+    // Restore boat/RV footage
+    if (initialDraft.boatLength !== undefined) {
+      setBoatLength(initialDraft.boatLength);
+    }
+    // Restore add-ons using the service we just found
+    if (initialDraft.selectedAddonIds?.length && service) {
+      const available = getAddonsForService(service.name);
+      const toRestore = available.filter((a) => initialDraft.selectedAddonIds!.includes(a.id));
+      setSelectedAddons(toRestore);
+    }
     setStep(3);
     setStepDirection(1);
     appliedDraftRef.current = true;
@@ -1204,6 +1244,8 @@ export function BookingSection({
       couponCode,
       appliedCoupon,
       pointsToRedeemInput,
+      boatLength: isFootageService(selectedService.name) ? boatLength : undefined,
+      selectedAddonIds: selectedAddons.map((a) => a.id),
     };
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -1219,7 +1261,11 @@ export function BookingSection({
     setStripeError(null);
     setBookingResult(null);
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      // Use full page path so Stripe bounces back to the correct page (boat, RV, or home)
+      const pageBase =
+        typeof window !== "undefined"
+          ? window.location.origin + window.location.pathname.replace(/\/$/, "")
+          : "";
       const draft: DraftBooking = {
         serviceId: selectedService.id,
         vehicleSize: (isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
@@ -1238,6 +1284,8 @@ export function BookingSection({
         couponCode,
         appliedCoupon,
         pointsToRedeemInput,
+        boatLength: isFootageService(selectedService.name) ? boatLength : undefined,
+        selectedAddonIds: selectedAddons.map((a) => a.id),
       };
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -1245,8 +1293,8 @@ export function BookingSection({
       const result = await bookDetailing({
         ...buildPayload(),
         paymentMethod: "pay_now",
-        successUrl: origin,
-        cancelUrl: origin,
+        successUrl: pageBase,
+        cancelUrl: pageBase,
       });
       if (!result.success) {
         setStripeError(result.error);
@@ -1470,7 +1518,7 @@ export function BookingSection({
                   {/* Service name + price */}
                   <div>
                     <h2 className="text-2xl font-black text-white leading-tight">
-                      {selectedService.name}
+                      {BOAT_DISPLAY_NAMES[selectedService.name]?.name ?? selectedService.name}
                     </h2>
                     <p className="text-[#D4AF37] font-bold mt-1.5 text-base">
                       {isFootageService(selectedService.name) ? (
@@ -1633,30 +1681,32 @@ export function BookingSection({
                   return (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <Waves size={14} className="text-blue-400" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Marine Detailing</h3>
+                        <Waves size={14} className="text-[#D4AF37]" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Marine Detailing — Waterline Up</h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {marine.map((service) => (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {marine.map((service) => {
+                          const display = BOAT_DISPLAY_NAMES[service.name];
+                          const rate    = BOAT_RATE[service.name] ?? service.price_small;
+                          return (
                           <button
                             key={service.id}
                             type="button"
                             onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-blue-500/30 hover:text-zinc-200 hover:bg-blue-500/[0.04] active:scale-[0.99] group"
+                            className="p-4 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-[#D4AF37]/[0.05] active:scale-[0.99] group"
                           >
-                            <div className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors">
-                              {service.name}
+                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                              {display ? display.name : service.name}
                             </div>
-                            <div className="text-[11px] text-blue-400/80 font-medium mt-0.5">
-                              ${BOAT_RATE[service.name] ?? service.price_small}/ft
+                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
+                              ${rate}/ft
                             </div>
-                            {service.description && (
-                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
-                                {service.description}
-                              </div>
-                            )}
+                            <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                              {display ? display.tagline : service.description}
+                            </div>
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -1725,7 +1775,7 @@ export function BookingSection({
                 </h2>
                 {selectedService ? (
                   <p className="text-sm text-[#D4AF37] mt-0.5 font-medium">
-                    {selectedService.name}
+                    {BOAT_DISPLAY_NAMES[selectedService.name]?.name ?? selectedService.name}
                     {computedPrice != null && (
                       <span className="text-white font-semibold">
                         {" "}
@@ -1803,9 +1853,9 @@ export function BookingSection({
                         const isRV = isRVService(selectedService.name);
                         const minFt = FOOTAGE_MIN_FEET[selectedService.name] ?? 15;
                         const rate  = FOOTAGE_RATE[selectedService.name] ?? selectedService.price_small;
-                        const accentColor = isRV ? "text-green-400" : "text-blue-400";
-                        const borderColor = isRV ? "border-green-500/15 bg-green-500/5" : "border-blue-500/15 bg-blue-500/5";
-                        const textColor   = isRV ? "text-green-300/80" : "text-blue-300/80";
+                        const accentColor = isRV ? "text-green-400" : "text-[#D4AF37]";
+                        const borderColor = isRV ? "border-green-500/15 bg-green-500/5" : "border-[#D4AF37]/15 bg-[#D4AF37]/[0.03]";
+                        const textColor   = isRV ? "text-green-300/80" : "text-zinc-400";
                         const makePlaceholder  = isRV ? "Winnebago" : "Sea Ray";
                         const modelPlaceholder = isRV ? "Minnie Winnie" : "Sundancer 260";
                         const sizeRange = isRV ? "most RVs 20–45 ft" : "most boats 15–40 ft";
@@ -1847,25 +1897,52 @@ export function BookingSection({
                               </div>
                             </div>
 
-                            {/* Footage input */}
+                            {/* Footage input — touch-friendly stepper */}
                             <div>
-                              <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                              <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-3">
                                 {isRV ? "RV Length (feet)" : "Boat Length (feet)"}
                               </label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min={minFt}
-                                  max={maxFt}
-                                  value={boatLength}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setBoatLength(val === "" ? "" : Math.max(1, parseInt(val, 10) || 1));
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = typeof boatLength === "number" ? boatLength : minFt;
+                                    setBoatLength(Math.max(minFt, cur - 1));
                                   }}
-                                  placeholder={`e.g. ${minFt + 5}`}
-                                  className="w-full text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-4 outline-none transition-all placeholder:text-zinc-600 text-2xl font-black tabular-nums"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-medium pointer-events-none">ft</span>
+                                  disabled={typeof boatLength === "number" && boatLength <= minFt}
+                                  className="w-12 h-12 rounded-xl border border-white/10 bg-zinc-900/60 flex items-center justify-center text-zinc-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all shrink-0"
+                                  aria-label="Decrease length"
+                                >
+                                  <ChevronLeft size={18} />
+                                </button>
+                                <div className="relative flex-1">
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={minFt}
+                                    max={maxFt}
+                                    value={boatLength}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setBoatLength(val === "" ? "" : Math.max(1, parseInt(val, 10) || 1));
+                                    }}
+                                    placeholder={`e.g. ${minFt + 5}`}
+                                    className="w-full text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-4 outline-none transition-all placeholder:text-zinc-600 text-2xl font-black tabular-nums min-h-[52px]"
+                                  />
+                                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-medium pointer-events-none">ft</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = typeof boatLength === "number" ? boatLength : minFt;
+                                    setBoatLength(Math.min(maxFt, cur + 1));
+                                  }}
+                                  disabled={typeof boatLength === "number" && boatLength >= maxFt}
+                                  className="w-12 h-12 rounded-xl border border-white/10 bg-zinc-900/60 flex items-center justify-center text-zinc-300 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all shrink-0"
+                                  aria-label="Increase length"
+                                >
+                                  <ChevronRight size={18} />
+                                </button>
                               </div>
                               <p className="text-[11px] text-zinc-600 mt-2 text-center">
                                 Minimum {minFt} ft · {sizeRange}
@@ -2004,12 +2081,15 @@ export function BookingSection({
                         const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
                         const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
                         const note       = getIncludedNote(selectedService?.name ?? "");
+                        const isMarine = !!(selectedService && BOAT_DISPLAY_NAMES[selectedService.name]);
+                        const isRV     = !!(selectedService && isRVService(selectedService.name));
+                        if (!standAlone.length && !floorOpts.length) return null;
                         return (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
                               <Sparkles size={14} className="text-[#D4AF37]" />
                               <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
-                                Enhance Your Detail
+                                {isMarine ? "Marine Specialist Add-ons" : isRV ? "RV Specialist Add-ons" : "Enhance Your Detail"}
                               </label>
                             </div>
 

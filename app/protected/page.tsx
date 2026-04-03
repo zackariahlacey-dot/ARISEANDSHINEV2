@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowLeft, Gift, Star } from "lucide-react";
+import { ArrowLeft, Gift, Star, Crown, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getRecentPointTransactions } from "@/app/actions/getRecentPointTransactions";
@@ -148,6 +148,26 @@ async function Dashboard() {
 
         {/* ── Refer & Earn Card ────────────────────────────────────────────── */}
         <ReferAndEarnCard referralCode={referralCode} />
+
+        {/* ── Maintenance Club CTA ─────────────────────────────────────────── */}
+        <Link
+          href="/maintenance-club"
+          className="group relative mt-5 flex items-center gap-4 rounded-2xl border border-[#D4AF37]/20 bg-zinc-900/60 backdrop-blur-sm p-5 transition-all duration-200 hover:border-[#D4AF37]/40 hover:bg-zinc-900/80"
+        >
+          <div className="shrink-0 w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
+            <Crown size={20} className="text-[#D4AF37]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold tracking-[0.16em] uppercase text-[#D4AF37] mb-0.5">
+              Member Exclusive
+            </p>
+            <p className="text-sm font-bold text-zinc-100">Maintenance Club</p>
+            <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">
+              Monthly plans starting at $89/mo — keep your vehicle in showroom condition year-round.
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-zinc-600 shrink-0 group-hover:text-[#D4AF37] transition-colors" />
+        </Link>
 
         {/* Back to book CTA */}
         <div className="mt-6 text-center">

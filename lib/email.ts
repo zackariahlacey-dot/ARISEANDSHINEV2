@@ -1113,11 +1113,11 @@ export async function sendBookingEmails(
         })
       : Promise.resolve(null),
 
-    // Owner notification: customer name, phone, car details, scheduled date
+    // Owner notification: full booking details
     resend.emails.send({
       from: FROM_ADDRESS,
       to: OWNER_EMAIL,
-      subject: `New Booking Received: ${data.customerName} - ${data.serviceName}`,
+      subject: `New Booking: ${data.customerName} — ${data.serviceName} on ${formattedDate}`,
       html: getAdminBookingAlertHtml({
         customerName: data.customerName,
         customerPhone: data.customerPhone,
@@ -1126,10 +1126,14 @@ export async function sendBookingEmails(
         vehicleYear: data.vehicleYear,
         vehicleMake: data.vehicleMake,
         vehicleModel: data.vehicleModel,
+        vehicleSize: data.vehicleSize,
         serviceName: data.serviceName,
         bookingDate: formattedDate,
         bookingTime: data.bookingTime,
         totalPrice: data.servicePrice,
+        paymentMethod: data.paymentMethod,
+        distanceMiles: data.distanceMiles,
+        notes: data.notes,
       }),
     }),
   ]);
@@ -1144,4 +1148,71 @@ export async function sendBookingEmails(
       console.error(`[email] ${label} resend error:`, result.value.error);
     }
   }
+}
+
+// ─── Price Updated Notification ───────────────────────────────────────────────
+export async function sendPriceUpdatedEmail(data: {
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  bookingDate: string;
+  bookingTime: string;
+  oldPrice: number;
+  newPrice: number;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) return;
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const firstName = (data.customerName.trim().split(/\s+/)[0] ?? "there");
+  let formattedDate = data.bookingDate;
+  try {
+    const d = new Date(data.bookingDate + "T12:00:00");
+    formattedDate = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  } catch {}
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Price Update — Arise & Shine VT</title></head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td align="center" style="padding:40px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+        <tr><td style="background:#0a0a0a;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
+          <span style="color:#f59e0b;font-size:22px;font-weight:900;letter-spacing:-0.5px;">Arise &amp; Shine VT</span>
+        </td></tr>
+        <tr><td style="background:#111;padding:32px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+          <h1 style="color:#fff;font-size:22px;font-weight:900;margin:0 0 6px;">Price Updated</h1>
+          <p style="color:#999;font-size:14px;margin:0;">Your booking price has been adjusted</p>
+        </td></tr>
+        <tr><td style="background:#fff;padding:36px 40px;border-radius:0 0 16px 16px;">
+          <p style="font-size:15px;font-weight:700;color:#111;margin:0 0 6px;">Hi ${firstName},</p>
+          <p style="font-size:14px;color:#555;margin:0 0 24px;line-height:1.7;">
+            We wanted to let you know that the price for your <strong>${data.serviceName}</strong> appointment on
+            <strong>${formattedDate}</strong> has been updated.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9f9f9;border-radius:10px;padding:20px;margin-bottom:24px;">
+            <tr>
+              <td style="font-size:13px;color:#888;padding:6px 0;">Previous price</td>
+              <td align="right" style="font-size:13px;color:#888;padding:6px 0;text-decoration:line-through;">$${data.oldPrice.toFixed(0)}</td>
+            </tr>
+            <tr>
+              <td style="font-size:15px;font-weight:900;color:#111;padding:6px 0;">New price</td>
+              <td align="right" style="font-size:18px;font-weight:900;color:#f59e0b;padding:6px 0;">$${data.newPrice.toFixed(0)}</td>
+            </tr>
+          </table>
+          <p style="font-size:13px;color:#888;margin:0;line-height:1.6;">
+            Questions? Reply to this email or call/text us anytime. We appreciate your business!
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.customerEmail,
+    replyTo: REPLY_TO,
+    subject: `Price Update — ${data.serviceName} on ${formattedDate}`,
+    html,
+  }).catch(e => console.error("[email] sendPriceUpdatedEmail error:", e));
 }

@@ -46,18 +46,31 @@ export async function updateSession(request: NextRequest) {
   // with the Supabase client, your users may be randomly logged out.
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
+  const pathname = request.nextUrl.pathname;
+
+  // ── Admin route guard: only zackariahlacey@gmail.com ──────────────────────
+  if (pathname.startsWith("/admin")) {
+    const email = (user?.email as string | undefined)?.toLowerCase();
+    if (!user || email !== "zackariahlacey@gmail.com") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
 
   if (
-    request.nextUrl.pathname !== "/" &&
+    pathname !== "/" &&
     !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/services") &&
-    !request.nextUrl.pathname.startsWith("/detailing") &&
-    !request.nextUrl.pathname.startsWith("/paint-correction") &&
-    !request.nextUrl.pathname.startsWith("/maintenance-club") &&
-    !request.nextUrl.pathname.startsWith("/boat-detailing") &&
-    !request.nextUrl.pathname.startsWith("/rv-detailing")
+    !pathname.startsWith("/login") &&
+    !pathname.startsWith("/auth") &&
+    !pathname.startsWith("/services") &&
+    !pathname.startsWith("/detailing") &&
+    !pathname.startsWith("/paint-correction") &&
+    !pathname.startsWith("/maintenance-club") &&
+    !pathname.startsWith("/boat-detailing") &&
+    !pathname.startsWith("/rv-detailing")
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();

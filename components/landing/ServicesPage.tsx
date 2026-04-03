@@ -140,7 +140,6 @@ export function ServicesPage({ services }: { services: Service[] }) {
       .sort((a, b) => DETAILING_ORDER.indexOf(a.name) - DETAILING_ORDER.indexOf(b.name)),
     [services]
   );
-  const monthlyPlanServices = useMemo(() => services.filter((s) => s.is_subscription), [services]);
 
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -171,7 +170,6 @@ export function ServicesPage({ services }: { services: Service[] }) {
     { label: "Auto Detailing", id: "auto-detailing" },
     { label: "Ultimate Packages", id: "ultimate-packages" },
     { label: "Paint Correction", id: "paint-correction" },
-    { label: "Maintenance Plan", id: "maintenance-plan" },
   ];
 
   return (
@@ -281,29 +279,6 @@ export function ServicesPage({ services }: { services: Service[] }) {
           </div>
         </div>
       </motion.section>
-
-      {/* ── 4. Maintenance Plan ── */}
-      {monthlyPlanServices.length > 0 && (
-        <motion.section id="maintenance-plan" initial="hidden" whileInView="visible" viewport={viewport} variants={sectionVariants}
-          className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#D4AF37]/5 blur-[100px] rounded-full pointer-events-none" />
-          <div className="w-full max-w-7xl mx-auto relative z-10">
-            <SectionHeader eyebrow="Member Exclusive" title="Maintenance Plan" subtitle="Recurring monthly plans that keep your vehicle in showroom condition — automatically." />
-            <div className="mt-4 inline-flex items-center gap-2 bg-zinc-900/80 border border-white/5 px-4 py-2.5 rounded-2xl text-zinc-400 text-xs font-medium mx-auto flex-wrap justify-center">
-              <ShieldCheck size={14} className="text-[#D4AF37]" />
-              <span className="text-white/90 font-bold">$75–$100 One-Time Setup Fee</span>
-              <span className="text-zinc-700">•</span>
-              <span>Includes Deep Clean on first visit</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10 md:mt-14">
-              {monthlyPlanServices.map((plan) => (
-                <MaintenanceCard key={plan.id} plan={plan} onBook={() => openBooking("club", plan)} />
-              ))}
-            </div>
-          </div>
-        </motion.section>
-      )}
 
       {/* ── Booking Section ── */}
       <div id="booking-section" className="px-4 sm:px-6 lg:px-8 pb-16">

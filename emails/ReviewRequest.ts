@@ -14,12 +14,32 @@ const esc = (s: string | number): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+type MaintenancePlan = {
+  planName: string;
+  price: string;
+  slug: "interior" | "full";
+};
+
+function getMaintenancePlan(serviceName?: string): MaintenancePlan | null {
+  if (!serviceName) return null;
+  const name = serviceName.toLowerCase();
+  // Only upsell for straight interior or full detail — not boat/RV/paint/ultimate
+  if (name.includes("interior detail") && !name.includes("boat") && !name.includes("rv")) {
+    return { planName: "Interior Maintenance Plan", price: "$75/mo", slug: "interior" };
+  }
+  if (name.includes("full detail") && !name.includes("boat") && !name.includes("rv")) {
+    return { planName: "Full Detail Maintenance Plan", price: "$125/mo", slug: "full" };
+  }
+  return null;
+}
+
 export function getReviewRequestHtml(
   customerName: string,
   serviceName?: string
 ): string {
   const firstName = customerName.trim().split(/\s+/)[0] || "there";
   const service = serviceName ? esc(serviceName) : "your detail";
+  const plan = getMaintenancePlan(serviceName);
 
   return `
 <!DOCTYPE html>
@@ -145,6 +165,75 @@ export function getReviewRequestHtml(
               </p>
             </td>
           </tr>
+
+          ${plan ? `
+          <!-- Maintenance Club upsell (Interior or Full Detail customers only) -->
+          <tr>
+            <td style="padding:32px 40px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+                style="background-color:#0a0a0c;border-radius:12px;border:1px solid #1f1f23;overflow:hidden;">
+                <tr>
+                  <td style="padding:0;line-height:0;font-size:0;">
+                    <div style="height:2px;background:linear-gradient(90deg,transparent 0%,#d4af37 40%,#f3e5ab 50%,#d4af37 60%,transparent 100%);opacity:0.6;"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:24px 24px 8px;">
+                    <p style="margin:0 0 4px;font-size:9px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#d4af37;">
+                      Member Exclusive
+                    </p>
+                    <p style="margin:0;font-size:17px;font-weight:900;color:#fafafa;line-height:1.3;letter-spacing:-0.2px;">
+                      Keep that shine going — every month.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 24px 0;">
+                    <p style="margin:0;font-size:13px;color:#a1a1aa;line-height:1.7;">
+                      Since you booked a <strong style="color:#fafafa;">${esc(serviceName ?? "")}</strong>, you qualify for our
+                      <strong style="color:#fafafa;">${esc(plan.planName)}</strong> — the same service,
+                      on a recurring schedule so your vehicle stays in showroom condition year-round.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 24px 0;">
+                    <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                      <tr>
+                        <td style="font-size:12px;color:#71717a;vertical-align:top;line-height:1.9;">
+                          &#10003;&nbsp;<span style="color:#a1a1aa;">Only <strong style="color:#fafafa;">${esc(plan.price)}</strong> — billed monthly</span><br/>
+                          &#10003;&nbsp;<span style="color:#a1a1aa;">Deep-clean included on first visit</span><br/>
+                          &#10003;&nbsp;<span style="color:#a1a1aa;">We come to you, no scheduling stress</span><br/>
+                          &#10003;&nbsp;<span style="color:#a1a1aa;">Cancel any time</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:20px 24px 24px;">
+                    <table border="0" cellspacing="0" cellpadding="0" role="presentation">
+                      <tr>
+                        <td style="background-color:#18181b;border-radius:8px;border:1px solid rgba(212,175,55,0.35);">
+                          <a
+                            href="https://www.ariseandshinevt.com/maintenance-club"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style="display:inline-block;padding:12px 24px;font-size:13px;font-weight:700;color:#d4af37;text-decoration:none;letter-spacing:0.06em;line-height:1;">
+                            Join The Maintenance Club &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Spacer after upsell -->
+          <tr><td style="height:32px;"></td></tr>
+          ` : ""}
 
           <!-- Divider -->
           <tr>
