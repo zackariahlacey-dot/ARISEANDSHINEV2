@@ -1700,39 +1700,7 @@ export function BookingSection({
                   );
                 })()}
 
-                {/* 5. Monthly Maintenance Plans */}
-                {(() => {
-                  const subs = services.filter(s => s.is_subscription);
-                  if (!subs.length) return null;
-                  return (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Crown size={14} className="text-[#D4AF37]" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Maintenance Club</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {subs.map((service) => (
-                          <button
-                            key={service.id}
-                            type="button"
-                            onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-amber-500/10 bg-amber-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-amber-500/[0.04] active:scale-[0.99] group"
-                          >
-                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
-                              {service.name}
-                            </div>
-                            <div className="text-[11px] text-[#D4AF37] font-bold mt-0.5 uppercase tracking-tighter">
-                              ${service.price_small} / Month
-                            </div>
-                            <div className="text-[10px] text-zinc-500 mt-1">
-                              +${getMaintenanceSetupFee(service.name)} Initial Setup Fee
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
+                {/* Maintenance club is now invite-only via email after your first full detail */}
               </div>
 
               <button

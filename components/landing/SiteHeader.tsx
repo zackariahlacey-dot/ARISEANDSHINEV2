@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Phone, Menu, X, ChevronDown, Sparkles, Shield, Crown, Anchor, Truck } from "lucide-react";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
+import { BookingFlowSelector } from "./BookingFlowSelector";
 
 const SERVICE_LINKS = [
   { href: "/detailing", label: "Auto Detailing", icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
@@ -24,7 +25,10 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
+  const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleBookNow = onBookNow ?? (() => setFlowSelectorOpen(true));
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 50);
@@ -116,23 +120,13 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
               <Phone className="w-4 h-4" />802-585-5563
             </a>
             <LoyaltyHeaderButton />
-            {onBookNow && (
-              <button
-                type="button"
-                onClick={onBookNow}
-                className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 overflow-hidden"
-              >
-                <span className="relative z-[1]">Book Now</span>
-              </button>
-            )}
-            {!onBookNow && (
-              <Link
-                href="/detailing"
-                className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 overflow-hidden"
-              >
-                <span className="relative z-[1]">Book Now</span>
-              </Link>
-            )}
+            <button
+              type="button"
+              onClick={handleBookNow}
+              className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 overflow-hidden"
+            >
+              <span className="relative z-[1]">Book Now</span>
+            </button>
             {/* Mobile: call + hamburger */}
             <a href="tel:8025855563" className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors" aria-label="Call">
               <Phone className="w-4 h-4" />
@@ -181,15 +175,13 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
           <div className="w-16 h-px bg-white/10 my-4" />
           <LoyaltyHeaderButton />
 
-          {onBookNow ? (
-            <button onClick={() => { closeMobile(); onBookNow(); }} className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black transition-all duration-500 mt-3">
-              <span className="relative z-[1]">Book Your Detail</span>
-            </button>
-          ) : (
-            <Link href="/detailing" onClick={closeMobile} className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black transition-all duration-500 mt-3 text-center block">
-              <span className="relative z-[1]">Book Your Detail</span>
-            </Link>
-          )}
+          <button
+            type="button"
+            onClick={() => { closeMobile(); handleBookNow(); }}
+            className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black transition-all duration-500 mt-3"
+          >
+            <span className="relative z-[1]">Book Your Detail</span>
+          </button>
 
           <a href="tel:8025855563" onClick={closeMobile} className="flex items-center gap-2 text-zinc-400 hover:text-[#D4AF37] text-sm font-medium mt-3">
             <Phone className="w-4 h-4" />Call 802-585-5563
@@ -199,6 +191,8 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
         {/* Subtle gold glow */}
         <div className="pointer-events-none absolute bottom-0 inset-x-0 h-48" style={{ background: "radial-gradient(ellipse 60% 100% at 50% 100%, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
       </div>
+
+      <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
     </>
   );
 }

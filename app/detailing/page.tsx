@@ -37,9 +37,12 @@ async function DataProvider() {
     .from("services")
     .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription")
     .order("price_small", { ascending: true });
-  const DETAILING_NAMES = ["Interior Detail", "Exterior Detail", "Full Detail"];
+  const VEHICLE_NAMES = [
+    "Interior Detail", "Exterior Detail", "Full Detail",
+    "Ultimate Interior Reset + Wash", "Ultimate Showroom Restoration",
+  ];
   return <DetailingPage services={(services ?? []).filter((s: Service) =>
-    !s.is_subscription && DETAILING_NAMES.includes(s.name)
+    !s.is_subscription && VEHICLE_NAMES.includes(s.name)
   )} />;
 }
 

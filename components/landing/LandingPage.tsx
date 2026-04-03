@@ -34,6 +34,7 @@ import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
+import { BookingFlowSelector } from "./BookingFlowSelector";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -141,6 +142,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
+  const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
@@ -535,7 +537,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           <LoyaltyHeaderButton />
           <button
             type="button"
-            onClick={() => openBooking()}
+            onClick={() => setFlowSelectorOpen(true)}
             className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden"
           >
             <span className="relative z-[1]">Book Now</span>
@@ -686,7 +688,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           {/* Full-width Book Now CTA */}
           <button
-            onClick={() => { closeMobileMenu(); openBooking(); }}
+            onClick={() => { closeMobileMenu(); setFlowSelectorOpen(true); }}
             className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
           >
             <span className="relative z-[1]">Book Your Detail</span>
@@ -795,7 +797,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* CTAs — content-fit width, centered, side-by-side on desktop */}
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
             <button
-              onClick={() => openBooking()}
+              onClick={() => setFlowSelectorOpen(true)}
               className="btn-primary-gold-shimmer h-12 px-8 rounded-xl font-semibold tracking-wide w-fit min-w-[180px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
             >
               <span className="relative z-[1]">Book Your Detail</span>
@@ -1762,6 +1764,8 @@ export function LandingPage({ services }: { services: Service[] }) {
         onClose={handleCloseSuccessModal}
         data={successModalData}
       />
+
+      <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
     </div>
   );
 }

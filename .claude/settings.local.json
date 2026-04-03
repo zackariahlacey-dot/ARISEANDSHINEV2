@@ -5,7 +5,9 @@
       "Bash(find C:UsersZackARISEANDSHINEV2appactions -name *.ts -type f)",
       "Bash(grep:*)",
       "Bash(curl:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

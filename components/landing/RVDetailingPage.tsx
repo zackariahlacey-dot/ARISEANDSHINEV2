@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   MapPin, Sparkles, CheckCircle, Star, ShieldCheck,
@@ -167,10 +167,15 @@ function PriceCalculator({ services }: { services: Service[] }) {
 
 export function RVDetailingPage({ services }: { services: Service[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [successModal, setSuccessModal] = useState<SuccessModalData | null>(null);
   const bookingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchParams.get("book") === "1") setBookingOpen(true);
+  }, [searchParams]);
 
   // Merge static display data with DB services
   const displayServices = RV_SERVICES_STATIC.map((s) => ({

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   MapPin, Sparkles, Crown, CheckCircle, Star, Leaf, ShieldCheck,
@@ -80,6 +80,7 @@ const vp = { once: true, margin: "-80px" };
 
 export function DetailingPage({ services }: { services: Service[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -87,7 +88,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    if (searchParams.get("book") === "1") setBookingOpen(true);
+  }, [searchParams]);
 
   const orderedServices = useMemo(() =>
     [...services].sort((a, b) => {
@@ -102,11 +106,12 @@ export function DetailingPage({ services }: { services: Service[] }) {
     setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   }, []);
 
-  const openUltimateBooking = useCallback(() => {
-    setSelectedService(null);
+  const openUltimateBooking = useCallback((cardName: string) => {
+    const dbService = services.find(s => s.name === cardName) ?? null;
+    setSelectedService(dbService);
     setBookingOpen(true);
     setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-  }, []);
+  }, [services]);
 
   const handleSuccess = useCallback((data: SuccessModalData) => {
     setBookingOpen(false);
@@ -254,7 +259,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {ULTIMATE_CARDS.map((card) => (
-              <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} />
+              <UltimateServiceCard key={card.name} {...card} onBook={() => openUltimateBooking(card.name)} />
             ))}
           </div>
 

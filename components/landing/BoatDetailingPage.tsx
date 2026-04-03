@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   MapPin, Sparkles, CheckCircle, Star, ShieldCheck,
@@ -157,11 +157,16 @@ function PriceCalculator() {
 // ── Main Component ────────────────────────────────────────────────────────────
 export function BoatDetailingPage({ services }: { services: Service[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
   const bookingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchParams.get("book") === "1") setBookingOpen(true);
+  }, [searchParams]);
 
   const openBooking = useCallback((svc?: Service) => {
     if (svc) setSelectedService(svc);
