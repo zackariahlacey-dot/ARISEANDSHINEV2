@@ -35,6 +35,7 @@ import {
   type CouponResult,
 } from "@/app/actions/validateCoupon";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
+import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import {
   filterMakesByQuery,
@@ -57,14 +58,23 @@ function getMaintenanceSetupFee(serviceName: string): number {
 }
 
 const ALL_ADD_ONS = [
-  { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay" },
+  // ── Vehicle / Standard ────────────────────────────────────────────────────
+  { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
   { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
-  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 40,  desc: "Remove embedded contaminants for a glass-smooth finish" },
+  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 40,  desc: "Remove embedded contaminants for a glass-smooth finish before wax or sealant." },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 30,  desc: "Deep extraction of embedded pet hair from seats, carpet & cargo area. Applied upon inspection — only charged if heavy accumulation is present." },
+  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
+  { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
+  { id: "odor_bomb",         label: "Odor Eliminator Treatment",             price: 40,  desc: "Activated neutralizer bombs combat smoke, food & mild pet odors throughout the cabin." },
+  // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
+  { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 425, desc: "Complete paint correction & protection: machine polish removes swirls & oxidation, then a professional 2-year ceramic coat is applied. Requires a full-day appointment." },
+  { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
+  // ── Marine ───────────────────────────────────────────────────────────────
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Window Clarity",      price: 100, desc: "Haze/scratch removal + UV sealant on all enclosure windows" },
   { id: "marine_engine_bay", label: "Marine Engine Bay Deep Clean",          price: 150, desc: "Full degreasing and detail of engine compartment & bilge" },
-  // RV-specific add-ons
+  // ── RV ───────────────────────────────────────────────────────────────────
   { id: "rv_awning",         label: "Awning Deep Clean",                     price: 60,  desc: "Remove mold, mildew & road grime from awning fabric, arms & housing. UV protectant applied." },
   { id: "rv_slide_seal",     label: "Slide-Out Seal Conditioning",           price: 50,  desc: "Condition & lubricate all rubber slide seals. Prevents cracking, water intrusion & leaks." },
   { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",              price: 80,  desc: "UV-protective EPDM/TPO sealant applied to roof membrane. Extends life & prevents seam leaks." },
@@ -74,43 +84,54 @@ const ALL_ADD_ONS = [
 
 type AddonItem = typeof ALL_ADD_ONS[number];
 
-const FLOOR_ADDON_IDS = ["floor_1", "floor_2", "floor_all"];
+const FLOOR_ADDON_IDS    = ["floor_1", "floor_2", "floor_all"];
+const MARINE_ADDON_IDS   = ["marine_isinglass", "marine_engine_bay"];
+const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
+/** High-ticket upgrades for Ultimate packages — no shampoo or clay (already included) */
+const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore", "ozone_treatment"];
+/** Standard vehicle add-ons — never includes marine or RV items */
+const VEHICLE_ADDON_IDS  = ["engine_bay", "floor_1", "floor_2", "floor_all", "clay_bar", "pet_hair", "headlight_restore", "tar_bug", "odor_bomb"];
+/** Add-ons that require a full-day appointment */
+export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
+export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
 
 /**
  * Returns add-ons relevant to a given service.
- * Hides options that are redundant (already included) or irrelevant (wrong scope).
+ * Each service category only ever sees its own add-ons — no cross-category bleed.
  */
 function getAddonsForService(serviceName: string): readonly AddonItem[] {
   const n = serviceName.toLowerCase();
 
-  // Boat services: marine-specific flat-fee add-ons only
+  // ── Marine / Boat ────────────────────────────────────────────────────────
   if (n.includes("boat")) {
-    return ALL_ADD_ONS.filter(a => a.id === "marine_isinglass" || a.id === "marine_engine_bay");
+    return ALL_ADD_ONS.filter(a => MARINE_ADDON_IDS.includes(a.id));
   }
-  // RV services: RV-specific add-ons
+
+  // ── RV ───────────────────────────────────────────────────────────────────
   if (n.includes("rv") || n.includes("motorhome")) {
-    const RV_ADDON_IDS = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
     return ALL_ADD_ONS.filter(a => RV_ADDON_IDS.includes(a.id));
   }
 
-  // Paint correction: exterior-only work; clay bar already part of the process
+  // ── Vehicle services below — never include marine or RV add-ons ──────────
+
+  // Paint correction: clay bar already part of the process; exterior-only scope
   if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage")) {
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay");
   }
 
-  // Ultimate Showroom: clay bar & decontamination already included; has full interior
-  if (n.includes("ultimate showroom")) {
-    return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
+  // Ultimate packages: high-ticket upgrades only — shampoo & clay bar already included
+  if (n.includes("ultimate")) {
+    return ALL_ADD_ONS.filter(a => ULTIMATE_ADDON_IDS.includes(a.id));
   }
 
-  // Exterior Detail: no floorboard shampoo (exterior only)
+  // Exterior Detail: no floorboard shampoo (exterior-only scope)
   if (n.includes("exterior") && !n.includes("full")) {
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || a.id === "clay_bar");
   }
 
-  // Interior Detail (standalone, not maintenance): no clay bar (exterior treatment)
-  if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance") && !n.includes("ultimate")) {
-    return ALL_ADD_ONS.filter(a => a.id !== "clay_bar");
+  // Interior Detail (standalone): no clay bar (exterior treatment)
+  if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
+    return ALL_ADD_ONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id) && a.id !== "clay_bar");
   }
 
   // Maintenance plans: engine bay + floor shampoo (quick recurring visits)
@@ -118,8 +139,8 @@ function getAddonsForService(serviceName: string): readonly AddonItem[] {
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
   }
 
-  // Ultimate Interior Reset, Full Detail, default → all add-ons
-  return ALL_ADD_ONS;
+  // Full Detail and anything else → all vehicle add-ons only
+  return ALL_ADD_ONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
 }
 
 /**
@@ -127,7 +148,7 @@ function getAddonsForService(serviceName: string): readonly AddonItem[] {
  */
 function getIncludedNote(serviceName: string): string | null {
   const n = serviceName.toLowerCase();
-  if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage") || n.includes("ultimate showroom")) {
+  if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage") || n.includes("ultimate interior + exterior") || n.includes("ultimate showroom")) {
     return "Clay Bar Treatment is already included in this service.";
   }
   return null;
@@ -186,6 +207,17 @@ const FOOTAGE_MIN_FEET: Record<string, number> = {
 // backward-compat aliases used in a few inline JSX references
 const BOAT_RATE = FOOTAGE_RATE;
 const BOAT_MIN_FEET = 15;
+
+/**
+ * Frontend overrides for service descriptions shown in the booking confirm screen.
+ * Keeps the UX accurate regardless of what's stored in the database.
+ */
+const SERVICE_DESCRIPTION_OVERRIDES: Record<string, string> = {
+  "Ultimate Interior Reset":
+    "Our deepest interior clean — hot water extraction, steam sanitation, full shampoo, road salt neutralization, and a 6-month ceramic sealant coat. No exterior paint work.",
+  "Ultimate Interior + Exterior Reset":
+    "Showroom quality inside and out. Full interior deep clean combined with a complete exterior decontamination wash, clay bar, iron & fallout removal, ceramic sealant application, and all trim/glass dressing. No machine polishing.",
+};
 
 /** Maps DB service names → Waterline Up marketing display names */
 const BOAT_DISPLAY_NAMES: Record<string, { name: string; tagline: string }> = {
@@ -312,15 +344,22 @@ function getDurationForService(serviceName: string, vehicleSize: VehicleSizeSlug
   return service[vehicleSize] ?? 120;
 }
 
-/** Slots that fit before closing and do not overlap existing bookings */
+/**
+ * How many minutes a booking is allowed to run past the scheduled closing time.
+ * This lets the last slot of the day be accepted even if the job finishes slightly late.
+ */
+const OVERTIME_GRACE_MINS = 60;
+
+/** Slots that fit before closing (+ overtime grace) and do not overlap existing bookings */
 async function getAvailableSlots(
   serviceName: string,
   vehicleSize: VehicleSizeSlug,
   existingBookings: BookingOnDate[] | null,
   allSlots: { time: string; period: string }[],
-  closingMinutes: number = 1080 // Default to 6:00 PM if not provided
+  closingMinutes: number = 1080, // Default to 6:00 PM if not provided
+  durationOverride?: number
 ): Promise<{ time: string; period: string }[]> {
-  const duration = getDurationForService(serviceName, vehicleSize);
+  const duration = durationOverride ?? getDurationForService(serviceName, vehicleSize);
   
   const bookedBlocks = await Promise.all((existingBookings ?? []).map(async (b) => {
     const start = await timeToMinutes(b.booking_time);
@@ -334,7 +373,8 @@ async function getAvailableSlots(
   const results = await Promise.all(allSlots.map(async (slot) => {
     const start = await timeToMinutes(slot.time);
     const end = start + duration;
-    if (end > closingMinutes) return null;
+    // Allow the job to run up to OVERTIME_GRACE_MINS past closing
+    if (end > closingMinutes + OVERTIME_GRACE_MINS) return null;
     const overlaps = bookedBlocks.some(
       (b) => start < b.end && end > b.start
     );
@@ -603,6 +643,8 @@ export interface BookingSectionProps {
   initialDraft?: DraftBooking | null;
   /** Called after draft has been applied so parent can clear initialDraft */
   onDraftRestored?: () => void;
+  /** Pre-select a service category so the picker opens straight to that category */
+  initialCategory?: "vehicle" | "boat" | "rv";
 }
 
 export function BookingSection({
@@ -616,6 +658,7 @@ export function BookingSection({
   initialRewardPoints = null,
   initialDraft = null,
   onDraftRestored,
+  initialCategory,
 }: BookingSectionProps) {
   const router = useRouter();
   const bookingRef = useRef<HTMLDivElement>(null);
@@ -624,6 +667,8 @@ export function BookingSection({
   const [stepDirection, setStepDirection] = useState(1);
   /** True when a service was pre-selected from a card — shows the confirm-then-continue screen. */
   const [showServiceConfirm, setShowServiceConfirm] = useState(false);
+  /** Which top-level category the user picked: null = show category picker */
+  const [bookingCategory, setBookingCategory] = useState<"vehicle" | "boat" | "rv" | null>(initialCategory ?? null);
 
   // Step 1 — Vehicle
   const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug | "">("");
@@ -654,6 +699,8 @@ export function BookingSection({
   // Step 2 — Date & Time
   const [todayStr, setTodayStr] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [nextAvailDays, setNextAvailDays] = useState<AvailableDay[]>([]);
+  const [nextAvailLoading, setNextAvailLoading] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
   const [weekendDateError, setWeekendDateError] = useState<string | null>(null);
   const [existingBookingsForDate, setExistingBookingsForDate] = useState<
@@ -827,10 +874,20 @@ export function BookingSection({
     setSelectedAddons(prev => prev.filter(a => availableIds.includes(a.id)));
   }, [selectedService?.id]);
 
+  // Ultimate packages are flat-rate — auto-set a neutral size so validation passes
+  // without ever showing the size picker to the customer
+  const isUltimateService = !!(selectedService?.name.toLowerCase().includes("ultimate"));
+  useEffect(() => {
+    if (isUltimateService) {
+      setVehicleSize("compact");
+    }
+  }, [isUltimateService]);
+
   // Reset form state each time the booking section is opened (inline section — no body scroll lock)
   useEffect(() => {
     if (isVisible) {
       setShowServiceConfirm(!!selectedService);
+      setBookingCategory(initialCategory ?? null);
       setStep(1);
       setVehicleSize("");
       setVehicleYear("");
@@ -970,6 +1027,19 @@ export function BookingSection({
       .finally(() => setSlotsLoading(false));
   }, [selectedDate]);
 
+  // ── Fetch next available days whenever service / size changes on step 2 ─
+  useEffect(() => {
+    if (!selectedService || step !== 2) return;
+    let cancelled = false;
+    setNextAvailLoading(true);
+    setNextAvailDays([]);
+    getNextAvailableDays(selectedService.name, vehicleSize || "sedan", 3)
+      .then(days => { if (!cancelled) setNextAvailDays(days); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setNextAvailLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedService?.name, vehicleSize, step]);
+
   // ── Travel fee when address changes (debounced) ─────────────────────────────
   useEffect(() => {
     const addr = serviceAddress.trim();
@@ -1075,6 +1145,8 @@ export function BookingSection({
   // ── Available slots for selected date + service (no double-book, respect closing) ─
   const [availableSlots, setAvailableSlots] = useState<{ time: string; period: string }[]>([]);
 
+  const hasFullDayAddon = selectedAddons.some(a => FULL_DAY_ADDON_IDS.includes(a.id));
+
   useEffect(() => {
     async function updateAvailable() {
       if (selectedService && selectedDate) {
@@ -1083,7 +1155,8 @@ export function BookingSection({
           vehicleSize || "compact",
           existingBookingsForDate,
           slotsForSelectedDate,
-          closingMinutesForSelectedDate
+          closingMinutesForSelectedDate,
+          hasFullDayAddon ? FULL_DAY_DURATION_MIN : undefined
         );
         setAvailableSlots(slots);
       } else {
@@ -1091,7 +1164,7 @@ export function BookingSection({
       }
     }
     updateAvailable();
-  }, [selectedService, selectedDate, vehicleSize, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate]);
+  }, [selectedService, selectedDate, vehicleSize, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon]);
 
   // Remove past times for today so they don't render at all (pass full slot so regex can read .time or .label)
   const displaySlots = selectedDate
@@ -1113,7 +1186,8 @@ export function BookingSection({
           vehicleSize || "compact",
           existingBookingsForDate,
           slotsForSelectedDate,
-          closingMinutesForSelectedDate
+          closingMinutesForSelectedDate,
+          hasFullDayAddon ? FULL_DAY_DURATION_MIN : undefined
         );
         if (available.length > 0 && !available.some((s) => s.time === selectedTime)) {
           setSelectedTime("");
@@ -1131,6 +1205,8 @@ export function BookingSection({
         return !!(vehicleYear && vehicleMake && vehicleModel &&
           typeof boatLength === "number" && boatLength >= minFt);
       }
+      // Ultimate packages are flat-rate — no size selection needed
+      if (isUltimateService) return !!(vehicleYear && vehicleMake && vehicleModel);
       return !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
     }
     if (step === 2)
@@ -1528,6 +1604,11 @@ export function BookingSection({
                             / foot — enter your {isRVService(selectedService.name) ? "RV" : "boat"} length to calculate
                           </span>
                         </>
+                      ) : selectedService.price_small === selectedService.price_large ? (
+                        <>
+                          ${selectedService.price_small}
+                          <span className="text-zinc-500 font-normal text-xs ml-1">— flat rate, all sizes</span>
+                        </>
                       ) : (
                         <>
                           ${selectedService.price_small}
@@ -1541,9 +1622,9 @@ export function BookingSection({
                   </div>
 
                   {/* Description */}
-                  {selectedService.description && (
+                  {(SERVICE_DESCRIPTION_OVERRIDES[selectedService.name] ?? selectedService.description) && (
                     <p className="text-sm text-zinc-400 leading-relaxed -mt-2">
-                      {selectedService.description}
+                      {SERVICE_DESCRIPTION_OVERRIDES[selectedService.name] ?? selectedService.description}
                     </p>
                   )}
 
@@ -1571,6 +1652,7 @@ export function BookingSection({
                       type="button"
                       onClick={() => {
                         setShowServiceConfirm(false);
+                        setBookingCategory(null);
                         onClearService?.();
                       }}
                       className="w-full py-3 rounded-xl border border-white/[0.06] text-zinc-400 text-sm font-medium hover:text-white hover:border-white/20 transition-colors"
@@ -1582,129 +1664,227 @@ export function BookingSection({
               );
             })()
           ) : !selectedService && services.length > 0 ? (
-            /* ── Choose Your Service (when opened via Book Now / Schedule Now) ── */
-            <div className="px-6 py-6">
-              <h2 className="text-xl font-black text-white">
-                Choose Your Service
-              </h2>
-              <p className="text-sm text-zinc-500 mt-0.5 mb-6">
-                Select a package to continue — price varies by vehicle size
-              </p>
-
-              <div className="space-y-8">
-                {/* 1. One-Time Detailing */}
-                {(() => {
-                  const oneTime = services.filter(s =>
-                    !s.is_subscription &&
-                    !s.name.toLowerCase().includes("ultimate") &&
-                    !s.name.toLowerCase().includes("paint") &&
-                    !s.name.toLowerCase().includes("correction") &&
-                    !s.name.toLowerCase().includes("boat")
-                  );
-                  if (!oneTime.length) return null;
-                  return (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles size={14} className="text-[#D4AF37]" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">One-Time Detailing</h3>
+            /* ── Service Category Picker / Service List ── */
+            !bookingCategory ? (
+              /* ── Step 0: Pick a Category ── */
+              <div className="px-6 py-6">
+                <h2 className="text-xl font-black text-white">Book a Service</h2>
+                <p className="text-sm text-zinc-500 mt-0.5 mb-6">
+                  What are we detailing today?
+                </p>
+                <div className="flex flex-col gap-3">
+                  {/* Vehicle */}
+                  <button
+                    type="button"
+                    onClick={() => setBookingCategory("vehicle")}
+                    className="w-full p-5 rounded-2xl border border-[#252525] text-left bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center shrink-0">
+                        <Car size={20} className="text-[#D4AF37]" />
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {oneTime.map((service) => (
-                          <button
-                            key={service.id}
-                            type="button"
-                            onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-white/[0.02] active:scale-[0.99] group"
-                          >
-                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
-                              {service.name}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-white group-hover:text-[#D4AF37] transition-colors">
+                          Vehicle Detailing
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-0.5">
+                          Cars, trucks, SUVs &amp; more — interior, exterior &amp; full detail packages
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors shrink-0" />
+                    </div>
+                  </button>
+
+                  {/* Marine */}
+                  <button
+                    type="button"
+                    onClick={() => setBookingCategory("boat")}
+                    className="w-full p-5 rounded-2xl border border-[#252525] text-left bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center shrink-0">
+                        <Waves size={20} className="text-[#D4AF37]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-white group-hover:text-[#D4AF37] transition-colors">
+                          Boat / Marine Detailing
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-0.5">
+                          Dockside specialist — waterline up, no haul-out required
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors shrink-0" />
+                    </div>
+                  </button>
+
+                  {/* RV */}
+                  <button
+                    type="button"
+                    onClick={() => setBookingCategory("rv")}
+                    className="w-full p-5 rounded-2xl border border-[#252525] text-left bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center shrink-0">
+                        <Layers size={20} className="text-[#D4AF37]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-white group-hover:text-[#D4AF37] transition-colors">
+                          RV Detailing
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-0.5">
+                          Motorhomes &amp; campers — mobile service, priced per foot
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors shrink-0" />
+                    </div>
+                  </button>
+                </div>
+
+                <button
+                  onClick={onClose}
+                  className="mt-8 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors py-2 border-t border-white/5 pt-6"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              /* ── Step 1: Service List (filtered by category) ── */
+              <div className="px-6 py-6">
+                {/* Back header */}
+                <button
+                  type="button"
+                  onClick={() => setBookingCategory(null)}
+                  className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors mb-5 -ml-1 group"
+                >
+                  <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                  All Services
+                </button>
+
+                {bookingCategory === "vehicle" && (() => {
+                  const isVehicleService = (s: Service) =>
+                    !s.is_subscription && !isBoatService(s.name) && !isRVService(s.name) &&
+                    !s.name.toLowerCase().includes("paint") && !s.name.toLowerCase().includes("correction");
+                  const standard = services.filter(s => isVehicleService(s) && !s.name.toLowerCase().includes("ultimate"));
+                  const ultimate = services.filter(s => isVehicleService(s) && s.name.toLowerCase().includes("ultimate"));
+                  return (
+                    <div className="space-y-8">
+                      <div>
+                        <h2 className="text-xl font-black text-white mb-1">Vehicle Detailing</h2>
+                        <p className="text-sm text-zinc-500 mb-6">Price varies by vehicle size</p>
+
+                        {/* Standard packages */}
+                        {standard.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Sparkles size={14} className="text-[#D4AF37]" />
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Detailing Packages</h3>
                             </div>
-                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
-                              From ${service.price_small}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {standard.map((service) => (
+                                <button
+                                  key={service.id}
+                                  type="button"
+                                  onClick={() => onSelectService(service)}
+                                  className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 hover:border-[#D4AF37]/40 hover:bg-white/[0.02] active:scale-[0.99] group"
+                                >
+                                  <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                                    {service.name}
+                                  </div>
+                                  <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
+                                    From ${service.price_small}
+                                  </div>
+                                  {service.description && (
+                                    <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                      {service.description}
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
                             </div>
-                            {service.description && (
-                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
-                                {service.description}
-                              </div>
-                            )}
-                          </button>
-                        ))}
+                          </div>
+                        )}
+
+                        {/* Ultimate Series — visually distinct */}
+                        {ultimate.length > 0 && (
+                          <div className={standard.length > 0 ? "mt-6" : ""}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Gem size={14} className="text-[#D4AF37]" />
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">Ultimate Series</h3>
+                            </div>
+                            <p className="text-[11px] text-zinc-600 mb-3">The full deep-clean experience — flat rate, no size upcharge</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {ultimate.map((service) => {
+                                const flatPrice = service.price_small === service.price_large
+                                  ? `$${service.price_small}`
+                                  : `From $${service.price_small}`;
+                                const isInterior = service.name.toLowerCase().includes("interior");
+                                return (
+                                  <button
+                                    key={service.id}
+                                    type="button"
+                                    onClick={() => onSelectService(service)}
+                                    className="relative p-4 rounded-xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.06] to-[#D4AF37]/[0.02] text-left transition-all duration-150 hover:border-[#D4AF37]/60 hover:from-[#D4AF37]/[0.10] hover:to-[#D4AF37]/[0.04] active:scale-[0.99] group overflow-hidden"
+                                  >
+                                    <div className="absolute top-2 right-2">
+                                      <Crown size={12} className="text-[#D4AF37]/40" />
+                                    </div>
+                                    <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors pr-5">
+                                      {service.name}
+                                    </div>
+                                    <div className="text-sm text-[#D4AF37] font-black mt-1">
+                                      {flatPrice}
+                                    </div>
+                                    {(SERVICE_DESCRIPTION_OVERRIDES[service.name] ?? service.description) && (
+                                      <div className="text-[11px] text-zinc-500 mt-1.5 line-clamp-2 leading-relaxed">
+                                        {SERVICE_DESCRIPTION_OVERRIDES[service.name] ?? service.description}
+                                      </div>
+                                    )}
+                                    <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#D4AF37]/70 bg-[#D4AF37]/10 rounded-full px-2 py-0.5">
+                                      <Crown size={9} />
+                                      {isInterior ? "Deep Interior Reset" : "Full Exterior + Interior"}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 })()}
 
-                {/* 2. Ultimate Series */}
-                {(() => {
-                  const ultimate = services.filter(s =>
-                    !s.is_subscription && s.name.toLowerCase().includes("ultimate")
-                  );
-                  if (!ultimate.length) return null;
+                {bookingCategory === "boat" && (() => {
+                  const marine = services.filter(s => !s.is_subscription && isBoatService(s.name));
                   return (
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Gem size={14} className="text-[#D4AF37]" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Ultimate Series</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {ultimate.map((service) => (
-                          <button
-                            key={service.id}
-                            type="button"
-                            onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/50 hover:text-zinc-200 hover:bg-[#D4AF37]/[0.06] active:scale-[0.99] group"
-                          >
-                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
-                              {service.name}
-                            </div>
-                            <div className="text-[11px] text-[#D4AF37] font-bold mt-0.5">
-                              ${service.price_small} – ${service.price_large}
-                            </div>
-                            {service.description && (
-                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
-                                {service.description}
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* 3. Marine Detailing */}
-                {(() => {
-                  const marine = services.filter(s =>
-                    !s.is_subscription && s.name.toLowerCase().includes("boat")
-                  );
-                  if (!marine.length) return null;
-                  return (
-                    <div>
+                      <h2 className="text-xl font-black text-white mb-1">Boat / Marine Detailing</h2>
+                      <p className="text-sm text-zinc-500 mb-6">Dockside service — priced per foot, 15 ft minimum</p>
                       <div className="flex items-center gap-2 mb-3">
                         <Waves size={14} className="text-[#D4AF37]" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Marine Detailing — Waterline Up</h3>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Waterline Up Packages</h3>
                       </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {marine.map((service) => {
                           const display = BOAT_DISPLAY_NAMES[service.name];
                           const rate    = BOAT_RATE[service.name] ?? service.price_small;
                           return (
-                          <button
-                            key={service.id}
-                            type="button"
-                            onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-[#D4AF37]/[0.05] active:scale-[0.99] group"
-                          >
-                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
-                              {display ? display.name : service.name}
-                            </div>
-                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
-                              ${rate}/ft
-                            </div>
-                            <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
-                              {display ? display.tagline : service.description}
-                            </div>
-                          </button>
+                            <button
+                              key={service.id}
+                              type="button"
+                              onClick={() => onSelectService(service)}
+                              className="p-4 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.02] text-left transition-all duration-150 hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.05] active:scale-[0.99] group"
+                            >
+                              <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                                {display ? display.name : service.name}
+                              </div>
+                              <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
+                                ${rate}/ft
+                              </div>
+                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                {display ? display.tagline : service.description}
+                              </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -1712,17 +1892,15 @@ export function BookingSection({
                   );
                 })()}
 
-                {/* 4. RV Detailing */}
-                {(() => {
-                  const rv = services.filter(s =>
-                    !s.is_subscription && isRVService(s.name)
-                  );
-                  if (!rv.length) return null;
+                {bookingCategory === "rv" && (() => {
+                  const rv = services.filter(s => !s.is_subscription && isRVService(s.name));
                   return (
                     <div>
+                      <h2 className="text-xl font-black text-white mb-1">RV Detailing</h2>
+                      <p className="text-sm text-zinc-500 mb-6">Mobile service — priced per foot, 20 ft minimum</p>
                       <div className="flex items-center gap-2 mb-3">
-                        <Layers size={14} className="text-green-400" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">RV Detailing</h3>
+                        <Layers size={14} className="text-[#D4AF37]" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">RV Packages</h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {rv.map((service) => (
@@ -1730,12 +1908,12 @@ export function BookingSection({
                             key={service.id}
                             type="button"
                             onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-green-500/15 bg-green-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-green-500/30 hover:text-zinc-200 hover:bg-green-500/[0.04] active:scale-[0.99] group"
+                            className="p-4 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.02] text-left transition-all duration-150 hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.05] active:scale-[0.99] group"
                           >
-                            <div className="font-bold text-sm text-white group-hover:text-green-400 transition-colors">
+                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
                               {service.name}
                             </div>
-                            <div className="text-[11px] text-green-400/80 font-medium mt-0.5">
+                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
                               ${FOOTAGE_RATE[service.name] ?? service.price_small}/ft
                             </div>
                             {service.description && (
@@ -1751,15 +1929,15 @@ export function BookingSection({
                 })()}
 
                 {/* Maintenance club is now invite-only via email after your first full detail */}
-              </div>
 
-              <button
-                onClick={onClose}
-                className="mt-8 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors py-2 border-t border-white/5 pt-6"
-              >
-                Cancel
-              </button>
-            </div>
+                <button
+                  onClick={onClose}
+                  className="mt-8 w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors py-2 border-t border-white/5 pt-6"
+                >
+                  Cancel
+                </button>
+              </div>
+            )
           ) : !selectedService ? (
             /* No service and no services list (edge case) */
             <div className="px-6 py-8 text-center">
@@ -2021,59 +2199,71 @@ export function BookingSection({
                         </div>
                       </div>
 
-                      {/* Vehicle Size — always-interactive; auto-selects on model pick, can override */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
-                            Vehicle Size
-                          </label>
-                          {autoDetected && vehicleSize && (
-                            <span className="inline-flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
-                              <Zap size={8} className="fill-[#D4AF37]" /> Auto-detected
-                            </span>
+                      {/* Vehicle Size — hidden for flat-rate Ultimate packages */}
+                      {isUltimateService ? (
+                        <div className="flex items-center gap-3 rounded-2xl border border-[#D4AF37]/25 bg-[#D4AF37]/[0.05] px-5 py-4">
+                          <Crown size={16} className="text-[#D4AF37] shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              {selectedService?.price_small != null ? `$${selectedService.price_small}` : ""} — Flat Rate
+                            </p>
+                            <p className="text-[11px] text-zinc-500 mt-0.5">One price for all vehicle sizes. No upsell.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                              Vehicle Size
+                            </label>
+                            {autoDetected && vehicleSize && (
+                              <span className="inline-flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                                <Zap size={8} className="fill-[#D4AF37]" /> Auto-detected
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            {VEHICLE_SIZES.map((size) => {
+                              const isSelected = vehicleSize === size.id;
+                              return (
+                                <button
+                                  key={size.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setVehicleSize(size.id);
+                                    setAutoDetected(false);
+                                  }}
+                                  className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
+                                    isSelected
+                                      ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 shadow-[0_0_18px_rgba(212,175,55,0.12)]"
+                                      : "bg-zinc-950/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                      {size.label}
+                                    </span>
+                                    {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                  </div>
+                                  <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
+                                  {selectedService && (
+                                    <p className={`text-sm font-black mt-2 ${isSelected ? "text-white" : "text-zinc-400"}`}>
+                                      ${selectedService[size.sizeKey]}
+                                    </p>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {!vehicleSize && vehicleMake.trim() && vehicleModel.trim() && (
+                            <p className="text-[11px] text-zinc-500 mt-2.5 text-center">
+                              Vehicle not found in our database — please select your size above
+                            </p>
                           )}
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          {VEHICLE_SIZES.map((size) => {
-                            const isSelected = vehicleSize === size.id;
-                            return (
-                              <button
-                                key={size.id}
-                                type="button"
-                                onClick={() => {
-                                  setVehicleSize(size.id);
-                                  setAutoDetected(false);
-                                }}
-                                className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
-                                  isSelected
-                                    ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 shadow-[0_0_18px_rgba(212,175,55,0.12)]"
-                                    : "bg-zinc-950/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
-                                    {size.label}
-                                  </span>
-                                  {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
-                                </div>
-                                <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
-                                {selectedService && (
-                                  <p className={`text-sm font-black mt-2 ${isSelected ? "text-white" : "text-zinc-400"}`}>
-                                    ${selectedService[size.sizeKey]}
-                                  </p>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {!vehicleSize && vehicleMake.trim() && vehicleModel.trim() && (
-                          <p className="text-[11px] text-zinc-500 mt-2.5 text-center">
-                            Vehicle not found in our database — please select your size above
-                          </p>
-                        )}
-                      </div>
+                      )}
 
                       {/* Enhance Your Detail (Smart per-service Add-ons) */}
                       {(() => {
@@ -2081,15 +2271,16 @@ export function BookingSection({
                         const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
                         const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
                         const note       = getIncludedNote(selectedService?.name ?? "");
-                        const isMarine = !!(selectedService && BOAT_DISPLAY_NAMES[selectedService.name]);
-                        const isRV     = !!(selectedService && isRVService(selectedService.name));
+                        const isMarine   = !!(selectedService && BOAT_DISPLAY_NAMES[selectedService.name]);
+                        const isRV       = !!(selectedService && isRVService(selectedService.name));
+                        const isUltimate = !!(selectedService?.name.toLowerCase().includes("ultimate"));
                         if (!standAlone.length && !floorOpts.length) return null;
                         return (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
                               <Sparkles size={14} className="text-[#D4AF37]" />
                               <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
-                                {isMarine ? "Marine Specialist Add-ons" : isRV ? "RV Specialist Add-ons" : "Enhance Your Detail"}
+                                {isMarine ? "Marine Specialist Add-ons" : isRV ? "RV Specialist Add-ons" : isUltimate ? "Ultimate Upgrades" : "Enhance Your Detail"}
                               </label>
                             </div>
 
@@ -2097,6 +2288,16 @@ export function BookingSection({
                               <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 mb-3">
                                 <Check size={12} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
                                 <p className="text-[11px] text-emerald-300/80 leading-relaxed">{note}</p>
+                              </div>
+                            )}
+
+                            {/* Full-day notice when 1-step polish is selected */}
+                            {hasFullDayAddon && (
+                              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 mb-3">
+                                <Zap size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                                <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                                  <span className="font-bold">Full-day appointment required.</span> Machine polishing takes the full day — only morning start times will be available.
+                                </p>
                               </div>
                             )}
 
@@ -2203,9 +2404,55 @@ export function BookingSection({
                         </p>
                       </div>
                     )}
-                    <div className="w-full max-w-[calc(100vw-40px)] min-w-0 overflow-x-auto">
+                    {/* ── Next Available quick-pick ──────────────────────── */}
+                    <div>
                       <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
-                        Select a Date
+                        Next Available
+                      </label>
+                      {nextAvailLoading ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {[0,1,2].map(i => (
+                            <div key={i} className="skeleton-shimmer h-[72px] rounded-xl border border-zinc-800/40" style={{ animationDelay: `${i*0.1}s` }} />
+                          ))}
+                        </div>
+                      ) : nextAvailDays.length === 0 ? (
+                        <p className="text-xs text-zinc-500 py-1">No openings in the next 3 weeks — please call us.</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {nextAvailDays.map(day => {
+                            const isSelected = selectedDate === day.date;
+                            return (
+                              <button
+                                key={day.date}
+                                type="button"
+                                onClick={() => {
+                                  setWeekendDateError(null);
+                                  setSelectedDate(day.date);
+                                  // Pre-select the earliest time by converting back to raw "HH:MM" format
+                                  // day.earliestSlot is "H:MM AM/PM", convert to slot key used by displaySlots
+                                  // We store it in selectedTime as the 12h display string used in slot.time
+                                  setSelectedTime(day.earliestSlot);
+                                }}
+                                className={`flex flex-col items-center justify-center gap-0.5 py-3 px-1 rounded-xl border transition-all active:scale-95 ${
+                                  isSelected
+                                    ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 text-[#D4AF37]"
+                                    : "bg-zinc-900/30 border-white/[0.07] text-zinc-300 hover:border-[#D4AF37]/40"
+                                }`}
+                              >
+                                <span className="text-[10px] font-black uppercase tracking-wide">{day.label}</span>
+                                <span className={`text-xs font-bold mt-0.5 ${isSelected ? "text-[#D4AF37]" : "text-white"}`}>{day.earliestSlot}</span>
+                                <span className="text-[9px] text-zinc-500">{day.totalSlots} open</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Manual date picker ─────────────────────────────── */}
+                    <div className="w-full max-w-[calc(100vw-40px)] min-w-0">
+                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                        Or Pick a Different Date
                       </label>
                       <input
                         type="date"
@@ -2220,6 +2467,7 @@ export function BookingSection({
                           }
                           setWeekendDateError(null);
                           setSelectedDate(value);
+                          setSelectedTime("");
                         }}
                         min={todayStr}
                         className={`w-full text-center max-w-full min-h-[44px] box-border bg-zinc-950/50 border rounded-xl px-4 py-3 outline-none transition-all [color-scheme:dark] text-[16px] md:text-sm ${
@@ -2229,7 +2477,7 @@ export function BookingSection({
                         } text-white`}
                       />
                       <p className="text-zinc-500 text-xs mt-1.5">
-                        Dates are based on our current schedule. Blocked and closed days cannot be selected.
+                        Weekends and blocked days are unavailable.
                       </p>
                       {weekendDateError && (
                         <p className="text-amber-400 text-sm mt-1.5 font-medium" role="alert">
@@ -2238,13 +2486,14 @@ export function BookingSection({
                       )}
                     </div>
 
+                    {/* ── Time slots ─────────────────────────────────────── */}
                     <div>
                       <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
-                        Select a Time
+                        {selectedDate ? "All Available Times" : "Available Times"}
                       </label>
                       {!selectedDate ? (
                         <p className="text-sm text-zinc-500 py-2">
-                          Pick a date above to see available times.
+                          Tap a quick-pick above or choose a date to see all times.
                         </p>
                       ) : slotsLoading ? (
                         <div className="grid grid-cols-2 gap-2" aria-label="Loading available times…">
@@ -2258,11 +2507,26 @@ export function BookingSection({
                         </div>
                       ) : !selectedService ? (
                         <p className="text-sm text-zinc-500 py-2">
-                          Select a service (from the service card) to see available times.
+                          Select a service first to see available times.
                         </p>
                       ) : displaySlots.length === 0 ? (
-                        <div className="rounded-xl border border-amber-800/50 bg-amber-950/20 px-4 py-4 text-sm text-amber-200">
-                          No available times on this date. Please select another day.
+                        <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 px-4 py-4 space-y-2">
+                          <p className="text-sm font-semibold text-zinc-300">No openings on this day</p>
+                          <p className="text-xs text-zinc-500">This date is fully booked. Tap one of the &ldquo;Next Available&rdquo; days above for instant booking.</p>
+                          {nextAvailDays.length > 0 && (
+                            <div className="flex gap-2 pt-1">
+                              {nextAvailDays.map(day => (
+                                <button
+                                  key={day.date}
+                                  type="button"
+                                  onClick={() => { setSelectedDate(day.date); setSelectedTime(day.earliestSlot); setWeekendDateError(null); }}
+                                  className="flex-1 py-2 rounded-lg border border-[#D4AF37]/40 bg-[#D4AF37]/5 text-[#D4AF37] text-[10px] font-black uppercase tracking-wide"
+                                >
+                                  {day.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-2">

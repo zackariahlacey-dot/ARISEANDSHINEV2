@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ── Admin route guard: only zackariahlacey@gmail.com ──────────────────────
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/admin_v2")) {
     const email = (user?.email as string | undefined)?.toLowerCase();
     if (!user || email !== "zackariahlacey@gmail.com") {
       const url = request.nextUrl.clone();
@@ -63,8 +63,8 @@ export async function updateSession(request: NextRequest) {
   if (
     pathname !== "/" &&
     !user &&
-    !pathname.startsWith("/login") &&
     !pathname.startsWith("/auth") &&
+    !pathname.startsWith("/api") &&
     !pathname.startsWith("/services") &&
     !pathname.startsWith("/detailing") &&
     !pathname.startsWith("/paint-correction") &&

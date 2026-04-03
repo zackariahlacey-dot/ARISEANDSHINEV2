@@ -542,7 +542,7 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const supabase = createAdminClient();
   const { data: booking } = await supabase
     .from("bookings")
-    .select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name, reward_points), services:service_id(name)")
+    .select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name, reward_points, lifetime_points), services:service_id(name)")
     .eq("id", id)
     .single();
 
@@ -554,13 +554,31 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const serviceName = booking.service_name || booking.services?.name || "Detailing Service";
 
   if (status === "completed") {
-    const pointsAwarded = Math.floor(Math.max(0, Number(booking.total_price)));
-    // Award loyalty points if linked profile
-    if (booking.user_id && booking.profiles) {
+    // Only award points for admin-created bookings (customer bookings already
+    // earn points at the time of booking / Stripe payment). Admin-created
+    // booking notes contain the "(admin-created)" marker.
+    const isAdminCreated = typeof booking.notes === "string" &&
+      booking.notes.includes("admin-created");
+
+    const pointsAwarded = isAdminCreated
+      ? Math.floor(Math.max(0, Number(booking.total_price)))
+      : 0;
+
+    if (isAdminCreated && pointsAwarded > 0 && booking.user_id && booking.profiles) {
+      const currentReward   = (booking.profiles.reward_points as number)   || 0;
+      const currentLifetime = (booking.profiles as any).lifetime_points     || 0;
       await supabase.from("profiles").update({
-        reward_points: (booking.profiles.reward_points || 0) + pointsAwarded,
+        reward_points:   currentReward   + pointsAwarded,
+        lifetime_points: currentLifetime + pointsAwarded,
       }).eq("id", booking.user_id);
+
+      await supabase.from("point_transactions").insert({
+        user_id:     booking.user_id,
+        amount:      pointsAwarded,
+        description: `Earned from ${serviceName}`,
+      });
     }
+
     if (email) {
       await sendJobCompletedEmail({
         customerName: name,
@@ -569,11 +587,9 @@ export async function updateBookingStatusAction(id: string, status: string) {
         amountPaid: Number(booking.total_price),
         pointsEarned: pointsAwarded,
       }).catch(e => console.error("Completion email fail:", e));
-      // 24-hour follow-up review + maintenance upsell
-      setTimeout(() => {
-        sendReviewFollowupEmail({ customerName: name, customerEmail: email! })
-          .catch(e => console.error("Follow-up email fail:", e));
-      }, 24 * 60 * 60 * 1000);
+      // 24-hour review + upsell is handled by the /api/cron/review-emails cron job,
+      // which runs daily and checks review_email_sent_at. No setTimeout here because
+      // serverless functions don't keep timers alive between requests.
     }
   } else if (status === "cancelled") {
     if (email) {

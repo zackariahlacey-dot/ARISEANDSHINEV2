@@ -52,16 +52,36 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient();
 
     // Idempotency: if we already fulfilled this session, skip (prevents double-insert on webhook retry)
-    const { data: existing } = await supabase
+    const { data: alreadyFulfilled } = await supabase
       .from("bookings")
       .select("id")
       .eq("stripe_checkout_session_id", session.id)
       .maybeSingle();
 
-    if (existing) {
+    if (alreadyFulfilled) {
       return NextResponse.json({ received: true });
     }
 
+    // ── Admin-created booking path ─────────────────────────────────────────
+    // If metadata contains a booking_id, this was an invoice sent by the admin.
+    // Update the existing pending_payment booking instead of inserting a new one.
+    if (m.booking_id) {
+      const { error: updateErr } = await supabase
+        .from("bookings")
+        .update({ status: "confirmed", stripe_checkout_session_id: session.id })
+        .eq("id", m.booking_id)
+        .eq("status", "pending_payment"); // safety: only transition from pending
+
+      if (updateErr) {
+        console.error("[webhooks/stripe] Admin booking update failed:", updateErr);
+        return NextResponse.json({ error: "Admin booking update failed" }, { status: 500 });
+      }
+
+      // Points awarded when admin marks completed, not at payment time for admin bookings
+      return NextResponse.json({ received: true });
+    }
+
+    // ── Customer-initiated booking path ───────────────────────────────────
     // FINAL AVAILABILITY CHECK: Ensure slot wasn't taken while customer was on Stripe
     const isAvailable = await checkAvailability(
       m.bookingDate,
@@ -71,13 +91,10 @@ export async function POST(req: NextRequest) {
     );
 
     if (!isAvailable) {
-      console.warn(`[webhooks/stripe] OVERBOOKING DETECTED: ${m.bookingDate} at ${m.bookingTime} for ${m.customerName}. Payment was successful but slot is now taken. Manual resolution required.`);
-      // We still return 200 to Stripe so it doesn't retry, but we don't insert the booking.
-      // In a real production app, you might trigger a special "Overbooking Alert" email to the admin here.
+      console.warn(`[webhooks/stripe] OVERBOOKING DETECTED: ${m.bookingDate} at ${m.bookingTime} for ${m.customerName}. Payment successful but slot is now taken. Manual resolution required.`);
       return NextResponse.json({ received: true, warning: "overbooked" });
     }
 
-    // Insert booking only after successful payment
     // Parse add-ons JSON stored in Stripe metadata
     let addonsJson: { id: string; label: string; price: number }[] | null = null;
     if (m.addonsJson) {
@@ -190,15 +207,23 @@ export async function POST(req: NextRequest) {
 
           const { data: referrerProfile } = await supabase
             .from("profiles")
-            .select("reward_points")
+            .select("reward_points, lifetime_points")
             .eq("id", authProfile.referred_by)
             .maybeSingle();
 
           if (referrerProfile != null) {
+            const newReward   = ((referrerProfile as any).reward_points   ?? 0) + 200;
+            const newLifetime = ((referrerProfile as any).lifetime_points ?? 0) + 200;
             await supabase
               .from("profiles")
-              .update({ reward_points: (referrerProfile.reward_points ?? 0) + 200 })
+              .update({ reward_points: newReward, lifetime_points: newLifetime })
               .eq("id", authProfile.referred_by);
+
+            await supabase.from("point_transactions").insert({
+              user_id:     authProfile.referred_by,
+              amount:      200,
+              description: "Referral bonus — friend completed first detail",
+            });
           }
         }
       } catch (refErr) {

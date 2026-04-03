@@ -125,7 +125,7 @@ const REVIEWS = [
   },
 ] as const;
 
-type ExpandedBookingId = "hero" | "club" | "services" | "ultimate" | null;
+type ExpandedBookingId = "hero" | "services" | "ultimate" | "boat" | "rv" | null;
 
 export function LandingPage({ services }: { services: Service[] }) {
   const searchParams = useSearchParams();
@@ -170,8 +170,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const bottomCtaRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const maintenanceCarouselRef = useRef<HTMLDivElement>(null);
-  const [maintenanceCarouselActiveIdx, setMaintenanceCarouselActiveIdx] = useState(0);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
 
   useEffect(() => {
@@ -254,8 +252,6 @@ export function LandingPage({ services }: { services: Service[] }) {
     setSelectedService(service ?? null);
     if (!service) {
       setExpandedBookingId("hero");
-    } else if (service.is_subscription) {
-      setExpandedBookingId("club");
     } else {
       setExpandedBookingId("services");
     }
@@ -347,7 +343,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   }, []);
 
   const mainGridServices = services.filter((s) => !s.is_subscription);
-  const monthlyPlanServices = services.filter((s) => s.is_subscription);
 
   // Fixed display order: Interior | Full Detail | Exterior — home page shows only these 3
   const CAROUSEL_ORDER = ["Interior Detail", "Full Detail", "Exterior Detail"];
@@ -389,10 +384,6 @@ export function LandingPage({ services }: { services: Service[] }) {
     if (svc) setActiveServiceId(svc.id);
   }, [carouselServices]);
 
-  const [activeMonthlyPlanId, setActiveMonthlyPlanId] = useState<string | null>(() => {
-    return monthlyPlanServices[0]?.id ?? null;
-  });
-  const activeMonthlyPlan = monthlyPlanServices.find((s) => s.id === activeMonthlyPlanId) ?? monthlyPlanServices[0];
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
@@ -1088,6 +1079,144 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
+      {/* ─── Boat & RV Detailing Callouts ──────────────────────────────────────── */}
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        variants={sectionVariants}
+        className="py-10 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+      >
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-6">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">More Services</p>
+            <div className="flex-1 h-px bg-white/[0.05]" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ── Boat / Marine Card ── */}
+            <div className="relative rounded-2xl border border-[#D4AF37]/20 bg-zinc-900/50 overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/[0.04] to-transparent pointer-events-none" />
+              <div className="relative p-6 sm:p-8">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                    <Anchor size={20} className="text-[#D4AF37]" />
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[9px] font-bold tracking-widest uppercase mb-1.5">
+                      Dockside Specialist
+                    </div>
+                    <h3 className="text-lg font-black text-white leading-tight">Boat & Marine Detailing</h3>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      Waterline-up service — no haul-out required. Priced per foot, 15 ft minimum. 100% lake-safe, biodegradable chemicals.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-5">
+                  {["Marine Express — $20/ft", "The Deep Reset — $30/ft", "Showroom Restoration — $55/ft"].map((tag) => (
+                    <span key={tag} className="text-[10px] font-medium text-zinc-400 bg-zinc-800/60 border border-white/[0.06] px-2 py-1 rounded-lg">{tag}</span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedService(null);
+                      setExpandedBookingId(expandedBookingId === "boat" ? null : "boat");
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] text-black text-sm font-black hover:bg-amber-400 active:scale-[0.98] transition-all duration-200"
+                  >
+                    Book Now
+                  </button>
+                  <Link
+                    href="/boat-detailing"
+                    className="flex-1 py-2.5 rounded-xl border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+                  >
+                    View Packages
+                  </Link>
+                </div>
+              </div>
+              {/* Inline booking (Boat) */}
+              {mounted && expandedBookingId === "boat" && (
+                <div className="border-t border-white/[0.06] animate-in fade-in slide-in-from-top-3 duration-400">
+                  <BookingSection
+                    isVisible={true}
+                    onClose={() => setExpandedBookingId(null)}
+                    selectedService={null}
+                    services={services}
+                    onSelectService={setSelectedService}
+                    onClearService={() => setSelectedService(null)}
+                    onBookingSuccess={handleBookingSuccess}
+                    initialRewardPoints={authRewardPoints}
+                    initialCategory="boat"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ── RV Card ── */}
+            <div className="relative rounded-2xl border border-[#D4AF37]/20 bg-zinc-900/50 overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/[0.04] to-transparent pointer-events-none" />
+              <div className="relative p-6 sm:p-8">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                    <Truck size={20} className="text-[#D4AF37]" />
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[9px] font-bold tracking-widest uppercase mb-1.5">
+                      Mobile Service
+                    </div>
+                    <h3 className="text-lg font-black text-white leading-tight">RV Detailing</h3>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      Full-service detailing for motorhomes &amp; campers. We come to you — priced per foot, 20 ft minimum.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-5">
+                  {["Interior — $20/ft", "Exterior — $22/ft", "Full Detail — $38/ft"].map((tag) => (
+                    <span key={tag} className="text-[10px] font-medium text-zinc-400 bg-zinc-800/60 border border-white/[0.06] px-2 py-1 rounded-lg">{tag}</span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedService(null);
+                      setExpandedBookingId(expandedBookingId === "rv" ? null : "rv");
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] text-black text-sm font-black hover:bg-amber-400 active:scale-[0.98] transition-all duration-200"
+                  >
+                    Book Now
+                  </button>
+                  <Link
+                    href="/rv-detailing"
+                    className="flex-1 py-2.5 rounded-xl border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+                  >
+                    View Packages
+                  </Link>
+                </div>
+              </div>
+              {/* Inline booking (RV) */}
+              {mounted && expandedBookingId === "rv" && (
+                <div className="border-t border-white/[0.06] animate-in fade-in slide-in-from-top-3 duration-400">
+                  <BookingSection
+                    isVisible={true}
+                    onClose={() => setExpandedBookingId(null)}
+                    selectedService={null}
+                    services={services}
+                    onSelectService={setSelectedService}
+                    onClearService={() => setSelectedService(null)}
+                    onBookingSuccess={handleBookingSuccess}
+                    initialRewardPoints={authRewardPoints}
+                    initialCategory="rv"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
       {/* ─── Loyalty Rewards — Simple & Elegant ─────────────────────────────────────────── */}
       <motion.section
         id="loyalty-rewards"
@@ -1220,115 +1349,6 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ─── Membership / Maintenance Club ────────────────────────── */}
-      <motion.section
-        id="maintenance-club"
-        initial="hidden"
-        whileInView="visible"
-        viewport={sectionViewport}
-        variants={sectionVariants}
-        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
-      >
-        {/* Background Decorative Element */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none" />
-
-        <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-10 md:mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6">
-              <Crown size={10} fill="currentColor" />
-              Member Exclusive
-            </div>
-            <h2 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6">
-              The Maintenance <span className="text-zinc-500">Club</span>
-            </h2>
-            <p className="text-base md:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed px-4">
-              Experience the pinnacle of automotive care. Our recurring plans ensure your vehicle remains in showroom condition with effortless, scheduled maintenance.
-            </p>
-            <div className="mt-8 inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-zinc-900/80 border border-white/5 px-4 py-3 sm:px-5 sm:py-2.5 rounded-2xl text-zinc-400 text-[11px] sm:text-xs font-medium backdrop-blur-sm mx-auto">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={14} className="text-[#D4AF37]" />
-                <span className="text-white/90 font-bold">$75–$100 One-Time Setup Fee</span>
-              </div>
-              <span className="hidden sm:inline text-zinc-700">•</span>
-              <span>Includes Deep Clean on first visit</span>
-            </div>
-          </div>
-
-          {/* Mobile swipeable carousel */}
-          <div className="md:hidden relative">
-            <div
-              ref={maintenanceCarouselRef}
-              onScroll={() => {
-                const el = maintenanceCarouselRef.current;
-                if (!el) return;
-                const idx = Math.round(el.scrollLeft / el.clientWidth);
-                setMaintenanceCarouselActiveIdx(Math.min(Math.max(0, idx), monthlyPlanServices.length - 1));
-              }}
-              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide -mx-4 px-4"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {monthlyPlanServices.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="snap-center shrink-0 w-full flex justify-center px-2"
-                >
-                  <div className="w-full max-w-[370px]">
-                    <MaintenanceCard plan={plan} onBook={() => openBooking(plan)} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Dot indicators */}
-            {monthlyPlanServices.length > 1 && (
-              <div className="flex justify-center gap-2 mt-6">
-                {monthlyPlanServices.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Plan ${i + 1}`}
-                    onClick={() => {
-                      const el = maintenanceCarouselRef.current;
-                      if (!el) return;
-                      el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
-                      setMaintenanceCarouselActiveIdx(i);
-                    }}
-                    className={`rounded-full transition-all duration-300 ${
-                      maintenanceCarouselActiveIdx === i
-                        ? "w-6 h-2 bg-[#D4AF37]"
-                        : "w-2 h-2 bg-zinc-600 hover:bg-zinc-400"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Desktop Grid */}
-          <div className="hidden md:grid md:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto">
-            {monthlyPlanServices.map((plan) => (
-              <MaintenanceCard key={plan.id} plan={plan} onBook={() => openBooking(plan)} />
-            ))}
-          </div>
-
-          {/* Inline booking dropdown (Maintenance Club) */}
-          {mounted && expandedBookingId === "club" && (
-            <div className="w-full max-w-3xl mx-auto mt-12 animate-in fade-in slide-in-from-top-4 duration-500">
-              <BookingSection
-                isVisible={true}
-                onClose={() => setExpandedBookingId(null)}
-                selectedService={selectedService}
-                services={services}
-                onSelectService={setSelectedService}
-                onClearService={() => setSelectedService(null)}
-                onBookingSuccess={handleBookingSuccess}
-                initialRewardPoints={authRewardPoints}
-                initialDraft={initialDraft}
-                onDraftRestored={() => setInitialDraft(null)}
-              />
-            </div>
-          )}
-        </div>
-      </motion.section>
 
       {/* ─── Trust Banner (Our Promise) — 2x2 grid on mobile ─────────────────── */}
       <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
@@ -1805,103 +1825,6 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
   "Full Detail Monthly Maintenance": [...EXTERIOR_ITEMS, ...INTERIOR_ITEMS, ...MAINTENANCE_ITEMS],
 };
 
-// ─── Maintenance Card ──────────────────────────────────────────────────────────
-
-function MaintenanceCard({
-  plan,
-  onBook,
-}: {
-  plan: Service;
-  onBook: () => void;
-}) {
-  const [isIncludedOpen, setIsIncludedOpen] = useState(false);
-  const isFull = plan.name.toLowerCase().includes("full");
-  const inclusions = SERVICE_INCLUSIONS[plan.name] ?? [];
-
-  return (
-    <div className="relative group h-full">
-      <div className="absolute -inset-0.5 bg-gradient-to-b from-[#D4AF37]/20 to-transparent rounded-[1.5rem] md:rounded-[2.5rem] blur opacity-50 group-hover:opacity-100 transition duration-500" />
-      <div className="relative h-full bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-6 sm:p-8 lg:p-12 flex flex-col items-center text-center transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        <div className="mb-6 md:mb-8 flex flex-col items-center w-full">
-          <div className="flex flex-col items-center mb-4 md:mb-6 gap-3 md:gap-4">
-            <div className="w-12 h-10 md:w-16 md:h-14 rounded-xl md:rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
-              {isFull ? <Crown className="text-[#D4AF37]" size={24} /> : <Car className="text-[#D4AF37]" size={24} />}
-            </div>
-            <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[#D4AF37] text-[10px] font-black uppercase tracking-widest">
-              Limited Spots
-            </div>
-          </div>
-          <h3 className="text-xl md:text-3xl font-bold text-white mb-2 md:mb-3 tracking-tight">{plan.name}</h3>
-          <p className="text-zinc-500 text-xs md:text-sm leading-relaxed max-w-xs px-2">
-            {plan.description}
-          </p>
-        </div>
-
-        <div className="mb-8 md:mb-10">
-          <div className="flex items-baseline justify-center gap-1">
-            <span className="text-4xl md:text-6xl font-black text-white">${plan.price_small}</span>
-            <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] md:text-xs">/ mo</span>
-          </div>
-          <p className="text-[9px] md:text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] mt-2 md:mt-3">
-            +${plan.name.toLowerCase().includes("full") ? 100 : 75} Initial Setup Fee
-          </p>
-        </div>
-
-        {/* Features Preview */}
-        <ul className="space-y-3 md:space-y-4 mb-8 md:mb-10 w-full max-w-xs mx-auto">
-          {[
-            "Priority Scheduling",
-            "Fixed Monthly Dates",
-            "Premium Protectants Included",
-          ].map((feature) => (
-            <li key={feature} className="flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm text-zinc-300">
-              <CheckCircle size={14} className="text-[#D4AF37] shrink-0" />
-              {feature}
-            </li>
-          ))}
-        </ul>
-
-        {/* What's Included Dropdown */}
-        {inclusions.length > 0 && (
-          <details
-            open={isIncludedOpen}
-            className="group/details mb-8 md:mb-10 w-full"
-          >
-            <summary
-              className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-center gap-3 border-t border-white/5 pt-4 md:pt-5 cursor-pointer text-xs md:text-sm font-bold text-zinc-500 hover:text-[#D4AF37] transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsIncludedOpen((prev) => !prev);
-              }}
-            >
-              Full Inclusions
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-300 ${isIncludedOpen ? "rotate-180" : ""}`}
-              />
-            </summary>
-            <ul className="mt-4 md:mt-5 space-y-2 md:space-y-3 max-w-xs mx-auto">
-              {inclusions.map((item) => (
-                <li key={item} className="flex items-start gap-2.5 md:gap-3 text-[11px] md:text-xs text-zinc-400 text-left">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-1.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
-
-        <button
-          type="button"
-          onClick={onBook}
-          className="btn-primary-gold-shimmer mt-auto w-full py-4 md:py-5 rounded-xl md:rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-black hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden active:scale-[0.98]"
-        >
-          <span className="relative z-[1]">Join The Club</span>
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Service Card ──────────────────────────────────────────────────────────────
 
@@ -2005,9 +1928,9 @@ function ServiceCard({
 
 const ULTIMATE_CARDS = [
   {
-    name: "Ultimate Interior Reset + Wash",
-    tagline: "The total restoration for daily drivers.",
-    priceNormal: 375, priceLarge: 425, pointsNormal: 395, pointsLarge: 495,
+    name: "Ultimate Interior Reset",
+    tagline: "The deep interior clean your vehicle deserves.",
+    priceNormal: 250, priceLarge: 250, pointsNormal: 275, pointsLarge: 275,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Full Detail",
@@ -2020,17 +1943,17 @@ const ULTIMATE_CARDS = [
     isFlagship: false,
   },
   {
-    name: "Ultimate Showroom Restoration",
-    tagline: "Our flagship service for a true mirror finish.",
-    priceNormal: 525, priceLarge: 650, pointsNormal: 595, pointsLarge: 725,
+    name: "Ultimate Interior + Exterior Reset",
+    tagline: "Showroom quality — every surface, inside and out. No polishing required.",
+    priceNormal: 325, priceLarge: 325, pointsNormal: 360, pointsLarge: 360,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
-      "Mechanical Clay Bar & Iron Decontamination",
-      "1-Step Machine Paint Correction (Swirl & Scratch Reduction)",
-      "IPA Paint Prep & Surface Cleansing",
-      "Premium 12-Month Ceramic Coating Lite",
-      "Exhaust Tip & Wheel Barrel Polishing",
+      "Full Exterior Decontamination Wash & Clay Bar Treatment",
+      "Iron & Fallout Decontamination (Paint Prep)",
+      "Ceramic Sealant Application — 12-Month Protection",
+      "All Exterior Trim, Rubber & Glass Dressing",
+      "Exhaust Tips & Wheel Barrels Deep Cleaned",
     ],
     isFlagship: true,
   },
@@ -2075,16 +1998,25 @@ function UltimateServiceCard({
           <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{name}</h3>
           <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{tagline}</p>
         </div>
-        <div className={`flex rounded-xl mb-7 overflow-hidden border ${isFlagship ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
-          <div className="flex-1 py-4 text-center bg-white/[0.02]">
-            <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
-          </div>
-          <div className="w-px bg-white/[0.06]" />
-          <div className={`flex-1 py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-            <div className={`text-2xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
-          </div>
+        <div className={`rounded-xl mb-7 overflow-hidden border ${isFlagship ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
+          {priceNormal === priceLarge ? (
+            <div className={`py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+              <div className={`text-3xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-white"}`}>${priceNormal}</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Flat Rate — All Vehicle Sizes</div>
+            </div>
+          ) : (
+            <div className="flex">
+              <div className="flex-1 py-4 text-center bg-white/[0.02]">
+                <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
+              </div>
+              <div className="w-px bg-white/[0.06]" />
+              <div className={`flex-1 py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+                <div className={`text-2xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="mb-7 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">What&apos;s Included</p>
@@ -2110,7 +2042,8 @@ function UltimateServiceCard({
           Book This Service <Sparkles size={13} className="shrink-0" />
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-3">
-          <Sparkles size={9} className="inline mr-1" />Earn {pointsNormal}–{pointsLarge} reward points
+          <Sparkles size={9} className="inline mr-1" />
+          Earn {pointsNormal === pointsLarge ? pointsNormal : `${pointsNormal}–${pointsLarge}`} reward points
         </p>
       </div>
     </div>

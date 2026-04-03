@@ -23,11 +23,11 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     compact: 150, sedan: 150, suv: 210, xl: 210,
   },
   // Ultimate Series
-  "Ultimate Interior Reset + Wash": {
+  "Ultimate Interior Reset": {
     small: 270, medium: 270, large: 270, extra_large: 270,
     compact: 270, sedan: 270, suv: 270, xl: 270,
   },
-  "Ultimate Showroom Restoration": {
+  "Ultimate Interior + Exterior Reset": {
     small: 360, medium: 360, large: 360, extra_large: 360,
     compact: 360, sedan: 360, suv: 360, xl: 360,
   },

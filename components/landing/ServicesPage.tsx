@@ -27,9 +27,9 @@ const SuccessModal = dynamic(
 
 const ULTIMATE_CARDS = [
   {
-    name: "Ultimate Interior Reset + Wash",
-    tagline: "The total restoration for daily drivers.",
-    priceNormal: 340, priceLarge: 375, pointsNormal: 395, pointsLarge: 495,
+    name: "Ultimate Interior Reset",
+    tagline: "The deep interior clean your vehicle deserves.",
+    priceNormal: 250, priceLarge: 250, pointsNormal: 275, pointsLarge: 275,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Full Detail",
@@ -42,17 +42,17 @@ const ULTIMATE_CARDS = [
     isFlagship: false,
   },
   {
-    name: "Ultimate Showroom Restoration",
-    tagline: "Our flagship service for a true mirror finish.",
-    priceNormal: 525, priceLarge: 650, pointsNormal: 595, pointsLarge: 725,
+    name: "Ultimate Interior + Exterior Reset",
+    tagline: "Showroom quality — every surface, inside and out. No polishing required.",
+    priceNormal: 325, priceLarge: 325, pointsNormal: 360, pointsLarge: 360,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
-      "Mechanical Clay Bar & Iron Decontamination",
-      "1-Step Machine Paint Correction (Swirl & Scratch Reduction)",
-      "IPA Paint Prep & Surface Cleansing",
-      "Premium 12-Month Ceramic Coating Lite",
-      "Exhaust Tip & Wheel Barrel Polishing",
+      "Full Exterior Decontamination Wash & Clay Bar Treatment",
+      "Iron & Fallout Decontamination (Paint Prep)",
+      "Ceramic Sealant Application — 12-Month Protection",
+      "All Exterior Trim, Rubber & Glass Dressing",
+      "Exhaust Tips & Wheel Barrels Deep Cleaned",
     ],
     isFlagship: true,
   },
@@ -422,16 +422,25 @@ function UltimateServiceCard({ name, tagline, priceNormal, priceLarge, pointsNor
           <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{name}</h3>
           <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{tagline}</p>
         </div>
-        <div className={`flex rounded-xl mb-7 overflow-hidden border ${isFlagship ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
-          <div className="flex-1 py-4 text-center bg-white/[0.02]">
-            <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
-          </div>
-          <div className="w-px bg-white/[0.06]" />
-          <div className={`flex-1 py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-            <div className={`text-2xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
-          </div>
+        <div className={`rounded-xl mb-7 overflow-hidden border ${isFlagship ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
+          {priceNormal === priceLarge ? (
+            <div className={`py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+              <div className={`text-3xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-white"}`}>${priceNormal}</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Flat Rate — All Vehicle Sizes</div>
+            </div>
+          ) : (
+            <div className="flex">
+              <div className="flex-1 py-4 text-center bg-white/[0.02]">
+                <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
+              </div>
+              <div className="w-px bg-white/[0.06]" />
+              <div className={`flex-1 py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+                <div className={`text-2xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="mb-7 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">What&apos;s Included</p>
@@ -450,7 +459,8 @@ function UltimateServiceCard({ name, tagline, priceNormal, priceLarge, pointsNor
           Book This Service <Sparkles size={13} className="shrink-0" />
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-3">
-          <Sparkles size={9} className="inline mr-1" />Earn {pointsNormal}–{pointsLarge} reward points
+          <Sparkles size={9} className="inline mr-1" />
+          Earn {pointsNormal === pointsLarge ? pointsNormal : `${pointsNormal}–${pointsLarge}`} reward points
         </p>
       </div>
     </div>

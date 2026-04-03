@@ -284,6 +284,13 @@ export async function bookDetailing(
       .from("profiles")
       .update({ reward_points: profileRow.reward_points - payload.pointsToRedeem })
       .eq("id", profileId);
+
+    // Record the redemption in the ledger
+    await adminSupabase.from("point_transactions").insert({
+      user_id:     profileId,
+      amount:      -payload.pointsToRedeem,
+      description: `Redeemed for ${payload.serviceName}`,
+    });
   }
 
   // ── 2. Insert vehicle ───────────────────────────────────────────────────
@@ -329,7 +336,7 @@ export async function bookDetailing(
         ? `🧹 One-time Setup & Reset: $${payload.setupFee.toFixed(2)}`
         : null,
       payload.pointsToRedeem != null && payload.pointsToRedeem > 0
-        ? `🎁 Redeemed ${payload.pointsToRedeem} pts for ${payload.pointsToRedeem / 10}% off`
+        ? `🎁 Redeemed ${payload.pointsToRedeem} pts for $${(payload.pointsToRedeem / 10).toFixed(2)} off`
         : null,
       payload.couponDiscount != null && payload.couponDiscount > 0
         ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
@@ -553,17 +560,23 @@ export async function bookDetailing(
 
         const { data: referrerProfile } = await adminSupabase
           .from("profiles")
-          .select("reward_points")
+          .select("reward_points, lifetime_points")
           .eq("id", authProfile.referred_by)
           .maybeSingle();
 
         if (referrerProfile != null) {
+          const newReward   = ((referrerProfile as any).reward_points   ?? 0) + 200;
+          const newLifetime = ((referrerProfile as any).lifetime_points ?? 0) + 200;
           await adminSupabase
             .from("profiles")
-            .update({
-              reward_points: (referrerProfile.reward_points ?? 0) + 200,
-            })
+            .update({ reward_points: newReward, lifetime_points: newLifetime })
             .eq("id", authProfile.referred_by);
+
+          await adminSupabase.from("point_transactions").insert({
+            user_id:     authProfile.referred_by,
+            amount:      200,
+            description: "Referral bonus — friend completed first detail",
+          });
         }
       }
     } catch (refErr) {

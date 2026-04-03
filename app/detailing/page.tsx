@@ -39,7 +39,7 @@ async function DataProvider() {
     .order("price_small", { ascending: true });
   const VEHICLE_NAMES = [
     "Interior Detail", "Exterior Detail", "Full Detail",
-    "Ultimate Interior Reset + Wash", "Ultimate Showroom Restoration",
+    "Ultimate Interior Reset", "Ultimate Interior + Exterior Reset",
   ];
   return <DetailingPage services={(services ?? []).filter((s: Service) =>
     !s.is_subscription && VEHICLE_NAMES.includes(s.name)
