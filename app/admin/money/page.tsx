@@ -81,7 +81,17 @@ export default function MoneyPage() {
     const email = b.customer_email;
     if (!email) { toast("No email on file", "error"); return; }
     try {
-      const r = await sendStripePaymentLink({ bookingId: b.id, customerEmail: email, amount: Number(b.total_price) });
+      const r = await sendStripePaymentLink(b.id, {
+        serviceName:  b.service_name ?? "Detailing Service",
+        totalPrice:   Number(b.total_price),
+        vehicleYear:  b.vehicle_year  ?? undefined,
+        vehicleMake:  b.vehicle_make  ?? undefined,
+        vehicleModel: b.vehicle_model ?? undefined,
+        vehicleSize:  b.vehicle_size  ?? undefined,
+        bookingDate:  b.booking_date  ?? "",
+        bookingTime:  b.booking_time  ?? "",
+        customerEmail: email,
+      });
       if (r.success) toast("Stripe link sent!"); else toast(r.error ?? "Failed", "error");
     } catch { toast("Failed", "error"); }
   }
