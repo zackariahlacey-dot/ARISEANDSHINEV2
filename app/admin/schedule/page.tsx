@@ -319,7 +319,7 @@ function NewBookingForm({
           <FieldLabel>Email</FieldLabel>
           <Input value={email} onChange={setEmail} placeholder="john@email.com" type="email" />
           <FieldLabel>Service Address</FieldLabel>
-          <AddressAutocomplete value={address} onChange={setAddress} placeholder="123 Main St, Burlington, VT" />
+          <AddressAutocomplete value={address} onChange={setAddress} />
           <NavBtn disabled={!name || !phone} onNext={() => setStep(2)} />
         </div>
       )}
