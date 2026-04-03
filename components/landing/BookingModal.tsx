@@ -22,6 +22,7 @@ import {
   Sparkles,
   Gem,
   Layers,
+  Waves,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
@@ -74,6 +75,9 @@ const FLOOR_ADDON_IDS = ["floor_1", "floor_2", "floor_all"];
 function getAddonsForService(serviceName: string): readonly AddonItem[] {
   const n = serviceName.toLowerCase();
 
+  // Footage-based services (boat/RV): no car-specific add-ons
+  if (n.includes("boat") || n.includes("rv") || n.includes("motorhome")) return [];
+
   // Paint correction: exterior-only work; clay bar already part of the process
   if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage")) {
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay");
@@ -114,6 +118,19 @@ function getIncludedNote(serviceName: string): string | null {
   return null;
 }
 
+function isFootageService(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.includes("boat") || n.includes("rv") || n.includes("motorhome");
+}
+function isRVService(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.includes("rv") || n.includes("motorhome");
+}
+// kept for backward compat with add-on filters
+function isBoatService(name: string): boolean {
+  return name.toLowerCase().includes("boat");
+}
+
 /**
  * Returns a display label for the service category.
  */
@@ -123,10 +140,37 @@ function getServiceCategory(service: Service): { label: string; color: string } 
   if (n.includes("ultimate"))   return { label: "Ultimate Series",           color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
   if (n.includes("paint") || n.includes("correction") || n.includes("single-stage") || n.includes("two-stage"))
                                 return { label: "Paint Correction",           color: "text-violet-400 bg-violet-500/10 border-violet-500/20" };
+  if (n.includes("boat"))       return { label: "Marine Detailing",          color: "text-blue-400 bg-blue-500/10 border-blue-500/20" };
+  if (n.includes("rv") || n.includes("motorhome"))
+                                return { label: "RV Detailing",              color: "text-green-400 bg-green-500/10 border-green-500/20" };
   return                               { label: "One-Time Detailing",         color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20" };
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
+
+/** Per-foot rates for footage-based services (boat / RV) */
+const FOOTAGE_RATE: Record<string, number> = {
+  // Boats — 15 ft minimum
+  "Boat Interior Detail": 18,
+  "Boat Exterior Detail": 20,
+  "Full Boat Detail":     32,
+  // RVs — 20 ft minimum
+  "RV Interior Detail":   20,
+  "RV Exterior Detail":   22,
+  "RV Full Detail":       38,
+};
+/** Minimum footage per service */
+const FOOTAGE_MIN_FEET: Record<string, number> = {
+  "Boat Interior Detail": 15,
+  "Boat Exterior Detail": 15,
+  "Full Boat Detail":     15,
+  "RV Interior Detail":   20,
+  "RV Exterior Detail":   20,
+  "RV Full Detail":       20,
+};
+// backward-compat aliases used in a few inline JSX references
+const BOAT_RATE = FOOTAGE_RATE;
+const BOAT_MIN_FEET = 15;
 
 const VEHICLE_SIZES: {
   id: VehicleSizeSlug;
@@ -556,6 +600,7 @@ export function BookingSection({
   const [vehicleYear, setVehicleYear] = useState("");
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
+  const [boatLength, setBoatLength] = useState<number | "">(20);
 
   // Add-ons
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; label: string; price: number }[]>([]);
@@ -638,10 +683,18 @@ export function BookingSection({
   } | null>(null);
 
   // Computed price
-  const computedPrice =
-    selectedService && vehicleSize
-      ? getPriceForSize(selectedService, vehicleSize)
-      : null;
+  const computedPrice = selectedService
+    ? isFootageService(selectedService.name)
+      ? (() => {
+          const minFt = FOOTAGE_MIN_FEET[selectedService.name] ?? 15;
+          const rate  = FOOTAGE_RATE[selectedService.name] ?? selectedService.price_small;
+          if (typeof boatLength !== "number" || boatLength < minFt) return null;
+          return Math.max(Math.round(rate * minFt), Math.round(rate * boatLength));
+        })()
+      : vehicleSize
+        ? getPriceForSize(selectedService, vehicleSize)
+        : null
+    : null;
 
   const formatPhoneNumber = (value: string) => {
     if (!value) return value;
@@ -753,6 +806,7 @@ export function BookingSection({
       setVehicleYear("");
       setVehicleMake("");
       setVehicleModel("");
+      setBoatLength(20);
       setSelectedAddons([]);
       setSelectedDate("");
       setSelectedTime("");
@@ -1031,8 +1085,14 @@ export function BookingSection({
 
   // ── Navigation guards ────────────────────────────────────────────────────
   const canGoNext = (): boolean => {
-    if (step === 1)
+    if (step === 1) {
+      if (selectedService && isFootageService(selectedService.name)) {
+        const minFt = FOOTAGE_MIN_FEET[selectedService.name] ?? 15;
+        return !!(vehicleYear && vehicleMake && vehicleModel &&
+          typeof boatLength === "number" && boatLength >= minFt);
+      }
       return !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
+    }
     if (step === 2)
       return !!(
         selectedDate &&
@@ -1068,10 +1128,12 @@ export function BookingSection({
     serviceId: selectedService!.id,
     serviceName: selectedService!.name,
     totalPrice: totalAfterDiscount,
-    vehicleSize: vehicleSize as VehicleSizeSlug,
-    vehicleYear,
-    vehicleMake,
-    vehicleModel,
+    vehicleSize: (selectedService && isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+    vehicleYear: vehicleYear,
+    vehicleMake: vehicleMake,
+    vehicleModel: selectedService && isFootageService(selectedService.name)
+      ? `${vehicleModel} (${boatLength}ft)`
+      : vehicleModel,
     bookingDate: selectedDate,
     bookingTime: selectedTime,
     serviceAddress,
@@ -1093,7 +1155,7 @@ export function BookingSection({
 
   // ── Pay at Arrival ───────────────────────────────────────────────────────
   const handlePayAtArrival = async () => {
-    if (!selectedService || !vehicleSize || !canConfirm()) return;
+    if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize) || !canConfirm()) return;
     setIsSubmitting(true);
     setBookingResult(null);
     setStripeError(null);
@@ -1123,13 +1185,13 @@ export function BookingSection({
 
   // ── Save draft and redirect to sign up (keeps booking state for after auth) ─
   const handleCreateAccountClick = () => {
-    if (!selectedService || !vehicleSize) return;
+    if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize)) return;
     const draft: DraftBooking = {
       serviceId: selectedService.id,
-      vehicleSize: vehicleSize as VehicleSizeSlug,
-      vehicleYear,
-      vehicleMake,
-      vehicleModel,
+      vehicleSize: (isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+      vehicleYear: vehicleYear,
+      vehicleMake: vehicleMake,
+      vehicleModel: isFootageService(selectedService.name) ? `${vehicleModel} (${boatLength}ft)` : vehicleModel,
       selectedDate,
       selectedTime,
       serviceAddress,
@@ -1152,7 +1214,7 @@ export function BookingSection({
 
   // ── Pay Now via Stripe ───────────────────────────────────────────────────
   const handlePayNow = async () => {
-    if (!selectedService || !vehicleSize || !canConfirm()) return;
+    if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize) || !canConfirm()) return;
     setIsStripeLoading(true);
     setStripeError(null);
     setBookingResult(null);
@@ -1160,10 +1222,10 @@ export function BookingSection({
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const draft: DraftBooking = {
         serviceId: selectedService.id,
-        vehicleSize: vehicleSize as VehicleSizeSlug,
-        vehicleYear,
-        vehicleMake,
-        vehicleModel,
+        vehicleSize: (isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+        vehicleYear: vehicleYear,
+        vehicleMake: vehicleMake,
+        vehicleModel: isFootageService(selectedService.name) ? `${vehicleModel} (${boatLength}ft)` : vehicleModel,
         selectedDate,
         selectedTime,
         serviceAddress,
@@ -1411,11 +1473,22 @@ export function BookingSection({
                       {selectedService.name}
                     </h2>
                     <p className="text-[#D4AF37] font-bold mt-1.5 text-base">
-                      ${selectedService.price_small}
-                      {selectedService.price_large !== selectedService.price_small && (
-                        <> – ${selectedService.price_large}</>
+                      {isFootageService(selectedService.name) ? (
+                        <>
+                          ${FOOTAGE_RATE[selectedService.name] ?? selectedService.price_small}
+                          <span className="text-zinc-500 font-normal text-xs ml-1">
+                            / foot — enter your {isRVService(selectedService.name) ? "RV" : "boat"} length to calculate
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          ${selectedService.price_small}
+                          {selectedService.price_large !== selectedService.price_small && (
+                            <> – ${selectedService.price_large}</>
+                          )}
+                          <span className="text-zinc-500 font-normal text-xs ml-1">/ depending on vehicle size</span>
+                        </>
                       )}
-                      <span className="text-zinc-500 font-normal text-xs ml-1">/ depending on vehicle size</span>
                     </p>
                   </div>
 
@@ -1477,7 +1550,8 @@ export function BookingSection({
                     !s.is_subscription &&
                     !s.name.toLowerCase().includes("ultimate") &&
                     !s.name.toLowerCase().includes("paint") &&
-                    !s.name.toLowerCase().includes("correction")
+                    !s.name.toLowerCase().includes("correction") &&
+                    !s.name.toLowerCase().includes("boat")
                   );
                   if (!oneTime.length) return null;
                   return (
@@ -1550,32 +1624,31 @@ export function BookingSection({
                   );
                 })()}
 
-                {/* 3. Paint Correction & Restoration */}
+                {/* 3. Marine Detailing */}
                 {(() => {
-                  const paint = services.filter(s =>
-                    !s.is_subscription &&
-                    (s.name.toLowerCase().includes("paint") || s.name.toLowerCase().includes("correction"))
+                  const marine = services.filter(s =>
+                    !s.is_subscription && s.name.toLowerCase().includes("boat")
                   );
-                  if (!paint.length) return null;
+                  if (!marine.length) return null;
                   return (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <Layers size={14} className="text-[#D4AF37]" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Paint Correction & Restoration</h3>
+                        <Waves size={14} className="text-blue-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Marine Detailing</h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {paint.map((service) => (
+                        {marine.map((service) => (
                           <button
                             key={service.id}
                             type="button"
                             onClick={() => onSelectService(service)}
-                            className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 text-zinc-400 hover:border-[#D4AF37]/40 hover:text-zinc-200 hover:bg-white/[0.02] active:scale-[0.99] group"
+                            className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-blue-500/30 hover:text-zinc-200 hover:bg-blue-500/[0.04] active:scale-[0.99] group"
                           >
-                            <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                            <div className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors">
                               {service.name}
                             </div>
-                            <div className="text-[11px] text-[#D4AF37]/80 font-medium mt-0.5">
-                              ${service.price_small} – ${service.price_large}
+                            <div className="text-[11px] text-blue-400/80 font-medium mt-0.5">
+                              ${BOAT_RATE[service.name] ?? service.price_small}/ft
                             </div>
                             {service.description && (
                               <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
@@ -1589,7 +1662,45 @@ export function BookingSection({
                   );
                 })()}
 
-                {/* 4. Monthly Maintenance Plans */}
+                {/* 4. RV Detailing */}
+                {(() => {
+                  const rv = services.filter(s =>
+                    !s.is_subscription && isRVService(s.name)
+                  );
+                  if (!rv.length) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Layers size={14} className="text-green-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">RV Detailing</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {rv.map((service) => (
+                          <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => onSelectService(service)}
+                            className="p-4 rounded-xl border border-green-500/15 bg-green-500/[0.02] text-left transition-all duration-150 text-zinc-400 hover:border-green-500/30 hover:text-zinc-200 hover:bg-green-500/[0.04] active:scale-[0.99] group"
+                          >
+                            <div className="font-bold text-sm text-white group-hover:text-green-400 transition-colors">
+                              {service.name}
+                            </div>
+                            <div className="text-[11px] text-green-400/80 font-medium mt-0.5">
+                              ${FOOTAGE_RATE[service.name] ?? service.price_small}/ft
+                            </div>
+                            {service.description && (
+                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                {service.description}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 5. Monthly Maintenance Plans */}
                 {(() => {
                   const subs = services.filter(s => s.is_subscription);
                   if (!subs.length) return null;
@@ -1718,207 +1829,308 @@ export function BookingSection({
                       className="space-y-6 min-h-[280px]"
                       layout
                     >
-                    {/* Year, Make, Model — Make/Model autocomplete with size auto-select on pick */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
-                          Year
-                        </label>
-                        <input
-                          type="text"
-                          value={vehicleYear}
-                          onChange={(e) => setVehicleYear(e.target.value)}
-                          placeholder="2022"
-                          maxLength={4}
-                          className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
-                          Make
-                        </label>
-                        <MakeAutocomplete
-                          value={vehicleMake}
-                          onChange={setVehicleMake}
-                          onSelect={() => {
-                            setVehicleModel("");
-                            setAutoDetected(false);
-                          }}
-                          placeholder="Toyota"
-                        />
-                      </div>
-                      <div>
-                        <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
-                          Model
-                        </label>
-                        <ModelAutocomplete
-                          value={vehicleModel}
-                          onChange={setVehicleModel}
-                          make={vehicleMake}
-                          onSelect={(_, sizeSlug) => {
-                            setVehicleSize(sizeSlug);
-                            setAutoDetected(true);
-                          }}
-                          placeholder="Camry"
-                        />
-                      </div>
-                    </div>
+                    {selectedService && isFootageService(selectedService.name) ? (
+                      /* ── BOAT / RV: year/make/model + footage + live price calc ── */
+                      (() => {
+                        const isRV = isRVService(selectedService.name);
+                        const minFt = FOOTAGE_MIN_FEET[selectedService.name] ?? 15;
+                        const rate  = FOOTAGE_RATE[selectedService.name] ?? selectedService.price_small;
+                        const accentColor = isRV ? "text-green-400" : "text-blue-400";
+                        const borderColor = isRV ? "border-green-500/15 bg-green-500/5" : "border-blue-500/15 bg-blue-500/5";
+                        const textColor   = isRV ? "text-green-300/80" : "text-blue-300/80";
+                        const makePlaceholder  = isRV ? "Winnebago" : "Sea Ray";
+                        const modelPlaceholder = isRV ? "Minnie Winnie" : "Sundancer 260";
+                        const sizeRange = isRV ? "most RVs 20–45 ft" : "most boats 15–40 ft";
+                        const maxFt = isRV ? 60 : 80;
+                        return (
+                          <div className="space-y-5">
+                            {/* Year / Make / Model */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Year</label>
+                                <input
+                                  type="text"
+                                  value={vehicleYear}
+                                  onChange={(e) => setVehicleYear(e.target.value)}
+                                  placeholder="2021"
+                                  maxLength={4}
+                                  className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Make</label>
+                                <input
+                                  type="text"
+                                  value={vehicleMake}
+                                  onChange={(e) => setVehicleMake(e.target.value)}
+                                  placeholder={makePlaceholder}
+                                  className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Model</label>
+                                <input
+                                  type="text"
+                                  value={vehicleModel}
+                                  onChange={(e) => setVehicleModel(e.target.value)}
+                                  placeholder={modelPlaceholder}
+                                  className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                />
+                              </div>
+                            </div>
 
+                            {/* Footage input */}
+                            <div>
+                              <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                                {isRV ? "RV Length (feet)" : "Boat Length (feet)"}
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min={minFt}
+                                  max={maxFt}
+                                  value={boatLength}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBoatLength(val === "" ? "" : Math.max(1, parseInt(val, 10) || 1));
+                                  }}
+                                  placeholder={`e.g. ${minFt + 5}`}
+                                  className="w-full text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-4 outline-none transition-all placeholder:text-zinc-600 text-2xl font-black tabular-nums"
+                                />
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-medium pointer-events-none">ft</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-600 mt-2 text-center">
+                                Minimum {minFt} ft · {sizeRange}
+                              </p>
+                            </div>
 
-                    {/* Vehicle Size — always-interactive; auto-selects on model pick, can override */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
-                          Vehicle Size
-                        </label>
-                        {autoDetected && vehicleSize && (
-                          <span className="inline-flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
-                            <Zap size={8} className="fill-[#D4AF37]" /> Auto-detected
-                          </span>
+                            {/* Live price calculation */}
+                            {computedPrice != null && (
+                              <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 px-5 py-4 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Estimated Total</p>
+                                <p className="text-3xl font-black text-[#D4AF37] tabular-nums">${computedPrice}</p>
+                                <p className="text-[11px] text-zinc-500 mt-1">
+                                  {typeof boatLength === "number" && boatLength < minFt
+                                    ? `${minFt}ft minimum applies`
+                                    : `${boatLength}ft × $${rate}/ft`}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className={`rounded-xl border ${borderColor} px-4 py-3`}>
+                              <p className={`text-[11px] ${textColor} leading-relaxed`}>
+                                {isRV
+                                  ? "Final price confirmed on-site. Slide-outs, awnings, and diesel pusher coaches may require a custom quote."
+                                  : "Final price confirmed on-site after inspection. Pontoons, bowriders, and larger center consoles may require a quote for additional complexity."}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      /* ── VEHICLE: year/make/model + size ── */
+                      <>
+                      {/* Year, Make, Model — Make/Model autocomplete with size auto-select on pick */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                            Year
+                          </label>
+                          <input
+                            type="text"
+                            value={vehicleYear}
+                            onChange={(e) => setVehicleYear(e.target.value)}
+                            placeholder="2022"
+                            maxLength={4}
+                            className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                            Make
+                          </label>
+                          <MakeAutocomplete
+                            value={vehicleMake}
+                            onChange={setVehicleMake}
+                            onSelect={() => {
+                              setVehicleModel("");
+                              setAutoDetected(false);
+                            }}
+                            placeholder="Toyota"
+                          />
+                        </div>
+                        <div>
+                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                            Model
+                          </label>
+                          <ModelAutocomplete
+                            value={vehicleModel}
+                            onChange={setVehicleModel}
+                            make={vehicleMake}
+                            onSelect={(_, sizeSlug) => {
+                              setVehicleSize(sizeSlug);
+                              setAutoDetected(true);
+                            }}
+                            placeholder="Camry"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Vehicle Size — always-interactive; auto-selects on model pick, can override */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                            Vehicle Size
+                          </label>
+                          {autoDetected && vehicleSize && (
+                            <span className="inline-flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                              <Zap size={8} className="fill-[#D4AF37]" /> Auto-detected
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          {VEHICLE_SIZES.map((size) => {
+                            const isSelected = vehicleSize === size.id;
+                            return (
+                              <button
+                                key={size.id}
+                                type="button"
+                                onClick={() => {
+                                  setVehicleSize(size.id);
+                                  setAutoDetected(false);
+                                }}
+                                className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
+                                  isSelected
+                                    ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 shadow-[0_0_18px_rgba(212,175,55,0.12)]"
+                                    : "bg-zinc-950/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                    {size.label}
+                                  </span>
+                                  {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                </div>
+                                <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
+                                {selectedService && (
+                                  <p className={`text-sm font-black mt-2 ${isSelected ? "text-white" : "text-zinc-400"}`}>
+                                    ${selectedService[size.sizeKey]}
+                                  </p>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {!vehicleSize && vehicleMake.trim() && vehicleModel.trim() && (
+                          <p className="text-[11px] text-zinc-500 mt-2.5 text-center">
+                            Vehicle not found in our database — please select your size above
+                          </p>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        {VEHICLE_SIZES.map((size) => {
-                          const isSelected = vehicleSize === size.id;
-                          return (
-                            <button
-                              key={size.id}
-                              type="button"
-                              onClick={() => {
-                                setVehicleSize(size.id);
-                                setAutoDetected(false);
-                              }}
-                              className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
-                                isSelected
-                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 shadow-[0_0_18px_rgba(212,175,55,0.12)]"
-                                  : "bg-zinc-950/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
-                                  {size.label}
-                                </span>
-                                {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
-                              </div>
-                              <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
-                              {selectedService && (
-                                <p className={`text-sm font-black mt-2 ${isSelected ? "text-white" : "text-zinc-400"}`}>
-                                  ${selectedService[size.sizeKey]}
-                                </p>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {!vehicleSize && vehicleMake.trim() && vehicleModel.trim() && (
-                        <p className="text-[11px] text-zinc-500 mt-2.5 text-center">
-                          Vehicle not found in our database — please select your size above
-                        </p>
-                      )}
-                    </div>
-
-
-                    {/* Enhance Your Detail (Smart per-service Add-ons) */}
-                    {(() => {
-                      const available = getAddonsForService(selectedService?.name ?? "");
-                      const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
-                      const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
-                      const note       = getIncludedNote(selectedService?.name ?? "");
-                      return (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Sparkles size={14} className="text-[#D4AF37]" />
-                            <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
-                              Enhance Your Detail
-                            </label>
-                          </div>
-
-                          {note && (
-                            <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 mb-3">
-                              <Check size={12} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
-                              <p className="text-[11px] text-emerald-300/80 leading-relaxed">{note}</p>
+                      {/* Enhance Your Detail (Smart per-service Add-ons) */}
+                      {(() => {
+                        const available = getAddonsForService(selectedService?.name ?? "");
+                        const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
+                        const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
+                        const note       = getIncludedNote(selectedService?.name ?? "");
+                        return (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Sparkles size={14} className="text-[#D4AF37]" />
+                              <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
+                                Enhance Your Detail
+                              </label>
                             </div>
-                          )}
 
-                          <div className="space-y-2.5">
-                            {/* Standalone add-ons (non-floor) */}
-                            {standAlone.map((addon) => {
-                              const isSelected = selectedAddons.some(a => a.id === addon.id);
-                              return (
-                                <button
-                                  key={addon.id}
-                                  type="button"
-                                  onClick={() => toggleAddon(addon)}
-                                  className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
-                                    isSelected
-                                      ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
-                                      : "bg-zinc-950/40 border-white/5 hover:border-white/20"
-                                  }`}
-                                >
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
-                                        {addon.label}
-                                      </span>
-                                      {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
-                                    </div>
-                                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
-                                      {addon.desc}
-                                    </p>
-                                  </div>
-                                  <div className={`shrink-0 font-black text-sm tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                    +${addon.price}
-                                  </div>
-                                </button>
-                              );
-                            })}
-
-                            {/* Floorboard Shampoo — tiered selector (only for services with interior work) */}
-                            {floorOpts.length > 0 && (
-                              <div className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
-                                selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
-                                  ? "border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
-                                  : "border-white/5"
-                              }`}>
-                                <div className={`px-4 py-3 border-b border-white/[0.06] ${
-                                  selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
-                                    ? "bg-[#D4AF37]/10"
-                                    : "bg-zinc-950/40"
-                                }`}>
-                                  <p className="text-sm font-bold text-zinc-200">Sectional Floorboard Shampoo</p>
-                                  <p className="text-[11px] text-zinc-500 mt-0.5">Deep shampoo — pick how many sections</p>
-                                </div>
-                                <div className="flex divide-x divide-white/[0.06] bg-zinc-950/40">
-                                  {floorOpts.map((addon) => {
-                                    const isSelected = selectedAddons.some(a => a.id === addon.id);
-                                    const shortLabel = addon.id === "floor_1" ? "1 Section" : addon.id === "floor_2" ? "2 Sections" : "All";
-                                    return (
-                                      <button
-                                        key={addon.id}
-                                        type="button"
-                                        onClick={() => toggleAddon(addon)}
-                                        className={`flex-1 py-3.5 text-center transition-all duration-200 ${
-                                          isSelected ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.03]"
-                                        }`}
-                                      >
-                                        <div className={`text-xs font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-400"}`}>
-                                          {shortLabel}
-                                        </div>
-                                        <div className={`text-sm font-black mt-0.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                          +${addon.price}
-                                        </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
+                            {note && (
+                              <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 mb-3">
+                                <Check size={12} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
+                                <p className="text-[11px] text-emerald-300/80 leading-relaxed">{note}</p>
                               </div>
                             )}
+
+                            <div className="space-y-2.5">
+                              {/* Standalone add-ons (non-floor) */}
+                              {standAlone.map((addon) => {
+                                const isSelected = selectedAddons.some(a => a.id === addon.id);
+                                return (
+                                  <button
+                                    key={addon.id}
+                                    type="button"
+                                    onClick={() => toggleAddon(addon)}
+                                    className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
+                                      isSelected
+                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+                                        : "bg-zinc-950/40 border-white/5 hover:border-white/20"
+                                    }`}
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
+                                          {addon.label}
+                                        </span>
+                                        {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                      </div>
+                                      <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                                        {addon.desc}
+                                      </p>
+                                    </div>
+                                    <div className={`shrink-0 font-black text-sm tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                      +${addon.price}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+
+                              {/* Floorboard Shampoo — tiered selector */}
+                              {floorOpts.length > 0 && (
+                                <div className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
+                                  selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
+                                    ? "border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+                                    : "border-white/5"
+                                }`}>
+                                  <div className={`px-4 py-3 border-b border-white/[0.06] ${
+                                    selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
+                                      ? "bg-[#D4AF37]/10"
+                                      : "bg-zinc-950/40"
+                                  }`}>
+                                    <p className="text-sm font-bold text-zinc-200">Sectional Floorboard Shampoo</p>
+                                    <p className="text-[11px] text-zinc-500 mt-0.5">Deep shampoo — pick how many sections</p>
+                                  </div>
+                                  <div className="flex divide-x divide-white/[0.06] bg-zinc-950/40">
+                                    {floorOpts.map((addon) => {
+                                      const isSelected = selectedAddons.some(a => a.id === addon.id);
+                                      const shortLabel = addon.id === "floor_1" ? "1 Section" : addon.id === "floor_2" ? "2 Sections" : "All";
+                                      return (
+                                        <button
+                                          key={addon.id}
+                                          type="button"
+                                          onClick={() => toggleAddon(addon)}
+                                          className={`flex-1 py-3.5 text-center transition-all duration-200 ${
+                                            isSelected ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.03]"
+                                          }`}
+                                        >
+                                          <div className={`text-xs font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-400"}`}>
+                                            {shortLabel}
+                                          </div>
+                                          <div className={`text-sm font-black mt-0.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                            +${addon.price}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })()}
+                      </>
+                    )}
                   </motion.div>
                   )}
 

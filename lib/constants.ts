@@ -40,6 +40,32 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 480, medium: 480, large: 480, extra_large: 480,
     compact: 480, sedan: 480, suv: 480, xl: 480,
   },
+  // Boat Detailing
+  "Boat Interior Detail": {
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    compact: 240, sedan: 240, suv: 240, xl: 240,
+  },
+  "Boat Exterior Detail": {
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    compact: 240, sedan: 240, suv: 240, xl: 240,
+  },
+  "Full Boat Detail": {
+    small: 480, medium: 480, large: 480, extra_large: 480,
+    compact: 480, sedan: 480, suv: 480, xl: 480,
+  },
+  // RV Detailing
+  "RV Interior Detail": {
+    small: 300, medium: 300, large: 360, extra_large: 360,
+    compact: 300, sedan: 300, suv: 360, xl: 360,
+  },
+  "RV Exterior Detail": {
+    small: 240, medium: 240, large: 300, extra_large: 300,
+    compact: 240, sedan: 240, suv: 300, xl: 300,
+  },
+  "RV Full Detail": {
+    small: 480, medium: 480, large: 600, extra_large: 600,
+    compact: 480, sedan: 480, suv: 600, xl: 600,
+  },
 };
 
 export const VEHICLE_SIZE_MAP = {

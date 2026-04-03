@@ -4,12 +4,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Phone, Menu, X, ChevronDown, Sparkles, Brush, Shield, Crown } from "lucide-react";
+import { Phone, Menu, X, ChevronDown, Sparkles, Shield, Crown, Anchor, Truck } from "lucide-react";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 
 const SERVICE_LINKS = [
   { href: "/detailing", label: "Auto Detailing", icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
-  { href: "/paint-correction", label: "Paint Correction", icon: Brush, desc: "Swirl removal & restoration" },
+  { href: "/boat-detailing", label: "Boat Detailing", icon: Anchor, desc: "Marine interior, exterior & full detail" },
+  { href: "/rv-detailing", label: "RV Detailing", icon: Truck, desc: "Per-foot pricing for motorhomes & trailers" },
   { href: "/maintenance-club", label: "Maintenance Club", icon: Crown, desc: "Monthly recurring plans" },
   { href: "/services", label: "All Services", icon: Shield, desc: "Browse everything we offer" },
 ];
