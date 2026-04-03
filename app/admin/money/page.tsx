@@ -92,7 +92,7 @@ export default function MoneyPage() {
         bookingTime:  b.booking_time  ?? "",
         customerEmail: email,
       });
-      if (r.success) toast("Stripe link sent!"); else toast(r.error ?? "Failed", "error");
+      if ("url" in r) toast("Stripe link sent!"); else toast(r.error ?? "Failed", "error");
     } catch { toast("Failed", "error"); }
   }
 
