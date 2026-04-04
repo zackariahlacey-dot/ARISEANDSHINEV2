@@ -993,80 +993,220 @@ export async function deletePersonalBlockAction(id: string) {
 
 // ── Money / revenue breakdown ───────────────────────────────────────────────
 
+/** YYYY-MM-DD in America/New_York (business is Vermont). */
+function todayYmdEastern(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function isRealMoneyJob(b: { service_name?: string | null; notes?: string | null }): boolean {
+  const sn = (b.service_name ?? "").toLowerCase();
+  if (sn.includes("personal block")) return false;
+  if ((b.notes ?? "").toLowerCase().includes("personal time")) return false;
+  return true;
+}
+
+function isCancelledBooking(b: { status?: string | null }): boolean {
+  return (b.status ?? "").toLowerCase() === "cancelled";
+}
+
+/**
+ * Money tab: paid = scheduled date is before today and not cancelled (ignore completed/pending flags).
+ * Upcoming = today or later on the calendar and not cancelled.
+ */
+function isPaidBySchedule(
+  b: { booking_date?: string | null; status?: string | null; service_name?: string | null; notes?: string | null },
+  todayStr: string
+): boolean {
+  if (!isRealMoneyJob(b)) return false;
+  if (isCancelledBooking(b)) return false;
+  const d = String(b.booking_date ?? "");
+  if (!d) return false;
+  return d < todayStr;
+}
+
+function isUpcomingBySchedule(
+  b: { booking_date?: string | null; status?: string | null; service_name?: string | null; notes?: string | null },
+  todayStr: string
+): boolean {
+  if (!isRealMoneyJob(b)) return false;
+  if (isCancelledBooking(b)) return false;
+  const d = String(b.booking_date ?? "");
+  if (!d) return false;
+  return d >= todayStr;
+}
+
+function isStripePayment(b: any): boolean {
+  if (b.payment_method === "pay_now") return true;
+  if (b.payment_method === "pay_on_arrival") return false;
+  const n = (b.notes ?? "").toLowerCase();
+  return n.includes("stripe") || n.includes("pay now") || n.includes("card");
+}
+
+function sumPaid(rows: any[], filter: (b: any) => boolean, todayStr: string) {
+  const paid = rows.filter((b) => isPaidBySchedule(b, todayStr) && filter(b));
+  const stripe = paid.filter(isStripePayment).reduce((s, b) => s + Number(b.total_price || 0), 0);
+  const cash = paid.filter((b) => !isStripePayment(b)).reduce((s, b) => s + Number(b.total_price || 0), 0);
+  return { paid, stripe, cash, total: stripe + cash, count: paid.length };
+}
+
 export async function getRevenueBreakdown(monthOffset = 0) {
   const supabase = createAdminClient();
   const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth() + monthOffset;
   const first = new Date(y, m, 1).toISOString().split("T")[0];
-  const last  = new Date(y, m + 1, 0).toISOString().split("T")[0];
+  const last = new Date(y, m + 1, 0).toISOString().split("T")[0];
+  const todayStr = todayYmdEastern();
+  const calendarYear = now.getFullYear();
+  const viewYear = new Date(y, m, 1).getFullYear();
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("id, total_price, status, notes, service_name, booking_date, booking_time, customer_name, payment_method")
-    .gte("booking_date", first)
-    .lte("booking_date", last);
+    .select(
+      "id, total_price, status, notes, service_name, booking_date, booking_time, customer_name, customer_email, payment_method"
+    )
+    .gte("booking_date", "2020-01-01")
+    .lte("booking_date", `${calendarYear + 5}-12-31`);
 
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const completed = rows.filter((b: any) => b.status === "completed");
-  const confirmed = rows.filter((b: any) => b.status === "confirmed");
 
-  // Stripe vs Cash: check payment_method column first, then parse notes
-  function isStripe(b: any): boolean {
-    if (b.payment_method === "pay_now") return true;
-    if (b.payment_method === "pay_on_arrival") return false;
-    const n = (b.notes ?? "").toLowerCase();
-    return n.includes("stripe") || n.includes("pay now") || n.includes("card");
-  }
+  // ── Selected month (paid by calendar: date before today, not cancelled) ──
+  const inMonth = (b: any) => b.booking_date >= first && b.booking_date <= last;
+  const monthStats = sumPaid(rows, inMonth, todayStr);
+  const avgTicket = monthStats.count > 0 ? monthStats.total / monthStats.count : 0;
 
-  const stripeRevenue = completed.filter(isStripe).reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
-  const cashRevenue   = completed.filter((b: any) => !isStripe(b)).reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
-  const totalRevenue  = stripeRevenue + cashRevenue;
-  const jobCount      = completed.length;
-  const avgTicket     = jobCount > 0 ? totalRevenue / jobCount : 0;
+  const monthUpcomingRows = rows.filter(
+    (b: any) => isRealMoneyJob(b) && !isCancelledBooking(b) && inMonth(b) && isUpcomingBySchedule(b, todayStr)
+  );
+  const monthUpcomingTotal = monthUpcomingRows.reduce((s, b) => s + Number(b.total_price || 0), 0);
+  const cancelledInMonthCount = rows.filter(
+    (b: any) => isRealMoneyJob(b) && isCancelledBooking(b) && inMonth(b)
+  ).length;
 
-  // Per-service breakdown
   const byService: Record<string, { name: string; revenue: number; count: number }> = {};
-  for (const b of completed) {
+  for (const b of monthStats.paid) {
     const svc = b.service_name || "Unknown";
     if (!byService[svc]) byService[svc] = { name: svc, revenue: 0, count: 0 };
     byService[svc].revenue += Number(b.total_price || 0);
     byService[svc].count += 1;
   }
 
-  // Unpaid: confirmed bookings (cash / not yet processed)
-  const unpaid = confirmed.map((b: any) => ({
+  // ── Year-to-date (calendar year, paid-by-schedule only) ─────────────────
+  const ytdFilter = (b: any) =>
+    b.booking_date >= `${calendarYear}-01-01` && b.booking_date <= `${calendarYear}-12-31`;
+  const ytdStats = sumPaid(rows, ytdFilter, todayStr);
+  const ytdAvg = ytdStats.count > 0 ? ytdStats.total / ytdStats.count : 0;
+
+  // ── Full calendar year of the month you're viewing (paid by schedule) ───
+  const yearViewFilter = (b: any) => {
+    const yr = parseInt(String(b.booking_date ?? "").slice(0, 4), 10);
+    return yr === viewYear;
+  };
+  const viewYearStats = sumPaid(rows, yearViewFilter, todayStr);
+  const viewYearAvg = viewYearStats.count > 0 ? viewYearStats.total / viewYearStats.count : 0;
+
+  // ── Upcoming: any non-cancelled job on today or a future calendar date ───
+  const futureRows = rows.filter((b: any) => isUpcomingBySchedule(b, todayStr));
+  const futureTotal = futureRows.reduce((s, b) => s + Number(b.total_price || 0), 0);
+
+  // ── Outstanding: invoice not paid (admin Stripe link flow) ─────────────
+  const outstandingRows = rows.filter((b: any) => isRealMoneyJob(b) && b.status === "pending_payment");
+  const unpaid = outstandingRows.map((b: any) => ({
     id: b.id,
     customer_name: b.customer_name,
+    customer_email: b.customer_email,
     service_name: b.service_name,
     booking_date: b.booking_date,
     booking_time: b.booking_time,
     total_price: Number(b.total_price || 0),
-    is_stripe: isStripe(b),
+    is_stripe: isStripePayment(b),
   }));
+
+  // ── Recent paid jobs (selected month, past dates) for overview list ─────
+  const recentEarned = [...monthStats.paid]
+    .sort((a, b) => (b.booking_date + (b.booking_time ?? "")).localeCompare(a.booking_date + (a.booking_time ?? "")))
+    .slice(0, 25)
+    .map((b: any) => ({
+      id: b.id,
+      customer_name: b.customer_name,
+      service_name: b.service_name,
+      booking_date: b.booking_date,
+      status: b.status,
+      total_price: Number(b.total_price || 0),
+      is_stripe: isStripePayment(b),
+    }));
 
   return {
     period: { first, last },
-    stripeRevenue,
-    cashRevenue,
-    totalRevenue,
-    jobCount,
+    stripeRevenue: monthStats.stripe,
+    cashRevenue: monthStats.cash,
+    totalRevenue: monthStats.total,
+    jobCount: monthStats.count,
     avgTicket,
     byService: Object.values(byService).sort((a, b) => b.revenue - a.revenue),
     unpaid,
+    // Extended dashboard fields
+    monthUpcomingCount: monthUpcomingRows.length,
+    monthUpcomingTotal,
+    cancelledInMonthCount,
+    yearToDate: {
+      total: ytdStats.total,
+      stripe: ytdStats.stripe,
+      cash: ytdStats.cash,
+      jobCount: ytdStats.count,
+      avgTicket: ytdAvg,
+      year: calendarYear,
+    },
+    /** Paid-by-schedule total for the full calendar year of the month you're viewing */
+    viewYearSummary: {
+      year: viewYear,
+      total: viewYearStats.total,
+      stripe: viewYearStats.stripe,
+      cash: viewYearStats.cash,
+      jobCount: viewYearStats.count,
+      avgTicket: viewYearAvg,
+    },
+    futurePipeline: {
+      total: futureTotal,
+      count: futureRows.length,
+      jobs: futureRows
+        .sort((a: any, b: any) => {
+          const da = `${a.booking_date} ${String(a.booking_time ?? "").slice(0, 8)}`;
+          const db = `${b.booking_date} ${String(b.booking_time ?? "").slice(0, 8)}`;
+          return da.localeCompare(db);
+        })
+        .slice(0, 30)
+        .map((b: any) => ({
+          id: b.id,
+          customer_name: b.customer_name,
+          service_name: b.service_name,
+          booking_date: b.booking_date,
+          booking_time: b.booking_time,
+          total_price: Number(b.total_price || 0),
+          status: b.status,
+        })),
+    },
+    recentEarned,
+    earnedLogic:
+      "Paid = scheduled date before today and not cancelled. Upcoming = today or later, not cancelled. Personal blocks excluded.",
   };
 }
 
 // ── All-time stats (for money page header) ─────────────────────────────────
 export async function getAllTimeStats() {
   const supabase = createAdminClient();
+  const todayStr = todayYmdEastern();
   const { data } = await supabase
     .from("bookings")
-    .select("total_price, status, notes, payment_method")
-    .eq("status", "completed");
-  const rows = data ?? [];
+    .select("total_price, status, notes, service_name, payment_method, booking_date");
+  const rows = (data ?? []).filter((b: any) => isPaidBySchedule(b, todayStr));
   const total = rows.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
   return { totalRevenue: total, jobCount: rows.length };
 }
