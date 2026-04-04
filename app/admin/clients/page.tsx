@@ -66,6 +66,15 @@ function formatTime(t: string): string {
   return to12h(t.slice(0, 5));
 }
 
+/** Normalize stored phone for tel: / sms: (works on iOS & Android) */
+function phoneToTelHref(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.length === 10) return `+1${d}`;
+  if (d.length === 11 && d.startsWith("1")) return `+${d}`;
+  if (d.length >= 10) return `+${d}`;
+  return d ? `+${d}` : "";
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
   const { toast } = useToast();
@@ -457,7 +466,7 @@ export default function ClientsPage() {
           setActiveClient(null);
           setClientModalView("profile");
         }}
-        mobileBottomOffset="pb-12 sm:pb-16 md:pb-0"
+        fullScreen
       >
         {activeClient && clientModalView === "book" && clientBookPrefill && (
           <div className="space-y-3">
@@ -542,38 +551,95 @@ export default function ClientsPage() {
               <div className="space-y-3">
                 {/* Contact */}
                 <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
-                  {activeClient.phone && (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-zinc-300">
-                        <Phone size={13} className="text-zinc-600" />
-                        <span>{activeClient.phone}</span>
+                  {activeClient.phone && (() => {
+                    const tel = phoneToTelHref(activeClient.phone);
+                    return (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-sm text-zinc-300 min-w-0 flex-1">
+                          <Phone size={13} className="text-zinc-600 shrink-0" />
+                          {tel ? (
+                            <a
+                              href={`tel:${tel}`}
+                              className="truncate font-medium text-white underline-offset-2 hover:underline active:opacity-80"
+                            >
+                              {activeClient.phone}
+                            </a>
+                          ) : (
+                            <span>{activeClient.phone}</span>
+                          )}
+                        </div>
+                        {tel ? (
+                          <div className="flex gap-2 shrink-0">
+                            <a
+                              href={`tel:${tel}`}
+                              className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-400 hover:bg-amber-500/25 transition-colors active:scale-95"
+                              aria-label="Call client"
+                            >
+                              <Phone size={16} />
+                            </a>
+                            <a
+                              href={`sms:${tel}`}
+                              className="p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-zinc-300 hover:bg-white/[0.1] transition-colors active:scale-95"
+                              aria-label="Text client"
+                            >
+                              <MessageSquare size={16} />
+                            </a>
+                          </div>
+                        ) : null}
                       </div>
-                      <div className="flex gap-1.5">
-                        <a href={`tel:${activeClient.phone}`} className="p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all"><Phone size={12} /></a>
-                        <a href={`sms:${activeClient.phone}`} className="p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all"><MessageSquare size={12} /></a>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                   {activeClient.email && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-sm text-zinc-300 min-w-0 flex-1">
                         <Mail size={13} className="text-zinc-600 shrink-0" />
-                        <span className="truncate">{activeClient.email}</span>
+                        <a
+                          href={`mailto:${encodeURIComponent(activeClient.email)}`}
+                          className="truncate text-sky-400/90 underline-offset-2 hover:underline active:opacity-80"
+                        >
+                          {activeClient.email}
+                        </a>
                       </div>
-                      <button
-                        onClick={() => { setSingleRecipient(activeClient); setView("email"); setActiveClient(null); }}
-                        className="ml-2 p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all shrink-0"
-                      ><Send size={12} /></button>
+                      <div className="flex gap-2 shrink-0">
+                        <a
+                          href={`mailto:${encodeURIComponent(activeClient.email)}`}
+                          className="p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-zinc-300 hover:bg-white/[0.1] transition-colors active:scale-95"
+                          aria-label="Open email"
+                        >
+                          <Mail size={16} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => { setSingleRecipient(activeClient); setView("email"); setActiveClient(null); }}
+                          className="p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-zinc-300 hover:bg-white/[0.1] transition-colors active:scale-95"
+                          aria-label="Compose in Email Marketing"
+                        >
+                          <Send size={16} />
+                        </button>
+                      </div>
                     </div>
                   )}
                   {activeClient._lastAddress && activeClient._lastAddress !== "No address recorded" && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-sm text-zinc-300 min-w-0 flex-1">
                         <Navigation size={13} className="text-zinc-600 shrink-0" />
-                        <span className="truncate text-xs">{activeClient._lastAddress}</span>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeClient._lastAddress)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate text-xs text-sky-400/90 underline-offset-2 hover:underline active:opacity-80 text-left"
+                        >
+                          {activeClient._lastAddress}
+                        </a>
                       </div>
-                      <a href={`https://maps.google.com/?q=${encodeURIComponent(activeClient._lastAddress)}`} target="_blank" className="ml-2 p-1.5 rounded-lg bg-white/[0.04] text-zinc-400 hover:text-white transition-all shrink-0">
-                        <Navigation size={12} />
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeClient._lastAddress)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-zinc-300 hover:bg-white/[0.1] shrink-0 transition-colors active:scale-95"
+                        aria-label="Open in Maps"
+                      >
+                        <Navigation size={16} />
                       </a>
                     </div>
                   )}
