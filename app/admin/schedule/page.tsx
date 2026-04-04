@@ -117,16 +117,38 @@ const RV_DISPLAY: Record<string, { name: string; sub: string }> = {
 
 type Pathway = "vehicle" | "boat" | "rv";
 
-function NewBookingForm({
+/** Prefill when opening quick-book from Admin → Clients (profile + garage) */
+export type ClientPrefillForBooking = {
+  profileId: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  vehicles: { id: string; year: number | null; make: string; model: string; size: string }[];
+};
+
+function dbSizeToSlug(size: string | null | undefined): string {
+  const s = (size || "").toLowerCase();
+  if (s === "small" || s === "compact") return "compact";
+  if (s === "medium" || s === "sedan") return "sedan";
+  if (s === "large" || s === "suv") return "suv";
+  if (s === "extra_large" || s === "xl") return "xl";
+  return "sedan";
+}
+
+export function NewBookingForm({
   defaultDate,
   services,
   onSuccess,
   onCancel,
+  clientPrefill,
 }: {
   defaultDate: string;
   services: any[];
   onSuccess: () => void;
   onCancel: () => void;
+  /** When set, step 1 contact fields are filled; vehicle pathway can pick a saved car */
+  clientPrefill?: ClientPrefillForBooking | null;
 }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -161,6 +183,18 @@ function NewBookingForm({
   const [bookedSlots,   setBookedSlots]   = useState<any[]>([]);
   const [slotsLoading,  setSlotsLoading]  = useState(false);
   const [operatingHours,setOperatingHours]= useState<any>(null);
+
+  /** When set, reuse this vehicles row instead of inserting a new one (vehicle pathway only) */
+  const [existingVehicleId, setExistingVehicleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!clientPrefill) return;
+    setName(clientPrefill.name);
+    setPhone(clientPrefill.phone);
+    setEmail(clientPrefill.email);
+    setAddress(clientPrefill.address);
+    setExistingVehicleId(null);
+  }, [clientPrefill]);
 
   // Derived
   const vehicleServices = useMemo(() =>
@@ -246,6 +280,8 @@ function NewBookingForm({
         bookingDate, bookingTime: to12h(bookingTime),
         totalPrice,
         notes: [notes, footageNote, addonNote].filter(Boolean).join(""),
+        ...(clientPrefill?.profileId ? { preferredProfileId: clientPrefill.profileId } : {}),
+        ...(pathway === "vehicle" && existingVehicleId ? { existingVehicleId } : {}),
       });
       if (res.success) { toast("Booking created! 🎉"); onSuccess(); }
       else toast(res.error ?? "Error", "error");
@@ -269,7 +305,7 @@ function NewBookingForm({
           ].map(p => (
             <button
               key={p.id}
-              onClick={() => { setPathway(p.id); setStep(1); setServiceId(""); setSelectedAddons([]); }}
+              onClick={() => { setPathway(p.id); setStep(1); setServiceId(""); setSelectedAddons([]); setExistingVehicleId(null); }}
               className="flex items-center gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] rounded-2xl px-4 py-4 transition-all active:scale-[0.98]"
             >
               <span className="text-3xl">{p.emoji}</span>
@@ -331,6 +367,55 @@ function NewBookingForm({
           {pathway === "vehicle" && (
             <>
               <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Vehicle & Service</p>
+              {clientPrefill && clientPrefill.vehicles.length > 0 && (
+                <div className="space-y-2">
+                  <FieldLabel>Saved vehicle</FieldLabel>
+                  <div className="space-y-2">
+                    {clientPrefill.vehicles.map((v: any) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => {
+                          setExistingVehicleId(v.id);
+                          setVehicleYear(v.year != null ? String(v.year) : "");
+                          setVehicleMake(v.make || "");
+                          setVehicleModel(v.model || "");
+                          setVehicleSize(dbSizeToSlug(v.size));
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center justify-between gap-2",
+                          existingVehicleId === v.id
+                            ? "bg-amber-500/10 border-amber-500/50 text-amber-300"
+                            : "border-white/[0.07] text-zinc-300 bg-white/[0.02]"
+                        )}
+                      >
+                        <span className="text-sm font-bold truncate">
+                          {[v.year, v.make, v.model].filter(Boolean).join(" ") || "Vehicle"}
+                        </span>
+                        <span className="text-[10px] text-zinc-600 shrink-0 capitalize">{(v.size || "").replace(/_/g, " ")}</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExistingVehicleId(null);
+                        setVehicleYear("");
+                        setVehicleMake("");
+                        setVehicleModel("");
+                        setVehicleSize("sedan");
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-3 rounded-xl border border-dashed transition-all text-sm font-bold",
+                        existingVehicleId === null
+                          ? "border-amber-500/50 bg-amber-500/5 text-amber-400"
+                          : "border-white/[0.1] text-zinc-500"
+                      )}
+                    >
+                      + Add a different vehicle (enter below)
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-2">
                 <div><FieldLabel>Year</FieldLabel><Input value={vehicleYear} onChange={setVehicleYear} placeholder="2022" /></div>
                 <div><FieldLabel>Make</FieldLabel><Input value={vehicleMake} onChange={setVehicleMake} placeholder="Toyota" /></div>
@@ -454,7 +539,17 @@ function NewBookingForm({
             </>
           )}
 
-          <NavBtn onBack={() => setStep(1)} disabled={!serviceId || ((pathway === "boat" || pathway === "rv") && !footage)} onNext={() => setStep(3)} />
+          <NavBtn
+            onBack={() => setStep(1)}
+            disabled={
+              !serviceId ||
+              ((pathway === "boat" || pathway === "rv") && !footage) ||
+              (pathway === "vehicle" &&
+                !existingVehicleId &&
+                (!vehicleYear?.trim() || !vehicleMake?.trim() || !vehicleModel?.trim()))
+            }
+            onNext={() => setStep(3)}
+          />
         </div>
       )}
 

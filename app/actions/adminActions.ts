@@ -71,9 +71,20 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
   const firstName = parts[0] ?? "";
   const lastName = parts.slice(1).join(" ") || "";
 
-  let targetUserId: string;
+  let targetUserId: string | undefined;
+
+  // 0. Prefer explicit profile (e.g. admin booking from Clients tab)
+  if (payload.preferredProfileId && typeof payload.preferredProfileId === "string") {
+    const { data: profRow } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", payload.preferredProfileId)
+      .maybeSingle();
+    if (profRow?.id) targetUserId = profRow.id;
+  }
 
   // 1. Resolve by Phone FIRST to avoid unique constraint violations and attribute to existing profile
+  if (!targetUserId) {
   const { data: existingByPhone } = await supabase
     .from("profiles")
     .select("id")
@@ -108,6 +119,11 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     // 3. No existing phone and no email, use new UUID
     targetUserId = crypto.randomUUID();
   }
+  }
+
+  if (!targetUserId) {
+    return { success: false, error: "Could not resolve customer profile." };
+  }
 
   // 2. Ensure Profile exists and is updated (MUST include email so admin can contact client)
   await supabase.from("profiles").upsert({
@@ -118,20 +134,43 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     ...(email ? { email } : {}),
   }, { onConflict: "id" });
 
-  // 3. Insert Vehicle
-  const { data: vehicle, error: vehicleErr } = await supabase
-    .from("vehicles")
-    .insert({
-      user_id: targetUserId,
-      make: payload.vehicleMake || "Unknown",
-      model: payload.vehicleModel || "Unknown",
-      year: parseInt(payload.vehicleYear) || new Date().getFullYear(),
-      size: VEHICLE_SIZE_MAP[payload.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium",
-    })
-    .select("id")
-    .single();
+  // 3. Vehicle — reuse existing row or insert new
+  let vehicle: { id: string };
+  let snapshotMake = payload.vehicleMake || "Unknown";
+  let snapshotModel = payload.vehicleModel || "Unknown";
+  let snapshotYear = String(payload.vehicleYear || "");
+  let dbVehicleSize = VEHICLE_SIZE_MAP[payload.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
 
-  if (vehicleErr) throw new Error("Vehicle creation failed");
+  if (payload.existingVehicleId && typeof payload.existingVehicleId === "string") {
+    const { data: existingV, error: vErr } = await supabase
+      .from("vehicles")
+      .select("id, user_id, make, model, year, size")
+      .eq("id", payload.existingVehicleId)
+      .single();
+    if (vErr || !existingV || existingV.user_id !== targetUserId) {
+      return { success: false, error: "That saved vehicle could not be used for this booking." };
+    }
+    vehicle = { id: existingV.id };
+    snapshotMake = existingV.make || snapshotMake;
+    snapshotModel = existingV.model || snapshotModel;
+    snapshotYear = existingV.year != null ? String(existingV.year) : snapshotYear;
+    dbVehicleSize = existingV.size || dbVehicleSize;
+  } else {
+    const { data: newV, error: vehicleErr } = await supabase
+      .from("vehicles")
+      .insert({
+        user_id: targetUserId,
+        make: snapshotMake,
+        model: snapshotModel,
+        year: parseInt(String(payload.vehicleYear), 10) || new Date().getFullYear(),
+        size: dbVehicleSize,
+      })
+      .select("id")
+      .single();
+
+    if (vehicleErr || !newV) throw new Error("Vehicle creation failed");
+    vehicle = newV;
+  }
 
   // 4. Check Availability First — prevent double booking
   const { data: existingOnDate } = await supabase
@@ -153,12 +192,10 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   // 5. Insert Booking
   const notesBody = [
-    `💳 Payment: Pay at Arrival (Admin Quick Book)`,
+    `💳 Payment: Pay at Arrival (Admin Quick Book) (admin-created)`,
     payload.address ? `📍 Service Location: ${payload.address}` : null,
     payload.notes,
   ].filter(Boolean).join("\n\n");
-
-  const dbVehicleSize = VEHICLE_SIZE_MAP[payload.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
 
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
@@ -176,9 +213,9 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       customer_email:  email ?? null,
       customer_phone:  phoneDigits,
       service_address: payload.address ?? null,
-      vehicle_make:    payload.vehicleMake || "Unknown",
-      vehicle_model:   payload.vehicleModel || "Unknown",
-      vehicle_year:    String(payload.vehicleYear || ""),
+      vehicle_make:    snapshotMake,
+      vehicle_model:   snapshotModel,
+      vehicle_year:    snapshotYear,
       vehicle_size:    dbVehicleSize,
       service_name:    payload.serviceName,
       addons_json:     null,
@@ -198,9 +235,9 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
         customerEmail: email,
         serviceAddress: payload.address,
         serviceName: payload.serviceName,
-        vehicleYear: payload.vehicleYear,
-        vehicleMake: payload.vehicleMake,
-        vehicleModel: payload.vehicleModel,
+        vehicleYear: snapshotYear,
+        vehicleMake: snapshotMake,
+        vehicleModel: snapshotModel,
         bookingDate: payload.bookingDate,
         bookingTime: payload.bookingTime,
         travelFee: 0,
@@ -220,9 +257,9 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     servicePrice: payload.totalPrice,
     bookingDate: payload.bookingDate,
     bookingTime: payload.bookingTime,
-    vehicleYear: payload.vehicleYear,
-    vehicleMake: payload.vehicleMake,
-    vehicleModel: payload.vehicleModel,
+    vehicleYear: snapshotYear,
+    vehicleMake: snapshotMake,
+    vehicleModel: snapshotModel,
     vehicleSize: payload.vehicleSize,
     rewardPointsEarned: 0,
     serviceAddress: payload.address,

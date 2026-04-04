@@ -2,13 +2,18 @@
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function Modal({ open, onClose, title, children, className }: {
+export function Modal({ open, onClose, title, children, className, mobileBottomOffset }: {
   open: boolean; onClose: () => void; title?: string; children: React.ReactNode; className?: string;
+  /** Extra padding from bottom on mobile so the sheet sits higher (e.g. "pb-14") */
+  mobileBottomOffset?: string;
 }) {
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-end md:items-center justify-center"
+      className={cn(
+        "fixed inset-0 z-[200] flex items-end md:items-center justify-center",
+        mobileBottomOffset ?? ""
+      )}
       onClick={onClose}
     >
       {/* Backdrop */}

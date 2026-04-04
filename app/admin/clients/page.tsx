@@ -13,9 +13,11 @@ import {
   Users, Search, Phone, MessageSquare, Mail, Navigation,
   Car, Star, Crown, AlertTriangle,
   Save, CheckCircle2, ChevronRight,
-  Loader2, Send, X, ArrowLeft, UserCheck, UserX,
+  Loader2, Send, X, ArrowLeft, UserCheck, UserX, CalendarPlus,
 } from "lucide-react";
 import { format, differenceInMonths, parseISO } from "date-fns";
+import { useServices } from "@/hooks/use-admin-data";
+import { NewBookingForm, type ClientPrefillForBooking } from "@/app/admin/schedule/page";
 import { cn } from "@/lib/utils";
 import { to12h } from "@/lib/availability";
 
@@ -73,11 +75,13 @@ export default function ClientsPage() {
     queryKey: ["admin", "clients"],
     queryFn: async () => await getAllClients(),
   });
+  const { data: bookingServices } = useServices();
 
   const [search, setSearch]       = useState("");
   const [sort, setSort]           = useState<"recent" | "ltv" | "az">("recent");
   const [accountFilter, setAccountFilter] = useState<"all" | "signed_up" | "guest">("all");
   const [activeClient, setActiveClient]   = useState<any>(null);
+  const [clientModalView, setClientModalView] = useState<"profile" | "book">("profile");
   const [clientTab, setClientTab]         = useState<"overview" | "history">("overview");
   const [editingNotes, setEditingNotes]   = useState(false);
   const [notesValue, setNotesValue]       = useState("");
@@ -115,6 +119,31 @@ export default function ClientsPage() {
       return db - da;
     });
   }, [clients, search, sort, accountFilter]);
+
+  const clientBookPrefill: ClientPrefillForBooking | null = useMemo(() => {
+    if (!activeClient || activeClient._is_orphan) return null;
+    const name =
+      activeClient._display_name?.trim() ||
+      [activeClient.first_name, activeClient.last_name].filter(Boolean).join(" ").trim() ||
+      "Customer";
+    return {
+      profileId: activeClient.id,
+      name,
+      phone: activeClient.phone ?? "",
+      email: activeClient.email ?? "",
+      address:
+        activeClient._lastAddress && activeClient._lastAddress !== "No address recorded"
+          ? activeClient._lastAddress
+          : "",
+      vehicles: (activeClient.vehicles ?? []).map((v: any) => ({
+        id: v.id,
+        year: v.year ?? null,
+        make: v.make ?? "",
+        model: v.model ?? "",
+        size: v.size ?? "medium",
+      })),
+    };
+  }, [activeClient]);
 
   const massRecipients = useMemo(() => {
     if (!clients) return [];
@@ -380,7 +409,13 @@ export default function ClientsPage() {
             return (
               <button
                 key={c.id}
-                onClick={() => { setActiveClient(c); setClientTab("overview"); setNotesValue(c.notes ?? ""); setEditingNotes(false); }}
+                onClick={() => {
+                  setActiveClient(c);
+                  setClientModalView("profile");
+                  setClientTab("overview");
+                  setNotesValue(c.notes ?? "");
+                  setEditingNotes(false);
+                }}
                 className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
               >
                 {/* Avatar */}
@@ -416,8 +451,45 @@ export default function ClientsPage() {
       )}
 
       {/* ── Client Detail Modal ─────────────────────────────────────────────── */}
-      <Modal open={!!activeClient} onClose={() => setActiveClient(null)}>
-        {activeClient && (
+      <Modal
+        open={!!activeClient}
+        onClose={() => {
+          setActiveClient(null);
+          setClientModalView("profile");
+        }}
+        mobileBottomOffset="pb-12 sm:pb-16 md:pb-0"
+      >
+        {activeClient && clientModalView === "book" && clientBookPrefill && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setClientModalView("profile")}
+                className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </button>
+            </div>
+            {!bookingServices ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="animate-spin text-amber-500" size={28} />
+              </div>
+            ) : (
+              <NewBookingForm
+                defaultDate={format(new Date(), "yyyy-MM-dd")}
+                services={bookingServices}
+                clientPrefill={clientBookPrefill}
+                onSuccess={() => {
+                  setClientModalView("profile");
+                  queryClient.invalidateQueries({ queryKey: ["admin", "clients"] });
+                }}
+                onCancel={() => setClientModalView("profile")}
+              />
+            )}
+          </div>
+        )}
+        {activeClient && clientModalView === "profile" && (
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-start gap-3">
@@ -454,6 +526,17 @@ export default function ClientsPage() {
                 className={cn("flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
                   clientTab === "history" ? "bg-amber-500 text-black" : "text-zinc-500")}>History</button>
             </div>
+
+            {clientBookPrefill && (
+              <button
+                type="button"
+                onClick={() => setClientModalView("book")}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-400 text-sm font-black uppercase tracking-wider active:scale-[0.98] transition-all"
+              >
+                <CalendarPlus size={18} />
+                Book appointment
+              </button>
+            )}
 
             {clientTab === "overview" && (
               <div className="space-y-3">
