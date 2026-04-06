@@ -706,24 +706,137 @@ export function NewBookingForm({
       {step === 4 && (
         <div className="space-y-3">
           <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Date & Time</p>
+
+          {/* Date picker */}
           <FieldLabel>Date</FieldLabel>
           <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)}
             className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50" />
-          <FieldLabel>Available Times</FieldLabel>
+
+          {/* Day timeline — every 30 min, booked slots shown with client name */}
+          <FieldLabel>Schedule</FieldLabel>
           {slotsLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="animate-spin text-amber-500" size={20} /></div>
-          ) : availableSlots.length === 0 ? (
-            <p className="text-xs text-zinc-500 py-2">No available slots on this date.</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {availableSlots.map(slot => (
-                <button key={slot} onClick={() => setBookingTime(slot)}
-                  className={cn("py-2.5 rounded-xl border text-xs font-black transition-all",
-                    bookingTime === slot ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-400"
-                  )}>{to12h(slot)}</button>
-              ))}
-            </div>
-          )}
+          ) : (() => {
+            // Build every 30-min interval for the day (7 AM – 8 PM)
+            const TIMELINE_START = DAY_START_HOUR * 60;  // 7:00 AM in minutes
+            const TIMELINE_END   = DAY_END_HOUR   * 60;  // 8:00 PM in minutes
+
+            // Convert booked slots to { startMins, endMins, customer, service }
+            const bookedRanges = bookedSlots.map(b => {
+              const startMins = timeToMins(b.booking_time);
+              return {
+                startMins,
+                endMins: startMins + b.duration_mins,
+                customer: b.customer_name ?? "Client",
+                service:  b.service_name  ?? "Service",
+                duration: b.duration_mins,
+              };
+            });
+
+            // Build slot rows
+            const rows: { mins: number; label: string; booking: typeof bookedRanges[0] | null }[] = [];
+            for (let m = TIMELINE_START; m < TIMELINE_END; m += 30) {
+              const h   = Math.floor(m / 60);
+              const min = m % 60;
+              const hh  = String(h).padStart(2, "0");
+              const mm  = min === 0 ? "00" : "30";
+              const label = to12h(`${hh}:${mm}`);
+              // Find booking that covers this slot
+              const booking = bookedRanges.find(b => m >= b.startMins && m < b.endMins) ?? null;
+              rows.push({ mins: m, label, booking });
+            }
+
+            const selectedMins = bookingTime ? timeToMins(bookingTime) : -1;
+
+            return (
+              <div className="rounded-xl border border-white/[0.07] overflow-hidden divide-y divide-white/[0.04]">
+                {rows.map(({ mins, label, booking }) => {
+                  const hh  = String(Math.floor(mins / 60)).padStart(2, "0");
+                  const mm  = mins % 60 === 0 ? "00" : "30";
+                  const slotVal = `${hh}:${mm}`;
+                  const isSelected      = selectedMins === mins;
+                  const isHourMark      = mins % 60 === 0;
+                  const isStartOfBooked = bookedRanges.some(b => b.startMins === mins);
+
+                  return (
+                    <button
+                      key={slotVal}
+                      type="button"
+                      onClick={() => setBookingTime(slotVal)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 transition-all text-left",
+                        isHourMark ? "py-2.5" : "py-1.5",
+                        isSelected
+                          ? "bg-amber-500/20 border-l-2 border-l-amber-400"
+                          : booking
+                            ? "bg-red-500/[0.06] hover:bg-red-500/[0.12]"
+                            : "bg-transparent hover:bg-white/[0.03]"
+                      )}
+                    >
+                      {/* Time label */}
+                      <span className={cn(
+                        "w-16 shrink-0 tabular-nums",
+                        isHourMark ? "text-xs font-black" : "text-[10px] font-medium",
+                        isSelected ? "text-amber-300" : booking ? "text-red-400/70" : "text-zinc-500"
+                      )}>
+                        {isHourMark ? label : `  ${label}`}
+                      </span>
+
+                      {/* Slot content */}
+                      <div className="flex-1 min-w-0">
+                        {isSelected && !booking && (
+                          <span className="text-xs font-black text-amber-300">← Selected</span>
+                        )}
+                        {isSelected && booking && (
+                          <span className="text-xs font-black text-amber-300">← Selected (overlap!)</span>
+                        )}
+                        {!isSelected && isStartOfBooked && booking && (
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                            <span className="text-xs font-bold text-red-300 truncate">{booking.customer}</span>
+                            <span className="text-[10px] text-zinc-500 truncate hidden sm:block">
+                              {booking.service} · {booking.duration >= 60 ? `${booking.duration / 60}h` : `${booking.duration}m`}
+                            </span>
+                          </div>
+                        )}
+                        {!isSelected && booking && !isStartOfBooked && (
+                          <span className="text-[10px] text-red-500/50 pl-3">↕ {booking.customer}</span>
+                        )}
+                      </div>
+
+                      {/* Free indicator */}
+                      {!booking && !isSelected && (
+                        <span className="text-[10px] text-zinc-700 shrink-0">open</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Manual time override — any time outside the grid */}
+          <div>
+            <FieldLabel>Custom time (any hour)</FieldLabel>
+            <input
+              type="time"
+              value={bookingTime}
+              onChange={e => setBookingTime(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
+            />
+            {bookingTime && (
+              <p className="text-xs text-amber-400 mt-1 font-semibold">
+                Selected: {to12h(bookingTime)}
+                {bookedSlots.some(b => {
+                  const bStart = timeToMins(b.booking_time);
+                  const bEnd   = bStart + b.duration_mins;
+                  const sel    = timeToMins(bookingTime);
+                  return sel >= bStart && sel < bEnd;
+                }) && " — ⚠️ overlaps existing booking"}
+              </p>
+            )}
+          </div>
+
           <FieldLabel>Notes</FieldLabel>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
             placeholder="Special instructions, gate code, dock slip…"

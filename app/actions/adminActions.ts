@@ -41,21 +41,32 @@ export type BookedSlot = {
   booking_time: string;
   service_name: string | null;
   vehicle_size: string | null;
+  customer_name: string | null;
+  duration_mins: number;
 };
 
-/** Returns booked slots for a date with service name and vehicle size for accurate duration overlap. */
+/** Returns booked slots for a date with all info needed for the admin timeline view. */
 export async function getBookedSlotsAction(date: string): Promise<BookedSlot[]> {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size")
+    .select("booking_time, service_name, vehicle_size, customer_name, profiles(first_name, last_name)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
-  return (data ?? []).map(r => ({
-    booking_time: String(r.booking_time ?? ""),
-    service_name: (r as any).service_name ?? null,
-    vehicle_size: (r as any).vehicle_size ?? null,
-  }));
+  return (data ?? []).map(r => {
+    const svcName = (r as any).service_name ?? "";
+    const vSize   = (r as any).vehicle_size ?? "medium";
+    const dur     = SERVICE_DURATIONS[svcName]?.[vSize] ?? 180;
+    const profileName = [(r as any).profiles?.first_name, (r as any).profiles?.last_name].filter(Boolean).join(" ");
+    const custName = ((r as any).customer_name ?? profileName) || "Client";
+    return {
+      booking_time: String(r.booking_time ?? ""),
+      service_name: svcName || null,
+      vehicle_size: vSize || null,
+      customer_name: custName,
+      duration_mins: dur,
+    };
+  });
 }
 
 /**
