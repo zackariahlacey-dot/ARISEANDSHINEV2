@@ -176,6 +176,24 @@ export function NewBookingForm({
   // Step 3 — Add-ons
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
+  // Multi-vehicle (vehicle pathway only)
+  const ADMIN_MULTI_VEHICLE_DISCOUNT = 25;
+  const ADMIN_MULTI_VEHICLE_SERVICES = [
+    "Interior Detail", "Exterior Detail", "Full Detail",
+    "Ultimate Interior Reset", "Ultimate Interior + Exterior Reset",
+  ];
+  type AdminAddlVehicle = {
+    vehicleYear: string; vehicleMake: string; vehicleModel: string;
+    vehicleSize: string; serviceId: string; serviceName: string; servicePrice: number;
+  };
+  const [additionalVehicles, setAdditionalVehicles] = useState<AdminAddlVehicle[]>([]);
+  const addAdminVehicle = () =>
+    setAdditionalVehicles(prev => [...prev, { vehicleYear: "", vehicleMake: "", vehicleModel: "", vehicleSize: "sedan", serviceId: "", serviceName: "", servicePrice: 0 }]);
+  const removeAdminVehicle = (i: number) =>
+    setAdditionalVehicles(prev => prev.filter((_, idx) => idx !== i));
+  const updateAdminVehicle = (i: number, patch: Partial<AdminAddlVehicle>) =>
+    setAdditionalVehicles(prev => prev.map((v, idx) => idx === i ? { ...v, ...patch } : v));
+
   // Step 4 — Time
   const [bookingDate,   setBookingDate]   = useState(defaultDate);
   const [bookingTime,   setBookingTime]   = useState("");
@@ -206,6 +224,7 @@ export function NewBookingForm({
   const rvServices   = useMemo(() => services.filter((s: any) => { const n = s.name.toLowerCase(); return n.includes("rv") || n.includes("motorhome"); }), [services]);
 
   const selectedService = services.find((s: any) => s.id === serviceId);
+  const supportsAdminMultiVehicle = ADMIN_MULTI_VEHICLE_SERVICES.includes(selectedService?.name ?? "");
 
   const availableAddons = useMemo(() => {
     if (!pathway) return [];
@@ -234,7 +253,8 @@ export function NewBookingForm({
   }, [selectedService, pathway, footage, vehicleSize]);
 
   const addonTotal  = selectedAddons.reduce((sum, id) => sum + (ADMIN_ADDONS.find(a => a.id === id)?.price ?? 0), 0);
-  const totalPrice  = priceOverride !== "" ? Number(priceOverride) : basePrice + addonTotal;
+  const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => sum + Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT), 0);
+  const totalPrice  = priceOverride !== "" ? Number(priceOverride) : basePrice + addonTotal + additionalVehiclesTotal;
 
   useEffect(() => {
     if (step !== 4 || !bookingDate) return;
@@ -272,6 +292,11 @@ export function NewBookingForm({
         ? `\nAdd-ons: ${selectedAddons.map(id => ADMIN_ADDONS.find(a => a.id === id)?.label).filter(Boolean).join(", ")}`
         : "";
       const footageNote = (pathway === "boat" || pathway === "rv") && footage ? `\n${pathway === "boat" ? "Boat" : "RV"} length: ${footage} ft` : "";
+      const addlVehicleNote = additionalVehicles.length
+        ? `\nAdditional vehicles (${additionalVehicles.length}): ${additionalVehicles.map((v, i) =>
+            `${i + 2}. ${v.vehicleYear} ${v.vehicleMake} ${v.vehicleModel} — ${v.serviceName} ($${Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT)}, $${ADMIN_MULTI_VEHICLE_DISCOUNT} off)`
+          ).join("; ")}`
+        : "";
       const res = await adminQuickBookAction({
         name, phone, email, address,
         vehicleYear, vehicleMake, vehicleModel,
@@ -279,9 +304,20 @@ export function NewBookingForm({
         serviceId, serviceName: selectedService?.name ?? "",
         bookingDate, bookingTime: to12h(bookingTime),
         totalPrice,
-        notes: [notes, footageNote, addonNote].filter(Boolean).join(""),
+        notes: [notes, footageNote, addonNote, addlVehicleNote].filter(Boolean).join(""),
         ...(clientPrefill?.profileId ? { preferredProfileId: clientPrefill.profileId } : {}),
         ...(pathway === "vehicle" && existingVehicleId ? { existingVehicleId } : {}),
+        ...(additionalVehicles.length > 0 ? {
+          additionalVehicles: additionalVehicles.map(v => ({
+            vehicleSize: v.vehicleSize,
+            vehicleYear: v.vehicleYear,
+            vehicleMake: v.vehicleMake,
+            vehicleModel: v.vehicleModel,
+            serviceId: v.serviceId,
+            serviceName: v.serviceName,
+            servicePrice: Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT),
+          })),
+        } : {}),
       });
       if (res.success) { toast("Booking created! 🎉"); onSuccess(); }
       else toast(res.error ?? "Error", "error");
@@ -450,6 +486,71 @@ export function NewBookingForm({
               </div>
               <FieldLabel>Price Override (optional)</FieldLabel>
               <Input value={priceOverride} onChange={setPriceOverride} placeholder={`Auto: $${basePrice}`} type="number" />
+
+              {/* Multi-vehicle section */}
+              {supportsAdminMultiVehicle && (
+                <div className="pt-2 space-y-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
+                    <span className="text-emerald-400 text-xs font-bold">💰 Save $25</span>
+                    <span className="text-xs text-zinc-400">per additional vehicle — same visit</span>
+                  </div>
+                  {additionalVehicles.map((av, idx) => {
+                    const multiVehicleServices = vehicleServices.filter((s: any) =>
+                      ADMIN_MULTI_VEHICLE_SERVICES.includes(s.name)
+                    );
+                    return (
+                      <div key={idx} className="rounded-xl border border-amber-500/20 bg-amber-500/[0.03] p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-amber-400">Vehicle {idx + 2}</span>
+                          <button onClick={() => removeAdminVehicle(idx)} className="text-zinc-600 hover:text-red-400 transition-colors">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <input value={av.vehicleYear} onChange={e => updateAdminVehicle(idx, { vehicleYear: e.target.value })} placeholder="Year"
+                            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+                          <input value={av.vehicleMake} onChange={e => updateAdminVehicle(idx, { vehicleMake: e.target.value })} placeholder="Make"
+                            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+                          <input value={av.vehicleModel} onChange={e => updateAdminVehicle(idx, { vehicleModel: e.target.value })} placeholder="Model"
+                            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {VEHICLE_SIZES_ADMIN.map(s => (
+                            <button key={s.value} onClick={() => {
+                              const svcForAv = vehicleServices.find((svc: any) => svc.id === av.serviceId);
+                              const newPrice = svcForAv ? Number(svcForAv[s.key] ?? svcForAv.price_small ?? 0) : 0;
+                              updateAdminVehicle(idx, { vehicleSize: s.value, servicePrice: newPrice });
+                            }}
+                              className={cn("py-2 rounded-xl border text-xs font-black transition-all",
+                                av.vehicleSize === s.value ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-400"
+                              )}>{s.label}</button>
+                          ))}
+                        </div>
+                        <div className="space-y-1">
+                          {multiVehicleServices.map((svc: any) => {
+                            const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === av.vehicleSize) ?? VEHICLE_SIZES_ADMIN[1];
+                            const price = Number(svc[sizeEntry.key] ?? svc.price_small ?? 0);
+                            const discounted = Math.max(0, price - ADMIN_MULTI_VEHICLE_DISCOUNT);
+                            return (
+                              <button key={svc.id} onClick={() => updateAdminVehicle(idx, { serviceId: svc.id, serviceName: svc.name, servicePrice: price })}
+                                className={cn("w-full text-left px-3 py-2 rounded-xl border transition-all flex items-center justify-between text-xs",
+                                  av.serviceId === svc.id ? "bg-amber-500/10 border-amber-500/50 text-amber-400" : "border-white/[0.07] text-zinc-400"
+                                )}>
+                                <span className="font-bold">{svc.name}</span>
+                                <span className="font-black">${discounted} <span className="line-through text-zinc-600">${price}</span></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button onClick={addAdminVehicle}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-amber-500/30 text-amber-400 text-xs font-bold hover:bg-amber-500/5 transition-all">
+                    <Plus size={13} /> Add Another Vehicle — Save ${ADMIN_MULTI_VEHICLE_DISCOUNT}
+                  </button>
+                </div>
+              )}
             </>
           )}
 

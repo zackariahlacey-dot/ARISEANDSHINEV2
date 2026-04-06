@@ -9,6 +9,19 @@ import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
 
+/** One additional vehicle added to a multi-vehicle booking ($25 off per vehicle) */
+export type AdditionalVehicle = {
+  vehicleSize: VehicleSizeSlug;
+  vehicleYear: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  serviceId: string;
+  serviceName: string;
+  /** Price already discounted by $25 */
+  servicePrice: number;
+  selectedAddons?: { id: string; label: string; price: number }[];
+};
+
 export type BookingPayload = {
   serviceId: string;
   serviceName: string;
@@ -35,6 +48,8 @@ export type BookingPayload = {
   distanceMiles?: number;
   /** Optional add-ons (included in totalPrice) */
   selectedAddons?: { id: string; label: string; price: number }[];
+  /** Additional vehicles (2nd, 3rd, etc.) — each gets $25 off, -1 hr service time */
+  additionalVehicles?: AdditionalVehicle[];
   /** When "pay_now", booking is created as pending and a Stripe Checkout URL is returned */
   paymentMethod?: "pay_at_arrival" | "pay_now";
   /** Required when paymentMethod is "pay_now" for Stripe redirect URLs */
@@ -83,7 +98,13 @@ export async function timeToMinutes(t: string): Promise<number> {
   return 0;
 }
 
-export async function checkAvailability(date: string, time: string, serviceName: string, size: string) {
+export async function checkAvailability(
+  date: string,
+  time: string,
+  serviceName: string,
+  size: string,
+  customDurationMins?: number
+) {
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("bookings")
@@ -94,7 +115,7 @@ export async function checkAvailability(date: string, time: string, serviceName:
   if (!existing || existing.length === 0) return true;
 
   const newStart = await timeToMinutes(time);
-  const newDur = SERVICE_DURATIONS[serviceName]?.[size] ?? 180;
+  const newDur = customDurationMins ?? SERVICE_DURATIONS[serviceName]?.[size] ?? 180;
   const newEnd = newStart + newDur;
 
   for (const b of existing) {
@@ -131,11 +152,22 @@ export async function bookDetailing(
   }
 
   // ── 0. Check Availability ───────────────────────────────────────────────
+  // For multi-vehicle bookings, use the total combined duration so the slot
+  // accounts for all vehicles being serviced in sequence.
+  const primaryDur =
+    SERVICE_DURATIONS[payload.serviceName]?.[VEHICLE_SIZE_MAP[payload.vehicleSize]] ?? 180;
+  const additionalDur = (payload.additionalVehicles ?? []).reduce((sum, av) => {
+    const base = SERVICE_DURATIONS[av.serviceName]?.[VEHICLE_SIZE_MAP[av.vehicleSize]] ?? 180;
+    return sum + Math.max(60, base - 60); // each extra vehicle: -1 hr, minimum 1 hr
+  }, 0);
+  const totalBookingDur = primaryDur + additionalDur;
+
   const isAvailable = await checkAvailability(
     payload.bookingDate,
     payload.bookingTime,
     payload.serviceName,
-    VEHICLE_SIZE_MAP[payload.vehicleSize]
+    VEHICLE_SIZE_MAP[payload.vehicleSize],
+    totalBookingDur > primaryDur ? totalBookingDur : undefined
   );
   if (!isAvailable) {
     return {
@@ -315,6 +347,39 @@ export async function bookDetailing(
     };
   }
 
+  // ── 2b. Insert additional vehicles (multi-vehicle booking) ──────────────
+  const additionalVehicleDbIds: string[] = [];
+  for (const av of (payload.additionalVehicles ?? [])) {
+    const avYear = parseInt(av.vehicleYear, 10);
+    const { data: avData } = await adminSupabase
+      .from("vehicles")
+      .insert({
+        user_id: profileId,
+        make: (av.vehicleMake || "Unknown").trim(),
+        model: (av.vehicleModel || "Unknown").trim(),
+        year: isNaN(avYear) ? null : avYear,
+        size: VEHICLE_SIZE_MAP[av.vehicleSize] || "small",
+      })
+      .select("id")
+      .single();
+    if (avData) additionalVehicleDbIds.push(avData.id);
+  }
+
+  const additionalVehiclesForDb =
+    (payload.additionalVehicles ?? []).length > 0
+      ? (payload.additionalVehicles ?? []).map((av, i) => ({
+          vehicleSize: av.vehicleSize,
+          vehicleYear: av.vehicleYear,
+          vehicleMake: av.vehicleMake,
+          vehicleModel: av.vehicleModel,
+          serviceId: av.serviceId,
+          serviceName: av.serviceName,
+          servicePrice: av.servicePrice,
+          selectedAddons: av.selectedAddons ?? [],
+          vehicleDbId: additionalVehicleDbIds[i] ?? null,
+        }))
+      : null;
+
   // ── Build notes body (human-readable for internal reference) ────────────
   const addonsNote =
     payload.selectedAddons && payload.selectedAddons.length > 0
@@ -340,6 +405,11 @@ export async function bookDetailing(
         : null,
       payload.couponDiscount != null && payload.couponDiscount > 0
         ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
+        : null,
+      (payload.additionalVehicles ?? []).length > 0
+        ? `🚗 Additional vehicles (${payload.additionalVehicles!.length}):\n${payload.additionalVehicles!.map((av, i) =>
+            `  ${i + 2}. ${av.vehicleYear} ${av.vehicleMake} ${av.vehicleModel} — ${av.serviceName} ($${av.servicePrice}, $25 off applied)`
+          ).join("\n")}`
         : null,
       payload.notes || null,
     ]
@@ -437,6 +507,21 @@ export async function bookDetailing(
           addonsJson: payload.selectedAddons && payload.selectedAddons.length > 0
             ? JSON.stringify(payload.selectedAddons).slice(0, 400)
             : "",
+          // Additional vehicles for multi-vehicle bookings (compact keys, ≤500 chars)
+          ...(additionalVehicleDbIds.length > 0 && {
+            additionalVehicleIds: additionalVehicleDbIds.join(",").slice(0, 499),
+            additionalVehiclesJson: JSON.stringify(
+              (payload.additionalVehicles ?? []).map(av => ({
+                sz: av.vehicleSize,
+                yr: av.vehicleYear.slice(0, 4),
+                mk: av.vehicleMake.slice(0, 30),
+                md: av.vehicleModel.slice(0, 30),
+                si: av.serviceId,
+                sn: av.serviceName.slice(0, 40),
+                sp: av.servicePrice,
+              }))
+            ).slice(0, 499),
+          }),
           ...(payload.couponId ? { couponId: payload.couponId } : {}),
           ...(payload.pointsToRedeem != null &&
             payload.pointsToRedeem > 0 && {
@@ -499,6 +584,7 @@ export async function bookDetailing(
         payload.selectedAddons && payload.selectedAddons.length > 0
           ? payload.selectedAddons
           : null,
+      additional_vehicles_json: additionalVehiclesForDb,
       ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
     })
     .select("id")

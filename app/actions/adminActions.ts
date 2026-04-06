@@ -197,6 +197,38 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     payload.notes,
   ].filter(Boolean).join("\n\n");
 
+  // Create additional vehicle rows for multi-vehicle bookings
+  const addlVehicles: any[] = payload.additionalVehicles ?? [];
+  const addlVehicleDbIds: string[] = [];
+  for (const av of addlVehicles) {
+    const avYear = parseInt(String(av.vehicleYear), 10);
+    const avDbSize = VEHICLE_SIZE_MAP[av.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
+    const { data: avData } = await supabase
+      .from("vehicles")
+      .insert({
+        user_id: targetUserId,
+        make: (av.vehicleMake || "Unknown").trim(),
+        model: (av.vehicleModel || "Unknown").trim(),
+        year: isNaN(avYear) ? null : avYear,
+        size: avDbSize,
+      })
+      .select("id")
+      .single();
+    if (avData) addlVehicleDbIds.push(avData.id);
+  }
+  const additionalVehiclesForDb = addlVehicles.length > 0
+    ? addlVehicles.map((av, i) => ({
+        vehicleSize: av.vehicleSize,
+        vehicleYear: av.vehicleYear,
+        vehicleMake: av.vehicleMake,
+        vehicleModel: av.vehicleModel,
+        serviceId: av.serviceId,
+        serviceName: av.serviceName,
+        servicePrice: av.servicePrice,
+        vehicleDbId: addlVehicleDbIds[i] ?? null,
+      }))
+    : null;
+
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
     .insert({
@@ -219,6 +251,7 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       vehicle_size:    dbVehicleSize,
       service_name:    payload.serviceName,
       addons_json:     null,
+      additional_vehicles_json: additionalVehiclesForDb,
     })
     .select("id")
     .single();

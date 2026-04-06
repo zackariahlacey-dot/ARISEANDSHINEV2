@@ -101,6 +101,31 @@ export async function POST(req: NextRequest) {
       try { addonsJson = JSON.parse(m.addonsJson); } catch { addonsJson = null; }
     }
 
+    // Parse additional vehicles from Stripe metadata (compact format)
+    type CompactAddlVehicle = { sz: string; yr: string; mk: string; md: string; si: string; sn: string; sp: number };
+    let compactAddlVehicles: CompactAddlVehicle[] = [];
+    if (m.additionalVehiclesJson) {
+      try { compactAddlVehicles = JSON.parse(m.additionalVehiclesJson); } catch { compactAddlVehicles = []; }
+    }
+
+    // Rebuild vehicle DB rows for additional vehicles using pre-created IDs
+    const additionalVehicleDbIds = m.additionalVehicleIds
+      ? m.additionalVehicleIds.split(",").filter(Boolean)
+      : [];
+
+    const additionalVehiclesForDb = compactAddlVehicles.length > 0
+      ? compactAddlVehicles.map((av, i) => ({
+          vehicleSize: av.sz,
+          vehicleYear: av.yr,
+          vehicleMake: av.mk,
+          vehicleModel: av.md,
+          serviceId: av.si,
+          serviceName: av.sn,
+          servicePrice: av.sp,
+          vehicleDbId: additionalVehicleDbIds[i] ?? null,
+        }))
+      : null;
+
     const { data: booking, error: insertErr } = await supabase
       .from("bookings")
       .insert({
@@ -123,6 +148,7 @@ export async function POST(req: NextRequest) {
         vehicle_size:    m.vehicleSize ?? null,
         service_name:    m.serviceName ?? null,
         addons_json:     addonsJson,
+        additional_vehicles_json: additionalVehiclesForDb,
         ...(m.couponId ? { coupon_id: m.couponId } : {}),
         stripe_checkout_session_id: session.id,
       })

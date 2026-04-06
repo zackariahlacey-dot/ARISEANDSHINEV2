@@ -23,12 +23,16 @@ import {
   Gem,
   Layers,
   Waves,
+  Plus,
+  X,
+  Tag,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
   bookDetailing,
   type BookingResult,
   type VehicleSizeSlug,
+  type AdditionalVehicle,
 } from "@/app/actions/bookDetailing";
 import {
   validateCoupon,
@@ -385,6 +389,37 @@ async function getAvailableSlots(
   return results.filter((s): s is { time: string; period: string } => s !== null);
 }
 
+/** $25 off per additional vehicle added to the same appointment */
+const MULTI_VEHICLE_DISCOUNT = 25;
+
+/** Services that support multi-vehicle bookings */
+const MULTI_VEHICLE_SERVICE_NAMES = [
+  "Interior Detail",
+  "Exterior Detail",
+  "Full Detail",
+  "Ultimate Interior Reset",
+  "Ultimate Interior + Exterior Reset",
+];
+
+/** Per-vehicle state for the multi-vehicle UI */
+type AdditionalVehicleForm = {
+  vehicleSize: VehicleSizeSlug | "";
+  vehicleYear: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  serviceId: string;
+  serviceName: string;
+  servicePrice: number;
+  selectedAddons: { id: string; label: string; price: number }[];
+};
+
+function emptyAdditionalVehicle(): AdditionalVehicleForm {
+  return {
+    vehicleSize: "", vehicleYear: "", vehicleMake: "", vehicleModel: "",
+    serviceId: "", serviceName: "", servicePrice: 0, selectedAddons: [],
+  };
+}
+
 /** True if the slot time has already passed today (only when selectedDate is today). Uses local date and regex so "8:00 AM Morning" parses correctly. */
 function isTimeSlotPassed(timeData: unknown, selectedDate: unknown): boolean {
   if (!selectedDate || !timeData) return false;
@@ -680,6 +715,28 @@ export function BookingSection({
   // Add-ons
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; label: string; price: number }[]>([]);
 
+  // Multi-vehicle
+  const [additionalVehicles, setAdditionalVehicles] = useState<AdditionalVehicleForm[]>([]);
+
+  const addAdditionalVehicle = () =>
+    setAdditionalVehicles(prev => [...prev, emptyAdditionalVehicle()]);
+
+  const removeAdditionalVehicle = (idx: number) =>
+    setAdditionalVehicles(prev => prev.filter((_, i) => i !== idx));
+
+  const updateAdditionalVehicle = (idx: number, patch: Partial<AdditionalVehicleForm>) =>
+    setAdditionalVehicles(prev => prev.map((v, i) => i === idx ? { ...v, ...patch } : v));
+
+  const toggleAdditionalAddon = (idx: number, addon: { id: string; label: string; price: number }) =>
+    setAdditionalVehicles(prev => prev.map((v, i) => {
+      if (i !== idx) return v;
+      const has = v.selectedAddons.some(a => a.id === addon.id);
+      const filtered = has
+        ? v.selectedAddons.filter(a => a.id !== addon.id)
+        : [...v.selectedAddons.filter(a => !FLOOR_ADDON_IDS.includes(addon.id) || !FLOOR_ADDON_IDS.includes(a.id)), addon];
+      return { ...v, selectedAddons: filtered };
+    }));
+
   const toggleAddon = (addon: AddonItem) => {
     setSelectedAddons(prev => {
       const isSelected = prev.some(a => a.id === addon.id);
@@ -797,8 +854,13 @@ export function BookingSection({
       ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
       : Math.min(appliedCoupon.discountAmount ?? 0, servicePrice)
     : 0;
+  // Additional vehicles: each gets $25 off + their own add-ons included in their servicePrice
+  const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => {
+    const addonSum = v.selectedAddons.reduce((s, a) => s + a.price, 0);
+    return sum + Math.max(0, v.servicePrice - MULTI_VEHICLE_DISCOUNT) + addonSum;
+  }, 0);
   const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee + addonsTotal;
+    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
   const availablePoints = rewardPoints ?? 0;
   
   // 10 points = $1. Max redeemable is 1000 pts ($100).
@@ -877,6 +939,22 @@ export function BookingSection({
   // Ultimate packages are flat-rate — auto-set a neutral size so validation passes
   // without ever showing the size picker to the customer
   const isUltimateService = !!(selectedService?.name.toLowerCase().includes("ultimate"));
+
+  // Multi-vehicle support — only for standard car services (not boat/RV/paint/maintenance)
+  const supportsMultiVehicle = !!(
+    selectedService && MULTI_VEHICLE_SERVICE_NAMES.includes(selectedService.name)
+  );
+
+  // Total booking duration accounts for all vehicles (each additional = base - 60 min, min 60)
+  const primaryDurationMins = selectedService
+    ? getDurationForService(selectedService.name, (vehicleSize || "compact") as VehicleSizeSlug)
+    : 120;
+  const additionalDurationMins = additionalVehicles.reduce((sum, v) => {
+    if (!v.serviceName || !v.vehicleSize) return sum;
+    const base = getDurationForService(v.serviceName, v.vehicleSize as VehicleSizeSlug);
+    return sum + Math.max(60, base - 60);
+  }, 0);
+  const totalBookingDurationMins = primaryDurationMins + additionalDurationMins;
   useEffect(() => {
     if (isUltimateService) {
       setVehicleSize("compact");
@@ -895,6 +973,7 @@ export function BookingSection({
       setVehicleModel("");
       setBoatLength(20);
       setSelectedAddons([]);
+      setAdditionalVehicles([]);
       setSelectedDate("");
       setSelectedTime("");
       setExistingBookingsForDate(null);
@@ -1146,6 +1225,11 @@ export function BookingSection({
   const [availableSlots, setAvailableSlots] = useState<{ time: string; period: string }[]>([]);
 
   const hasFullDayAddon = selectedAddons.some(a => FULL_DAY_ADDON_IDS.includes(a.id));
+  const effectiveDurationOverride = hasFullDayAddon
+    ? FULL_DAY_DURATION_MIN
+    : additionalDurationMins > 0
+      ? totalBookingDurationMins
+      : undefined;
 
   useEffect(() => {
     async function updateAvailable() {
@@ -1156,7 +1240,7 @@ export function BookingSection({
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate,
-          hasFullDayAddon ? FULL_DAY_DURATION_MIN : undefined
+          effectiveDurationOverride
         );
         setAvailableSlots(slots);
       } else {
@@ -1164,7 +1248,7 @@ export function BookingSection({
       }
     }
     updateAvailable();
-  }, [selectedService, selectedDate, vehicleSize, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon]);
+  }, [selectedService, selectedDate, vehicleSize, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon, effectiveDurationOverride]);
 
   // Remove past times for today so they don't render at all (pass full slot so regex can read .time or .label)
   const displaySlots = selectedDate
@@ -1187,7 +1271,7 @@ export function BookingSection({
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate,
-          hasFullDayAddon ? FULL_DAY_DURATION_MIN : undefined
+          effectiveDurationOverride
         );
         if (available.length > 0 && !available.some((s) => s.time === selectedTime)) {
           setSelectedTime("");
@@ -1206,8 +1290,17 @@ export function BookingSection({
           typeof boatLength === "number" && boatLength >= minFt);
       }
       // Ultimate packages are flat-rate — no size selection needed
-      if (isUltimateService) return !!(vehicleYear && vehicleMake && vehicleModel);
-      return !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
+      const primaryValid = isUltimateService
+        ? !!(vehicleYear && vehicleMake && vehicleModel)
+        : !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
+      if (!primaryValid) return false;
+      // Each additional vehicle must be fully filled out
+      for (const av of additionalVehicles) {
+        const isUlt = av.serviceName.toLowerCase().includes("ultimate");
+        if (!av.vehicleYear || !av.vehicleMake || !av.vehicleModel || !av.serviceId) return false;
+        if (!isUlt && !av.vehicleSize) return false;
+      }
+      return true;
     }
     if (step === 2)
       return !!(
@@ -1240,34 +1333,50 @@ export function BookingSection({
   };
 
   // ── Submit helpers ───────────────────────────────────────────────────────
-  const buildPayload = () => ({
-    serviceId: selectedService!.id,
-    serviceName: selectedService!.name,
-    totalPrice: totalAfterDiscount,
-    vehicleSize: (selectedService && isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
-    vehicleYear: vehicleYear,
-    vehicleMake: vehicleMake,
-    vehicleModel: selectedService && isFootageService(selectedService.name)
-      ? `${vehicleModel} (${boatLength}ft)`
-      : vehicleModel,
-    bookingDate: selectedDate,
-    bookingTime: selectedTime,
-    serviceAddress,
-    name,
-    phone,
-    email,
-    notes,
-    selectedAddons,
-    ...(travelFee > 0 && { travelFee }),
-    ...(setupFee > 0 && { setupFee }),
-    ...(pointsToRedeem > 0 && { pointsToRedeem }),
-    ...(referralEligible && { isApplyingReferralDiscount: true }),
-    ...(authUserId && { authUserId }),
-    ...(appliedCoupon && {
-      couponId: appliedCoupon.couponId,
-      couponDiscount,
-    }),
-  });
+  const buildPayload = () => {
+    const addlVehicles: AdditionalVehicle[] = additionalVehicles
+      .filter(av => av.serviceId && av.vehicleYear && av.vehicleMake && av.vehicleModel)
+      .map(av => ({
+        vehicleSize: (av.vehicleSize || "compact") as VehicleSizeSlug,
+        vehicleYear: av.vehicleYear,
+        vehicleMake: av.vehicleMake,
+        vehicleModel: av.vehicleModel,
+        serviceId: av.serviceId,
+        serviceName: av.serviceName,
+        servicePrice: Math.max(0, av.servicePrice - MULTI_VEHICLE_DISCOUNT),
+        selectedAddons: av.selectedAddons,
+      }));
+
+    return {
+      serviceId: selectedService!.id,
+      serviceName: selectedService!.name,
+      totalPrice: totalAfterDiscount,
+      vehicleSize: (selectedService && isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+      vehicleYear: vehicleYear,
+      vehicleMake: vehicleMake,
+      vehicleModel: selectedService && isFootageService(selectedService.name)
+        ? `${vehicleModel} (${boatLength}ft)`
+        : vehicleModel,
+      bookingDate: selectedDate,
+      bookingTime: selectedTime,
+      serviceAddress,
+      name,
+      phone,
+      email,
+      notes,
+      selectedAddons,
+      ...(addlVehicles.length > 0 && { additionalVehicles: addlVehicles }),
+      ...(travelFee > 0 && { travelFee }),
+      ...(setupFee > 0 && { setupFee }),
+      ...(pointsToRedeem > 0 && { pointsToRedeem }),
+      ...(referralEligible && { isApplyingReferralDiscount: true }),
+      ...(authUserId && { authUserId }),
+      ...(appliedCoupon && {
+        couponId: appliedCoupon.couponId,
+        couponDiscount,
+      }),
+    };
+  };
 
   // ── Pay at Arrival ───────────────────────────────────────────────────────
   const handlePayAtArrival = async () => {
@@ -2378,6 +2487,221 @@ export function BookingSection({
                           </div>
                         );
                       })()}
+                      {/* ── Multi-Vehicle Add-on Section ── */}
+                      {supportsMultiVehicle && (
+                        <div className="pt-2">
+                          {/* Savings banner */}
+                          <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 mb-4">
+                            <Tag size={14} className="text-emerald-400 shrink-0" />
+                            <p className="text-[11px] text-emerald-300/90 leading-relaxed">
+                              <span className="font-bold">Save $25 on each additional vehicle</span> — bring multiple cars and we'll detail them all in one visit!
+                            </p>
+                          </div>
+
+                          {/* Added vehicles */}
+                          {additionalVehicles.map((av, idx) => {
+                            const avIsUltimate = av.serviceName.toLowerCase().includes("ultimate");
+                            const eligibleServices = services.filter(
+                              s => MULTI_VEHICLE_SERVICE_NAMES.includes(s.name)
+                            );
+                            const avAddons = av.serviceId
+                              ? getAddonsForService(av.serviceName)
+                              : [];
+                            const avServiceObj = services.find(s => s.id === av.serviceId);
+                            const avBasePrice = avIsUltimate
+                              ? avServiceObj?.price_small ?? 0
+                              : av.vehicleSize
+                                ? (avServiceObj ? getPriceForSize(avServiceObj, av.vehicleSize as VehicleSizeSlug) : 0)
+                                : 0;
+                            return (
+                              <div
+                                key={idx}
+                                className="mb-4 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] overflow-hidden"
+                              >
+                                {/* Card header */}
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-[#D4AF37]/10 bg-[#D4AF37]/[0.04]">
+                                  <div className="flex items-center gap-2">
+                                    <Car size={14} className="text-[#D4AF37]" />
+                                    <span className="text-sm font-bold text-white">Vehicle {idx + 2}</span>
+                                    {avBasePrice > 0 && (
+                                      <span className="text-xs text-emerald-400 font-semibold">
+                                        ${avBasePrice} <span className="line-through text-zinc-500">${avBasePrice + MULTI_VEHICLE_DISCOUNT}</span> (–${MULTI_VEHICLE_DISCOUNT} off)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAdditionalVehicle(idx)}
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                    aria-label="Remove vehicle"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+
+                                <div className="p-4 space-y-4">
+                                  {/* Service selector */}
+                                  <div>
+                                    <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Service</label>
+                                    <div className="grid grid-cols-1 gap-1.5">
+                                      {eligibleServices.map(svc => {
+                                        const isUlt = svc.name.toLowerCase().includes("ultimate");
+                                        const selected = av.serviceId === svc.id;
+                                        const price = isUlt
+                                          ? svc.price_small ?? 0
+                                          : av.vehicleSize
+                                            ? getPriceForSize(svc, av.vehicleSize as VehicleSizeSlug)
+                                            : svc.price_small ?? 0;
+                                        return (
+                                          <button
+                                            key={svc.id}
+                                            type="button"
+                                            onClick={() => {
+                                              const isUltSvc = svc.name.toLowerCase().includes("ultimate");
+                                              updateAdditionalVehicle(idx, {
+                                                serviceId: svc.id,
+                                                serviceName: svc.name,
+                                                servicePrice: price,
+                                                selectedAddons: [],
+                                                ...(isUltSvc ? { vehicleSize: "compact" } : {}),
+                                              });
+                                            }}
+                                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                                              selected
+                                                ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 text-[#D4AF37]"
+                                                : "border-white/[0.06] hover:border-white/20 text-zinc-300 hover:text-white"
+                                            }`}
+                                          >
+                                            <span className="text-sm font-semibold">{svc.name}</span>
+                                            <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
+                                              ${Math.max(0, price - MULTI_VEHICLE_DISCOUNT)}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Year / Make / Model */}
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Year</label>
+                                      <input
+                                        type="text"
+                                        value={av.vehicleYear}
+                                        onChange={e => updateAdditionalVehicle(idx, { vehicleYear: e.target.value })}
+                                        placeholder="2022"
+                                        maxLength={4}
+                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Make</label>
+                                      <input
+                                        type="text"
+                                        value={av.vehicleMake}
+                                        onChange={e => updateAdditionalVehicle(idx, { vehicleMake: e.target.value })}
+                                        placeholder="Toyota"
+                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Model</label>
+                                      <input
+                                        type="text"
+                                        value={av.vehicleModel}
+                                        onChange={e => updateAdditionalVehicle(idx, { vehicleModel: e.target.value })}
+                                        placeholder="Camry"
+                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Vehicle Size — hidden for Ultimate */}
+                                  {!avIsUltimate && av.serviceId && (
+                                    <div>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Vehicle Size</label>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {VEHICLE_SIZES.map(size => {
+                                          const selected = av.vehicleSize === size.id;
+                                          const svcForPrice = avServiceObj;
+                                          const sizePrice = svcForPrice
+                                            ? getPriceForSize(svcForPrice, size.id)
+                                            : 0;
+                                          return (
+                                            <button
+                                              key={size.id}
+                                              type="button"
+                                              onClick={() => {
+                                                const newPrice = avServiceObj
+                                                  ? getPriceForSize(avServiceObj, size.id)
+                                                  : 0;
+                                                updateAdditionalVehicle(idx, {
+                                                  vehicleSize: size.id,
+                                                  servicePrice: newPrice,
+                                                });
+                                              }}
+                                              className={`p-3 rounded-xl border text-left transition-all ${
+                                                selected
+                                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/60"
+                                                  : "border-white/[0.06] hover:border-white/20"
+                                              }`}
+                                            >
+                                              <div className={`text-xs font-bold ${selected ? "text-[#D4AF37]" : "text-zinc-300"}`}>{size.label}</div>
+                                              {svcForPrice && (
+                                                <div className={`text-sm font-black mt-0.5 tabular-nums ${selected ? "text-white" : "text-zinc-400"}`}>
+                                                  ${Math.max(0, sizePrice - MULTI_VEHICLE_DISCOUNT)}
+                                                </div>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Add-ons for this vehicle */}
+                                  {avAddons.length > 0 && (
+                                    <div>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Add-ons</label>
+                                      <div className="space-y-1.5">
+                                        {avAddons.filter(a => !FLOOR_ADDON_IDS.includes(a.id)).map(addon => {
+                                          const sel = av.selectedAddons.some(a => a.id === addon.id);
+                                          return (
+                                            <button
+                                              key={addon.id}
+                                              type="button"
+                                              onClick={() => toggleAdditionalAddon(idx, { id: addon.id, label: addon.label, price: addon.price })}
+                                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                                                sel
+                                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/50"
+                                                  : "border-white/[0.06] hover:border-white/15"
+                                              }`}
+                                            >
+                                              <span className={`text-xs font-semibold ${sel ? "text-[#D4AF37]" : "text-zinc-300"}`}>{addon.label}</span>
+                                              <span className={`text-xs font-black ${sel ? "text-white" : "text-[#D4AF37]"}`}>+${addon.price}</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Add vehicle button */}
+                          <button
+                            type="button"
+                            onClick={addAdditionalVehicle}
+                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-dashed border-[#D4AF37]/40 text-[#D4AF37] text-sm font-bold hover:bg-[#D4AF37]/[0.05] hover:border-[#D4AF37]/60 transition-all active:scale-[0.98]"
+                          >
+                            <Plus size={15} strokeWidth={2.5} />
+                            Add Another Vehicle — Save $25
+                          </button>
+                        </div>
+                      )}
                       </>
                     )}
                   </motion.div>
@@ -2768,6 +3092,31 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               <span className="font-semibold text-white">${a.price.toFixed(2)}</span>
                             </div>
                           ))}
+                          {/* Additional vehicle line items */}
+                          {additionalVehicles.filter(av => av.serviceId).map((av, i) => {
+                            const addonSum = av.selectedAddons.reduce((s, a) => s + a.price, 0);
+                            const discountedPrice = Math.max(0, av.servicePrice - MULTI_VEHICLE_DISCOUNT);
+                            return (
+                              <div key={i}>
+                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
+                                  <span className="text-zinc-400">
+                                    {av.vehicleYear} {av.vehicleMake} {av.vehicleModel} — {av.serviceName}
+                                  </span>
+                                  <span className="font-semibold text-white">${discountedPrice.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-[11px] text-emerald-400 pl-2">
+                                  <span>Multi-vehicle discount</span>
+                                  <span>−${MULTI_VEHICLE_DISCOUNT.toFixed(2)}</span>
+                                </div>
+                                {av.selectedAddons.map(a => (
+                                  <div key={a.id} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0 pl-2">
+                                    <span className="text-zinc-400 text-xs">{a.label}</span>
+                                    <span className="font-semibold text-white text-xs">${a.price.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
                           {referralDiscountAmount > 0 && (
                             <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                               <span className="flex items-center gap-1.5">
