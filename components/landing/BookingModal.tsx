@@ -52,7 +52,7 @@ import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
 import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
-import { SERVICE_DURATIONS } from "@/lib/constants";
+import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
@@ -870,6 +870,47 @@ export function BookingSection({
     const addonSum = v.selectedAddons.reduce((s, a) => s + a.price, 0);
     return sum + Math.max(0, v.servicePrice - MULTI_VEHICLE_DISCOUNT) + addonSum;
   }, 0);
+  // ── Estimated duration ───────────────────────────────────────────────────
+  const estimatedDuration = (() => {
+    if (!selectedService) return null;
+    const svcName = selectedService.name;
+    // Full-day add-on overrides everything
+    const hasFullDay = selectedAddons.some(a => FULL_DAY_ADDON_IDS.includes(a.id as any));
+    if (hasFullDay) return { minMins: FULL_DAY_DURATION_MIN, maxMins: FULL_DAY_DURATION_MIN };
+
+    const sizeKey = VEHICLE_SIZE_MAP[vehicleSize as VehicleSizeSlug] || vehicleSize || "medium";
+    const primaryMins = SERVICE_DURATIONS[svcName]?.[sizeKey] ?? 180;
+
+    const addlMins = additionalVehicles.reduce((sum, av) => {
+      if (!av.serviceName || !av.vehicleSize) return sum;
+      const avKey = VEHICLE_SIZE_MAP[av.vehicleSize as VehicleSizeSlug] || av.vehicleSize || "medium";
+      const base = SERVICE_DURATIONS[av.serviceName]?.[avKey] ?? 180;
+      return sum + Math.max(60, base - 60);
+    }, 0);
+
+    const total = primaryMins + addlMins;
+    const margin = 30;
+    return { minMins: Math.max(30, total - margin), maxMins: total + margin };
+  })();
+
+  const formatDurationRange = (minMins: number, maxMins: number): string => {
+    const fmt = (m: number) => {
+      if (m < 60) return `${m} min`;
+      const h = m / 60;
+      const whole = Math.floor(h);
+      const half = Math.round((h - whole) * 2) / 2;
+      if (half === 0) return `${whole} hr${whole !== 1 ? "s" : ""}`;
+      if (whole === 0) return "30 min";
+      return `${whole}.5 hrs`;
+    };
+    if (minMins === maxMins) return fmt(minMins);
+    return `${fmt(minMins)}–${fmt(maxMins)}`;
+  };
+
+  const durationLabel = estimatedDuration
+    ? formatDurationRange(estimatedDuration.minMins, estimatedDuration.maxMins)
+    : null;
+
   const giftCardDiscount = appliedGiftCard
     ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
     : 0;
@@ -2967,6 +3008,24 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           ))}
                         </div>
                       )}
+
+                      {/* Estimated duration — shown once a time is picked or always as context */}
+                      {durationLabel && (
+                        <div className="mt-3 flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+                          <span className="text-base">⏱</span>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-zinc-400">
+                              Estimated time:{" "}
+                              <span className="font-semibold text-zinc-200">{durationLabel}</span>
+                            </span>
+                            {additionalVehicles.filter(v => v.vehicleSize && v.serviceName).length > 0 && (
+                              <span className="ml-1.5 text-[10px] text-zinc-600">
+                                ({1 + additionalVehicles.filter(v => v.vehicleSize && v.serviceName).length} vehicles)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                   )}
@@ -3017,6 +3076,12 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               : "—"
                           }
                         />
+                        {durationLabel && (
+                          <ReceiptRow
+                            label="Est. Duration"
+                            value={durationLabel}
+                          />
+                        )}
                         <ReceiptRow label="Location" value={serviceAddress || "—"} />
                         {selectedAddons.length > 0 && (
                           <div className="flex flex-col gap-1.5 pt-1.5">
