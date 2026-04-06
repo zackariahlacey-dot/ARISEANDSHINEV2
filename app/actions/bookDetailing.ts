@@ -62,6 +62,12 @@ export type BookingPayload = {
   authUserId?: string;
   couponId?: string;
   couponDiscount?: number;
+  /** Gift card code applied at checkout */
+  giftCardCode?: string;
+  /** Dollar amount discounted by gift card (deducted from total before charging) */
+  giftCardDiscount?: number;
+  /** Gift card UUID — needed to deduct the balance */
+  giftCardId?: string;
 };
 
 export type BookingResult =
@@ -325,6 +331,21 @@ export async function bookDetailing(
     });
   }
 
+  // ── 1c. Deduct gift card balance (Pay at Arrival only) ──────────────────
+  if (!isPayNow && payload.giftCardId && payload.giftCardDiscount && payload.giftCardDiscount > 0) {
+    const { data: gc } = await adminSupabase
+      .from("gift_cards")
+      .select("remaining_balance, is_active")
+      .eq("id", payload.giftCardId)
+      .maybeSingle();
+    if (gc && gc.is_active && Number(gc.remaining_balance) >= payload.giftCardDiscount) {
+      await adminSupabase
+        .from("gift_cards")
+        .update({ remaining_balance: Number(gc.remaining_balance) - payload.giftCardDiscount })
+        .eq("id", payload.giftCardId);
+    }
+  }
+
   // ── 2. Insert vehicle ───────────────────────────────────────────────────
   const vehicleYearInt = parseInt(payload.vehicleYear, 10);
   const { data: vehicle, error: vehicleErr } = await adminSupabase
@@ -405,6 +426,9 @@ export async function bookDetailing(
         : null,
       payload.couponDiscount != null && payload.couponDiscount > 0
         ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
+        : null,
+      payload.giftCardCode && payload.giftCardDiscount != null && payload.giftCardDiscount > 0
+        ? `🎁 Gift card (${payload.giftCardCode}): $${payload.giftCardDiscount.toFixed(2)} off`
         : null,
       (payload.additionalVehicles ?? []).length > 0
         ? `🚗 Additional vehicles (${payload.additionalVehicles!.length}):\n${payload.additionalVehicles!.map((av, i) =>
@@ -536,6 +560,11 @@ export async function bookDetailing(
               isApplyingReferralDiscount: "true",
               authUserId: user,
             }),
+          ...(payload.giftCardId && payload.giftCardDiscount != null && payload.giftCardDiscount > 0 && {
+            giftCardId: payload.giftCardId,
+            giftCardCode: payload.giftCardCode ?? "",
+            giftCardDiscount: String(payload.giftCardDiscount),
+          }),
         },
         success_url: `${origin}/?stripe=success`,
         cancel_url: `${origin}/?stripe=cancelled`,

@@ -38,6 +38,7 @@ import {
   validateCoupon,
   type CouponResult,
 } from "@/app/actions/validateCoupon";
+import { validateGiftCard } from "@/app/actions/validateGiftCard";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
@@ -816,6 +817,16 @@ export function BookingSection({
     discountPercentage: number | null;
   } | null>(null);
 
+  // Gift card
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [isGiftCardLoading, setIsGiftCardLoading] = useState(false);
+  const [giftCardError, setGiftCardError] = useState<string | null>(null);
+  const [appliedGiftCard, setAppliedGiftCard] = useState<{
+    giftCardId: string;
+    code: string;
+    remainingBalance: number;
+  } | null>(null);
+
   // Computed price
   const computedPrice = selectedService
     ? isFootageService(selectedService.name)
@@ -859,10 +870,13 @@ export function BookingSection({
     const addonSum = v.selectedAddons.reduce((s, a) => s + a.price, 0);
     return sum + Math.max(0, v.servicePrice - MULTI_VEHICLE_DISCOUNT) + addonSum;
   }, 0);
+  const giftCardDiscount = appliedGiftCard
+    ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
+    : 0;
   const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
+    servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
   const availablePoints = rewardPoints ?? 0;
-  
+
   // 10 points = $1. Max redeemable is 1000 pts ($100).
   const redeemablePoints = Math.min(MAX_REDEEMABLE_POINTS, availablePoints);
   const pointsToRedeem = Math.min(Math.max(0, pointsToRedeemInput), redeemablePoints);
@@ -994,6 +1008,9 @@ export function BookingSection({
       setIsCouponLoading(false);
       setCouponError(null);
       setAppliedCoupon(null);
+      setGiftCardCode("");
+      setGiftCardError(null);
+      setAppliedGiftCard(null);
       setBookingResult(null);
       setIsSubmitting(false);
       setIsStripeLoading(false);
@@ -1040,7 +1057,7 @@ export function BookingSection({
       const toRestore = available.filter((a) => initialDraft.selectedAddonIds!.includes(a.id));
       setSelectedAddons(toRestore);
     }
-    setStep(3);
+    setStep(initialDraft.selectedDate ? 3 : 2);
     setStepDirection(1);
     appliedDraftRef.current = true;
     onDraftRestored?.();
@@ -1375,6 +1392,11 @@ export function BookingSection({
         couponId: appliedCoupon.couponId,
         couponDiscount,
       }),
+      ...(appliedGiftCard && giftCardDiscount > 0 && {
+        giftCardId: appliedGiftCard.giftCardId,
+        giftCardCode: appliedGiftCard.code,
+        giftCardDiscount,
+      }),
     };
   };
 
@@ -1538,6 +1560,78 @@ export function BookingSection({
       setCouponError(result.error);
     }
   };
+
+  // ── Apply gift card ──────────────────────────────────────────────────────
+  const handleApplyGiftCard = async () => {
+    if (!giftCardCode.trim() || appliedGiftCard) return;
+    setIsGiftCardLoading(true);
+    setGiftCardError(null);
+    const result = await validateGiftCard(giftCardCode);
+    setIsGiftCardLoading(false);
+    if (result.valid) {
+      setAppliedGiftCard({
+        giftCardId: result.giftCardId,
+        code: result.code,
+        remainingBalance: result.remainingBalance,
+      });
+      setGiftCardCode(result.code);
+    } else {
+      setGiftCardError(result.error);
+    }
+  };
+
+  // ── Gift card UI ─────────────────────────────────────────────────────────
+  const renderGiftCardUI = () => (
+    <div className="pt-3 mt-2 border-t border-white/10">
+      {!appliedGiftCard ? (
+        <div>
+          <p className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+            Gift Card
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={giftCardCode}
+              onChange={(e) => {
+                setGiftCardCode(e.target.value.toUpperCase());
+                setGiftCardError(null);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleApplyGiftCard()}
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              className="flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#D4AF37]/50 font-mono"
+            />
+            <button
+              type="button"
+              onClick={handleApplyGiftCard}
+              disabled={!giftCardCode.trim() || isGiftCardLoading}
+              className="px-4 py-3 rounded-xl text-sm font-semibold bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1.5"
+            >
+              {isGiftCardLoading ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
+            </button>
+          </div>
+          {giftCardError && (
+            <p className="mt-1.5 text-xs text-red-400">{giftCardError}</p>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-xs text-emerald-400">
+          <Check size={12} strokeWidth={2.5} />
+          <span>
+            Gift card{" "}
+            <span className="font-mono font-semibold">{appliedGiftCard.code}</span>{" "}
+            applied (${appliedGiftCard.remainingBalance.toFixed(2)} available)
+          </span>
+          <button
+            type="button"
+            onClick={() => { setAppliedGiftCard(null); setGiftCardCode(""); }}
+            className="ml-auto text-zinc-600 hover:text-zinc-400 transition-colors"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   // ── Promo code UI (rendered inside both receipt cards) ───────────────────
   const renderCouponUI = () => (
@@ -2981,6 +3075,17 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 <span className="font-semibold">−${couponDiscount.toFixed(2)}</span>
                               </div>
                             )}
+                            {giftCardDiscount > 0 && (
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
+                                <span className="flex items-center gap-1.5">
+                                  🎁 Gift Card
+                                  <span className="text-[10px] text-emerald-500/70 font-mono">
+                                    {appliedGiftCard?.code}
+                                  </span>
+                                </span>
+                                <span className="font-semibold">−${giftCardDiscount.toFixed(2)}</span>
+                              </div>
+                            )}
                             {travelFeeLoading && (
                               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-zinc-500 text-xs min-w-0">
                                 <span>Travel Fee (if applicable)</span>
@@ -2996,6 +3101,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               </div>
                             )}
                             {renderCouponUI()}
+                            {renderGiftCardUI()}
                             {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
                               <div className="pt-3 space-y-2">
                                 <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">

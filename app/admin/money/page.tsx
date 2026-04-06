@@ -7,6 +7,9 @@ import {
   deleteCouponAction,
 } from "@/app/actions/adminActions";
 import {
+  getGiftCardsAction, createGiftCardAction, toggleGiftCardAction,
+} from "@/app/actions/createGiftCard";
+import {
   useRevenueBreakdown, useAllTimeStats, useMonthlyGoal, useSetMonthlyGoal,
 } from "@/hooks/use-admin-data";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
@@ -15,7 +18,7 @@ import { Modal } from "@/components/admin/Modal";
 import {
   DollarSign, CreditCard, Banknote, TrendingUp, Target, Ticket,
   ChevronLeft, ChevronRight, Plus, Trash2, Power, Loader2,
-  Link, Check, CalendarClock, Receipt, Info,
+  Link, Check, CalendarClock, Receipt, Info, Gift,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -70,12 +73,17 @@ export default function MoneyPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [monthOffset, setMonthOffset] = useState(0);
-  const [tab, setTab] = useState<"overview" | "pipeline" | "unpaid" | "services" | "coupons">("overview");
+  const [tab, setTab] = useState<"overview" | "pipeline" | "unpaid" | "services" | "coupons" | "gift_cards">("overview");
   const [showGoalEdit, setShowGoalEdit] = useState(false);
   const [goalInput, setGoalInput] = useState("");
   const [showNewCoupon, setShowNewCoupon] = useState(false);
   const [newCoupon, setNewCoupon] = useState({ code: "", type: "percentage", value: "" });
   const [creating, setCreating] = useState(false);
+
+  // Gift cards state
+  const [showNewGiftCard, setShowNewGiftCard] = useState(false);
+  const [newGiftCard, setNewGiftCard] = useState({ amount: "", recipientEmail: "", recipientName: "", purchaserEmail: "" });
+  const [creatingGiftCard, setCreatingGiftCard] = useState(false);
 
   const { data: rev, isLoading: revLoading } = useRevenueBreakdown(monthOffset);
   const { data: allTime, isLoading: atLoading } = useAllTimeStats();
@@ -87,6 +95,20 @@ export default function MoneyPage() {
   const { data: coupons, isLoading: cLoading } = useQuery({
     queryKey: ["admin", "coupons"],
     queryFn: async () => await getCouponStats(),
+  });
+
+  const { data: giftCards, isLoading: gcLoading } = useQuery({
+    queryKey: ["admin", "gift_cards"],
+    queryFn: async () => await getGiftCardsAction(),
+    enabled: tab === "gift_cards",
+  });
+
+  const toggleGcMut = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) => toggleGiftCardAction(id, is_active),
+    onSuccess: () => {
+      toast("Updated");
+      queryClient.invalidateQueries({ queryKey: ["admin", "gift_cards"] });
+    },
   });
 
   const toggleMut = useMutation({
@@ -135,6 +157,32 @@ export default function MoneyPage() {
     }
   }
 
+  async function handleCreateGiftCard() {
+    const amount = Number(newGiftCard.amount);
+    if (!amount || amount < 1) { toast("Enter a valid amount", "error"); return; }
+    setCreatingGiftCard(true);
+    try {
+      const result = await createGiftCardAction({
+        amount,
+        recipientEmail: newGiftCard.recipientEmail || undefined,
+        recipientName: newGiftCard.recipientName || undefined,
+        purchaserEmail: newGiftCard.purchaserEmail || undefined,
+      });
+      if (result.success) {
+        toast(`Gift card created: ${result.code}`);
+        setShowNewGiftCard(false);
+        setNewGiftCard({ amount: "", recipientEmail: "", recipientName: "", purchaserEmail: "" });
+        queryClient.invalidateQueries({ queryKey: ["admin", "gift_cards"] });
+      } else {
+        toast(result.error, "error");
+      }
+    } catch {
+      toast("Failed", "error");
+    } finally {
+      setCreatingGiftCard(false);
+    }
+  }
+
   async function handleResendStripeLink(b: any) {
     const email = b.customer_email;
     if (!email) {
@@ -166,6 +214,7 @@ export default function MoneyPage() {
     { id: "unpaid" as const, label: `Unpaid${rev?.unpaid?.length ? ` (${rev.unpaid.length})` : ""}` },
     { id: "services" as const, label: "By service" },
     { id: "coupons" as const, label: "Coupons" },
+    { id: "gift_cards" as const, label: "Gift Cards" },
   ];
 
   return (
@@ -564,6 +613,64 @@ export default function MoneyPage() {
         </div>
       )}
 
+      {tab === "gift_cards" && (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowNewGiftCard(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-amber-500/30 py-3 text-xs font-black uppercase tracking-wider text-amber-500 transition-all hover:border-amber-500/60 active:scale-95"
+          >
+            <Plus size={14} /> Issue gift card
+          </button>
+
+          {gcLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="animate-spin text-amber-500" size={20} />
+            </div>
+          ) : !giftCards?.length ? (
+            <p className="py-6 text-center text-sm text-zinc-600">No gift cards yet.</p>
+          ) : (
+            giftCards.map((gc: any) => (
+              <div key={gc.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={cn("text-xs font-black font-mono", gc.is_active ? "text-white" : "text-zinc-600 line-through")}>
+                        {gc.code}
+                      </span>
+                      {gc.is_active ? (
+                        <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-400">Active</span>
+                      ) : (
+                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-zinc-600">Off</span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      ${Number(gc.remaining_balance).toFixed(0)} remaining of ${Number(gc.initial_amount).toFixed(0)}
+                      {gc.recipient_name ? ` · For ${gc.recipient_name}` : ""}
+                    </p>
+                    {gc.recipient_email && (
+                      <p className="text-[10px] text-zinc-600">{gc.recipient_email}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleGcMut.mutate({ id: gc.id, is_active: !gc.is_active })}
+                    className={cn(
+                      "rounded-lg border p-2 text-xs transition-all active:scale-90 shrink-0",
+                      gc.is_active
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                        : "border-white/[0.08] bg-white/[0.03] text-zinc-600"
+                    )}
+                  >
+                    <Power size={13} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
       <Modal open={showGoalEdit} onClose={() => setShowGoalEdit(false)}>
         <div className="space-y-4">
           <h2 className="flex items-center gap-2 text-lg font-black">
@@ -668,6 +775,62 @@ export default function MoneyPage() {
                 <>
                   <Plus size={14} /> Create
                 </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showNewGiftCard} onClose={() => setShowNewGiftCard(false)}>
+        <div className="space-y-4">
+          <h2 className="flex items-center gap-2 text-lg font-black">
+            <Gift size={16} className="text-amber-500" /> Issue gift card
+          </h2>
+          <div>
+            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-zinc-500">Amount ($)</p>
+            <input
+              type="number"
+              value={newGiftCard.amount}
+              onChange={(e) => setNewGiftCard((p) => ({ ...p, amount: e.target.value }))}
+              placeholder="100"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white focus:border-amber-500/50 focus:outline-none"
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-zinc-500">Recipient name (optional)</p>
+            <input
+              value={newGiftCard.recipientName}
+              onChange={(e) => setNewGiftCard((p) => ({ ...p, recipientName: e.target.value }))}
+              placeholder="Jane Doe"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white focus:border-amber-500/50 focus:outline-none"
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-zinc-500">Recipient email (optional)</p>
+            <input
+              type="email"
+              value={newGiftCard.recipientEmail}
+              onChange={(e) => setNewGiftCard((p) => ({ ...p, recipientEmail: e.target.value }))}
+              placeholder="jane@email.com"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white focus:border-amber-500/50 focus:outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowNewGiftCard(false)}
+              className="flex-1 rounded-xl border border-white/[0.08] py-3 text-sm font-black uppercase tracking-wider text-zinc-400"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateGiftCard}
+              disabled={creatingGiftCard}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-black uppercase tracking-wider text-black active:scale-95"
+            >
+              {creatingGiftCard ? <Loader2 className="animate-spin" size={16} /> : (
+                <><Plus size={14} /> Issue</>
               )}
             </button>
           </div>

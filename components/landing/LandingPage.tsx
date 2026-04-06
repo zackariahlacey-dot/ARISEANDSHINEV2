@@ -1613,8 +1613,16 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
           </div>
 
-          {/* Legal links row */}
-          <div className="flex items-center justify-center gap-6 pt-2 border-t border-white/[0.04]">
+          {/* Quick links row */}
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 border-t border-white/[0.04]">
+            <Link href="/my-detail" className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors">
+              Track My Appointment
+            </Link>
+            <span className="text-zinc-800 text-xs">·</span>
+            <Link href="/gift-cards" className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors">
+              Gift Cards
+            </Link>
+            <span className="text-zinc-800 text-xs">·</span>
             <button
               onClick={() => setLegalModal("privacy")}
               className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors"

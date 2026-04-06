@@ -44,12 +44,41 @@ export async function POST(req: NextRequest) {
     }
 
     const m = session.metadata;
+
+    const supabase = createAdminClient();
+
+    // ── Gift card purchase path ───────────────────────────────────────────
+    if (m?.sessionType === "gift_card") {
+      const amount = Number(m.amount) || 0;
+      if (amount < 1) {
+        console.error("[webhooks/stripe] Gift card: invalid amount", m.amount);
+        return NextResponse.json({ received: true });
+      }
+      // Generate a unique code
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 16; i++) {
+        if (i > 0 && i % 4 === 0) code += "-";
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      await supabase.from("gift_cards").insert({
+        code,
+        initial_amount: amount,
+        remaining_balance: amount,
+        purchaser_email: m.purchaserEmail ?? null,
+        recipient_email: m.recipientEmail || null,
+        recipient_name: m.recipientName || null,
+        stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+        is_active: true,
+      });
+      // TODO: send gift card email with the code
+      return NextResponse.json({ received: true });
+    }
+
     if (!m?.profileId || !m?.vehicleId || !m?.serviceId || !m?.bookingDate || !m?.bookingTime) {
       console.error("[webhooks/stripe] Missing required metadata (profileId, vehicleId, serviceId, bookingDate, bookingTime)");
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
-
-    const supabase = createAdminClient();
 
     // Idempotency: if we already fulfilled this session, skip (prevents double-insert on webhook retry)
     const { data: alreadyFulfilled } = await supabase
@@ -254,6 +283,24 @@ export async function POST(req: NextRequest) {
         }
       } catch (refErr) {
         console.error("[webhooks/stripe] referral reward error:", refErr);
+      }
+    }
+
+    // Deduct gift card balance (Pay Now — deferred until payment confirmed)
+    if (m.giftCardId && m.giftCardDiscount) {
+      const gcDiscount = Number(m.giftCardDiscount) || 0;
+      if (gcDiscount > 0) {
+        const { data: gc } = await supabase
+          .from("gift_cards")
+          .select("remaining_balance, is_active")
+          .eq("id", m.giftCardId)
+          .maybeSingle();
+        if (gc && gc.is_active && Number(gc.remaining_balance) >= gcDiscount) {
+          await supabase
+            .from("gift_cards")
+            .update({ remaining_balance: Number(gc.remaining_balance) - gcDiscount })
+            .eq("id", m.giftCardId);
+        }
       }
     }
 

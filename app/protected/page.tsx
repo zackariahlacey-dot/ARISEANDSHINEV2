@@ -1,13 +1,107 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowLeft, Gift, Star, Crown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Gift, Star, Crown, ChevronRight, Calendar, Car, MapPin, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getRecentPointTransactions } from "@/app/actions/getRecentPointTransactions";
 import { ensureReferralCode } from "@/app/actions/createProfileWithReferral";
 import { ReferAndEarnCard } from "@/components/landing/ReferAndEarnCard";
 import { XpHistoryCard } from "@/components/dashboard/XpHistoryCard";
+import { getClientBookings, type ClientBooking } from "@/app/actions/getClientBookings";
+
+function formatBookingDate(d: string) {
+  try {
+    return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
+      weekday: "short", month: "short", day: "numeric", year: "numeric",
+    });
+  } catch { return d; }
+}
+
+function formatBookingTime(t: string | null) {
+  if (!t) return null;
+  try {
+    const [h, m] = t.split(":");
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    return `${hour % 12 || 12}:${m} ${ampm}`;
+  } catch { return t; }
+}
+
+function buildRebookDraft(b: ClientBooking) {
+  return {
+    serviceId: "",
+    vehicleSize: "sedan" as const,
+    vehicleYear: b.vehicle_year ?? "",
+    vehicleMake: b.vehicle_make ?? "",
+    vehicleModel: b.vehicle_model ?? "",
+    selectedDate: "",
+    selectedTime: "",
+    serviceAddress: b.service_address ?? "",
+    name: "", phone: "", email: "", notes: "",
+    travelFee: 0, distanceMiles: null,
+    couponCode: "", appliedCoupon: null,
+    pointsToRedeemInput: 0,
+  };
+}
+
+function BookingCard({ b, showRebook }: { b: ClientBooking; showRebook?: boolean }) {
+  const today = new Date().toISOString().split("T")[0];
+  const isUpcoming = b.booking_date >= today;
+  const vehicleLabel = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 p-4 space-y-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-zinc-100 truncate text-sm">{b.service_name ?? "Detailing Service"}</p>
+          {vehicleLabel && <p className="text-xs text-zinc-500 truncate mt-0.5">{vehicleLabel}</p>}
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-sm font-black text-[#D4AF37]">${b.total_price.toFixed(0)}</p>
+          {isUpcoming && (
+            <span className="text-[8px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded">
+              Upcoming
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
+        <span className="flex items-center gap-1">
+          <Calendar size={10} />
+          {formatBookingDate(b.booking_date)}
+          {b.booking_time ? ` · ${formatBookingTime(b.booking_time.slice(0, 5))}` : ""}
+        </span>
+        {b.service_address && (
+          <span className="flex items-center gap-1 truncate max-w-[200px]">
+            <MapPin size={10} className="shrink-0" />{b.service_address}
+          </span>
+        )}
+      </div>
+
+      {showRebook && (
+        <form
+          action="/"
+          method="get"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const draft = buildRebookDraft(b);
+            try { sessionStorage.setItem("draftBooking", JSON.stringify(draft)); } catch {}
+            window.location.href = "/?restore_booking=1";
+          }}
+        >
+          <button
+            type="submit"
+            className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-[#D4AF37] transition-colors"
+          >
+            <RotateCcw size={11} /> Rebook this service
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
 
 async function Dashboard() {
   const supabase = await createClient();
@@ -28,6 +122,7 @@ async function Dashboard() {
 
   const transactions = await getRecentPointTransactions(user.id);
   const dollarValue = (currentPoints / 10).toFixed(2);
+  const { upcoming, past } = await getClientBookings(user.id);
 
   return (
     <div className="relative min-h-screen bg-zinc-950 overflow-hidden">
@@ -142,6 +237,46 @@ async function Dashboard() {
           </div>
         </div>
 
+
+        {/* ── Upcoming Appointments ───────────────────────────────────────── */}
+        {upcoming.length > 0 && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-[#D4AF37] mb-3">
+              Upcoming ({upcoming.length})
+            </p>
+            <div className="space-y-3">
+              {upcoming.map((b) => (
+                <BookingCard key={b.id} b={b} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Past Appointments ─────────────────────────────────────────────── */}
+        {past.length > 0 && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-zinc-600 mb-3">
+              Past appointments
+            </p>
+            <div className="space-y-3">
+              {past.slice(0, 5).map((b) => (
+                <BookingCard key={b.id} b={b} showRebook />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {upcoming.length === 0 && past.length === 0 && (
+          <div className="mb-5 rounded-2xl border border-dashed border-white/[0.06] p-6 text-center">
+            <p className="text-sm text-zinc-600">No appointments yet.</p>
+            <Link
+              href="/#services"
+              className="mt-2 inline-block text-sm text-[#D4AF37] hover:underline"
+            >
+              Book your first detail →
+            </Link>
+          </div>
+        )}
 
         {/* ── XP History Ledger ─────────────────────────────────────────────── */}
         <XpHistoryCard transactions={transactions} />
