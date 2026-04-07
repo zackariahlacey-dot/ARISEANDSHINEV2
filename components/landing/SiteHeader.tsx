@@ -137,23 +137,22 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
       </header>
 
       {/* Mobile menu — slides down from header */}
+      {mobileOpen && (
+        <div className="fixed inset-0 top-[57px] bg-black/60 z-39 md:hidden" onClick={closeMobile} />
+      )}
       <div
-        className={`md:hidden fixed inset-x-0 top-[57px] z-40 transition-all duration-300 ease-in-out origin-top ${
+        className={`md:hidden fixed inset-x-0 top-[57px] z-40 transition-all duration-300 ease-in-out ${
           mobileOpen
             ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 -translate-y-3 pointer-events-none"
+            : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
+        style={{ maxHeight: "calc(100dvh - 57px)", display: "flex", flexDirection: "column" }}
         aria-hidden={!mobileOpen}
       >
-        {/* Backdrop tap-to-close */}
-        {mobileOpen && (
-          <div className="fixed inset-0 top-[57px] bg-black/60 -z-10" onClick={closeMobile} />
-        )}
+        <div className="bg-zinc-950 border-b border-white/[0.07] shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100dvh - 57px)" }}>
 
-        <div className="bg-zinc-950/98 border-b border-white/[0.07] shadow-2xl overflow-y-auto max-h-[calc(100svh-57px)]">
-          <div className="px-4 py-4 space-y-1">
-
-            {/* Nav links */}
+          {/* Scrollable nav links */}
+          <div className="overflow-y-auto flex-1 px-4 pt-3 pb-2">
             <Link
               href="/"
               onClick={closeMobile}
@@ -163,8 +162,8 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
             </Link>
 
             {/* Services */}
-            <div className="pt-1">
-              <p className="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
+            <div className="mt-1">
+              <p className="px-4 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
               {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => (
                 <Link
                   key={href}
@@ -186,7 +185,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
             <Link
               href="/#why-us"
               onClick={closeMobile}
-              className="flex items-center px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
+              className="flex items-center px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors mt-1"
             >
               Why Us
             </Link>
@@ -197,33 +196,25 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
             >
               Contact
             </Link>
+          </div>
 
-            {/* Divider */}
-            <div className="h-px bg-white/[0.07] mx-2 my-2" />
-
-            {/* Loyalty */}
-            <div className="px-4 py-1">
-              <LoyaltyHeaderButton />
-            </div>
-
-            {/* Book + Call */}
-            <div className="px-2 pt-1 pb-2 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => { closeMobile(); handleBookNow(); }}
-                className="btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-3.5 rounded-xl text-sm hover:text-black transition-all duration-500"
-              >
-                <span className="relative z-[1]">Book Your Detail</span>
-              </button>
-              <a
-                href="tel:8025855563"
-                onClick={closeMobile}
-                className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm font-medium transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                802-585-5563
-              </a>
-            </div>
+          {/* Book + Call — always visible at bottom, never scrolls away */}
+          <div className="shrink-0 px-4 pt-2 pb-4 border-t border-white/[0.06] flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => { closeMobile(); handleBookNow(); }}
+              className="btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-3.5 rounded-xl text-sm hover:text-black transition-all duration-500"
+            >
+              <span className="relative z-[1]">Book Your Detail</span>
+            </button>
+            <a
+              href="tel:8025855563"
+              onClick={closeMobile}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm font-medium transition-colors"
+            >
+              <Phone className="w-4 h-4" />
+              802-585-5563
+            </a>
           </div>
         </div>
       </div>
