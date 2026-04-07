@@ -6,9 +6,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, CheckCircle, Star, ShieldCheck,
+  Sparkles, Star, ShieldCheck,
   BadgeCheck, Phone, ArrowRight, Anchor, Waves,
-  Droplets, Leaf, AlertTriangle, Calculator, ChevronRight,
+  Droplets, Leaf, Calculator, ChevronRight,
   Minus, Plus, Zap, FlaskConical, Eye, Wrench, Snowflake,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
@@ -27,6 +27,10 @@ const SuccessModal = dynamic(
 
 const sv = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const vp = { once: true, margin: "-80px" };
+
+/** Hide scrollbar for horizontal carousels (mobile) */
+const carouselScrollClass =
+  "overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 const BOAT_MIN_FEET = 15;
 
@@ -126,12 +130,6 @@ const MARINE_ADDONS = [
   },
 ] as const;
 
-const LAKES = [
-  "Lake Champlain", "Lake Memphremagog", "Lake Willoughby",
-  "Lake Bomoseen", "Lake St. Catherine", "Lake Fairlee",
-  "Lake Morey", "Caspian Lake",
-];
-
 // ── Touch-friendly Price Calculator ──────────────────────────────────────────
 function PriceCalculator({ onBook }: { onBook: () => void }) {
   const [feet, setFeet] = useState<number>(22);
@@ -141,8 +139,8 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
 
   return (
     <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] p-5 md:p-7">
-      <div className="flex items-center justify-between gap-2 mb-5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col items-center text-center sm:flex-row sm:justify-between sm:text-left gap-2 mb-5">
+        <div className="flex items-center justify-center gap-2">
           <Calculator size={16} className="text-[#D4AF37] shrink-0" />
           <h3 className="text-sm font-black uppercase tracking-widest text-[#D4AF37]">Price Calculator</h3>
         </div>
@@ -150,10 +148,10 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
       </div>
 
       <div className="mb-6">
-        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">
+        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3 text-center sm:text-left">
           Boat Length
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center gap-3 max-w-md mx-auto sm:max-w-none sm:mx-0">
           <button
             type="button"
             onClick={() => adjust(-1)}
@@ -187,11 +185,13 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-5">
+      <div
+        className={`flex md:grid md:grid-cols-3 gap-3 mb-5 ${carouselScrollClass} pb-2 -mx-1 px-1 md:mx-0 md:px-0 md:overflow-visible`}
+      >
         {BOAT_SERVICES_STATIC.map((svc) => (
           <div
             key={svc.dbName}
-            className={`rounded-xl border p-3 text-center ${svc.popular ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}
+            className={`snap-center shrink-0 w-[min(82vw,280px)] md:w-auto rounded-xl border p-4 text-center ${svc.popular ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}
           >
             <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
             <p className={`text-xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
@@ -201,6 +201,7 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
           </div>
         ))}
       </div>
+      <p className="text-[10px] text-zinc-600 text-center md:hidden -mt-2 mb-4">Swipe for packages</p>
 
       <button
         onClick={onBook}
@@ -322,18 +323,9 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
           </p>
 
           {/* Rates */}
-          <p className="text-sm font-bold text-[#D4AF37] mb-6">
+          <p className="text-sm font-bold text-[#D4AF37] mb-6 px-2 leading-relaxed text-center">
             Marine Express $20/ft · Deep Reset $30/ft · Showroom Restoration $55/ft
           </p>
-
-          {/* Waterline Up disclaimer */}
-          <div className="inline-flex items-start gap-2.5 text-left bg-zinc-900/60 border border-[#D4AF37]/20 rounded-2xl px-4 py-3 mb-8 max-w-xl mx-auto">
-            <Anchor size={14} className="text-[#D4AF37] shrink-0 mt-0.5" />
-            <p className="text-[12px] text-zinc-400 leading-relaxed">
-              <span className="font-bold text-zinc-200">Mobile Dockside Service:</span>{" "}
-              We specialize in detailing from the waterline up. No haul-out or lift required.
-            </p>
-          </div>
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
@@ -349,20 +341,16 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
           </div>
 
           {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-y-3 text-xs text-zinc-500">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-items-center justify-center gap-x-4 gap-y-3 text-xs text-zinc-500 max-w-md mx-auto sm:max-w-none">
             {[
               { icon: Star, label: "5★ Rated" },
               { icon: ShieldCheck, label: "Fully Insured" },
               { icon: Leaf, label: "100% Lake-Safe" },
               { icon: BadgeCheck, label: "Gelcoat Safe" },
-            ].map(({ icon: Icon, label }, i, arr) => (
-              <span key={label} className="flex items-center">
-                <span className="flex items-center gap-1">
-                  <Icon size={13} className="text-[#D4AF37]" />{label}
-                </span>
-                {i < arr.length - 1 && (
-                  <span className="mx-16 text-zinc-700">·</span>
-                )}
+            ].map(({ icon: Icon, label }) => (
+              <span key={label} className="flex items-center justify-center gap-1.5 text-center">
+                <Icon size={13} className="text-[#D4AF37] shrink-0" />
+                {label}
               </span>
             ))}
           </div>
@@ -381,10 +369,10 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
         <div className="max-w-2xl mx-auto">
           {/* Restore toast */}
           {showRestoreToast && (
-            <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3 text-sm text-[#D4AF37]">
-              <span className="text-lg">⚓</span>
-              <span>Your booking details have been restored — pick up right where you left off.</span>
-              <button onClick={() => setShowRestoreToast(false)} className="ml-auto text-[#D4AF37]/60 hover:text-[#D4AF37]">✕</button>
+            <div className="mb-4 flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-center gap-2 sm:gap-3 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3 text-sm text-[#D4AF37]">
+              <span className="text-lg shrink-0">⚓</span>
+              <span className="flex-1">Your booking details have been restored — pick up right where you left off.</span>
+              <button type="button" onClick={() => setShowRestoreToast(false)} className="sm:ml-auto text-[#D4AF37]/60 hover:text-[#D4AF37] px-2 py-1">✕</button>
             </div>
           )}
           {mounted && (
@@ -420,16 +408,22 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <p className="text-center text-[11px] text-zinc-600 mb-4 md:hidden">Swipe to compare packages</p>
+          <div
+            className={`flex md:grid md:grid-cols-3 gap-4 ${carouselScrollClass} pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:pb-0`}
+          >
             {displayServices.map((svc) => {
               const Icon = svc.icon;
               return (
-                <div key={svc.dbName} className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 hover:-translate-y-1 ${svc.border} ${svc.bg} ${svc.popular ? "shadow-[0_0_40px_rgba(212,175,55,0.08)]" : ""}`}>
+                <div
+                  key={svc.dbName}
+                  className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 md:hover:-translate-y-1 snap-center shrink-0 w-[min(88vw,380px)] md:w-auto md:min-w-0 md:snap-none md:shrink ${svc.border} ${svc.bg} ${svc.popular ? "shadow-[0_0_40px_rgba(212,175,55,0.08)]" : ""}`}
+                >
                   {svc.popular && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />}
 
-                  <div className="p-5 sm:p-6 flex flex-col flex-1">
+                  <div className="p-5 sm:p-6 flex flex-col flex-1 text-center md:text-left items-center md:items-stretch">
                     {/* Badges row */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3 min-h-[22px]">
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3 min-h-[22px] w-full">
                       {svc.popular && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">
                           <Star size={9} fill="currentColor" />Most Popular
@@ -444,30 +438,33 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
                     </div>
 
                     {/* Icon + name */}
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Icon size={18} className={svc.accent} />
+                    <div className="flex flex-col md:flex-row items-center gap-2 mb-1.5">
+                      <Icon size={22} className={svc.accent} />
                       <h3 className="text-lg font-black text-white tracking-tight">{svc.displayName}</h3>
                     </div>
-                    <p className="text-sm text-zinc-500 leading-relaxed mb-4">{svc.tagline}</p>
+                    <p className="text-sm text-zinc-500 leading-relaxed mb-4 max-w-xs md:max-w-none mx-auto md:mx-0">{svc.tagline}</p>
 
                     {/* Price badge */}
-                    <div className={`rounded-xl mb-5 py-3 text-center border ${svc.popular ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.05]" : "border-white/[0.06] bg-white/[0.02]"}`}>
+                    <div className={`w-full rounded-xl mb-5 py-3 text-center border ${svc.popular ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.05]" : "border-white/[0.06] bg-white/[0.02]"}`}>
                       <div className={`text-3xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
                         ${svc.ratePerFoot}<span className="text-lg font-bold text-zinc-500">/ft</span>
                       </div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
                         Min {BOAT_MIN_FEET}ft · ${svc.ratePerFoot * BOAT_MIN_FEET} minimum
                       </div>
                     </div>
 
                     {/* Feature list */}
-                    <ul className="space-y-2 flex-1 mb-5">
+                    <ul className="space-y-2.5 flex-1 mb-5 w-full">
                       {svc.features.map((f) => (
-                        <li key={f} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
+                        <li
+                          key={f}
+                          className="flex items-start gap-3 text-sm text-zinc-300 leading-snug max-w-[min(100%,19rem)] mx-auto md:mx-0 md:max-w-none"
+                        >
                           <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
                             <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
                           </span>
-                          {f}
+                          <span className="text-left">{f}</span>
                         </li>
                       ))}
                     </ul>
@@ -498,26 +495,28 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
       >
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Upsells</p>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Marine Specialist Add-ons</h2>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Marine Add-ons</h2>
             <p className="text-zinc-500 mt-2 text-sm">
               Add any of these when booking — mention them in the notes field or call to confirm.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <p className="text-center text-[11px] text-zinc-600 mb-3 sm:hidden">Swipe for add-ons</p>
+          <div
+            className={`flex sm:grid sm:grid-cols-2 gap-3 ${carouselScrollClass} pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:pb-0`}
+          >
             {MARINE_ADDONS.map((addon) => {
               const Icon = addon.icon;
               return (
                 <div
                   key={addon.label}
-                  className="flex items-start gap-4 p-5 rounded-2xl border border-[#D4AF37]/15 bg-zinc-900/50 hover:border-[#D4AF37]/30 hover:bg-zinc-900/80 transition-all"
+                  className="snap-center shrink-0 w-[min(88vw,400px)] sm:w-auto flex flex-col sm:flex-row items-center text-center sm:items-start sm:text-left gap-3 sm:gap-4 p-5 rounded-2xl border border-[#D4AF37]/15 bg-zinc-900/50 sm:hover:border-[#D4AF37]/30 sm:hover:bg-zinc-900/80 transition-all"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
                     <Icon size={17} className="text-[#D4AF37]" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="min-w-0 flex-1 w-full">
+                    <div className="flex flex-col items-center gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:flex-wrap">
                       <h3 className="font-bold text-sm text-white">{addon.label}</h3>
                       <span className="text-sm font-black text-[#D4AF37] tabular-nums whitespace-nowrap">{addon.price}</span>
                     </div>
@@ -539,73 +538,6 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ── Vermont Lakes ─────────────────────────────────────────────── */}
-      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
-      >
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">We Serve Vermont&apos;s Lakes</p>
-          <h2 className="text-2xl md:text-3xl font-black text-white mb-5">Marinas & Lake Communities We Reach</h2>
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {LAKES.map((lake) => (
-              <span key={lake} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/[0.05] text-[#D4AF37]/80 text-xs font-semibold">
-                <Waves size={10} />{lake}
-              </span>
-            ))}
-          </div>
-          <p className="text-zinc-500 text-sm leading-relaxed">
-            Don&apos;t see your lake?{" "}
-            <a href="tel:8025855563" className="text-[#D4AF37] hover:text-[#F3E5AB] transition-colors">Call us</a>{" "}
-            — we cover all of Vermont and service remote boat storage yards by request.
-          </p>
-        </div>
-      </motion.section>
-
-      {/* ── Why Choose Us ────────────────────────────────────────────── */}
-      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
-      >
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-4xl font-black text-white">Why Vermont Boaters Choose Us</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              { title: "True Dockside Service", desc: "Marina, driveway, or storage yard — fully self-contained rig. No haul-out. No lift. No trailering." },
-              { title: "Per-Foot Transparent Pricing", desc: "Enter your boat length and know your price upfront. No surprise fees after arrival." },
-              { title: "100% Lake-Safe Chemicals", desc: "All products are biodegradable and compliant with Vermont environmental standards. Safe for runoff near any VT waterway." },
-              { title: "Vermont UV & Winter Ready", desc: "Our sealants and ceramic treatments protect against Vermont's harsh UV summers and freeze-thaw winters." },
-              { title: "Fully Insured & Certified", desc: "Full marine liability coverage on every job. Your boat is protected from start to finish." },
-              { title: "5★ Local Reputation", desc: "Locally owned and operated in Vermont. We treat your boat like we own it — because our reputation depends on it." },
-            ].map(({ title, desc }) => (
-              <div key={title} className="rounded-2xl border border-[#D4AF37]/10 bg-zinc-900/40 p-5 hover:border-[#D4AF37]/25 transition-colors">
-                <CheckCircle size={18} className="text-[#D4AF37] mb-3" />
-                <h3 className="font-bold text-sm text-white mb-1.5">{title}</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* ── Notices ───────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-4 max-w-2xl mx-auto space-y-3">
-        <div className="flex items-start gap-2.5 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] px-4 py-3">
-          <AlertTriangle size={14} className="text-[#D4AF37]/60 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-zinc-500 leading-relaxed">
-            <span className="font-bold text-zinc-400">Severe Mold / Bilge Odor:</span>{" "}
-            Boats with heavy mold, mildew, or persistent odor may require a $75–$150 remediation surcharge. We always confirm before starting.
-          </p>
-        </div>
-        <div className="flex items-start gap-2.5 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] px-4 py-3">
-          <Leaf size={14} className="text-[#D4AF37]/60 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-zinc-500 leading-relaxed">
-            <span className="font-bold text-zinc-400">Eco Commitment:</span>{" "}
-            We use only biodegradable, phosphate-free marine soaps and sealants compliant with Vermont Department of Environmental Conservation standards.
-          </p>
-        </div>
-      </div>
-
       {/* ── Bottom CTA ────────────────────────────────────────────────── */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05] text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
@@ -614,6 +546,9 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
           <h2 className="text-2xl md:text-4xl font-black text-white mb-3">Ready for the Waterline Up Treatment?</h2>
           <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
             Calculate your price above, pick your package, and book in under 2 minutes.
+          </p>
+          <p className="text-[11px] text-zinc-600 mb-6 leading-relaxed">
+            Heavy mold or bilge odor may add a $75–$150 surcharge — always confirmed before we start. All products are biodegradable and lake-safe.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
@@ -639,7 +574,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
 
       {/* Footer */}
       <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-28 md:pb-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 text-xs text-zinc-600 text-center sm:text-left">
           <span>© 2025 Arise And Shine VT · Waterline Up Marine Detailing · Vermont</span>
           <Link href="/" className="hover:text-[#D4AF37] transition-colors">← Back to Home</Link>
         </div>
