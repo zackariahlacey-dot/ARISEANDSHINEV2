@@ -187,7 +187,7 @@ export function AddressAutocomplete({
             isReady ? "123 Main St, Burlington, VT" : "Loading map data…"
           }
           disabled={!isReady}
-          autoComplete="off"
+          autoComplete="street-address"
           spellCheck={false}
           className={`w-full text-center bg-[#1a1a1a] border rounded-xl pl-9 pr-9 py-3 text-[16px] md:text-sm text-white placeholder-zinc-700 focus:outline-none transition-colors disabled:opacity-40 ${
             isConfirmed

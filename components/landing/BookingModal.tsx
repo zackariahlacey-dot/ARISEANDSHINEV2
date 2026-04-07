@@ -1641,6 +1641,8 @@ export function BookingSection({
               }}
               onKeyDown={(e) => e.key === "Enter" && handleApplyGiftCard()}
               placeholder="XXXX-XXXX-XXXX-XXXX"
+              autoComplete="off"
+              name="gift-card-code-x"
               className="flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#D4AF37]/50 font-mono"
             />
             <button
@@ -1695,6 +1697,8 @@ export function BookingSection({
               onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
               placeholder="ENTER CODE"
               disabled={isCouponLoading}
+              autoComplete="off"
+              name="promo-discount-x"
               className="flex-1 text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-sm font-mono tracking-wider uppercase disabled:opacity-50"
             />
             <button
