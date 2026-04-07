@@ -32,8 +32,20 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // No body scroll lock — dropdown menu, not full-screen overlay.
-  // Locking overflow removes the scrollbar and causes a layout shift.
+  useEffect(() => {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
@@ -95,85 +107,77 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
         </div>
       </header>
 
-      {/* Backdrop — z-[54] sits above page content, below menu panel */}
+      {/* Backdrop */}
       {mobileOpen && (
-        <div className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden" onClick={closeMobile} />
+        <div
+          className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden"
+          onClick={closeMobile}
+          aria-hidden
+        />
       )}
 
-      {/* Mobile menu panel — z-[55] sits above the RecentActivityToast (z-50) */}
+      {/* Mobile menu */}
       <div
-        className={`md:hidden fixed inset-x-0 top-16 z-[55] transition-all duration-300 ease-in-out ${
-          mobileOpen
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 -translate-y-2 pointer-events-none"
+        className={`md:hidden fixed inset-x-0 top-16 z-[55] flex justify-center px-4 transition-all duration-250 ease-out ${
+          mobileOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
-        style={{ maxHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}
         aria-hidden={!mobileOpen}
       >
-        <div className="bg-zinc-950 border-b border-white/[0.07] shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100dvh - 64px)" }}>
-
-          {/* Scrollable nav links */}
-          <div className="overflow-y-auto flex-1 px-4 pt-3 pb-2">
+        <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden mt-2">
+          <div className="p-2 flex flex-col items-center">
             <Link
               href="/"
               onClick={closeMobile}
-              className={`flex items-center px-4 py-3 rounded-xl text-base font-semibold transition-colors ${pathname === "/" ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"}`}
+              className={`w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                pathname === "/" ? "text-[#D4AF37] bg-[#D4AF37]/8" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"
+              }`}
             >
               Home
             </Link>
 
-            {/* Services — flat list */}
-            <div className="mt-1">
-              <p className="px-4 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
-              {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={closeMobile}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${pathname === href ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"}`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${pathname === href ? "bg-[#D4AF37]/20" : "bg-zinc-800"}`}>
-                    <Icon size={14} className={pathname === href ? "text-[#D4AF37]" : "text-zinc-400"} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold leading-tight">{label}</p>
-                    <p className="text-[11px] text-zinc-500 mt-0.5">{desc}</p>
-                  </div>
-                </Link>
-              ))}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 pt-4 pb-2 text-center">Services</p>
+            <div className="w-full flex flex-col gap-1">
+              {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={closeMobile}
+                    className={`flex flex-col items-center text-center gap-1 py-3 px-3 rounded-xl transition-colors ${
+                      active ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${active ? "bg-[#D4AF37]/15 text-[#D4AF37]" : "bg-zinc-800 text-zinc-400"}`}>
+                      <Icon size={14} strokeWidth={1.75} />
+                    </div>
+                    <p className={`text-sm font-semibold ${active ? "text-[#D4AF37]" : "text-white"}`}>{label}</p>
+                    <p className="text-[11px] text-zinc-500 leading-snug">{desc}</p>
+                  </Link>
+                );
+              })}
             </div>
 
-            <Link
-              href="/#why-us"
-              onClick={closeMobile}
-              className="flex items-center px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors mt-1"
-            >
-              Why Us
-            </Link>
-            <Link
-              href="/#contact"
-              onClick={closeMobile}
-              className="flex items-center px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
-            >
-              Contact
-            </Link>
+            <div className="w-full h-px bg-white/[0.06] my-2" />
+
+            <Link href="/#why-us" onClick={closeMobile} className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">Why Us</Link>
+            <Link href="/#contact" onClick={closeMobile} className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">Contact</Link>
           </div>
 
-          {/* Book + Call — pinned at bottom, never scrolls away */}
-          <div className="shrink-0 px-4 pt-2 pb-4 border-t border-white/[0.06] flex flex-col gap-2">
+          <div className="px-3 pb-3 pt-1 border-t border-white/[0.07] flex flex-col gap-2 mt-1">
             <button
               type="button"
               onClick={() => { closeMobile(); handleBookNow(); }}
-              className="btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-3.5 rounded-xl text-sm hover:text-black transition-all duration-500"
+              className="btn-primary-gold-shimmer w-full bg-zinc-800 border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
             >
               <span className="relative z-[1]">Book Your Detail</span>
             </button>
             <a
               href="tel:8025855563"
               onClick={closeMobile}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-zinc-400 hover:text-white text-sm font-medium transition-colors"
             >
-              <Phone className="w-4 h-4" />
+              <Phone className="w-3.5 h-3.5 text-[#D4AF37]/70" />
               802-585-5563
             </a>
           </div>

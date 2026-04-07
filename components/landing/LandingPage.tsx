@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -131,6 +131,7 @@ type ExpandedBookingId = "hero" | "services" | "ultimate" | "boat" | "rv" | null
 export function LandingPage({ services }: { services: Service[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [expandedBookingId, setExpandedBookingId] = useState<ExpandedBookingId>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -369,7 +370,18 @@ export function LandingPage({ services }: { services: Service[] }) {
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
-    // No body scroll lock — dropdown menu, not full-screen overlay.
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+    };
   }, [mobileMenuOpen]);
 
   // Close mobile menu if viewport widens to desktop
@@ -564,58 +576,70 @@ export function LandingPage({ services }: { services: Service[] }) {
             className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 active:bg-[#D4AF37] active:text-zinc-950 transition-colors duration-300"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> :             <Menu className="w-4 h-4" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
         </div>
       </header>
 
-      {/* ─── Mobile Menu — slide-down panel ─────────────────────── */}
+      {/* ─── Mobile Menu ──────────────────────────────────────── */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden" onClick={closeMobileMenu} />
+        <div
+          className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden"
+          onClick={closeMobileMenu}
+          aria-hidden
+        />
       )}
       <div
-        className={`md:hidden fixed inset-x-0 top-16 z-[55] transition-all duration-300 ease-in-out ${
+        className={`md:hidden fixed inset-x-0 top-16 z-[55] flex justify-center px-4 transition-all duration-250 ease-out ${
           mobileMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
-        style={{ maxHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}
         aria-hidden={!mobileMenuOpen}
       >
-        <div className="bg-zinc-950 border-b border-white/[0.07] shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100dvh - 64px)" }}>
+        <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden mt-2">
+          <div className="p-2 flex flex-col items-center">
+            <Link
+              href="/"
+              onClick={closeMobileMenu}
+              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-semibold text-[#D4AF37] bg-[#D4AF37]/8 transition-colors"
+            >
+              Home
+            </Link>
 
-          {/* Scrollable links */}
-          <div className="overflow-y-auto flex-1 px-4 pt-3 pb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 pt-4 pb-2 text-center">Services</p>
+            <div className="w-full flex flex-col gap-1">
+              {SERVICE_LINKS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    className="flex flex-col items-center text-center gap-1 py-3 px-3 rounded-xl hover:bg-white/[0.05] transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400">
+                      <Icon size={14} strokeWidth={1.75} />
+                    </div>
+                    <p className="text-sm font-semibold text-white">{item.label}</p>
+                    <p className="text-[11px] text-zinc-500 leading-snug">{item.desc}</p>
+                  </Link>
+                );
+              })}
+            </div>
 
-            {/* Services — flat list */}
-            <p className="px-4 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
-            {SERVICE_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeMobileMenu}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${false ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"}`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${false ? "bg-[#D4AF37]/20" : "bg-zinc-800"}`}>
-                  <item.icon size={14} className={false ? "text-[#D4AF37]" : "text-zinc-400"} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold leading-tight">{item.label}</p>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">{item.desc}</p>
-                </div>
-              </Link>
-            ))}
-
-            <div className="h-px bg-white/[0.06] mx-2 my-2" />
+            <div className="w-full h-px bg-white/[0.06] my-2" />
 
             <button
+              type="button"
               onClick={() => { closeMobileMenu(); document.getElementById("why-us")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
+              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
             >
               Why Us
             </button>
             <button
+              type="button"
               onClick={() => { closeMobileMenu(); document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
+              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
             >
               Contact
             </button>
@@ -624,28 +648,28 @@ export function LandingPage({ services }: { services: Service[] }) {
               <Link
                 href="/admin"
                 onClick={closeMobileMenu}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-sm uppercase tracking-wider hover:bg-amber-500/20 transition-all mt-1"
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 text-amber-400 font-bold text-xs uppercase tracking-wider hover:bg-amber-500/20 transition-all mt-1"
               >
                 <LayoutDashboard size={14} />
-                Admin Dashboard
+                Admin
               </Link>
             )}
           </div>
 
-          {/* Pinned bottom CTAs */}
-          <div className="shrink-0 px-4 pt-2 pb-4 border-t border-white/[0.06] flex flex-col gap-2">
+          <div className="px-3 pb-3 pt-1 border-t border-white/[0.07] flex flex-col gap-2 mt-1">
             <button
+              type="button"
               onClick={() => { closeMobileMenu(); openBooking(); }}
-              className="btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-3.5 rounded-xl text-sm hover:text-black transition-all duration-500"
+              className="btn-primary-gold-shimmer w-full bg-zinc-800 border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
             >
               <span className="relative z-[1]">Book Your Detail</span>
             </button>
             <a
               href="tel:8025855563"
               onClick={closeMobileMenu}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-zinc-400 hover:text-white text-sm font-medium transition-colors"
             >
-              <Phone className="w-4 h-4" />
+              <Phone className="w-3.5 h-3.5 text-[#D4AF37]/70" />
               802-585-5563
             </a>
           </div>
