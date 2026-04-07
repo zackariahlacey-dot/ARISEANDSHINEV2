@@ -145,9 +145,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [stripeVerifying, setStripeVerifying] = useState(false);
   const [stripeRecoveryError, setStripeRecoveryError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
 
@@ -175,15 +173,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setServicesDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -380,8 +369,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    // No body scroll lock — dropdown menu, not full-screen overlay.
   }, [mobileMenuOpen]);
 
   // Close mobile menu if viewport widens to desktop
@@ -519,69 +507,15 @@ export function LandingPage({ services }: { services: Service[] }) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-              className={`flex items-center gap-1 hover:text-white transition-colors py-2 ${
-                servicesDropdownOpen ? "text-white" : ""
-              }`}
+          {SERVICE_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`hover:text-white transition-colors ${false ? "text-[#D4AF37]" : ""}`}
             >
-              Services
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-300 ${
-                  servicesDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            <AnimatePresence>
-              {servicesDropdownOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute top-full left-0 mt-2 w-80 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[60]"
-                >
-                  <div className="p-2">
-                    {SERVICE_LINKS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setServicesDropdownOpen(false)}
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-all group"
-                      >
-                        <div className="mt-1 w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5 group-hover:border-[#D4AF37]/30 transition-colors">
-                          <item.icon size={16} className="text-[#D4AF37]" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-white group-hover:text-[#D4AF37] transition-colors">
-                            {item.label}
-                          </div>
-                          <div className="text-[11px] text-zinc-500 line-clamp-1">
-                            {item.desc}
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                  <div className="p-3 bg-white/[0.02] border-t border-white/5">
-                    <button
-                      onClick={() => {
-                        setServicesDropdownOpen(false);
-                        scrollToServices();
-                      }}
-                      className="text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] hover:text-[#F3E5AB] transition-colors flex items-center gap-2"
-                    >
-                      Compare Packages
-                      <ChevronDown size={12} className="-rotate-90" />
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              {item.label}
+            </Link>
+          ))}
           <a href="#why-us" className="hover:text-white transition-colors">Why Us</a>
           <a href="#contact" className="hover:text-white transition-colors">Contact</a>
           {isAdmin && (
@@ -636,173 +570,86 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </header>
 
-      {/* ─── Mobile Menu Overlay ─────────────────────────────────── */}
+      {/* ─── Mobile Menu — slide-down panel ─────────────────────── */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden" onClick={closeMobileMenu} />
+      )}
       <div
-        className={`md:hidden fixed inset-0 z-[45] flex flex-col transition-all duration-300 ease-in-out ${
-          mobileMenuOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
+        className={`md:hidden fixed inset-x-0 top-16 z-[55] transition-all duration-300 ease-in-out ${
+          mobileMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
-        style={{ background: "rgba(9,9,11,0.97)", backdropFilter: "blur(16px)" }}
+        style={{ maxHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}
         aria-hidden={!mobileMenuOpen}
       >
-        {/* Content: vertically centered links */}
-        <div className="flex flex-col items-center justify-center flex-1 gap-2 px-8 overflow-y-auto">
-          <nav className="flex flex-col items-center gap-1 w-full">
-            {/* Services Dropdown (Mobile) */}
-            <div className="w-full flex flex-col items-center">
-              <button
-                onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-                className={`w-full text-center text-3xl font-black tracking-tight py-4 transition-all duration-200 flex items-center justify-center gap-3 ${
-                  mobileMenuOpen ? "text-zinc-100 hover:text-[#D4AF37]" : "text-transparent"
-                }`}
-              >
-                Services
-                <ChevronDown
-                  size={24}
-                  className={`transition-transform duration-300 ${
-                    servicesDropdownOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+        <div className="bg-zinc-950 border-b border-white/[0.07] shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100dvh - 64px)" }}>
 
-              <AnimatePresence>
-                {servicesDropdownOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="w-full overflow-hidden"
-                  >
-                    <div className="grid grid-cols-1 gap-2 py-4">
-                      {SERVICE_LINKS.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={closeMobileMenu}
-                          className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5"
-                        >
-                          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5">
-                            <item.icon size={20} className="text-[#D4AF37]" />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-bold text-white">
-                              {item.label}
-                            </div>
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">
-                              {item.desc}
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                      <button
-                        onClick={() => {
-                          closeMobileMenu();
-                          scrollToServices();
-                        }}
-                        className="w-full p-4 rounded-xl border border-dashed border-[#D4AF37]/30 text-[#D4AF37] text-sm font-bold uppercase tracking-widest"
-                      >
-                        Compare All Packages
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+          {/* Scrollable links */}
+          <div className="overflow-y-auto flex-1 px-4 pt-3 pb-2">
 
-            {[
-              {
-                label: "Why Us",
-                action: () => {
-                  closeMobileMenu();
-                  document.getElementById("why-us")?.scrollIntoView({ behavior: "smooth" });
-                },
-              },
-              {
-                label: "Contact",
-                action: () => {
-                  closeMobileMenu();
-                  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
-                },
-              },
-            ].map(({ label, action }) => (
-              <button
-                key={label}
-                onClick={action}
-                className={`w-full text-center text-3xl font-black tracking-tight py-4 transition-all duration-200 ${
-                  mobileMenuOpen
-                    ? "text-zinc-100 hover:text-[#D4AF37]"
-                    : "text-transparent"
-                }`}
+            {/* Services — flat list */}
+            <p className="px-4 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
+            {SERVICE_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeMobileMenu}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${false ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"}`}
               >
-                {label}
-              </button>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${false ? "bg-[#D4AF37]/20" : "bg-zinc-800"}`}>
+                  <item.icon size={14} className={false ? "text-[#D4AF37]" : "text-zinc-400"} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold leading-tight">{item.label}</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">{item.desc}</p>
+                </div>
+              </Link>
             ))}
-          </nav>
 
-          {/* Admin shortcut — only shown to the admin account */}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              onClick={closeMobileMenu}
-              className="flex items-center justify-center gap-2 w-full max-w-xs px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-sm uppercase tracking-wider hover:bg-amber-500/20 transition-all"
+            <div className="h-px bg-white/[0.06] mx-2 my-2" />
+
+            <button
+              onClick={() => { closeMobileMenu(); document.getElementById("why-us")?.scrollIntoView({ behavior: "smooth" }); }}
+              className="flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
             >
-              <LayoutDashboard size={15} />
-              Admin Dashboard
-            </Link>
-          )}
+              Why Us
+            </button>
+            <button
+              onClick={() => { closeMobileMenu(); document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }); }}
+              className="flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
+            >
+              Contact
+            </button>
 
-          {/* Divider */}
-          <div className="w-16 h-px bg-white/10 my-4" />
-
-          {/* Loyalty button inside menu */}
-          <div className="mb-4">
-            <LoyaltyHeaderButton />
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-sm uppercase tracking-wider hover:bg-amber-500/20 transition-all mt-1"
+              >
+                <LayoutDashboard size={14} />
+                Admin Dashboard
+              </Link>
+            )}
           </div>
 
-          {/* Full-width Book Now CTA */}
-          <button
-            onClick={() => { closeMobileMenu(); openBooking(); }}
-            className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
-          >
-            <span className="relative z-[1]">Book Your Detail</span>
-          </button>
-
-          {/* Call us link */}
-          <a
-            href="tel:8025855563"
-            onClick={closeMobileMenu}
-            className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] text-sm font-medium transition-colors duration-200 mt-1"
-          >
-            <Phone className="w-4 h-4" />
-            Call 802-585-5563
-          </a>
-
-          {/* Legal links */}
-          <div className="flex items-center gap-5 mt-6">
+          {/* Pinned bottom CTAs */}
+          <div className="shrink-0 px-4 pt-2 pb-4 border-t border-white/[0.06] flex flex-col gap-2">
             <button
-              onClick={() => { closeMobileMenu(); setLegalModal("privacy"); }}
-              className="text-xs text-zinc-600 hover:text-[#D4AF37] transition-colors"
+              onClick={() => { closeMobileMenu(); openBooking(); }}
+              className="btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-3.5 rounded-xl text-sm hover:text-black transition-all duration-500"
             >
-              Privacy Policy
+              <span className="relative z-[1]">Book Your Detail</span>
             </button>
-            <span className="text-zinc-800 text-xs">·</span>
-            <button
-              onClick={() => { closeMobileMenu(); setLegalModal("terms"); }}
-              className="text-xs text-zinc-600 hover:text-[#D4AF37] transition-colors"
+            <a
+              href="tel:8025855563"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm font-medium transition-colors"
             >
-              Terms of Service
-            </button>
+              <Phone className="w-4 h-4" />
+              802-585-5563
+            </a>
           </div>
         </div>
-
-        {/* Subtle gold glow at bottom */}
-        <div
-          className="pointer-events-none absolute bottom-0 inset-x-0 h-48"
-          style={{
-            background: "radial-gradient(ellipse 60% 100% at 50% 100%, rgba(212,175,55,0.08) 0%, transparent 70%)",
-          }}
-        />
       </div>
 
       {/* ─── Hero ───────────────────────────────────────────────── */}
