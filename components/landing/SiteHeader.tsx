@@ -34,10 +34,8 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = mobileOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [mobileOpen]);
+  // No body scroll lock — this is a dropdown, not a full-screen overlay.
+  // Locking overflow removes the scrollbar and causes a layout shift jump.
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
@@ -138,18 +136,18 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
 
       {/* Mobile menu — slides down from header */}
       {mobileOpen && (
-        <div className="fixed inset-0 top-[57px] bg-black/60 z-39 md:hidden" onClick={closeMobile} />
+        <div className="fixed inset-0 top-16 bg-black/60 z-39 md:hidden" onClick={closeMobile} />
       )}
       <div
-        className={`md:hidden fixed inset-x-0 top-[57px] z-40 transition-all duration-300 ease-in-out ${
+        className={`md:hidden fixed inset-x-0 top-16 z-40 transition-all duration-300 ease-in-out ${
           mobileOpen
             ? "opacity-100 translate-y-0 pointer-events-auto"
             : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
-        style={{ maxHeight: "calc(100dvh - 57px)", display: "flex", flexDirection: "column" }}
+        style={{ maxHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}
         aria-hidden={!mobileOpen}
       >
-        <div className="bg-zinc-950 border-b border-white/[0.07] shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100dvh - 57px)" }}>
+        <div className="bg-zinc-950 border-b border-white/[0.07] shadow-2xl flex flex-col overflow-hidden" style={{ maxHeight: "calc(100dvh - 64px)" }}>
 
           {/* Scrollable nav links */}
           <div className="overflow-y-auto flex-1 px-4 pt-3 pb-2">
