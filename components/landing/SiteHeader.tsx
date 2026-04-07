@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Phone, Menu, X, ChevronDown, Sparkles, Anchor, Truck } from "lucide-react";
+import { Phone, Menu, X, Sparkles, Anchor, Truck } from "lucide-react";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 import { BookingFlowSelector } from "./BookingFlowSelector";
 
@@ -22,9 +22,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleBookNow = onBookNow ?? (() => setFlowSelectorOpen(true));
 
@@ -34,24 +32,13 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // No body scroll lock — this is a dropdown, not a full-screen overlay.
-  // Locking overflow removes the scrollbar and causes a layout shift jump.
+  // No body scroll lock — dropdown menu, not full-screen overlay.
+  // Locking overflow removes the scrollbar and causes a layout shift.
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setServicesDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const isServicesActive = SERVICE_LINKS.some((l) => pathname === l.href);
@@ -68,44 +55,18 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
             <span className="font-semibold tracking-tight text-sm hidden sm:block text-white">Arise And Shine VT</span>
           </Link>
 
-          {/* Desktop nav */}
+          {/* Desktop nav — flat links, no dropdown */}
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
             <Link href="/" className={`hover:text-white transition-colors ${pathname === "/" ? "text-white" : ""}`}>Home</Link>
-
-            {/* Services dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setServicesDropdownOpen((o) => !o)}
-                className={`flex items-center gap-1 hover:text-white transition-colors ${isServicesActive ? "text-[#D4AF37]" : ""}`}
+            {SERVICE_LINKS.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`hover:text-white transition-colors ${pathname === href ? "text-[#D4AF37]" : ""}`}
               >
-                Services
-                <ChevronDown size={13} className={`transition-transform duration-200 ${servicesDropdownOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {servicesDropdownOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-72 bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="p-2">
-                    {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => (
-                      <Link
-                        key={href}
-                        href={href}
-                        onClick={() => setServicesDropdownOpen(false)}
-                        className={`flex items-start gap-3 px-3 py-3 rounded-xl transition-all duration-200 group ${pathname === href ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-white/[0.05] text-zinc-300 hover:text-white"}`}
-                      >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${pathname === href ? "bg-[#D4AF37]/20" : "bg-zinc-800 group-hover:bg-zinc-700"} transition-colors`}>
-                          <Icon size={14} className={pathname === href ? "text-[#D4AF37]" : "text-zinc-400 group-hover:text-zinc-200"} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm leading-tight">{label}</p>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">{desc}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
+                {label}
+              </Link>
+            ))}
             <a href="/#why-us" className="hover:text-white transition-colors">Why Us</a>
             <a href="/#contact" className="hover:text-white transition-colors">Contact</a>
           </nav>
@@ -134,12 +95,14 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
         </div>
       </header>
 
-      {/* Mobile menu — slides down from header */}
+      {/* Backdrop — z-[54] sits above page content, below menu panel */}
       {mobileOpen && (
-        <div className="fixed inset-0 top-16 bg-black/60 z-39 md:hidden" onClick={closeMobile} />
+        <div className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden" onClick={closeMobile} />
       )}
+
+      {/* Mobile menu panel — z-[55] sits above the RecentActivityToast (z-50) */}
       <div
-        className={`md:hidden fixed inset-x-0 top-16 z-40 transition-all duration-300 ease-in-out ${
+        className={`md:hidden fixed inset-x-0 top-16 z-[55] transition-all duration-300 ease-in-out ${
           mobileOpen
             ? "opacity-100 translate-y-0 pointer-events-auto"
             : "opacity-0 -translate-y-2 pointer-events-none"
@@ -159,7 +122,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
               Home
             </Link>
 
-            {/* Services */}
+            {/* Services — flat list */}
             <div className="mt-1">
               <p className="px-4 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
               {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => (
@@ -196,7 +159,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
             </Link>
           </div>
 
-          {/* Book + Call — always visible at bottom, never scrolls away */}
+          {/* Book + Call — pinned at bottom, never scrolls away */}
           <div className="shrink-0 px-4 pt-2 pb-4 border-t border-white/[0.06] flex flex-col gap-2">
             <button
               type="button"
