@@ -7,7 +7,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBookingEmails } from "@/lib/email";
+import { sendBookingEmails, sendGiftCardEmail } from "@/lib/email";
+import { sendBookerAccountInviteEmail } from "@/app/actions/sendBookingEmail";
+import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import { checkAvailability } from "@/app/actions/bookDetailing";
 import { VEHICLE_SIZE_MAP } from "@/lib/constants";
 
@@ -54,13 +56,18 @@ export async function POST(req: NextRequest) {
         console.error("[webhooks/stripe] Gift card: invalid amount", m.amount);
         return NextResponse.json({ received: true });
       }
-      // Generate a unique code
+      // Generate a cryptographically secure unique code (XXXX-XXXX-XXXX-XXXX)
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const randomBytes = new Uint8Array(16);
+      crypto.getRandomValues(randomBytes);
       let code = "";
       for (let i = 0; i < 16; i++) {
         if (i > 0 && i % 4 === 0) code += "-";
-        code += chars[Math.floor(Math.random() * chars.length)];
+        code += chars[randomBytes[i] % chars.length];
       }
+      // 1-year expiry from purchase date
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       await supabase.from("gift_cards").insert({
         code,
         initial_amount: amount,
@@ -70,8 +77,30 @@ export async function POST(req: NextRequest) {
         recipient_name: m.recipientName || null,
         stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
         is_active: true,
+        expires_at: expiresAt.toISOString(),
       });
-      // TODO: send gift card email with the code
+      // Send gift card to recipient (if set) and purchaser
+      const deliverTo = m.recipientEmail || m.purchaserEmail;
+      const recipientName = m.recipientName || "there";
+      if (deliverTo) {
+        sendGiftCardEmail({
+          recipientName,
+          toEmail: deliverTo,
+          purchaserEmail: m.purchaserEmail ?? deliverTo,
+          code,
+          amount,
+        }).catch((err) => console.error("[webhooks/stripe] gift card email error:", err));
+        // Also CC the purchaser if the card goes to someone else
+        if (m.recipientEmail && m.purchaserEmail && m.recipientEmail !== m.purchaserEmail) {
+          sendGiftCardEmail({
+            recipientName: "you",
+            toEmail: m.purchaserEmail,
+            purchaserEmail: m.purchaserEmail,
+            code,
+            amount,
+          }).catch((err) => console.error("[webhooks/stripe] gift card purchaser CC error:", err));
+        }
+      }
       return NextResponse.json({ received: true });
     }
 
@@ -323,6 +352,21 @@ export async function POST(req: NextRequest) {
       paymentMethod: "pay_now",
       notes: m.notes || undefined,
     }).catch((err) => console.error("[webhooks/stripe] Email error:", err));
+
+    const inviteEmail = m.customerEmail?.trim();
+    if (inviteEmail && m.profileId) {
+      profileHasAuthUser(m.profileId)
+        .then((hasAuth) => {
+          if (!hasAuth) {
+            return sendBookerAccountInviteEmail({
+              customerEmail: inviteEmail,
+              customerName: m.customerName ?? "",
+            });
+          }
+          return { ok: true as const };
+        })
+        .catch((err) => console.error("[webhooks/stripe] account invite email error:", err));
+    }
 
     return NextResponse.json({ received: true });
   } catch (err) {

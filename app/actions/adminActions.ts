@@ -661,12 +661,17 @@ export async function updateBookingStatusAction(id: string, status: string) {
     }
 
     if (email) {
+      // For customer-initiated bookings, points were already awarded at payment
+      // time. Use total_price as the earned amount so the receipt is accurate.
+      const emailPoints = isAdminCreated
+        ? pointsAwarded
+        : Math.floor(Math.max(0, Number(booking.total_price)));
       await sendJobCompletedEmail({
         customerName: name,
         customerEmail: email,
         serviceName,
         amountPaid: Number(booking.total_price),
-        pointsEarned: pointsAwarded,
+        pointsEarned: emailPoints,
       }).catch(e => console.error("Completion email fail:", e));
       // 24-hour review + upsell is handled by the /api/cron/review-emails cron job,
       // which runs daily and checks review_email_sent_at. No setTimeout here because

@@ -9,6 +9,7 @@ import {
   sendOnMyWayEmail,
   rescheduleBookingAction,
 } from "@/app/actions/adminActions";
+import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -16,7 +17,7 @@ import { Modal } from "@/components/admin/Modal";
 import {
   Navigation, Phone, MessageSquare, Check, DollarSign,
   Car, Clock, MapPin, ChevronRight, CalendarDays, Loader2,
-  Zap, AlertTriangle, Send, RotateCcw, X, TrendingUp,
+  Zap, AlertTriangle, Send, RotateCcw, X, TrendingUp, RefreshCw,
 } from "lucide-react";
 import { format, isToday, parseISO, isTomorrow, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,44 @@ export default function TodayPage() {
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("09:00 AM");
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoverySessionId, setRecoverySessionId] = useState("");
+  const [recoveryResult, setRecoveryResult] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
+
+  const handleRecoverBooking = async () => {
+    const id = recoverySessionId.trim();
+    if (!id) return;
+    setRecovering(true);
+    setRecoveryResult(null);
+    try {
+      const result = await recoverStripeBooking(id);
+      switch (result.status) {
+        case "already_fulfilled":
+          setRecoveryResult(`✅ Booking already exists for ${result.customerName} — ${result.bookingDate} ${result.bookingTime}`);
+          break;
+        case "recovered":
+          setRecoveryResult(`✅ Recovered! Booking created for ${result.customerName} — ${result.bookingDate} ${result.bookingTime}. Confirmation email sent.`);
+          queryClient.invalidateQueries({ queryKey: ["admin", "bookings"] });
+          break;
+        case "overbooked":
+          setRecoveryResult(`⚠️ Payment received but slot was already taken (${result.bookingDate} ${result.bookingTime}). Manual refund required.`);
+          break;
+        case "not_paid":
+          setRecoveryResult("❌ Session found but payment is not complete.");
+          break;
+        case "gift_card":
+          setRecoveryResult("ℹ️ This session was a gift card purchase, not a booking.");
+          break;
+        case "error":
+          setRecoveryResult(`❌ Error: ${result.error}`);
+          break;
+      }
+    } catch {
+      setRecoveryResult("❌ Unexpected error. Check the session ID and try again.");
+    }
+    setRecovering(false);
+  };
 
   const { data: bookings, isLoading, refetch } = useQuery({
     queryKey: ["admin", "bookings"],
@@ -219,12 +258,21 @@ export default function TodayPage() {
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Today</p>
           <h1 className="text-2xl font-black tracking-tight">{format(new Date(), "EEEE, MMMM d")}</h1>
         </div>
-        <button
-          onClick={() => router.push("/admin/schedule?new=1")}
-          className="flex items-center gap-1.5 bg-amber-500 text-black text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl active:scale-95 transition-transform"
-        >
-          <Zap size={13} /> Book
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowRecovery(true)}
+            className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-400 text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-xl active:scale-95 transition-transform hover:bg-white/[0.10]"
+            title="Recover a missed Stripe booking"
+          >
+            <RefreshCw size={12} /> Recover
+          </button>
+          <button
+            onClick={() => router.push("/admin/schedule?new=1")}
+            className="flex items-center gap-1.5 bg-amber-500 text-black text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl active:scale-95 transition-transform"
+          >
+            <Zap size={13} /> Book
+          </button>
+        </div>
       </div>
 
       {/* ── Next job hero ────────────────────────────────────────────────── */}
@@ -460,6 +508,38 @@ export default function TodayPage() {
               {doReschedule.isPending ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Reschedule"}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* ── Stripe recovery modal ──────────────────────────────────────────── */}
+      <Modal open={showRecovery} onClose={() => { setShowRecovery(false); setRecoveryResult(null); setRecoverySessionId(""); }}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={16} className="text-[#D4AF37]" />
+            <h3 className="font-bold text-zinc-100">Recover Stripe Booking</h3>
+          </div>
+          <p className="text-xs text-zinc-500 leading-relaxed">
+            Paste the Stripe Checkout Session ID (starts with <code className="text-zinc-300">cs_</code>) to manually fulfil a booking where payment succeeded but the webhook didn&apos;t fire.
+          </p>
+          <input
+            type="text"
+            value={recoverySessionId}
+            onChange={(e) => { setRecoverySessionId(e.target.value); setRecoveryResult(null); }}
+            placeholder="cs_live_..."
+            className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none font-mono"
+          />
+          {recoveryResult && (
+            <p className="text-xs text-zinc-300 bg-white/[0.04] rounded-xl px-4 py-3 leading-relaxed whitespace-pre-wrap">
+              {recoveryResult}
+            </p>
+          )}
+          <button
+            onClick={handleRecoverBooking}
+            disabled={recovering || !recoverySessionId.startsWith("cs_")}
+            className="w-full py-3 rounded-xl bg-[#D4AF37] text-black text-sm font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-40"
+          >
+            {recovering ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Recover Booking"}
+          </button>
         </div>
       </Modal>
     </div>

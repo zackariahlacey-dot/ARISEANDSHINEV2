@@ -1080,6 +1080,256 @@ export async function sendReviewFollowupEmail(data: {
   });
 }
 
+// ─── Day-before appointment reminder ─────────────────────────────────────────
+
+function reminderEmailHtml(data: {
+  customerName: string;
+  serviceName: string;
+  bookingDate: string;
+  bookingTime: string;
+  serviceAddress?: string;
+}, formattedDate: string): string {
+  const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Detail is Tomorrow — Arise And Shine VT</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+              ${logo}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+              <div style="font-size:48px;margin-bottom:16px;">📅</div>
+              <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">
+                Your Detail is Tomorrow!
+              </h1>
+              <p style="color:#999999;font-size:14px;margin:0;">
+                <strong style="color:#ffffff;">${esc(formattedDate)}</strong> at
+                <strong style="color:#ffffff;">${esc(data.bookingTime)}</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
+              <p style="font-size:16px;font-weight:700;color:#111111;margin:0 0 6px;">Hi ${firstName},</p>
+              <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
+                Just a friendly reminder that your <strong>${esc(data.serviceName)}</strong> appointment
+                is scheduled for tomorrow. We're looking forward to making your vehicle shine!
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7f7f7;border-radius:14px;overflow:hidden;margin-bottom:24px;">
+                ${detailRow("Service", esc(data.serviceName))}
+                ${detailRow("Date", esc(formattedDate))}
+                ${detailRow("Time", esc(data.bookingTime))}
+                ${data.serviceAddress ? detailRow("Location", `&#128205;&nbsp;${esc(data.serviceAddress)}`, true) : ""}
+              </table>
+              <p style="font-size:13px;color:#888888;margin:0 0 24px;line-height:1.6;text-align:center;">
+                Please make sure your vehicle is accessible at the scheduled time.<br/>
+                If you need to reschedule, contact us as soon as possible.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7f7f7;border-radius:12px;">
+                <tr>
+                  <td style="padding:20px;text-align:center;">
+                    <a href="mailto:${BUSINESS_EMAIL}"
+                       style="display:inline-block;background-color:#111111;color:#ffffff;
+                              font-size:13px;font-weight:700;padding:11px 28px;
+                              border-radius:8px;text-decoration:none;">
+                      Contact Us
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ${footer}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export type ReminderEmailData = {
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  bookingDate: string; // YYYY-MM-DD
+  bookingTime: string; // e.g. "10:00 AM"
+  serviceAddress?: string;
+};
+
+/**
+ * Sends a day-before appointment reminder email to the customer.
+ */
+export async function sendReminderEmail(data: ReminderEmailData): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set — skipping reminder email.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const formattedDate = formatDate(data.bookingDate);
+  const result = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.customerEmail,
+    replyTo: REPLY_TO,
+    subject: `Reminder: Your detail is tomorrow — ${formattedDate}`,
+    html: reminderEmailHtml(data, formattedDate),
+  });
+  if (result.error) {
+    console.error("[email] reminder send failed:", result.error);
+  }
+}
+
+// ─── Gift card delivery email ─────────────────────────────────────────────────
+
+function giftCardEmailHtml(data: {
+  recipientName: string;
+  purchaserEmail: string;
+  code: string;
+  amount: number;
+  recipientEmail?: string;
+}): string {
+  const name = esc(data.recipientName || "there");
+  const formattedCode = esc(data.code);
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your Arise And Shine VT Gift Card</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+              ${logo}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+              <div style="font-size:52px;margin-bottom:16px;">🎁</div>
+              <h1 style="color:#d4af37;font-size:28px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">
+                You've Got a Gift Card!
+              </h1>
+              <p style="color:#999999;font-size:14px;margin:0;line-height:1.5;">
+                <strong style="color:#ffffff;">$${esc(data.amount)}</strong> toward any Arise &amp; Shine VT detailing service
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
+              <p style="font-size:16px;font-weight:700;color:#111111;margin:0 0 6px;">Hi ${name},</p>
+              <p style="font-size:14px;color:#666666;margin:0 0 28px;line-height:1.7;">
+                You've received a gift card from <strong>${esc(data.purchaserEmail)}</strong>
+                — good for <strong>$${esc(data.amount)}</strong> toward any mobile auto detailing
+                service with Arise &amp; Shine VT. Use it at checkout!
+              </p>
+
+              <!-- Gift card code display -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:linear-gradient(135deg,#1a1a1a 0%,#2a2520 100%);
+                            border-radius:16px;margin-bottom:28px;overflow:hidden;">
+                <tr>
+                  <td style="padding:32px;text-align:center;">
+                    <p style="font-size:11px;font-weight:900;color:#d4af37;
+                               letter-spacing:0.25em;text-transform:uppercase;margin:0 0 16px;">
+                      Your Gift Card Code
+                    </p>
+                    <p style="font-size:28px;font-weight:900;color:#ffffff;
+                               letter-spacing:0.12em;margin:0 0 12px;
+                               font-family:monospace,monospace;">
+                      ${formattedCode}
+                    </p>
+                    <p style="font-size:22px;font-weight:900;color:#d4af37;margin:0;">
+                      $${esc(data.amount)} Value
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size:13px;color:#888888;margin:0 0 28px;line-height:1.6;text-align:center;">
+                Enter this code at checkout when booking on ariseandshinevt.com.<br/>
+                Gift cards never expire and can be partially redeemed.
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7f7f7;border-radius:12px;margin-bottom:0;">
+                <tr>
+                  <td style="padding:24px;text-align:center;">
+                    <a href="https://ariseandshinevt.com/#services"
+                       style="display:inline-block;background-color:#d4af37;color:#111111;
+                              font-size:14px;font-weight:900;padding:13px 32px;
+                              border-radius:8px;text-decoration:none;letter-spacing:0.3px;">
+                      Book Your Detail Now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ${footer}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export type GiftCardEmailData = {
+  /** The person receiving the gift card (purchaser if no recipient set) */
+  recipientName: string;
+  /** Email to deliver the gift card to */
+  toEmail: string;
+  /** The purchaser's email (shown in the email body) */
+  purchaserEmail: string;
+  code: string;
+  amount: number;
+};
+
+/**
+ * Sends the gift card code to the recipient (or purchaser if no recipient).
+ */
+export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set — skipping gift card email.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const result = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to: data.toEmail,
+    replyTo: REPLY_TO,
+    subject: `Your $${data.amount} Arise & Shine VT Gift Card — Code Inside`,
+    html: giftCardEmailHtml({
+      recipientName: data.recipientName,
+      purchaserEmail: data.purchaserEmail,
+      code: data.code,
+      amount: data.amount,
+    }),
+  });
+  if (result.error) {
+    console.error("[email] gift card email send failed:", result.error);
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**

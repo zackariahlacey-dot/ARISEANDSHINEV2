@@ -5,10 +5,11 @@ import { SignUpForm } from "@/components/sign-up-form";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{ ref?: string; email?: string }>;
 }) {
   const params = await searchParams;
   const refCode = params?.ref ?? null;
+  const initialEmail = params?.email?.trim() || null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-950 relative">
@@ -24,7 +25,7 @@ export default async function Page({
             </div>
           }
         >
-          <SignUpForm refCode={refCode} />
+          <SignUpForm refCode={refCode} initialEmail={initialEmail} />
         </Suspense>
       </div>
     </div>

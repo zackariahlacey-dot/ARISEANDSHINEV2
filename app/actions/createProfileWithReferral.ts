@@ -55,13 +55,13 @@ export async function createProfileWithReferral(
 
   if (guestProfiles && guestProfiles.length > 0) {
     for (const gp of guestProfiles) {
-      // Skip the new user's ID if it somehow exists
       if (gp.id === userId) continue;
-      
-      // Guest profiles in our system are often random UUIDs that don't exist in auth.users
-      // We'll treat any profile with matching email that isn't the current userId as a guest to merge
-      guestPoints += (gp.reward_points || 0);
-      guestLifetimePoints += (gp.lifetime_points || 0);
+
+      const { data: authRow } = await supabase.auth.admin.getUserById(gp.id);
+      if (authRow?.user) continue;
+
+      guestPoints += gp.reward_points || 0;
+      guestLifetimePoints += gp.lifetime_points || 0;
       if (!guestPhone && gp.phone) guestPhone = gp.phone;
       guestIds.push(gp.id);
     }

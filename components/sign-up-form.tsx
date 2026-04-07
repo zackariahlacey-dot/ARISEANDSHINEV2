@@ -26,13 +26,22 @@ const btnCls =
 
 type AuthState = "IDLE" | "SIGN_IN" | "SIGN_UP_DETAILS" | "SIGN_UP_VERIFY" | "SIGN_UP_PASSWORD";
 
-export function SignUpForm({ className, refCode }: { className?: string; refCode?: string | null }) {
+export function SignUpForm({
+  className,
+  refCode,
+  initialEmail,
+}: {
+  className?: string;
+  refCode?: string | null;
+  /** Prefill from booking invite link: /auth/sign-up?email=... */
+  initialEmail?: string | null;
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const referredByCode = searchParams.get("ref") ?? refCode ?? null;
 
   const [state, setState] = useState<AuthState>("IDLE");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => initialEmail?.trim() || "");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -50,6 +59,12 @@ export function SignUpForm({ className, refCode }: { className?: string; refCode
       if (session) router.push("/protected");
     });
   }, [router]);
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("email")?.trim();
+    if (fromUrl) setEmail(fromUrl);
+    else if (initialEmail?.trim()) setEmail(initialEmail.trim());
+  }, [searchParams, initialEmail]);
 
   useEffect(() => {
     if (resendCooldown > 0) {

@@ -3,7 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmails } from "@/lib/email";
-import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
+import { sendBookingEmail, sendBookerAccountInviteEmail } from "@/app/actions/sendBookingEmail";
+import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import Stripe from "stripe";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 
@@ -566,7 +567,7 @@ export async function bookDetailing(
             giftCardDiscount: String(payload.giftCardDiscount),
           }),
         },
-        success_url: `${origin}/?stripe=success`,
+        success_url: `${origin}/?stripe=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/?stripe=cancelled`,
         expires_at: Math.floor(Date.now() / 1000) + 60 * 30,
       });
@@ -722,6 +723,17 @@ export async function bookDetailing(
     }).catch((err) =>
       console.error("[bookDetailing] confirmation email error:", err)
     );
+
+    // Guest bookers: separate email to create an Auth account (merge by email on signup — createProfileWithReferral)
+    profileHasAuthUser(profileId).then((hasAuth) => {
+      if (!hasAuth) {
+        return sendBookerAccountInviteEmail({
+          customerEmail,
+          customerName: payload.name,
+        });
+      }
+      return { ok: true as const };
+    }).catch((err) => console.error("[bookDetailing] account invite email error:", err));
   }
 
   sendBookingEmails(

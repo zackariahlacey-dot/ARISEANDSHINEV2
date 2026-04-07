@@ -37,6 +37,7 @@ import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 import { BookingFlowSelector } from "./BookingFlowSelector";
+import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -141,6 +142,8 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
+  const [stripeVerifying, setStripeVerifying] = useState(false);
+  const [stripeRecoveryError, setStripeRecoveryError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
@@ -203,23 +206,99 @@ export function LandingPage({ services }: { services: Service[] }) {
     return () => observer.disconnect();
   }, [mounted]);
 
-  // Restore booking draft when returning from cancelled Stripe or from sign-up flow
+  // Restore booking draft when returning from cancelled Stripe, success, or sign-up flow
   useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
-    const stripeCancelled = searchParams.get("stripe") === "cancelled";
+    const stripeParam = searchParams.get("stripe");
+    const stripeCancelled = stripeParam === "cancelled";
+    const stripeSuccess = stripeParam === "success";
     const restoreBooking = searchParams.get("restore_booking") === "1";
-    if (!stripeCancelled && !restoreBooking) return;
+    if (!stripeCancelled && !stripeSuccess && !restoreBooking) return;
     const raw = sessionStorage.getItem("draftBooking");
+    const path = window.location.pathname + (window.location.hash || "");
+    window.history.replaceState(null, "", path || "/");
     if (!raw) return;
     try {
       const draft = JSON.parse(raw) as DraftBooking;
       sessionStorage.removeItem("draftBooking");
-      setInitialDraft(draft);
-      setSelectedService(services.find((s) => s.id === draft.serviceId) ?? null);
-      setExpandedBookingId("hero");
-      setShowRestoreToast(true);
-      const path = window.location.pathname + (window.location.hash || "");
-      window.history.replaceState(null, "", path || "/");
+      if (stripeSuccess) {
+        // Verify payment and recover booking if webhook hasn't fired yet
+        const sessionId = searchParams.get("session_id");
+        const service = services.find((s) => s.id === draft.serviceId);
+        const firstName = draft.name?.trim().split(/\s+/)[0] ?? "there";
+
+        if (sessionId) {
+          setStripeVerifying(true);
+          recoverStripeBooking(sessionId)
+            .then((result) => {
+              setStripeVerifying(false);
+              if (result.status === "error") {
+                setStripeRecoveryError(
+                  "Your payment was received but we had trouble confirming your booking. Please contact us and we'll sort it out right away."
+                );
+                return;
+              }
+              if (result.status === "overbooked") {
+                setStripeRecoveryError(
+                  "Your payment went through but the time slot was just taken by someone else. We'll contact you to reschedule or issue a full refund."
+                );
+                return;
+              }
+              // "already_fulfilled" | "recovered" | "gift_card" | "not_paid" — all good
+              const bookingDate =
+                "bookingDate" in result ? result.bookingDate : (draft.selectedDate ?? "");
+              const bookingTime =
+                "bookingTime" in result ? result.bookingTime : (draft.selectedTime ?? "");
+              const svcName =
+                "serviceName" in result ? result.serviceName : (service?.name ?? "Detailing Service");
+              setSuccessModalData({
+                confirmationId: "",
+                date: bookingDate,
+                time: bookingTime || undefined,
+                serviceName: svcName,
+                pointsEarned: 0,
+                firstName,
+                serviceAddress: draft.serviceAddress || undefined,
+                phone: draft.phone,
+              });
+              setShowSuccessModal(true);
+            })
+            .catch(() => {
+              setStripeVerifying(false);
+              // Fallback: show success anyway (webhook may have handled it)
+              setSuccessModalData({
+                confirmationId: "",
+                date: draft.selectedDate ?? "",
+                time: draft.selectedTime || undefined,
+                serviceName: service?.name ?? "Detailing Service",
+                pointsEarned: 0,
+                firstName,
+                serviceAddress: draft.serviceAddress || undefined,
+                phone: draft.phone,
+              });
+              setShowSuccessModal(true);
+            });
+        } else {
+          // No session_id in URL (old links) — show success modal from draft
+          setSuccessModalData({
+            confirmationId: "",
+            date: draft.selectedDate ?? "",
+            time: draft.selectedTime || undefined,
+            serviceName: service?.name ?? "Detailing Service",
+            pointsEarned: 0,
+            firstName,
+            serviceAddress: draft.serviceAddress || undefined,
+            phone: draft.phone,
+          });
+          setShowSuccessModal(true);
+        }
+      } else {
+        // Cancelled or rebook — restore the booking form
+        setInitialDraft(draft);
+        setSelectedService(services.find((s) => s.id === draft.serviceId) ?? null);
+        setExpandedBookingId("hero");
+        setShowRestoreToast(true);
+      }
     } catch {
       // invalid draft
     }
@@ -1796,6 +1875,45 @@ export function LandingPage({ services }: { services: Service[] }) {
         onClose={handleCloseSuccessModal}
         data={successModalData}
       />
+
+      {/* ─── Stripe payment verification overlay ──────────────────────────────── */}
+      {stripeVerifying && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 text-center px-6">
+            <div className="w-14 h-14 rounded-full border-2 border-[#D4AF37]/30 border-t-[#D4AF37] animate-spin" />
+            <p className="text-white font-bold text-lg">Confirming your booking…</p>
+            <p className="text-zinc-400 text-sm max-w-xs">
+              We&apos;re verifying your payment and locking in your appointment. This takes just a moment.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Stripe recovery error banner ─────────────────────────────────────── */}
+      {stripeRecoveryError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md px-4">
+          <div className="rounded-2xl border border-red-500/30 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-2xl flex items-start gap-3">
+            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-zinc-100 mb-1">Payment received — booking needs attention</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">{stripeRecoveryError}</p>
+              <a
+                href="tel:+18025551234"
+                className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline"
+              >
+                Call or text us →
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStripeRecoveryError(null)}
+              className="text-zinc-600 hover:text-zinc-300 shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
     </div>

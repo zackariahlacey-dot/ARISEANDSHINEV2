@@ -623,9 +623,12 @@ function ModelAutocomplete({
 export interface BookingSuccessData {
   confirmationId: string;
   date: string;
+  time?: string;
   serviceName: string;
   pointsEarned: number;
   firstName: string;
+  serviceAddress?: string;
+  isGuest?: boolean;
   /** Phone for success modal to fetch latest points from Supabase (guests) */
   phone?: string;
 }
@@ -658,9 +661,26 @@ export interface DraftBooking {
   boatLength?: number | "";
   /** IDs of selected add-ons to restore */
   selectedAddonIds?: string[];
+  /** Step reached — used for full cross-reload persistence */
+  step?: number;
+  /** Category selected */
+  bookingCategory?: "vehicle" | "boat" | "rv" | null;
+  /** Additional vehicles state */
+  additionalVehicleStates?: Array<{
+    vehicleSize: VehicleSizeSlug | "";
+    vehicleYear: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    serviceId: string;
+    serviceName: string;
+    servicePrice: number;
+    selectedAddonIds: string[];
+  }>;
 }
 
 const DRAFT_STORAGE_KEY = "draftBooking";
+/** localStorage key for cross-reload draft persistence (versioned to avoid stale schema conflicts) */
+const PERSISTENT_DRAFT_KEY = "bookingDraftPersistV1";
 
 export interface BookingSectionProps {
   /** When true, the section is expanded (accordion open). */
@@ -1104,6 +1124,122 @@ export function BookingSection({
     onDraftRestored?.();
   }, [isVisible, initialDraft, services, onSelectService, onDraftRestored]);
 
+  // ── Auto-save booking progress to localStorage (debounced 800ms) ──────────
+  // Restores across page refreshes and accidental navigation.
+  const persistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!isVisible) return;
+    // Don't persist a completely blank form
+    if (!selectedService && !vehicleYear && !name && !phone && !email) return;
+    if (persistDebounceRef.current) clearTimeout(persistDebounceRef.current);
+    persistDebounceRef.current = setTimeout(() => {
+      const draft: DraftBooking = {
+        serviceId: selectedService?.id ?? "",
+        vehicleSize: (vehicleSize as VehicleSizeSlug) || "sedan",
+        vehicleYear, vehicleMake, vehicleModel,
+        selectedDate, selectedTime,
+        serviceAddress, name, phone, email, notes,
+        travelFee, distanceMiles,
+        couponCode, appliedCoupon,
+        pointsToRedeemInput,
+        ...(boatLength !== "" ? { boatLength } : {}),
+        selectedAddonIds: selectedAddons.map((a) => a.id),
+        step,
+        bookingCategory,
+        additionalVehicleStates: additionalVehicles.map((v) => ({
+          vehicleSize: v.vehicleSize,
+          vehicleYear: v.vehicleYear,
+          vehicleMake: v.vehicleMake,
+          vehicleModel: v.vehicleModel,
+          serviceId: v.serviceId,
+          serviceName: v.serviceName,
+          servicePrice: v.servicePrice,
+          selectedAddonIds: v.selectedAddons.map((a) => a.id),
+        })),
+      };
+      try { localStorage.setItem(PERSISTENT_DRAFT_KEY, JSON.stringify(draft)); } catch {}
+    }, 800);
+    return () => { if (persistDebounceRef.current) clearTimeout(persistDebounceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, step, selectedService, vehicleSize, vehicleYear, vehicleMake, vehicleModel,
+      selectedDate, selectedTime, serviceAddress, name, phone, email, notes,
+      travelFee, distanceMiles, couponCode, appliedCoupon, pointsToRedeemInput,
+      boatLength, selectedAddons, additionalVehicles, bookingCategory]);
+
+  // ── Restore from localStorage when form opens (after the reset effect) ────
+  const [showResumeToast, setShowResumeToast] = useState(false);
+  useEffect(() => {
+    // initialDraft takes priority (Stripe return / rebook); localStorage is the fallback
+    if (initialDraft || !isVisible) return;
+    let saved: DraftBooking | null = null;
+    try {
+      const raw = localStorage.getItem(PERSISTENT_DRAFT_KEY);
+      if (raw) saved = JSON.parse(raw) as DraftBooking;
+    } catch {}
+    if (!saved || (!saved.serviceId && !saved.name && !saved.vehicleYear)) return;
+
+    const service = services.find((s) => s.id === saved!.serviceId);
+    if (service) onSelectService(service);
+    if (saved.bookingCategory) setBookingCategory(saved.bookingCategory);
+    setVehicleSize(saved.vehicleSize || "");
+    setVehicleYear(saved.vehicleYear || "");
+    setVehicleMake(saved.vehicleMake || "");
+    setVehicleModel(saved.vehicleModel || "");
+
+    // Only restore a future date — past dates are useless
+    const today = new Date().toISOString().slice(0, 10);
+    const dateIsValid = saved.selectedDate && saved.selectedDate >= today;
+    if (dateIsValid) {
+      setSelectedDate(saved.selectedDate!);
+      if (saved.selectedTime) setSelectedTime(saved.selectedTime);
+    }
+
+    setServiceAddress(saved.serviceAddress || "");
+    setName(saved.name || "");
+    setPhone(saved.phone || "");
+    setEmail(saved.email || "");
+    setNotes(saved.notes || "");
+    setTravelFee(saved.travelFee || 0);
+    setDistanceMiles(saved.distanceMiles ?? null);
+    setCouponCode(saved.couponCode || "");
+    setAppliedCoupon(saved.appliedCoupon ?? null);
+    setPointsToRedeemInput(saved.pointsToRedeemInput || 0);
+    if (saved.boatLength !== undefined) setBoatLength(saved.boatLength);
+    if (saved.selectedAddonIds?.length && service) {
+      const available = getAddonsForService(service.name);
+      setSelectedAddons(available.filter((a) => saved!.selectedAddonIds!.includes(a.id)));
+    }
+    if (saved.additionalVehicleStates?.length) {
+      setAdditionalVehicles(saved.additionalVehicleStates.map((v) => ({
+        vehicleSize: v.vehicleSize || "",
+        vehicleYear: v.vehicleYear || "",
+        vehicleMake: v.vehicleMake || "",
+        vehicleModel: v.vehicleModel || "",
+        serviceId: v.serviceId || "",
+        serviceName: v.serviceName || "",
+        servicePrice: v.servicePrice || 0,
+        selectedAddons: [],
+      })));
+    }
+
+    // Restore step — only advance if the data for that step is present
+    const savedStep = saved.step ?? 1;
+    if (savedStep >= 3 && dateIsValid) {
+      setStep(3);
+    } else if (savedStep >= 2 && (saved.vehicleSize || saved.vehicleYear)) {
+      setStep(2);
+    }
+
+    setShowResumeToast(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, initialDraft]);
+
+  useEffect(() => {
+    if (!showResumeToast) return;
+    const t = setTimeout(() => setShowResumeToast(false), 3500);
+    return () => clearTimeout(t);
+  }, [showResumeToast]);
+
   // Apple-level smooth scroll after dropdown opens: short delay so height expansion has started
   useEffect(() => {
     if (!isVisible) return;
@@ -1460,14 +1596,18 @@ export function BookingSection({
     setBookingResult(result);
     if (result.success && onBookingSuccess && selectedService) {
       const earned = Math.floor(totalAfterDiscount);
+      try { localStorage.removeItem(PERSISTENT_DRAFT_KEY); } catch {}
       onClose();
       router.refresh();
       onBookingSuccess?.({
         confirmationId: result.bookingId.slice(0, 8).toUpperCase(),
         date: selectedDate,
+        time: selectedTime || undefined,
         serviceName: selectedService.name,
         pointsEarned: earned,
         firstName: name.trim().split(/\s+/)[0] ?? "there",
+        serviceAddress: serviceAddress.trim() || undefined,
+        isGuest: !authUserId,
         phone: phone.trim() || undefined,
       });
     }
@@ -1540,6 +1680,7 @@ export function BookingSection({
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
       }
+      try { localStorage.removeItem(PERSISTENT_DRAFT_KEY); } catch {}
       const result = await bookDetailing({
         ...buildPayload(),
         paymentMethod: "pay_now",
@@ -1564,9 +1705,12 @@ export function BookingSection({
         onBookingSuccess?.({
           confirmationId: result.bookingId.slice(0, 8).toUpperCase(),
           date: selectedDate,
+          time: selectedTime || undefined,
           serviceName: selectedService.name,
           pointsEarned: earned,
           firstName: name.trim().split(/\s+/)[0] ?? "there",
+          serviceAddress: serviceAddress.trim() || undefined,
+          isGuest: !authUserId,
           phone: phone.trim() || undefined,
         });
       }
@@ -1772,6 +1916,16 @@ export function BookingSection({
               bg-zinc-950/80 backdrop-blur-xl border border-[#d4af37]/30
               rounded-b-xl shadow-lg"
           >
+            {/* Resume toast — shown briefly when saved progress is restored */}
+            {showResumeToast && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-800/90 border border-white/10 backdrop-blur-sm shadow-lg text-xs text-zinc-300 whitespace-nowrap">
+                  <span>↩</span>
+                  <span>Picking up where you left off</span>
+                </div>
+              </div>
+            )}
+
             {/* Success is shown in SuccessModal; brief placeholder if dropdown still visible */}
           {isSuccess ? (
             <div className="px-6 py-12 flex flex-col items-center justify-center text-center">

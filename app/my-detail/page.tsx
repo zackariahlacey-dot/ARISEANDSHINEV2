@@ -2,88 +2,28 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Phone, Calendar, Car, MapPin, Clock, Search, Loader2, ChevronRight } from "lucide-react";
+import { ArrowLeft, Phone, Search, Loader2, ChevronRight } from "lucide-react";
 import { getBookingsByPhone } from "@/app/actions/getBookingsByPhone";
 import type { ClientBooking } from "@/app/actions/getClientBookings";
-import { cn } from "@/lib/utils";
-
-function formatDate(d: string) {
-  try {
-    return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-      weekday: "short", month: "short", day: "numeric", year: "numeric",
-    });
-  } catch {
-    return d;
-  }
-}
-
-function formatTime(t: string | null) {
-  if (!t) return null;
-  try {
-    const [h, m] = t.split(":");
-    const hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const h12 = hour % 12 || 12;
-    return `${h12}:${m} ${ampm}`;
-  } catch {
-    return t;
-  }
-}
-
-function formatPhone(raw: string) {
-  const d = raw.replace(/\D/g, "").slice(0, 10);
-  if (d.length < 10) return raw;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
-
-function BookingCard({ b }: { b: ClientBooking }) {
-  const today = new Date().toISOString().split("T")[0];
-  const isUpcoming = b.booking_date >= today;
-
-  return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="font-bold text-zinc-100 truncate">{b.service_name ?? "Detailing Service"}</p>
-          {b.vehicle_year || b.vehicle_make ? (
-            <p className="text-xs text-zinc-500 mt-0.5">
-              {[b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ")}
-            </p>
-          ) : null}
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="text-sm font-black text-[#D4AF37]">${b.total_price.toFixed(0)}</p>
-          <span className={cn(
-            "text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded",
-            isUpcoming ? "bg-sky-500/10 text-sky-400" : "bg-white/[0.05] text-zinc-600"
-          )}>
-            {isUpcoming ? "Upcoming" : "Past"}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
-        <span className="flex items-center gap-1.5">
-          <Calendar size={11} className="shrink-0" />
-          {formatDate(b.booking_date)}
-          {b.booking_time ? ` · ${formatTime(b.booking_time.slice(0, 5))}` : ""}
-        </span>
-        {b.service_address && (
-          <span className="flex items-center gap-1.5">
-            <MapPin size={11} className="shrink-0" />
-            <span className="truncate max-w-[200px]">{b.service_address}</span>
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
+import { BookingCard } from "@/components/dashboard/BookingCard";
 
 export default function MyDetailPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [result, setResult] = useState<{ found: boolean; upcoming: ClientBooking[]; past: ClientBooking[] } | null>(null);
+
+  const handleCancelled = (id: string) => {
+    setResult((prev) =>
+      prev
+        ? {
+            ...prev,
+            upcoming: prev.upcoming.filter((b) => b.id !== id),
+            past: prev.past.filter((b) => b.id !== id),
+          }
+        : prev
+    );
+  };
 
   const formatPhoneInput = (value: string) => {
     const d = value.replace(/\D/g, "").slice(0, 10);
@@ -182,7 +122,14 @@ export default function MyDetailPage() {
                 <h2 className="text-xs font-semibold tracking-[0.18em] uppercase text-[#D4AF37]">
                   Upcoming ({result!.upcoming.length})
                 </h2>
-                {result!.upcoming.map((b) => <BookingCard key={b.id} b={b} />)}
+                {result!.upcoming.map((b) => (
+                  <BookingCard
+                    key={b.id}
+                    b={b}
+                    showActions
+                    onCancelled={handleCancelled}
+                  />
+                ))}
               </section>
             )}
 
@@ -191,7 +138,14 @@ export default function MyDetailPage() {
                 <h2 className="text-xs font-semibold tracking-[0.18em] uppercase text-zinc-600">
                   Past ({result!.past.length})
                 </h2>
-                {result!.past.map((b) => <BookingCard key={b.id} b={b} />)}
+                {result!.past.map((b) => (
+                  <BookingCard
+                    key={b.id}
+                    b={b}
+                    showRebook
+                    onCancelled={handleCancelled}
+                  />
+                ))}
               </section>
             )}
 

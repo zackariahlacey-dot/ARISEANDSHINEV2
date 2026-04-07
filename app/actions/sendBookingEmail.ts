@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 import { getBookingConfirmationHtml, type BookingConfirmationDetails } from "@/emails/BookingConfirmation";
+import { getBookerAccountInviteHtml } from "@/emails/BookerAccountInvite";
 
 /** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
 const FROM_ADDRESS =
@@ -61,6 +62,58 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to send email";
     console.error("[sendBookingEmail]", err);
+    return { ok: false, error: message };
+  }
+}
+
+function siteOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+}
+
+/**
+ * Second email after booking: prompts guest bookers (no Auth user yet) to sign up.
+ * Bookings/vehicles/points merge by email when they complete signup (see createProfileWithReferral).
+ */
+export async function sendBookerAccountInviteEmail(params: {
+  customerEmail: string;
+  customerName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const customerEmail = params.customerEmail?.trim();
+  if (!customerEmail) {
+    return { ok: false, error: "Customer email is required" };
+  }
+
+  const key = process.env.RESEND_API_KEY;
+  if (!key?.trim()) {
+    console.warn("[sendBookerAccountInviteEmail] RESEND_API_KEY is not set — skipping.");
+    return { ok: false, error: "Email is not configured" };
+  }
+
+  const signUpUrl = `${siteOrigin()}/auth/sign-up?email=${encodeURIComponent(customerEmail.toLowerCase())}`;
+
+  try {
+    const resend = new Resend(key);
+    const html = getBookerAccountInviteHtml({
+      customerName: params.customerName || "there",
+      signUpUrl,
+    });
+
+    const { error } = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: customerEmail,
+      replyTo: REPLY_TO,
+      subject: "Create your account — see your booking & rewards — Arise And Shine VT",
+      html,
+    });
+
+    if (error) {
+      console.error("[sendBookerAccountInviteEmail]", error);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to send email";
+    console.error("[sendBookerAccountInviteEmail]", err);
     return { ok: false, error: message };
   }
 }

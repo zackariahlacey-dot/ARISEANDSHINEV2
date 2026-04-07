@@ -93,9 +93,19 @@ export default function GiftCardsPage() {
         </Link>
 
         <div className="mb-8">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-1.5">Arise &amp; Shine VT</p>
-          <h1 className="text-3xl font-black tracking-tight text-zinc-100">Gift Cards</h1>
-          <p className="text-sm text-zinc-500 mt-1">Give the gift of a spotless vehicle. Codes are delivered by email instantly after purchase.</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-1.5">Arise &amp; Shine VT</p>
+              <h1 className="text-3xl font-black tracking-tight text-zinc-100">Gift Cards</h1>
+              <p className="text-sm text-zinc-500 mt-1">Give the gift of a spotless vehicle. Codes are delivered by email instantly after purchase.</p>
+            </div>
+            <Link
+              href="/gift-cards/balance"
+              className="shrink-0 text-xs font-semibold text-zinc-600 hover:text-[#D4AF37] transition-colors whitespace-nowrap mt-1"
+            >
+              Check balance →
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-5">
@@ -164,7 +174,7 @@ export default function GiftCardsPage() {
                 type="email"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="Recipient's email (to notify them)"
+                placeholder="Recipient's email (optional — if blank, code goes to you)"
                 className="flex-1 bg-transparent py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none"
               />
             </div>
