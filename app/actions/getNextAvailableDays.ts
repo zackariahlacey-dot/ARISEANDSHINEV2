@@ -39,7 +39,8 @@ export async function getNextAvailableDays(
   serviceName: string,
   vehicleSize: string,
   count: number = 3,
-  lookahead: number = 21
+  lookahead: number = 21,
+  customDurationMins?: number
 ): Promise<AvailableDay[]> {
   const supabase = createAdminClient();
 
@@ -52,7 +53,7 @@ export async function getNextAvailableDays(
   const operatingHours: any[] = ohResult.data ?? [];
   const blockedSet = new Set<string>((blockedResult.data ?? []).map((r: any) => r.blocked_date));
 
-  const duration = getDurationMins(serviceName, vehicleSize);
+  const duration = customDurationMins ?? getDurationMins(serviceName, vehicleSize);
   const results: AvailableDay[] = [];
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);

@@ -1164,18 +1164,20 @@ export function BookingSection({
       .finally(() => setSlotsLoading(false));
   }, [selectedDate]);
 
-  // ── Fetch next available days whenever service / size changes on step 2 ─
+  // ── Fetch next available days whenever service / size / additional vehicles change ─
   useEffect(() => {
     if (!selectedService || step !== 2) return;
     let cancelled = false;
     setNextAvailLoading(true);
     setNextAvailDays([]);
-    getNextAvailableDays(selectedService.name, vehicleSize || "sedan", 3)
+    // Pass combined duration so multi-vehicle slots are correctly filtered
+    const customDur = totalBookingDurationMins > primaryDurationMins ? totalBookingDurationMins : undefined;
+    getNextAvailableDays(selectedService.name, vehicleSize || "sedan", 3, 21, customDur)
       .then(days => { if (!cancelled) setNextAvailDays(days); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setNextAvailLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedService?.name, vehicleSize, step]);
+  }, [selectedService?.name, vehicleSize, step, totalBookingDurationMins]);
 
   // ── Travel fee when address changes (debounced) ─────────────────────────────
   useEffect(() => {
@@ -2732,22 +2734,38 @@ export function BookingSection({
                                     </div>
                                     <div>
                                       <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Make</label>
-                                      <input
-                                        type="text"
+                                      <MakeAutocomplete
                                         value={av.vehicleMake}
-                                        onChange={e => updateAdditionalVehicle(idx, { vehicleMake: e.target.value })}
+                                        onChange={v => updateAdditionalVehicle(idx, { vehicleMake: v, vehicleModel: "" })}
+                                        onSelect={make => updateAdditionalVehicle(idx, { vehicleMake: make, vehicleModel: "" })}
                                         placeholder="Toyota"
-                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
                                       />
                                     </div>
                                     <div>
-                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Model</label>
-                                      <input
-                                        type="text"
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">
+                                        Model
+                                        {av.vehicleSize && !avIsUltimate && (
+                                          <span className="ml-1.5 inline-flex items-center gap-0.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wide">
+                                            <Zap size={7} className="fill-[#D4AF37]" /> Auto
+                                          </span>
+                                        )}
+                                      </label>
+                                      <ModelAutocomplete
                                         value={av.vehicleModel}
-                                        onChange={e => updateAdditionalVehicle(idx, { vehicleModel: e.target.value })}
+                                        onChange={v => updateAdditionalVehicle(idx, { vehicleModel: v })}
+                                        make={av.vehicleMake}
+                                        onSelect={(model, sizeSlug) => {
+                                          const isUltSvc = av.serviceName.toLowerCase().includes("ultimate");
+                                          const patch: Partial<AdditionalVehicleForm> = { vehicleModel: model };
+                                          if (!isUltSvc && sizeSlug) {
+                                            const svcObj = services.find(s => s.id === av.serviceId);
+                                            const price = svcObj ? getPriceForSize(svcObj, sizeSlug) : av.servicePrice;
+                                            patch.vehicleSize = sizeSlug;
+                                            patch.servicePrice = price;
+                                          }
+                                          updateAdditionalVehicle(idx, patch);
+                                        }}
                                         placeholder="Camry"
-                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
                                       />
                                     </div>
                                   </div>
