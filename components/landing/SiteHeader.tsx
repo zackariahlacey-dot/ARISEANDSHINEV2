@@ -136,58 +136,96 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
         </div>
       </header>
 
-      {/* Mobile full-screen overlay */}
+      {/* Mobile menu — slides down from header */}
       <div
-        className={`md:hidden fixed inset-0 z-[45] flex flex-col transition-all duration-300 ease-in-out ${mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
-        style={{ background: "rgba(9,9,11,0.97)", backdropFilter: "blur(16px)" }}
+        className={`md:hidden fixed inset-x-0 top-[57px] z-40 transition-all duration-300 ease-in-out origin-top ${
+          mobileOpen
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 -translate-y-3 pointer-events-none"
+        }`}
         aria-hidden={!mobileOpen}
       >
-        <div className="flex flex-col items-center justify-center flex-1 gap-1 px-8 pt-20 pb-10 overflow-y-auto">
-          <Link href="/" onClick={closeMobile} className="w-full text-center text-3xl font-black tracking-tight py-3 text-zinc-100 hover:text-[#D4AF37] transition-colors">
-            Home
-          </Link>
+        {/* Backdrop tap-to-close */}
+        {mobileOpen && (
+          <div className="fixed inset-0 top-[57px] bg-black/60 -z-10" onClick={closeMobile} />
+        )}
 
-          {/* Services group */}
-          <div className="w-full mt-2 mb-1">
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-2">Services</p>
-            {SERVICE_LINKS.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={closeMobile}
-                className={`flex items-center justify-center gap-2 w-full text-center text-2xl font-black tracking-tight py-2.5 transition-colors ${pathname === href ? "text-[#D4AF37]" : "text-zinc-200 hover:text-[#D4AF37]"}`}
+        <div className="bg-zinc-950/98 border-b border-white/[0.07] shadow-2xl overflow-y-auto max-h-[calc(100svh-57px)]">
+          <div className="px-4 py-4 space-y-1">
+
+            {/* Nav links */}
+            <Link
+              href="/"
+              onClick={closeMobile}
+              className={`flex items-center px-4 py-3 rounded-xl text-base font-semibold transition-colors ${pathname === "/" ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"}`}
+            >
+              Home
+            </Link>
+
+            {/* Services */}
+            <div className="pt-1">
+              <p className="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 mb-1">Services</p>
+              {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={closeMobile}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${pathname === href ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"}`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${pathname === href ? "bg-[#D4AF37]/20" : "bg-zinc-800"}`}>
+                    <Icon size={14} className={pathname === href ? "text-[#D4AF37]" : "text-zinc-400"} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold leading-tight">{label}</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">{desc}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <Link
+              href="/#why-us"
+              onClick={closeMobile}
+              className="flex items-center px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
+            >
+              Why Us
+            </Link>
+            <Link
+              href="/#contact"
+              onClick={closeMobile}
+              className="flex items-center px-4 py-3 rounded-xl text-base font-semibold text-zinc-200 hover:text-white hover:bg-white/[0.05] transition-colors"
+            >
+              Contact
+            </Link>
+
+            {/* Divider */}
+            <div className="h-px bg-white/[0.07] mx-2 my-2" />
+
+            {/* Loyalty */}
+            <div className="px-4 py-1">
+              <LoyaltyHeaderButton />
+            </div>
+
+            {/* Book + Call */}
+            <div className="px-2 pt-1 pb-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => { closeMobile(); handleBookNow(); }}
+                className="btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-3.5 rounded-xl text-sm hover:text-black transition-all duration-500"
               >
-                <Icon size={18} className="shrink-0" />
-                {label}
-              </Link>
-            ))}
+                <span className="relative z-[1]">Book Your Detail</span>
+              </button>
+              <a
+                href="tel:8025855563"
+                onClick={closeMobile}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] text-zinc-400 hover:text-white text-sm font-medium transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                802-585-5563
+              </a>
+            </div>
           </div>
-
-          <Link href="/#why-us" onClick={closeMobile} className="w-full text-center text-3xl font-black tracking-tight py-3 text-zinc-100 hover:text-[#D4AF37] transition-colors mt-2">
-            Why Us
-          </Link>
-          <Link href="/#contact" onClick={closeMobile} className="w-full text-center text-3xl font-black tracking-tight py-3 text-zinc-100 hover:text-[#D4AF37] transition-colors">
-            Contact
-          </Link>
-
-          <div className="w-16 h-px bg-white/10 my-4" />
-          <LoyaltyHeaderButton />
-
-          <button
-            type="button"
-            onClick={() => { closeMobile(); handleBookNow(); }}
-            className="btn-primary-gold-shimmer w-full max-w-xs bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] font-bold py-4 rounded-xl text-base hover:text-black transition-all duration-500 mt-3"
-          >
-            <span className="relative z-[1]">Book Your Detail</span>
-          </button>
-
-          <a href="tel:8025855563" onClick={closeMobile} className="flex items-center gap-2 text-zinc-400 hover:text-[#D4AF37] text-sm font-medium mt-3">
-            <Phone className="w-4 h-4" />Call 802-585-5563
-          </a>
         </div>
-
-        {/* Subtle gold glow */}
-        <div className="pointer-events-none absolute bottom-0 inset-x-0 h-48" style={{ background: "radial-gradient(ellipse 60% 100% at 50% 100%, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
       </div>
 
       <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />

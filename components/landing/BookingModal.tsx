@@ -65,14 +65,15 @@ function getMaintenanceSetupFee(serviceName: string): number {
 const ALL_ADD_ONS = [
   // ── Vehicle / Standard ────────────────────────────────────────────────────
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
+  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
+  { id: "odor_bomb",         label: "Odor Eliminator Treatment",             price: 40,  desc: "Activated neutralizer bombs combat smoke, food & mild pet odors throughout the cabin." },
+  { id: "upholstery_shampoo",label: "Upholstery & Floorboard Shampoo",      price: 90,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
   { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 40,  desc: "Remove embedded contaminants for a glass-smooth finish before wax or sealant." },
   { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 30,  desc: "Deep extraction of embedded pet hair from seats, carpet & cargo area. Applied upon inspection — only charged if heavy accumulation is present." },
-  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
-  { id: "odor_bomb",         label: "Odor Eliminator Treatment",             price: 40,  desc: "Activated neutralizer bombs combat smoke, food & mild pet odors throughout the cabin." },
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 425, desc: "Complete paint correction & protection: machine polish removes swirls & oxidation, then a professional 2-year ceramic coat is applied. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
@@ -94,8 +95,8 @@ const MARINE_ADDON_IDS   = ["marine_isinglass", "marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
 /** High-ticket upgrades for Ultimate packages — no shampoo or clay (already included) */
 const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore", "ozone_treatment"];
-/** Standard vehicle add-ons — never includes marine or RV items */
-const VEHICLE_ADDON_IDS  = ["engine_bay", "floor_1", "floor_2", "floor_all", "clay_bar", "pet_hair", "headlight_restore", "tar_bug", "odor_bomb"];
+/** Simplified add-ons for Interior, Exterior, and Full Detail */
+const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo"];
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
@@ -129,14 +130,14 @@ function getAddonsForService(serviceName: string): readonly AddonItem[] {
     return ALL_ADD_ONS.filter(a => ULTIMATE_ADDON_IDS.includes(a.id));
   }
 
-  // Exterior Detail: no floorboard shampoo (exterior-only scope)
+  // Exterior Detail
   if (n.includes("exterior") && !n.includes("full")) {
-    return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || a.id === "clay_bar");
+    return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
   }
 
-  // Interior Detail (standalone): no clay bar (exterior treatment)
+  // Interior Detail (standalone)
   if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
-    return ALL_ADD_ONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id) && a.id !== "clay_bar");
+    return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
   }
 
   // Maintenance plans: engine bay + floor shampoo (quick recurring visits)
@@ -144,8 +145,8 @@ function getAddonsForService(serviceName: string): readonly AddonItem[] {
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
   }
 
-  // Full Detail and anything else → all vehicle add-ons only
-  return ALL_ADD_ONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
+  // Full Detail and anything else → standard 4 add-ons
+  return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
 }
 
 /**
