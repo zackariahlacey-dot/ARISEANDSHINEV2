@@ -961,7 +961,7 @@ export function LandingPage({ services }: { services: Service[] }) {
             <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none" />
 
             <div className="flex overflow-hidden">
-              <div className="flex animate-marquee whitespace-nowrap gap-12 md:gap-24 items-center py-4">
+              <div className="flex animate-marquee whitespace-nowrap gap-12 md:gap-24 items-center py-2">
                 {[...Array(3)].map((_, groupIdx) => (
                   <div key={groupIdx} className="flex gap-12 md:gap-24 items-center">
                     {[
@@ -973,13 +973,13 @@ export function LandingPage({ services }: { services: Service[] }) {
                     ].map(({ icon: Icon, label }, i) => (
                       <div
                         key={`${label}-${i}`}
-                        className="flex items-center gap-3 group/badge cursor-default"
+                        className="flex items-center gap-2.5 group/badge cursor-default"
                       >
-                        <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.02] border border-white/[0.05] group-hover/badge:border-[#D4AF37]/30 transition-all duration-500">
-                          <Icon size={18} className="text-[#D4AF37] group-hover/badge:scale-110 transition-transform duration-500" strokeWidth={1.5} />
-                          <div className="absolute inset-0 bg-[#D4AF37]/5 rounded-xl opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500 blur-sm" />
+                        <div className="relative flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.02] border border-white/[0.05] group-hover/badge:border-[#D4AF37]/30 transition-all duration-500">
+                          <Icon size={14} className="text-[#D4AF37] group-hover/badge:scale-110 transition-transform duration-500" strokeWidth={1.5} />
+                          <div className="absolute inset-0 bg-[#D4AF37]/5 rounded-lg opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500 blur-sm" />
                         </div>
-                        <span className="text-xs md:text-sm font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover/badge:text-zinc-200 transition-colors duration-500">
+                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover/badge:text-zinc-200 transition-colors duration-500">
                           {label}
                         </span>
                       </div>
