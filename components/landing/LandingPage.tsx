@@ -812,7 +812,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 pt-16"
+        className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 pt-28 md:pt-32"
         style={{ background: "#09090b" }}
       >
         {/* Moody automotive background image — barely visible texture layer (above fold, priority) */}
