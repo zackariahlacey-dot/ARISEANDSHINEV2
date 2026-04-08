@@ -132,7 +132,7 @@ function dbSizeToSlug(size: string | null | undefined): string {
   if (s === "small" || s === "compact") return "compact";
   if (s === "medium" || s === "sedan") return "sedan";
   if (s === "large" || s === "suv") return "suv";
-  if (s === "extra_large" || s === "xl") return "xl";
+  if (s === "extra_large" || s === "xl" || s === "xl_truck" || s === "large_suv") return "xl";
   return "sedan";
 }
 
@@ -439,6 +439,7 @@ export function NewBookingForm({
                         setVehicleMake("");
                         setVehicleModel("");
                         setVehicleSize("sedan");
+                        setServiceId("");
                       }}
                       className={cn(
                         "w-full text-left px-3 py-3 rounded-xl border border-dashed transition-all text-sm font-bold",
@@ -457,16 +458,29 @@ export function NewBookingForm({
                 <div><FieldLabel>Make</FieldLabel><Input value={vehicleMake} onChange={setVehicleMake} placeholder="Toyota" /></div>
                 <div><FieldLabel>Model</FieldLabel><Input value={vehicleModel} onChange={setVehicleModel} placeholder="Camry" /></div>
               </div>
-              <FieldLabel>Vehicle Size</FieldLabel>
-              <div className="grid grid-cols-2 gap-2">
-                {VEHICLE_SIZES_ADMIN.map(s => (
-                  <button key={s.value} onClick={() => setVehicleSize(s.value)}
-                    className={cn("py-2.5 rounded-xl border text-xs font-black transition-all",
-                      vehicleSize === s.value ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-400"
-                    )}
-                  >{s.label}</button>
-                ))}
-              </div>
+              {/* Vehicle size — only show manual picker if not using a saved vehicle */}
+              {existingVehicleId ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Size</span>
+                  <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-xl capitalize">
+                    {VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize)?.label ?? vehicleSize}
+                  </span>
+                  <span className="text-[10px] text-zinc-600">auto-filled from saved vehicle</span>
+                </div>
+              ) : (
+                <>
+                  <FieldLabel>Vehicle Size</FieldLabel>
+                  <div className="grid grid-cols-2 gap-2">
+                    {VEHICLE_SIZES_ADMIN.map(s => (
+                      <button key={s.value} onClick={() => setVehicleSize(s.value)}
+                        className={cn("py-2.5 rounded-xl border text-xs font-black transition-all",
+                          vehicleSize === s.value ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-400"
+                        )}
+                      >{s.label}</button>
+                    ))}
+                  </div>
+                </>
+              )}
               <FieldLabel>Service *</FieldLabel>
               <div className="space-y-2">
                 {vehicleServices.map((svc: any) => {

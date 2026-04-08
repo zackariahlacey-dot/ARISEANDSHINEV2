@@ -373,7 +373,7 @@ export async function bookDetailing(
   const additionalVehicleDbIds: string[] = [];
   for (const av of (payload.additionalVehicles ?? [])) {
     const avYear = parseInt(av.vehicleYear, 10);
-    const { data: avData } = await adminSupabase
+    const { data: avData, error: avErr } = await adminSupabase
       .from("vehicles")
       .insert({
         user_id: profileId,
@@ -384,6 +384,7 @@ export async function bookDetailing(
       })
       .select("id")
       .single();
+    if (avErr) console.error("[bookDetailing] additional vehicle insert error:", avErr);
     if (avData) additionalVehicleDbIds.push(avData.id);
   }
 
@@ -533,7 +534,9 @@ export async function bookDetailing(
             ? JSON.stringify(payload.selectedAddons).slice(0, 400)
             : "",
           // Additional vehicles for multi-vehicle bookings (compact keys, ≤500 chars)
-          ...(additionalVehicleDbIds.length > 0 && {
+          // NOTE: condition checks payload length, not DB insert success — ensures
+          // webhook always receives vehicle data even if vehicle row inserts failed.
+          ...((payload.additionalVehicles ?? []).length > 0 && {
             additionalVehicleIds: additionalVehicleDbIds.join(",").slice(0, 499),
             additionalVehiclesJson: JSON.stringify(
               (payload.additionalVehicles ?? []).map(av => ({
@@ -541,7 +544,6 @@ export async function bookDetailing(
                 yr: av.vehicleYear.slice(0, 4),
                 mk: av.vehicleMake.slice(0, 30),
                 md: av.vehicleModel.slice(0, 30),
-                si: av.serviceId,
                 sn: av.serviceName.slice(0, 40),
                 sp: av.servicePrice,
               }))
@@ -718,6 +720,15 @@ export async function bookDetailing(
         bookingTime: payload.bookingTime,
         travelFee: Math.round(payload.travelFee ?? 0),
         totalPrice: payload.totalPrice,
+        additionalVehicles: (payload.additionalVehicles ?? []).length > 0
+          ? payload.additionalVehicles!.map(av => ({
+              vehicleYear: av.vehicleYear,
+              vehicleMake: av.vehicleMake,
+              vehicleModel: av.vehicleModel,
+              serviceName: av.serviceName,
+              servicePrice: av.servicePrice,
+            }))
+          : undefined,
       },
       totalPrice: payload.totalPrice,
     }).catch((err) =>

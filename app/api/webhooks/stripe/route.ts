@@ -41,13 +41,47 @@ export async function POST(req: NextRequest) {
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
-    if (session.payment_status !== "paid") {
+    // For one-time payments require paid status; subscriptions fire on active too
+    if (session.payment_status !== "paid" && session.mode !== "subscription") {
       return NextResponse.json({ received: true });
     }
 
     const m = session.metadata;
 
     const supabase = createAdminClient();
+
+    // ── Monthly subscription purchase path ────────────────────────────────
+    if (m?.sessionType === "monthly_subscription") {
+      // Idempotency: skip if subscription already created (Stripe webhook retries)
+      const stripeSubId = typeof session.subscription === "string" ? session.subscription : null;
+      if (stripeSubId) {
+        const { data: existing } = await supabase
+          .from("monthly_subscriptions")
+          .select("id")
+          .eq("stripe_subscription_id", stripeSubId)
+          .maybeSingle();
+        if (existing) return NextResponse.json({ received: true }); // already processed
+      }
+
+      const { createMonthlySubscriptionFromWebhook } = await import("@/app/actions/monthlySubscriptions");
+      await createMonthlySubscriptionFromWebhook({
+        planId:               m.planId    ?? "",
+        planName:             m.planName  ?? "",
+        planPrice:            Number(m.planPrice) || 0,
+        profileId:            m.profileId ?? "",
+        customerName:         m.customerName  ?? "",
+        customerEmail:        m.customerEmail ?? "",
+        customerPhone:        m.customerPhone ?? "",
+        vehicleMake:          m.vehicleMake   ?? "",
+        vehicleModel:         m.vehicleModel  ?? "",
+        vehicleYear:          m.vehicleYear   ?? "",
+        vehicleSize:          m.vehicleSize   ?? "",
+        serviceAddress:       m.serviceAddress ?? "",
+        stripeSubscriptionId: stripeSubId,
+        stripeCustomerId:     typeof session.customer === "string" ? session.customer : null,
+      });
+      return NextResponse.json({ received: true });
+    }
 
     // ── Gift card purchase path ───────────────────────────────────────────
     if (m?.sessionType === "gift_card") {
@@ -160,10 +194,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse additional vehicles from Stripe metadata (compact format)
-    type CompactAddlVehicle = { sz: string; yr: string; mk: string; md: string; si: string; sn: string; sp: number };
+    // Note: 'si' (serviceId) was removed from compact format to save space — not stored.
+    type CompactAddlVehicle = { sz: string; yr: string; mk: string; md: string; sn: string; sp: number };
     let compactAddlVehicles: CompactAddlVehicle[] = [];
     if (m.additionalVehiclesJson) {
-      try { compactAddlVehicles = JSON.parse(m.additionalVehiclesJson); } catch { compactAddlVehicles = []; }
+      try { compactAddlVehicles = JSON.parse(m.additionalVehiclesJson); } catch {
+        console.error("[webhooks/stripe] Failed to parse additionalVehiclesJson:", m.additionalVehiclesJson?.slice(0, 100));
+        compactAddlVehicles = [];
+      }
     }
 
     // Rebuild vehicle DB rows for additional vehicles using pre-created IDs
@@ -177,7 +215,6 @@ export async function POST(req: NextRequest) {
           vehicleYear: av.yr,
           vehicleMake: av.mk,
           vehicleModel: av.md,
-          serviceId: av.si,
           serviceName: av.sn,
           servicePrice: av.sp,
           vehicleDbId: additionalVehicleDbIds[i] ?? null,
@@ -214,7 +251,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertErr || !booking) {
-      console.error("[webhooks/stripe] Booking insert failed:", insertErr);
+      console.error("[webhooks/stripe] Booking insert failed:", insertErr?.message, insertErr?.details, insertErr?.hint, {
+        profileId: m.profileId, vehicleId: m.vehicleId, serviceId: m.serviceId,
+        bookingDate: m.bookingDate, bookingTime: m.bookingTime,
+        hasAdditionalVehicles: !!m.additionalVehiclesJson,
+      });
       return NextResponse.json({ error: "Booking insert failed" }, { status: 500 });
     }
 

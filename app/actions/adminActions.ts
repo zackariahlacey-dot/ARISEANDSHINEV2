@@ -286,6 +286,13 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
         bookingTime: payload.bookingTime,
         travelFee: 0,
         totalPrice: payload.totalPrice,
+        additionalVehicles: addlVehicles.length > 0 ? addlVehicles.map(av => ({
+          vehicleYear: av.vehicleYear,
+          vehicleMake: av.vehicleMake,
+          vehicleModel: av.vehicleModel,
+          serviceName: av.serviceName,
+          servicePrice: av.servicePrice,
+        })) : undefined,
       },
       totalPrice: payload.totalPrice,
     }).catch(e => console.error("Customer Email Fail:", e));

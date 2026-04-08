@@ -2661,39 +2661,35 @@ export function BookingSection({
                             )}
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
-                            {VEHICLE_SIZES.map((size) => {
-                              const isSelected = vehicleSize === size.id;
-                              return (
-                                <button
+                          {!vehicleSize ? (
+                            /* ── No size yet: prompt to enter vehicle ── */
+                            <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-zinc-950/40 px-5 py-4 text-zinc-600">
+                              <Car size={16} className="shrink-0 opacity-50" />
+                              <p className="text-sm">Enter your vehicle above to get your price</p>
+                            </div>
+                          ) : (
+                            /* ── Size chosen: show only the selected card ── */
+                            <>
+                              {VEHICLE_SIZES.filter(s => s.id === vehicleSize).map((size) => (
+                                <div
                                   key={size.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setVehicleSize(size.id);
-                                    setAutoDetected(false);
-                                  }}
-                                  className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 active:scale-[0.98] ${
-                                    isSelected
-                                      ? "bg-[#D4AF37]/10 border-[#D4AF37]/60 shadow-[0_0_18px_rgba(212,175,55,0.12)]"
-                                      : "bg-zinc-950/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]"
-                                  }`}
+                                  className="w-full p-4 rounded-2xl border border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_18px_rgba(212,175,55,0.12)] text-left"
                                 >
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
-                                      {size.label}
-                                    </span>
-                                    {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                    <span className="text-sm font-bold text-[#D4AF37]">{size.label}</span>
+                                    <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />
                                   </div>
                                   <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
                                   {selectedService && (
-                                    <p className={`text-sm font-black mt-2 ${isSelected ? "text-white" : "text-zinc-400"}`}>
+                                    <p className="text-sm font-black mt-2 text-white">
                                       ${selectedService[size.sizeKey]}
                                     </p>
                                   )}
-                                </button>
-                              );
-                            })}
-                          </div>
+                                </div>
+                              ))}
+
+                            </>
+                          )}
 
                           {!vehicleSize && vehicleMake.trim() && vehicleModel.trim() && (
                             <p className="text-[11px] text-zinc-500 mt-2.5 text-center">

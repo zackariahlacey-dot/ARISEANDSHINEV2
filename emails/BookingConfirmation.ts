@@ -19,6 +19,14 @@ export type BookingConfirmationDetails = {
   bookingTime: string;
   travelFee: number;
   totalPrice: number;
+  /** Extra vehicles on the same booking (multi-vehicle discount) */
+  additionalVehicles?: Array<{
+    vehicleYear: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    serviceName: string;
+    servicePrice: number;
+  }>;
 };
 
 const esc = (s: string | number): string =>
@@ -146,6 +154,19 @@ const emailFooter = `
 
 // ── Vehicle customer email ─────────────────────────────────────────────────────
 
+function additionalVehicleRows(vehicles: BookingConfirmationDetails["additionalVehicles"]): string {
+  if (!vehicles?.length) return "";
+  return vehicles.map((v, i) => `
+  <tr>
+    <td style="padding:10px 22px;border-top:1px solid #e8e8e8;">
+      <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0 0 2px;
+                letter-spacing:0.15em;text-transform:uppercase;">Vehicle ${i + 2}</p>
+      <p style="font-size:14px;font-weight:600;color:#111111;margin:0;">${esc(v.vehicleYear)} ${esc(v.vehicleMake)} ${esc(v.vehicleModel)}</p>
+      <p style="font-size:12px;color:#888888;margin:2px 0 0;">${esc(v.serviceName)} — $${esc(v.servicePrice)}</p>
+    </td>
+  </tr>`).join("");
+}
+
 function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): string {
   const firstName = esc(d.customerName.trim().split(/\s+/)[0] ?? "there");
   const vehicleLabel = `${esc(d.vehicleYear)} ${esc(d.vehicleMake)} ${esc(d.vehicleModel)}`;
@@ -192,7 +213,8 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
                style="background-color:#f8f8f8;border-radius:14px;overflow:hidden;margin-bottom:28px;
                       border:1px solid #eeeeee;">
           ${detailRow("Service", esc(d.serviceName))}
-          ${detailRow("Vehicle", vehicleLabel)}
+          ${detailRow("Vehicle 1", vehicleLabel)}
+          ${additionalVehicleRows(d.additionalVehicles)}
           ${detailRow("Date", esc(date))}
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}

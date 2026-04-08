@@ -4,8 +4,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { getAllClients, getClientEmail, sendCustomEmailAction } from "@/app/actions/adminActions";
+import { sendTestMonthlyEmail, type TestEmailType } from "@/app/actions/sendTestMonthlyEmail";
 import { useToast } from "@/components/admin/Toast";
-import { Mail, Search, Check, Send, Sparkles, Star, Tag, RefreshCcw, Car, Zap, Loader2, Navigation } from "lucide-react";
+import { Mail, Search, Check, Send, Sparkles, Star, Tag, RefreshCcw, Car, Zap, Loader2, Navigation, Crown, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TEMPLATES = [
@@ -82,6 +83,10 @@ export default function EmailPage() {
   const [sending, setSending] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
 
+  // Monthly email test state
+  const [testEmail, setTestEmail]       = useState("");
+  const [testSending, setTestSending]   = useState<TestEmailType | null>(null);
+
   // Handle preselection from URL
   useEffect(() => {
     if (preselectedClientId && clients) {
@@ -107,6 +112,24 @@ export default function EmailPage() {
     
     setSubject(t.subject.replace(/{name}/g, name));
     setBody(t.body.replace(/{name}/g, name).replace(/{vehicle}/g, vehicle));
+  };
+
+  const handleTestMonthlyEmail = async (type: TestEmailType) => {
+    const email = testEmail.trim();
+    if (!email || !email.includes("@")) { toast("Enter a valid email address", "error"); return; }
+    setTestSending(type);
+    try {
+      const res = await sendTestMonthlyEmail(email, type);
+      if (res.ok) {
+        toast(`Test ${type} email sent to ${email}!`);
+      } else {
+        toast("Failed: " + (res.error || "Unknown error"), "error");
+      }
+    } catch {
+      toast("Error sending test email", "error");
+    } finally {
+      setTestSending(null);
+    }
   };
 
   const handleSend = async () => {
@@ -147,6 +170,48 @@ export default function EmailPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 space-y-6 max-w-3xl mx-auto w-full">
+
+        {/* ── MONTHLY EMAIL TEST PANEL ─────────────────────────────────────── */}
+        <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Crown size={14} className="text-[#D4AF37]" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">Monthly Email Preview</span>
+            <span className="ml-auto text-[8px] text-zinc-600 uppercase tracking-widest">Demo data · real send</span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={testEmail}
+              onChange={e => setTestEmail(e.target.value)}
+              placeholder="Send test to: you@example.com"
+              type="email"
+              className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-white outline-none focus:ring-1 ring-[#D4AF37]/40 placeholder:text-zinc-700"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { type: "invite" as TestEmailType, label: "Invite", desc: "Sent to new member" },
+              { type: "confirmation" as TestEmailType, label: "Confirmation", desc: "After signup" },
+              { type: "reminder" as TestEmailType, label: "Reminder", desc: "Monthly pick link" },
+            ]).map(({ type, label, desc }) => (
+              <button
+                key={type}
+                onClick={() => handleTestMonthlyEmail(type)}
+                disabled={testSending !== null}
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 hover:bg-[#D4AF37]/10 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {testSending === type
+                  ? <Loader2 size={14} className="animate-spin text-[#D4AF37]" />
+                  : <FlaskConical size={14} className="text-[#D4AF37]" />}
+                <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] text-center">{label}</span>
+                <span className="text-[8px] text-zinc-600 text-center">{desc}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[8px] text-zinc-700">
+            Sends a real email with demo customer data (Sarah · Full Maintenance · Toyota RAV4). Active invite/reminder links are functional.
+          </p>
+        </div>
+        {/* ─────────────────────────────────────────────────────────────────── */}
         
         {/* CLIENT SELECTOR */}
         <div className="space-y-1.5 relative z-20">

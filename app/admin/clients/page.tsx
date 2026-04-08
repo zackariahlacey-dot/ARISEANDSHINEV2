@@ -13,8 +13,9 @@ import {
   Users, Search, Phone, MessageSquare, Mail, Navigation,
   Car, Star, Crown, AlertTriangle,
   Save, CheckCircle2, ChevronRight,
-  Loader2, Send, X, ArrowLeft, UserCheck, UserX, CalendarPlus,
+  Loader2, Send, X, ArrowLeft, UserCheck, UserX, CalendarPlus, Repeat,
 } from "lucide-react";
+import { sendMonthlyPlanInvite } from "@/app/actions/monthlySubscriptions";
 import { format, differenceInMonths, parseISO } from "date-fns";
 import { useServices } from "@/hooks/use-admin-data";
 import { NewBookingForm, type ClientPrefillForBooking } from "@/app/admin/schedule/page";
@@ -95,6 +96,7 @@ export default function ClientsPage() {
   const [editingNotes, setEditingNotes]   = useState(false);
   const [notesValue, setNotesValue]       = useState("");
   const [savingNotes, setSavingNotes]     = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
   const [view, setView]           = useState<"list" | "email">("list");
 
   // Email state
@@ -544,6 +546,29 @@ export default function ClientsPage() {
               >
                 <CalendarPlus size={18} />
                 Book appointment
+              </button>
+            )}
+
+            {activeClient?.email && (
+              <button
+                type="button"
+                disabled={sendingInvite}
+                onClick={async () => {
+                  setSendingInvite(true);
+                  try {
+                    const r = await sendMonthlyPlanInvite(activeClient.id);
+                    if (r.ok) toast("Monthly plan invite sent! ✅");
+                    else toast(r.error ?? "Failed to send invite", "error");
+                  } catch { toast("Failed to send invite", "error"); }
+                  setSendingInvite(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-black uppercase tracking-wider active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {sendingInvite
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : <Repeat size={16} />
+                }
+                Send Monthly Plan Invite
               </button>
             )}
 
