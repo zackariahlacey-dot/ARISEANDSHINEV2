@@ -220,9 +220,10 @@ export async function POST(req: NextRequest) {
 
     const bookingId = booking.id;
     const totalPrice = Number(m.totalPrice) || 0;
+    const travelFee = Number(m.travelFee) || 0;
     const pointsToRedeem = Number(m.pointsToRedeem) || 0;
-    // Earn 1 pt per $1 of final amount paid (totalPrice already has tier + points discount applied)
-    const earnedPoints = Math.floor(Math.max(0, totalPrice));
+    // Earn 1 pt per $1 of service cost, excluding travel fee (matches pay-at-arrival logic)
+    const earnedPoints = Math.floor(Math.max(0, totalPrice - travelFee + (pointsToRedeem / 10)));
 
     // Deduct redeemed points (deferred from Pay Now flow until after payment)
     if (pointsToRedeem > 0) {

@@ -2,10 +2,26 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, MapPin, RotateCcw, X, AlertTriangle, Loader2, CalendarClock, RefreshCw } from "lucide-react";
+import { Calendar, MapPin, RotateCcw, X, AlertTriangle, Loader2, CalendarClock, RefreshCw, CalendarPlus } from "lucide-react";
 import { cancelBooking } from "@/app/actions/cancelBooking";
 import { RescheduleModal } from "./RescheduleModal";
 import type { ClientBooking } from "@/app/actions/getClientBookings";
+
+function buildGoogleCalendarUrl(b: ClientBooking): string {
+  try {
+    const [h, m] = (b.booking_time?.slice(0, 5) ?? "09:00").split(":").map(Number);
+    const start = new Date(b.booking_date + "T12:00:00");
+    start.setHours(h, m, 0, 0);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 hrs estimate
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    const title = encodeURIComponent(`${b.service_name ?? "Auto Detail"} — Arise & Shine VT`);
+    const loc = encodeURIComponent(b.service_address ?? "");
+    const details = encodeURIComponent("Mobile detailing by Arise & Shine VT · ariseandshinevt.com");
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&location=${loc}&details=${details}`;
+  } catch {
+    return "#";
+  }
+}
 
 function formatDate(d: string) {
   try {
@@ -200,6 +216,14 @@ export function BookingCard({ b, showRebook, showActions, onCancelled }: Booking
           <div className="flex items-center gap-3 pt-0.5">
             {showActions && !rescheduleSuccess && (
               <>
+                <a
+                  href={buildGoogleCalendarUrl(b)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-[#D4AF37] transition-colors"
+                >
+                  <CalendarPlus size={11} /> Add to Calendar
+                </a>
                 <button
                   type="button"
                   onClick={() => setShowReschedule(true)}

@@ -49,6 +49,7 @@ import {
 } from "@/lib/vehicleDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
+import { getProfileByPhone } from "@/app/actions/getProfileByPhone";
 import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
@@ -632,6 +633,8 @@ export interface BookingSuccessData {
   isGuest?: boolean;
   /** Phone for success modal to fetch latest points from Supabase (guests) */
   phone?: string;
+  /** Email to pre-fill sign-up form when guest creates account after booking */
+  email?: string;
 }
 
 /** Persisted draft for restoring after Stripe checkout cancel */
@@ -683,6 +686,14 @@ const DRAFT_STORAGE_KEY = "draftBooking";
 /** localStorage key for cross-reload draft persistence (versioned to avoid stale schema conflicts) */
 const PERSISTENT_DRAFT_KEY = "bookingDraftPersistV1";
 
+export type BookingProgressData = {
+  step: number;
+  serviceName: string | null;
+  date: string | null;
+  time: string | null;
+  price: number | null;
+};
+
 export interface BookingSectionProps {
   /** When true, the section is expanded (accordion open). */
   isVisible: boolean;
@@ -702,6 +713,8 @@ export interface BookingSectionProps {
   onDraftRestored?: () => void;
   /** Pre-select a service category so the picker opens straight to that category */
   initialCategory?: "vehicle" | "boat" | "rv";
+  /** Called whenever booking step/progress changes so parent can show a summary bar */
+  onProgress?: (data: BookingProgressData | null) => void;
 }
 
 export function BookingSection({
@@ -716,6 +729,7 @@ export function BookingSection({
   initialDraft = null,
   onDraftRestored,
   initialCategory,
+  onProgress,
 }: BookingSectionProps) {
   const router = useRouter();
   const bookingRef = useRef<HTMLDivElement>(null);
@@ -968,12 +982,15 @@ export function BookingSection({
   useEffect(() => {
     if (!isVisible || step !== 3 || !phone || phone.replace(/\D/g, "").length < 10) return;
     const t = setTimeout(() => {
-      getProfilePointsByPhone(phone).then((data) => {
+      getProfileByPhone(phone).then((data) => {
         setRewardPoints(data.reward_points);
+        // Pre-fill name/email only if the fields are still blank (don't overwrite user input)
+        if (data.name && !name.trim()) setName(data.name);
+        if (data.email && !email.trim()) setEmail(data.email);
       });
     }, 400);
     return () => clearTimeout(t);
-  }, [isVisible, step, phone]);
+  }, [isVisible, step, phone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clamp points-to-redeem input when redeemable limit drops (e.g. service/travel change)
   useEffect(() => {
@@ -1124,6 +1141,19 @@ export function BookingSection({
     appliedDraftRef.current = true;
     onDraftRestored?.();
   }, [isVisible, initialDraft, services, onSelectService, onDraftRestored]);
+
+  // ── Emit booking progress to parent (for sticky summary bar) ──────────────
+  useEffect(() => {
+    if (!isVisible) { onProgress?.(null); return; }
+    onProgress?.({
+      step,
+      serviceName: selectedService?.name ?? null,
+      date: selectedDate || null,
+      time: selectedTime || null,
+      price: step >= 3 ? totalAfterDiscount : null,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, step, selectedService?.name, selectedDate, selectedTime, totalAfterDiscount]);
 
   // ── Auto-save booking progress to localStorage (debounced 800ms) ──────────
   // Restores across page refreshes and accidental navigation.
@@ -1610,6 +1640,7 @@ export function BookingSection({
         serviceAddress: serviceAddress.trim() || undefined,
         isGuest: !authUserId,
         phone: phone.trim() || undefined,
+        email: email.trim() || undefined,
       });
     }
   };
@@ -1713,6 +1744,7 @@ export function BookingSection({
           serviceAddress: serviceAddress.trim() || undefined,
           isGuest: !authUserId,
           phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
         });
       }
     } catch (err) {
@@ -1910,7 +1942,8 @@ export function BookingSection({
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="overflow-visible w-full min-h-fit h-auto scroll-mt-[100px] box-border"
+          id="booking-panel"
+          className="overflow-visible w-full min-h-fit h-auto scroll-mt-[80px] box-border"
         >
           <div
             className="relative w-full min-h-fit h-auto flex flex-col justify-start overflow-visible box-border pb-10
@@ -3418,6 +3451,11 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               {computedPrice !== null ? `$${totalAfterDiscount.toFixed(2)}` : "—"}
                             </span>
                           </div>
+                          {computedPrice !== null && totalAfterDiscount > 0 && (
+                            <p className="text-[11px] text-[#D4AF37]/70 mt-2 text-right">
+                              +{Math.floor(totalAfterDiscount)} loyalty points earned
+                            </p>
+                          )}
                         </div>
                       </>
                     ) : (
@@ -3586,6 +3624,11 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               : "—"}
                           </span>
                         </div>
+                        {computedPrice !== null && totalAfterDiscount > 0 && (
+                          <p className="text-[11px] text-[#D4AF37]/70 mt-2 text-right">
+                            +{Math.floor(totalAfterDiscount)} loyalty points earned
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -3650,6 +3693,8 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           </label>
                           <input
                             type={field.type}
+                            inputMode={field.id === "phone" ? "tel" : field.id === "email" ? "email" : undefined}
+                            autoComplete={field.id === "phone" ? "tel" : field.id === "email" ? "email" : field.id === "name" ? "name" : undefined}
                             value={field.value}
                             onChange={(e) => {
                               if (field.id === "phone") {

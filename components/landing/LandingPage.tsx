@@ -14,6 +14,8 @@ import {
   BadgeCheck,
   Star,
   ChevronDown,
+  ChevronUp,
+  Calendar,
   Sparkles,
   Car,
   Brush,
@@ -34,9 +36,10 @@ import {
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
-import type { DraftBooking } from "./BookingModal";
+import type { DraftBooking, BookingProgressData } from "./BookingModal";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 import { BookingFlowSelector } from "./BookingFlowSelector";
+import { TrackAppointmentModal } from "./TrackAppointmentModal";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
 const BookingSection = dynamic(
@@ -147,6 +150,8 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [stripeRecoveryError, setStripeRecoveryError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
+  const [trackOpen, setTrackOpen] = useState(false);
+  const [bookingProgress, setBookingProgress] = useState<BookingProgressData | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
 
@@ -186,7 +191,7 @@ export function LandingPage({ services }: { services: Service[] }) {
       ([entry]) => {
         setIsBottomCtaVisible(entry.isIntersecting);
       },
-      { threshold: 0.1 }
+      { rootMargin: "0px 0px -80px 0px", threshold: 0 }
     );
 
     if (bottomCtaRef.current) {
@@ -495,41 +500,48 @@ export function LandingPage({ services }: { services: Service[] }) {
       />
       {/* ─── Sticky Header ─────────────────────────────────────── */}
       <header
-        className={`fixed top-0 inset-x-0 z-50 w-full py-3 md:h-16 transition-all duration-300 ${
+        className={`fixed top-0 inset-x-0 z-50 w-full py-3 md:h-[68px] transition-all duration-500 ${
           isScrolled || mobileMenuOpen
-            ? "bg-black/95 backdrop-blur-md border-b border-white/[0.06] shadow-2xl"
-            : "bg-transparent"
+            ? "bg-black/40 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_32px_rgba(0,0,0,0.4)]"
+            : "bg-transparent backdrop-blur-none"
         }`}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-full">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-3 shrink-0">
           <Image
             src="/e.png"
             alt="Arise And Shine VT Logo"
-            width={40}
-            height={40}
+            width={38}
+            height={38}
             className="object-contain drop-shadow-md shrink-0"
             priority
           />
-          <span className="font-semibold tracking-tight text-sm hidden sm:block">
+          <span className="font-semibold tracking-wide text-[13px] hidden sm:block text-white/90">
             Arise And Shine VT
           </span>
-        </div>
+        </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
+        <nav className="hidden md:flex items-center gap-7 text-[13px]">
           {SERVICE_LINKS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`hover:text-white transition-colors ${false ? "text-[#D4AF37]" : ""}`}
+              className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200"
             >
               {item.label}
             </Link>
           ))}
-          <a href="#why-us" className="hover:text-white transition-colors">Why Us</a>
-          <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+          <a href="#why-us" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Why Us</a>
+          <a href="#contact" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Contact</a>
+          <button
+            type="button"
+            onClick={() => setTrackOpen(true)}
+            className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200"
+          >
+            Track
+          </button>
           {isAdmin && (
             <Link
               href="/admin"
@@ -542,15 +554,15 @@ export function LandingPage({ services }: { services: Service[] }) {
         </nav>
 
         {/* Right: desktop (call + loyalty + book) and mobile (call + hamburger) */}
-        <div className="flex items-center gap-2 md:gap-4">
-          {/* Desktop: call link, loyalty, book now */}
+        <div className="flex items-center gap-2 md:gap-3">
           <a
             href="tel:8025855563"
-            className="hidden md:flex items-center gap-2 text-zinc-400 hover:text-[#D4AF37] text-sm font-medium transition-colors duration-200"
+            className="hidden md:flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-[13px] transition-colors duration-200"
           >
-            <Phone className="w-4 h-4" />
-            802-585-5563
+            <Phone className="w-3.5 h-3.5" />
+            <span>802-585-5563</span>
           </a>
+          <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
           <LoyaltyHeaderButton />
           <button
             type="button"
@@ -558,22 +570,22 @@ export function LandingPage({ services }: { services: Service[] }) {
               window.scrollTo({ top: 0, behavior: "smooth" });
               openBooking();
             }}
-            className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden"
+            className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-9 px-5 rounded-lg font-semibold tracking-wide text-[13px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 overflow-hidden"
           >
             <span className="relative z-[1]">Book Now</span>
           </button>
 
-          {/* Mobile: quick-call + hamburger (matching circular buttons) */}
+          {/* Mobile: quick-call + hamburger */}
           <a
             href="tel:8025855563"
-            className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 active:bg-[#D4AF37] active:text-zinc-950 transition-colors duration-300"
+            className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors"
             aria-label="Call 802-585-5563"
           >
             <Phone className="w-4 h-4" />
           </a>
           <button
             onClick={() => setMobileMenuOpen((o) => !o)}
-            className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 active:bg-[#D4AF37] active:text-zinc-950 transition-colors duration-300"
+            className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
             {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -585,7 +597,7 @@ export function LandingPage({ services }: { services: Service[] }) {
       {/* ─── Mobile Menu ──────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden"
+          className="fixed inset-0 top-16 bg-black/30 backdrop-blur-sm z-[54] md:hidden"
           onClick={closeMobileMenu}
           aria-hidden
         />
@@ -596,7 +608,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         }`}
         aria-hidden={!mobileMenuOpen}
       >
-        <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden mt-2">
+        <div className="w-full max-w-sm bg-black/50 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden mt-2">
           <div className="p-2 flex flex-col items-center">
             <Link
               href="/"
@@ -617,7 +629,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onClick={closeMobileMenu}
                     className="flex flex-col items-center text-center gap-1 py-3 px-3 rounded-xl hover:bg-white/[0.05] transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400">
+                    <div className="w-7 h-7 rounded-lg bg-white/[0.08] flex items-center justify-center text-zinc-400">
                       <Icon size={14} strokeWidth={1.75} />
                     </div>
                     <p className="text-sm font-semibold text-white">{item.label}</p>
@@ -643,6 +655,13 @@ export function LandingPage({ services }: { services: Service[] }) {
             >
               Contact
             </button>
+            <button
+              type="button"
+              onClick={() => { closeMobileMenu(); setTrackOpen(true); }}
+              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
+            >
+              Track My Appointment
+            </button>
 
             {isAdmin && (
               <Link
@@ -660,7 +679,7 @@ export function LandingPage({ services }: { services: Service[] }) {
             <button
               type="button"
               onClick={() => { closeMobileMenu(); openBooking(); }}
-              className="btn-primary-gold-shimmer w-full bg-zinc-800 border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
+              className="btn-primary-gold-shimmer w-full bg-white/[0.06] border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
             >
               <span className="relative z-[1]">Book Your Detail</span>
             </button>
@@ -771,6 +790,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 initialRewardPoints={authRewardPoints}
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
+                onProgress={setBookingProgress}
               />
             </div>
           )}
@@ -1464,7 +1484,7 @@ export function LandingPage({ services }: { services: Service[] }) {
       </section>
 
       {/* ─── CTA Banner ─────────────────────────────────────────── */}
-      <section className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
+      <section ref={bottomCtaRef} className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-7xl mx-auto">
         <div className="max-w-3xl mx-auto text-center">
           <div
@@ -1592,23 +1612,87 @@ export function LandingPage({ services }: { services: Service[] }) {
 
       {/* ─── Sticky Mobile CTA (only after scrolling past hero) ──────── */}
       <div
-        className={`md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-2 transition-all duration-300 ease-out ${
+        className={`md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-2 transition-all duration-500 ${
           isPastHero && !isBottomCtaVisible
-            ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0 pointer-events-none"
+            ? "translate-y-0 opacity-100 ease-out"
+            : "translate-y-full opacity-0 pointer-events-none ease-in"
         }`}
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="rounded-2xl border border-[#D4AF37]/30 bg-zinc-900/80 shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-md">
-          <button
-            onClick={() => openBooking()}
-            className="btn-primary-gold-shimmer w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-xl text-base font-semibold text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.99] transition-all duration-500 ease-in-out"
-          >
-            <span className="relative z-[1] flex items-center justify-center gap-2.5">
-              <Sparkles size={18} className="shrink-0 text-current" />
-              Book Now
-            </span>
-          </button>
+        <div className={`rounded-2xl border bg-black/60 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.5)] transition-colors duration-300 ${bookingProgress ? "border-[#D4AF37]/20" : "border-[#D4AF37]/30"}`}>
+          {bookingProgress ? (
+            /* ── Progress summary bar ── */
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-white truncate leading-tight">
+                  {bookingProgress.serviceName ?? "Booking in progress…"}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  {/* Step dots */}
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3].map((s) => (
+                      <div
+                        key={s}
+                        className={`rounded-full transition-all duration-300 ${s <= bookingProgress.step ? "w-3 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-zinc-700"}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[11px] text-zinc-500">Step {bookingProgress.step} of 3</span>
+                  {bookingProgress.date && (
+                    <>
+                      <span className="text-zinc-700 text-[11px]">·</span>
+                      <span className="flex items-center gap-1 text-[11px] text-zinc-400">
+                        <Calendar size={10} />
+                        {new Date(bookingProgress.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {bookingProgress.price !== null && (
+                  <span className="text-[#D4AF37] font-black text-sm">
+                    ${Math.round(bookingProgress.price)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("booking-panel");
+                    if (!el) return;
+                    const top = el.getBoundingClientRect().top + window.scrollY - 84;
+                    const startY = window.scrollY;
+                    const diff = top - startY;
+                    const duration = Math.min(900, Math.max(400, Math.abs(diff) * 0.4));
+                    const start = performance.now();
+                    const step = (ts: number) => {
+                      const p = Math.min((ts - start) / duration, 1);
+                      // easeInOutQuart
+                      const e = p < 0.5 ? 8 * p ** 4 : 1 - (-2 * p + 2) ** 4 / 2;
+                      window.scrollTo(0, startY + diff * e);
+                      if (p < 1) requestAnimationFrame(step);
+                    };
+                    requestAnimationFrame(step);
+                  }}
+                  className="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[#D4AF37] text-xs font-semibold hover:bg-[#D4AF37]/20 active:scale-95 transition-all whitespace-nowrap"
+                >
+                  <ChevronUp size={13} />
+                  Back to booking
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ── Normal Book Now CTA ── */
+            <button
+              onClick={() => openBooking()}
+              className="btn-primary-gold-shimmer w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-xl text-base font-semibold text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.99] transition-all duration-500 ease-in-out"
+            >
+              <span className="relative z-[1] flex items-center justify-center gap-2.5">
+                <Sparkles size={18} className="shrink-0 text-current" />
+                Book Now
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1787,6 +1871,7 @@ export function LandingPage({ services }: { services: Service[] }) {
       )}
 
       <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
+      <TrackAppointmentModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
     </div>
   );
 }

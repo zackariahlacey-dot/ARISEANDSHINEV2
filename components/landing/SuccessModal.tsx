@@ -14,6 +14,8 @@ export interface SuccessModalData {
   firstName: string;
   serviceAddress?: string;
   isGuest?: boolean;
+  /** Optional: email to pre-fill sign-up form from guest nudge */
+  email?: string;
   /** Optional: phone for modal to re-fetch latest points when user is guest */
   phone?: string;
 }
@@ -296,7 +298,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                     {data.pointsEarned > 0 && (
                       <div className="mt-2.5 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#d4af37]/[0.07] border border-[#d4af37]/20">
                         <span className="text-[#d4af37] text-xs font-bold">+{data.pointsEarned.toLocaleString()} pts</span>
-                        <span className="text-zinc-600 text-xs">credited after service</span>
+                        <span className="text-zinc-600 text-xs">{data.isGuest ? "create an account to claim" : "credited to your account"}</span>
                       </div>
                     )}
 
@@ -365,7 +367,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                     className="w-full mb-4"
                   >
                     <a
-                      href="/auth/login?signup=true"
+                      href={`/auth/login?signup=true${data?.email ? `&email=${encodeURIComponent(data.email)}` : ""}`}
                       className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800/50 border border-white/[0.07] hover:border-[#d4af37]/30 hover:bg-zinc-800/80 transition-colors text-left group"
                     >
                       <div className="w-7 h-7 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-[#d4af37]/20 transition-colors">

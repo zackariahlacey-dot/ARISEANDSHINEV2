@@ -30,11 +30,14 @@ export function SignUpForm({
   className,
   refCode,
   initialEmail,
+  redirectAfter,
 }: {
   className?: string;
   refCode?: string | null;
   /** Prefill from booking invite link: /auth/sign-up?email=... */
   initialEmail?: string | null;
+  /** After successful signup, redirect here instead of /protected (e.g. /?restore_booking=1) */
+  redirectAfter?: string | null;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -161,7 +164,10 @@ export function SignUpForm({
       if (res.success) {
         const supabase = createClient();
         await supabase.auth.signInWithPassword({ email, password });
-        router.push(`/auth/sign-up-success${res.isReferral ? "?ref=true" : ""}`);
+        const qs = new URLSearchParams();
+        if (res.isReferral) qs.set("ref", "true");
+        if (redirectAfter) qs.set("redirect", redirectAfter);
+        router.push(`/auth/sign-up-success${qs.size ? `?${qs}` : ""}`);
       } else {
         setError(res.error || "Signup failed");
       }

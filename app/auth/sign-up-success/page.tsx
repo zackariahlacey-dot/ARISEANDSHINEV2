@@ -12,6 +12,7 @@ function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isReferral = searchParams.get("ref") === "true";
+  const redirectAfter = searchParams.get("redirect");
 
   useEffect(() => {
     // 1. Initial Confetti Burst
@@ -116,10 +117,10 @@ function SuccessContent() {
           className="w-full space-y-4"
         >
           <button
-            onClick={() => router.push("/protected")}
+            onClick={() => router.push(redirectAfter ?? "/protected")}
             className="btn-primary-gold-shimmer w-full bg-[#D4AF37] text-black hover:scale-[1.02] py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-[0_10px_40px_rgba(212,175,55,0.2)]"
           >
-            GO TO DASHBOARD
+            {redirectAfter ? "CONTINUE BOOKING" : "GO TO DASHBOARD"}
             <ArrowRight size={22} strokeWidth={3} />
           </button>
           

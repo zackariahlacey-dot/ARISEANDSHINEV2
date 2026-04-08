@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Phone, Menu, X, Sparkles, Anchor, Truck } from "lucide-react";
 import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
 import { BookingFlowSelector } from "./BookingFlowSelector";
+import { TrackAppointmentModal } from "./TrackAppointmentModal";
 
 const SERVICE_LINKS = [
   { href: "/detailing", label: "Auto Detailing", icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
@@ -23,6 +24,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
+  const [trackOpen, setTrackOpen] = useState(false);
 
   const handleBookNow = onBookNow ?? (() => setFlowSelectorOpen(true));
 
@@ -58,41 +60,54 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
 
   return (
     <>
-      <header className={`fixed top-0 inset-x-0 z-50 py-3 md:h-16 transition-all duration-300 ${isScrolled || mobileOpen ? "bg-black/95 backdrop-blur-md border-b border-white/[0.06] shadow-2xl" : "bg-black/80 backdrop-blur-sm"}`}>
+      <header className={`fixed top-0 inset-x-0 z-50 py-3 md:h-[68px] transition-all duration-500 ${isScrolled || mobileOpen ? "bg-black/40 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_32px_rgba(0,0,0,0.4)]" : "bg-transparent backdrop-blur-none"}`}>
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-full">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image src="/e.png" alt="Arise And Shine VT Logo" width={40} height={40} className="object-contain drop-shadow-md shrink-0" priority />
-            <span className="font-semibold tracking-tight text-sm hidden sm:block text-white">Arise And Shine VT</span>
+          <Link href="/" className="flex items-center gap-3 shrink-0">
+            <Image src="/e.png" alt="Arise And Shine VT Logo" width={38} height={38} className="object-contain drop-shadow-md shrink-0" priority />
+            <span className="font-semibold tracking-wide text-[13px] hidden sm:block text-white/90">Arise And Shine VT</span>
           </Link>
 
-          {/* Desktop nav — flat links, no dropdown */}
-          <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
-            <Link href="/" className={`hover:text-white transition-colors ${pathname === "/" ? "text-white" : ""}`}>Home</Link>
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-7 text-[13px]">
+            <Link
+              href="/"
+              className={`relative py-1 transition-colors duration-200 ${pathname === "/" ? "text-white after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-[#D4AF37] after:rounded-full" : "text-zinc-400 hover:text-zinc-100"}`}
+            >
+              Home
+            </Link>
             {SERVICE_LINKS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                className={`hover:text-white transition-colors ${pathname === href ? "text-[#D4AF37]" : ""}`}
+                className={`relative py-1 transition-colors duration-200 ${pathname === href ? "text-[#D4AF37] after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-[#D4AF37] after:rounded-full" : "text-zinc-400 hover:text-zinc-100"}`}
               >
                 {label}
               </Link>
             ))}
-            <a href="/#why-us" className="hover:text-white transition-colors">Why Us</a>
-            <a href="/#contact" className="hover:text-white transition-colors">Contact</a>
+            <a href="/#why-us" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Why Us</a>
+            <a href="/#contact" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Contact</a>
+            <button
+              type="button"
+              onClick={() => setTrackOpen(true)}
+              className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200"
+            >
+              Track
+            </button>
           </nav>
 
           {/* Right controls */}
           <div className="flex items-center gap-2 md:gap-3">
-            <a href="tel:8025855563" className="hidden md:flex items-center gap-2 text-zinc-400 hover:text-[#D4AF37] text-sm font-medium transition-colors">
-              <Phone className="w-4 h-4" />802-585-5563
+            <a href="tel:8025855563" className="hidden md:flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-[13px] transition-colors duration-200">
+              <Phone className="w-3.5 h-3.5" /><span>802-585-5563</span>
             </a>
+            <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
             <LoyaltyHeaderButton />
             <button
               type="button"
               onClick={handleBookNow}
-              className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-10 px-6 rounded-xl font-semibold tracking-wide text-sm bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 overflow-hidden"
+              className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-9 px-5 rounded-lg font-semibold tracking-wide text-[13px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 overflow-hidden"
             >
               <span className="relative z-[1]">Book Now</span>
             </button>
@@ -110,7 +125,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
       {/* Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 top-16 bg-black/60 z-[54] md:hidden"
+          className="fixed inset-0 top-16 bg-black/30 backdrop-blur-sm z-[54] md:hidden"
           onClick={closeMobile}
           aria-hidden
         />
@@ -123,7 +138,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
         }`}
         aria-hidden={!mobileOpen}
       >
-        <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden mt-2">
+        <div className="w-full max-w-sm bg-black/50 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden mt-2">
           <div className="p-2 flex flex-col items-center">
             <Link
               href="/"
@@ -148,7 +163,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
                       active ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.05]"
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${active ? "bg-[#D4AF37]/15 text-[#D4AF37]" : "bg-zinc-800 text-zinc-400"}`}>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${active ? "bg-[#D4AF37]/15 text-[#D4AF37]" : "bg-white/[0.08] text-zinc-400"}`}>
                       <Icon size={14} strokeWidth={1.75} />
                     </div>
                     <p className={`text-sm font-semibold ${active ? "text-[#D4AF37]" : "text-white"}`}>{label}</p>
@@ -162,13 +177,20 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
 
             <Link href="/#why-us" onClick={closeMobile} className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">Why Us</Link>
             <Link href="/#contact" onClick={closeMobile} className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">Contact</Link>
+            <button
+              type="button"
+              onClick={() => { closeMobile(); setTrackOpen(true); }}
+              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
+            >
+              Track My Appointment
+            </button>
           </div>
 
           <div className="px-3 pb-3 pt-1 border-t border-white/[0.07] flex flex-col gap-2 mt-1">
             <button
               type="button"
               onClick={() => { closeMobile(); handleBookNow(); }}
-              className="btn-primary-gold-shimmer w-full bg-zinc-800 border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
+              className="btn-primary-gold-shimmer w-full bg-white/[0.06] border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
             >
               <span className="relative z-[1]">Book Your Detail</span>
             </button>
@@ -185,6 +207,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
       </div>
 
       <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
+      <TrackAppointmentModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
     </>
   );
 }
