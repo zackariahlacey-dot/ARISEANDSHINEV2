@@ -1,39 +1,87 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  getDurationMins,
-  checkSlotConflict,
-  timeToMins,
-  to12h,
-  type BookingSlot,
-} from "@/lib/availability";
+import { getDurationMins, getAdditionalVehiclesDuration, checkSlotConflict, timeToMins, to12h, type BookingSlot } from "@/lib/availability";
 
 export type AvailableDay = {
   date: string;         // YYYY-MM-DD
   label: string;        // "Today", "Tomorrow", "Mon Apr 7"
-  earliestSlot: string; // "09:00 AM"
+  earliestSlot: string; // "9:00 AM"
   totalSlots: number;
 };
 
-/** Fetch all non-cancelled bookings for a date (uses admin client to bypass RLS). */
-async function getBookingsForDateRaw(supabase: any, date: string): Promise<BookingSlot[]> {
+// Jobs may finish up to this many minutes past closing — same constant as BookingModal.
+const OVERTIME_GRACE_MINS = 60;
+
+// 30-minute grid — must match SLOT_INTERVAL_MIN in BookingModal.tsx.
+const SLOT_INTERVAL = 30;
+
+/**
+ * Fetch every active (non-cancelled) booking for one date.
+ * Prefers the direct service_name column; falls back to the services(name) join
+ * for older rows that were stored with only a service_id.
+ */
+async function fetchBookings(supabase: any, date: string): Promise<BookingSlot[]> {
   const { data } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, status")
+    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, status, services(name)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
-  return (data ?? []).map((r: any) => ({
-    booking_time: r.booking_time ?? "00:00",
-    service_name: r.service_name ?? null,
-    vehicle_size: r.vehicle_size ?? null,
-    status: r.status ?? "confirmed",
-  }));
+
+  return (data ?? []).map((r: any) => {
+    const direct = r.service_name as string | null | undefined;
+    const s = r.services;
+    const joined =
+      s == null ? null
+      : Array.isArray(s) ? ((s[0] as any)?.name ?? null)
+      : (s as any).name ?? null;
+    const serviceName = direct ?? joined;
+    const vehicleSize = r.vehicle_size ?? null;
+    const primaryDur  = getDurationMins(serviceName ?? "", vehicleSize ?? "sedan");
+    const addlDur     = getAdditionalVehiclesDuration(r.additional_vehicles_json);
+    return {
+      booking_time:        r.booking_time ?? "00:00",
+      service_name:        serviceName,
+      vehicle_size:        vehicleSize,
+      status:              r.status ?? "confirmed",
+      total_duration_mins: primaryDur + addlDur,
+    };
+  });
 }
 
 /**
- * Scans forward through the next `lookahead` days and returns the first
- * `count` days that have at least one open slot for the given service + size.
+ * Return the open time slots (HH:MM strings) on a given day.
+ * Uses identical boundaries to the BookingModal:
+ *   - slots start at dayStart, increment by SLOT_INTERVAL
+ *   - slots must START strictly before dayEnd  (m < dayEnd)
+ *   - jobs may finish up to OVERTIME_GRACE_MINS past dayEnd
+ */
+function openSlotsForDay(
+  existingBookings: BookingSlot[],
+  duration: number,
+  dayStart: number,
+  dayEnd: number,
+  skipBeforeMins: number | null  // for today: skip slots at or before current time
+): string[] {
+  const slots: string[] = [];
+  for (
+    let m = dayStart;
+    m < dayEnd && m + duration <= dayEnd + OVERTIME_GRACE_MINS;
+    m += SLOT_INTERVAL
+  ) {
+    if (skipBeforeMins !== null && m <= skipBeforeMins) continue;
+    if (!checkSlotConflict(existingBookings, m, duration)) {
+      const h  = Math.floor(m / 60);
+      const mn = m % 60;
+      slots.push(`${String(h).padStart(2, "0")}:${String(mn).padStart(2, "0")}`);
+    }
+  }
+  return slots;
+}
+
+/**
+ * Scan forward up to `lookahead` days and return the first `count` days
+ * that have at least one genuinely open slot for the given service and size.
  */
 export async function getNextAvailableDays(
   serviceName: string,
@@ -44,99 +92,74 @@ export async function getNextAvailableDays(
 ): Promise<AvailableDay[]> {
   const supabase = createAdminClient();
 
-  // Load operating hours and blocked dates in parallel
   const [ohResult, blockedResult] = await Promise.all([
     supabase.from("operating_hours").select("*"),
     supabase.from("blocked_dates").select("blocked_date"),
   ]);
 
   const operatingHours: any[] = ohResult.data ?? [];
-  const blockedSet = new Set<string>((blockedResult.data ?? []).map((r: any) => r.blocked_date));
+  const blockedDates = new Set<string>(
+    (blockedResult.data ?? []).map((r: any) => r.blocked_date as string)
+  );
 
   const duration = customDurationMins ?? getDurationMins(serviceName, vehicleSize);
-  const results: AvailableDay[] = [];
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
 
-  // How many minutes a booking is allowed to run past the scheduled closing time.
-  const OVERTIME_GRACE_MINS = 60;
+  // Use the local (Eastern) date string so it matches what customers see.
+  const todayStr = now.toLocaleDateString("en-CA"); // en-CA gives YYYY-MM-DD in local time
 
-  // Default hours used when no operating_hours rows exist in the DB yet.
-  // Current schedule: Mon–Fri 1 PM – 6 PM, weekends closed.
-  const DEFAULT_HOURS: Record<number, { start: string; end: string } | null> = {
-    0: null,              // Sunday — closed
-    1: { start: "13:00", end: "18:00" },
-    2: { start: "13:00", end: "18:00" },
-    3: { start: "13:00", end: "18:00" },
-    4: { start: "13:00", end: "18:00" },
-    5: { start: "13:00", end: "18:00" },
-    6: null,              // Saturday — closed
-  };
+  const results: AvailableDay[] = [];
 
   for (let i = 0; i < lookahead && results.length < count; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = d.toLocaleDateString("en-CA");
 
-    // Skip blocked dates
-    if (blockedSet.has(dateStr)) continue;
+    if (blockedDates.has(dateStr)) continue;
 
-    const dow = d.getDay(); // 0=Sun … 6=Sat
+    const dow = d.getDay(); // 0 = Sun … 6 = Sat
 
-    // Find operating hours for this day (month-specific override first, then generic)
+    // Resolve operating hours: month-specific override takes priority over generic row.
     const month = d.getMonth() + 1;
-    const overrideRow = operatingHours.find(
-      (h: any) => h.month === month && h.day_of_week === dow
-    );
-    const defaultRow = operatingHours.find(
-      (h: any) => (h.month == null || h.month === undefined) && h.day_of_week === dow
-    );
-    const row = overrideRow ?? defaultRow;
+    const row =
+      operatingHours.find((h: any) => h.month === month && h.day_of_week === dow) ??
+      operatingHours.find((h: any) => (h.month == null) && h.day_of_week === dow);
 
-    // Determine if day is open and what the hours are
     let dayStart: number;
     let dayEnd: number;
 
     if (row) {
-      // DB row found — respect is_open flag (schema uses is_open, not isClosed)
       if (!row.is_open) continue;
-      dayStart = timeToMins(row.start_time ?? "08:00");
+      dayStart = timeToMins(row.start_time ?? "13:00");
       dayEnd   = timeToMins(row.end_time   ?? "18:00");
+    } else if (operatingHours.length === 0) {
+      // No hours configured yet — use sensible defaults (Mon–Fri 1–6 PM).
+      if (dow === 0 || dow === 6) continue;
+      dayStart = timeToMins("13:00");
+      dayEnd   = timeToMins("18:00");
     } else {
-      // No DB row — fall back to built-in defaults
-      const def = DEFAULT_HOURS[dow];
-      if (!def) continue; // closed by default (Sunday)
-      dayStart = timeToMins(def.start);
-      dayEnd   = timeToMins(def.end);
+      // Hours ARE configured for other days but not this one — treat as closed.
+      continue;
     }
 
-    // Fetch existing bookings for this date
-    const existingBookings = await getBookingsForDateRaw(supabase, dateStr);
+    const existingBookings = await fetchBookings(supabase, dateStr);
 
-    // Find all open slots (allow jobs that finish up to OVERTIME_GRACE_MINS past closing)
-    const openSlots: string[] = [];
-    const interval = 60;
-    for (let m = dayStart; m + duration <= dayEnd + OVERTIME_GRACE_MINS; m += interval) {
-      // If this is today, skip past slots
-      if (dateStr === todayStr && m <= now.getHours() * 60 + now.getMinutes()) continue;
+    // For today skip time slots that have already passed.
+    const skipBefore = dateStr === todayStr
+      ? now.getHours() * 60 + now.getMinutes()
+      : null;
 
-      if (!checkSlotConflict(existingBookings, m, duration)) {
-        const h  = Math.floor(m / 60);
-        const mn = m % 60;
-        openSlots.push(`${String(h).padStart(2, "0")}:${String(mn).padStart(2, "0")}`);
-      }
-    }
+    const slots = openSlotsForDay(existingBookings, duration, dayStart, dayEnd, skipBefore);
+    if (slots.length === 0) continue;
 
-    if (openSlots.length === 0) continue;
-
-    // Human-readable label
+    // Build human-readable label.
     let label: string;
     if (dateStr === todayStr) {
       label = "Today";
     } else {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      if (dateStr === tomorrow.toISOString().slice(0, 10)) {
+      if (dateStr === tomorrow.toLocaleDateString("en-CA")) {
         label = "Tomorrow";
       } else {
         label = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
@@ -144,10 +167,10 @@ export async function getNextAvailableDays(
     }
 
     results.push({
-      date: dateStr,
+      date:         dateStr,
       label,
-      earliestSlot: to12h(openSlots[0]),
-      totalSlots: openSlots.length,
+      earliestSlot: to12h(slots[0]),
+      totalSlots:   slots.length,
     });
   }
 

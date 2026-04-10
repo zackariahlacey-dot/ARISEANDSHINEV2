@@ -3,12 +3,30 @@
  * Used by both the customer-facing BookingModal and the admin schedule page.
  */
 import { SERVICE_DURATIONS } from "./constants";
+import { MONTHLY_PLAN_DURATIONS } from "./monthlyPlans";
 
 export interface BookingSlot {
   booking_time: string;
   service_name: string | null;
   vehicle_size: string | null;
   status?: string | null;
+  /** Pre-computed total duration (primary + additional vehicles). Used when present. */
+  total_duration_mins?: number | null;
+}
+
+/**
+ * Compute extra minutes added by additional vehicles stored in additional_vehicles_json.
+ * Each vehicle adds max(60, baseDuration - 60) — matching the booking form logic.
+ * Handles both full DB format ({ serviceName, vehicleSize }) and Stripe compact format ({ sn, sz }).
+ */
+export function getAdditionalVehiclesDuration(additionalVehiclesJson: unknown): number {
+  if (!Array.isArray(additionalVehiclesJson) || additionalVehiclesJson.length === 0) return 0;
+  return (additionalVehiclesJson as any[]).reduce((sum: number, av: any) => {
+    const name = av.serviceName ?? av.sn ?? "";
+    const size = av.vehicleSize ?? av.sz ?? "sedan";
+    const base = getDurationMins(name, size);
+    return sum + Math.max(60, base - 60);
+  }, 0);
 }
 
 /** Convert "HH:MM" or "HH:MM:SS" to total minutes from midnight. */
@@ -71,6 +89,10 @@ export function getDurationMins(serviceName: string, vehicleSize: string): numbe
     const mins = parseInt(vehicleSize ?? "60", 10);
     return isNaN(mins) ? 60 : mins;
   }
+  // Monthly subscription plan names are not in SERVICE_DURATIONS
+  if (MONTHLY_PLAN_DURATIONS[serviceName] != null) {
+    return MONTHLY_PLAN_DURATIONS[serviceName];
+  }
   const normalized = SIZE_MAP[vehicleSize?.toLowerCase()] ?? "sedan";
   return (SERVICE_DURATIONS as any)[serviceName]?.[normalized] ?? 180;
 }
@@ -88,7 +110,8 @@ export function checkSlotConflict(
   for (const b of existingBookings) {
     if (b.status === "cancelled" || b.status === "no-show") continue;
     const bStart = timeToMins(b.booking_time);
-    const bDur = getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
+    const bDur = b.total_duration_mins
+      ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
     const bEnd = bStart + bDur;
     // True overlap: intervals touch or cross
     if (newStartMins < bEnd && newEnd > bStart) return true;

@@ -54,6 +54,7 @@ import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
+import { MONTHLY_PLAN_DURATIONS } from "@/lib/monthlyPlans";
 
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
@@ -346,9 +347,19 @@ async function buildSlotsFromHours(
 async function getWORKDAY_END_MIN() { return await timeToMinutes("6:00 PM"); }
 
 function getDurationForService(serviceName: string, vehicleSize: VehicleSizeSlug = "compact"): number {
+  if (!serviceName) return 180;
+  // Personal admin blocks store their duration (minutes) in the vehicle_size field
+  if (serviceName === "Personal Block") {
+    const mins = parseInt(vehicleSize ?? "60", 10);
+    return isNaN(mins) ? 60 : mins;
+  }
+  // Monthly subscription plan names are not in SERVICE_DURATIONS
+  if (MONTHLY_PLAN_DURATIONS[serviceName] != null) {
+    return MONTHLY_PLAN_DURATIONS[serviceName];
+  }
   const service = SERVICE_DURATIONS[serviceName];
-  if (!service) return 120;
-  return service[vehicleSize] ?? 120;
+  if (!service) return 180;
+  return service[vehicleSize] ?? 180;
 }
 
 /**
@@ -370,10 +381,8 @@ async function getAvailableSlots(
   
   const bookedBlocks = await Promise.all((existingBookings ?? []).map(async (b) => {
     const start = await timeToMinutes(b.booking_time);
-    const dur = getDurationForService(
-      b.service_name ?? "",
-      (b.vehicle_size as VehicleSizeSlug) ?? "compact"
-    );
+    const dur = b.total_duration_mins
+      ?? getDurationForService(b.service_name ?? "", (b.vehicle_size as VehicleSizeSlug) ?? "compact");
     return { start, end: start + dur };
   }));
 
@@ -1417,7 +1426,8 @@ export function BookingSection({
       if (blockedDates.includes(dateStr)) return true;
       if (operatingHours.length === 0) return false;
       const row = getResolvedForDate(dateStr);
-      return row?.isClosed ?? false;
+      // No DB row when hours ARE configured → treat as closed (matches slot behavior)
+      return row?.isClosed ?? true;
     },
     [blockedDates, operatingHours.length, getResolvedForDate]
   );

@@ -12,6 +12,7 @@ import { sendBookerAccountInviteEmail } from "@/app/actions/sendBookingEmail";
 import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import { checkAvailability } from "@/app/actions/bookDetailing";
 import { VEHICLE_SIZE_MAP } from "@/lib/constants";
+import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
@@ -34,6 +35,46 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("[webhooks/stripe] Signature verification failed:", err);
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
+
+    // ── Monthly subscription lifecycle events ────────────────────────────
+    if (event.type === "customer.subscription.deleted") {
+      const stripeSub = event.data.object as Stripe.Subscription;
+      const { error } = await createAdminClient()
+        .from("monthly_subscriptions")
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("stripe_subscription_id", stripeSub.id)
+        .neq("status", "cancelled");
+      if (error) console.error("[webhooks/stripe] subscription.deleted DB update failed:", error.message);
+      return NextResponse.json({ received: true });
+    }
+
+    if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const stripeSubId = typeof (invoice as any).subscription === "string" ? (invoice as any).subscription as string : null;
+      if (stripeSubId) {
+        const supabase = createAdminClient();
+        const { data: sub } = await supabase
+          .from("monthly_subscriptions")
+          .select("customer_name, customer_email")
+          .eq("stripe_subscription_id", stripeSubId)
+          .maybeSingle();
+        if (sub?.customer_email) {
+          // Notify subscriber (fire-and-forget)
+          const { Resend } = await import("resend");
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const firstName = (sub.customer_name ?? "there").split(" ")[0];
+          const FROM_ADDR = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+          resend.emails.send({
+            from:    FROM_ADDR,
+            to:      sub.customer_email,
+            subject: "Action needed: monthly plan payment failed — Arise & Shine VT",
+            html: `<p>Hi ${firstName},</p><p>We weren't able to process your monthly detail plan payment. Please update your payment method to keep your plan active.</p><p>Reply to this email or call 802-585-5563 and we'll get it sorted.</p><p>— Arise &amp; Shine VT</p>`,
+            replyTo: "contact@ariseandshinevt.com",
+          }).catch(err => console.error("[webhooks/stripe] payment_failed email error:", err));
+        }
+      }
+      return NextResponse.json({ received: true });
     }
 
     if (event.type !== "checkout.session.completed") {
@@ -139,8 +180,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!m?.profileId || !m?.vehicleId || !m?.serviceId || !m?.bookingDate || !m?.bookingTime) {
-      console.error("[webhooks/stripe] Missing required metadata (profileId, vehicleId, serviceId, bookingDate, bookingTime)");
-      return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+      // Payment link / manual Stripe sessions have no app metadata — acknowledge and ignore
+      return NextResponse.json({ received: true });
     }
 
     // Idempotency: if we already fulfilled this session, skip (prevents double-insert on webhook retry)
@@ -174,12 +215,34 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Customer-initiated booking path ───────────────────────────────────
-    // FINAL AVAILABILITY CHECK: Ensure slot wasn't taken while customer was on Stripe
+
+    // Parse additional vehicles early so combined duration can be used for the
+    // availability check — same formula as BookingModal / bookDetailing.
+    // Note: 'si' (serviceId) was removed from compact format to save space.
+    type CompactAddlVehicle = { sz: string; yr: string; mk: string; md: string; sn: string; sp: number };
+    let compactAddlVehicles: CompactAddlVehicle[] = [];
+    if (m.additionalVehiclesJson) {
+      try { compactAddlVehicles = JSON.parse(m.additionalVehiclesJson); } catch {
+        console.error("[webhooks/stripe] Failed to parse additionalVehiclesJson:", m.additionalVehiclesJson?.slice(0, 100));
+        compactAddlVehicles = [];
+      }
+    }
+
+    // FINAL AVAILABILITY CHECK: Ensure slot wasn't taken while customer was on Stripe.
+    // Use combined duration for multi-vehicle bookings.
+    const webhookPrimarySize = VEHICLE_SIZE_MAP[m.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
+    const webhookPrimaryDur  = getDurationMins(m.serviceName, webhookPrimarySize);
+    const webhookAddlDur     = getAdditionalVehiclesDuration(
+      compactAddlVehicles.map(av => ({ serviceName: av.sn, vehicleSize: av.sz }))
+    );
+    const webhookCombinedDur = webhookPrimaryDur + webhookAddlDur;
+
     const isAvailable = await checkAvailability(
       m.bookingDate,
       m.bookingTime,
       m.serviceName,
-      VEHICLE_SIZE_MAP[m.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium"
+      webhookPrimarySize,
+      webhookCombinedDur > webhookPrimaryDur ? webhookCombinedDur : undefined
     );
 
     if (!isAvailable) {
@@ -191,17 +254,6 @@ export async function POST(req: NextRequest) {
     let addonsJson: { id: string; label: string; price: number }[] | null = null;
     if (m.addonsJson) {
       try { addonsJson = JSON.parse(m.addonsJson); } catch { addonsJson = null; }
-    }
-
-    // Parse additional vehicles from Stripe metadata (compact format)
-    // Note: 'si' (serviceId) was removed from compact format to save space — not stored.
-    type CompactAddlVehicle = { sz: string; yr: string; mk: string; md: string; sn: string; sp: number };
-    let compactAddlVehicles: CompactAddlVehicle[] = [];
-    if (m.additionalVehiclesJson) {
-      try { compactAddlVehicles = JSON.parse(m.additionalVehiclesJson); } catch {
-        console.error("[webhooks/stripe] Failed to parse additionalVehiclesJson:", m.additionalVehiclesJson?.slice(0, 100));
-        compactAddlVehicles = [];
-      }
     }
 
     // Rebuild vehicle DB rows for additional vehicles using pre-created IDs
@@ -230,8 +282,9 @@ export async function POST(req: NextRequest) {
         booking_date: m.bookingDate,
         booking_time: m.bookingTime,
         status: "confirmed",
-        total_price: Number(m.totalPrice) || 0,
-        notes: m.notes ?? null,
+        total_price:     Number(m.totalPrice) || 0,
+        notes:           m.notes ?? null,
+        distance_miles:  m.distanceMiles ? Number(m.distanceMiles) : null,
         // ── Direct lead capture snapshot ──────────────────────────────────
         customer_name:   m.customerName ?? null,
         customer_email:  m.customerEmail ?? null,

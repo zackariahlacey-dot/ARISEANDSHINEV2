@@ -7,6 +7,7 @@ import { sendBookingEmail, sendBookerAccountInviteEmail } from "@/app/actions/se
 import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import Stripe from "stripe";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
+import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
 
@@ -115,22 +116,23 @@ export async function checkAvailability(
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, services(name), vehicles(size)")
+    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, services(name), vehicles(size)")
     .eq("booking_date", date)
-    .neq("status", "cancelled");
+    .neq("status", "cancelled")
+    .neq("status", "no-show");
 
   if (!existing || existing.length === 0) return true;
 
   const newStart = await timeToMinutes(time);
-  const newDur = customDurationMins ?? SERVICE_DURATIONS[serviceName]?.[size] ?? 180;
+  const newDur = customDurationMins ?? getDurationMins(serviceName, size);
   const newEnd = newStart + newDur;
 
   for (const b of existing) {
     const bStart = await timeToMinutes(b.booking_time);
-    // Use direct column first, fall back to join
-    const bName = (b as any).service_name ?? (b.services as any)?.name ?? "Interior Detail";
-    const bSize = (b as any).vehicle_size ?? (b.vehicles as any)?.size ?? "medium";
-    const bDur = SERVICE_DURATIONS[bName]?.[bSize] ?? 180;
+    const bName = (b as any).service_name ?? (b.services as any)?.name ?? "";
+    const bSize = (b as any).vehicle_size ?? (b.vehicles as any)?.size ?? "sedan";
+    const bDur  = getDurationMins(bName, bSize)
+                + getAdditionalVehiclesDuration((b as any).additional_vehicles_json);
     const bEnd = bStart + bDur;
     if (newStart < bEnd && newEnd > bStart) return false;
   }
