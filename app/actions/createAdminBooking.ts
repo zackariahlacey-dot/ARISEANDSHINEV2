@@ -136,17 +136,29 @@ export async function createAdminBooking(
   ].filter(Boolean).join("\n\n");
 
   // 3. Insert booking
+  const customerName = [payload.firstName, payload.lastName].filter(Boolean).join(" ") || "Customer";
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
     .insert({
-      user_id: profileId,
-      vehicle_id: vehicle.id,
-      service_id: payload.serviceId,
-      booking_date: payload.bookingDate,
-      booking_time: await to24h(payload.bookingTime),
+      user_id:         profileId,
+      vehicle_id:      vehicle.id,
+      service_id:      payload.serviceId,
+      booking_date:    payload.bookingDate,
+      booking_time:    await to24h(payload.bookingTime),
       status,
-      total_price: payload.totalPrice,
-      notes: notesBody,
+      total_price:     payload.totalPrice,
+      notes:           notesBody,
+      // ── Direct lead capture snapshot ─────────────────────────────────
+      customer_name:   customerName,
+      customer_email:  payload.email.trim() || null,
+      customer_phone:  phoneDigits,
+      service_address: payload.serviceAddress ?? null,
+      vehicle_make:    payload.vehicleMake.trim() || null,
+      vehicle_model:   payload.vehicleModel.trim() || null,
+      vehicle_year:    payload.vehicleYear || null,
+      vehicle_size:    VEHICLE_SIZE_MAP[payload.vehicleSize] ?? null,
+      service_name:    payload.serviceName,
+      distance_miles:  distanceMiles > 0 ? distanceMiles : null,
     })
     .select("id")
     .single();
@@ -156,7 +168,6 @@ export async function createAdminBooking(
     return { success: false, error: "Could not create booking." };
   }
 
-  const customerName = [payload.firstName, payload.lastName].filter(Boolean).join(" ") || "Customer";
   const bookingTime12 = payload.bookingTime;
 
   // 4a. Stripe Invoice
