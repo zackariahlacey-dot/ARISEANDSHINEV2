@@ -1466,3 +1466,103 @@ export async function sendPriceUpdatedEmail(data: {
     html,
   }).catch(e => console.error("[email] sendPriceUpdatedEmail error:", e));
 }
+
+// ─── Win-back email (30 / 60 / 90 day lapsed customers) ─────────────────────
+
+const WINBACK_COPY: Record<30 | 60 | 90, { subject: string; headline: string; sub: string; cta: string; offer: string }> = {
+  30: {
+    subject:  "Still thinking about that next detail?",
+    headline: "Your car could use some love ✨",
+    sub:      "It's been about a month since your last detail with us. Ready to book again?",
+    cta:      "Book Now",
+    offer:    "Use code <strong>RETURN10</strong> for $10 off your next service.",
+  },
+  60: {
+    subject:  "Two months already? Let's get you back on the schedule",
+    headline: "It's been a while — we miss you!",
+    sub:      "Your car deserves to look its best. Book a detail this week and we'll make it worth your while.",
+    cta:      "Schedule My Detail",
+    offer:    "Use code <strong>RETURN15</strong> for $15 off any detail service.",
+  },
+  90: {
+    subject:  "3 months since your last detail — come back for $20 off",
+    headline: "Your car hasn't been this dirty in a while 😄",
+    sub:      "We'd love to earn your business back. Book any detail service and save $20 — just our way of saying we appreciate you.",
+    cta:      "Claim My $20 Off",
+    offer:    "Use code <strong>RETURN20</strong> for $20 off — expires in 7 days.",
+  },
+};
+
+function winbackEmailHtml(name: string, days: 30 | 60 | 90): string {
+  const copy = WINBACK_COPY[days];
+  const n = esc(name);
+  const bookingUrl = "https://ariseandshinevt.com";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${copy.subject}</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td align="center" style="padding:40px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+        <tr>
+          <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+            ${logo}
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+            <h1 style="color:#f59e0b;font-size:26px;font-weight:900;margin:0 0 10px;letter-spacing:-0.5px;">
+              ${esc(copy.headline)}
+            </h1>
+            <p style="color:#a1a1aa;font-size:15px;margin:0;line-height:1.6;">
+              Hi ${n} — ${esc(copy.sub)}
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#18181b;padding:32px 40px;text-align:center;">
+            <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px 24px;margin-bottom:28px;text-align:left;">
+              <p style="color:#f59e0b;font-size:13px;font-weight:700;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.08em;">Special Offer</p>
+              <p style="color:#e4e4e7;font-size:14px;margin:0;line-height:1.6;">${copy.offer}</p>
+            </div>
+            <a href="${bookingUrl}" style="display:inline-block;background:#f59e0b;color:#000000;text-decoration:none;font-size:15px;font-weight:900;padding:14px 36px;border-radius:10px;letter-spacing:0.02em;">
+              ${esc(copy.cta)}
+            </a>
+            <p style="color:#52525b;font-size:12px;margin:20px 0 0;">
+              Questions? Reply to this email or text us anytime.
+            </p>
+          </td>
+        </tr>
+        ${footer}
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+export async function sendWinbackEmail(data: {
+  customerName: string;
+  customerEmail: string;
+  daysSince: 30 | 60 | 90;
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set — skipping win-back email.");
+    return;
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const copy = WINBACK_COPY[data.daysSince];
+  const result = await resend.emails.send({
+    from:    FROM_ADDRESS,
+    to:      data.customerEmail,
+    replyTo: REPLY_TO,
+    subject: copy.subject,
+    html:    winbackEmailHtml(data.customerName, data.daysSince),
+  });
+  if (result.error) {
+    console.error("[email] winback send failed:", result.error);
+  }
+}

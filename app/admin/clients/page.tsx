@@ -16,7 +16,7 @@ import {
   Loader2, Send, X, ArrowLeft, UserCheck, UserX, CalendarPlus, Repeat,
 } from "lucide-react";
 import { sendMonthlyPlanInvite } from "@/app/actions/monthlySubscriptions";
-import { format, differenceInMonths, parseISO } from "date-fns";
+import { format, differenceInMonths, differenceInDays, parseISO } from "date-fns";
 import { useServices } from "@/hooks/use-admin-data";
 import { NewBookingForm, type ClientPrefillForBooking } from "@/app/admin/schedule/page";
 import { cn } from "@/lib/utils";
@@ -90,6 +90,7 @@ export default function ClientsPage() {
   const [search, setSearch]       = useState("");
   const [sort, setSort]           = useState<"recent" | "ltv" | "az">("recent");
   const [accountFilter, setAccountFilter] = useState<"all" | "signed_up" | "guest">("all");
+  const [lapsedFilter, setLapsedFilter]   = useState<"all" | "30" | "60" | "90">("all");
   const [activeClient, setActiveClient]   = useState<any>(null);
   const [clientModalView, setClientModalView] = useState<"profile" | "book">("profile");
   const [clientTab, setClientTab]         = useState<"overview" | "history">("overview");
@@ -117,6 +118,12 @@ export default function ClientsPage() {
       // Account type filter
       if (accountFilter === "signed_up" && !c._is_signed_up) return false;
       if (accountFilter === "guest" && c._is_signed_up) return false;
+      // Lapsed filter — only show clients who haven't booked in N+ days
+      if (lapsedFilter !== "all") {
+        if (!c._lastService) return false;
+        const days = differenceInDays(new Date(), parseISO(c._lastService + "T12:00:00"));
+        if (days < Number(lapsedFilter)) return false;
+      }
       // Search
       if (!q) return true;
       const name = (c._display_name ?? `${c.first_name ?? ""} ${c.last_name ?? ""}`).toLowerCase();
@@ -379,6 +386,30 @@ export default function ClientsPage() {
                   {f.id === "signed_up"
                     ? clients.filter((c: any) => c._is_signed_up).length
                     : clients.filter((c: any) => !c._is_signed_up).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Lapsed filter */}
+        <div className="flex gap-1.5">
+          {([
+            { id: "all", label: "All" },
+            { id: "30",  label: "30d+" },
+            { id: "60",  label: "60d+" },
+            { id: "90",  label: "90d+" },
+          ] as const).map(f => (
+            <button key={f.id} onClick={() => setLapsedFilter(f.id)}
+              className={cn("flex-1 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all",
+                lapsedFilter === f.id ? "bg-orange-500/20 border-orange-500/40 text-orange-400" : "border-white/[0.08] text-zinc-600")}>
+              {f.label}
+              {clients && f.id !== "all" && (
+                <span className="ml-1 opacity-60">
+                  {clients.filter((c: any) => {
+                    if (!c._lastService) return false;
+                    return differenceInDays(new Date(), parseISO(c._lastService + "T12:00:00")) >= Number(f.id);
+                  }).length}
                 </span>
               )}
             </button>
