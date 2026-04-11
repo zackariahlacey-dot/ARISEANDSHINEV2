@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { MapPin, RefreshCw, Download, Loader2, AlertCircle } from "lucide-react";
-import { getMileageLog, backfillDistances, type MileageEntry } from "@/app/actions/taxActions";
+import { getMileageLog, backfillDistances, recoverAddressesFromNotes, type MileageEntry } from "@/app/actions/taxActions";
 import { formatMiles } from "@/lib/mileage";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,8 @@ export function MileageTab() {
   const [loading,      setLoading]      = useState(true);
   const [backfilling,  setBackfilling]  = useState(false);
   const [backfillMsg,  setBackfillMsg]  = useState<string | null>(null);
+  const [recovering,   setRecovering]   = useState(false);
+  const [recoverMsg,   setRecoverMsg]   = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -48,6 +50,26 @@ export function MileageTab() {
   // Missing = no address stored OR address present but distance not yet computed.
   const totalMiles   = entries.reduce((s, e) => s + (e.distance_miles ?? 0), 0);
   const missingCount = entries.filter(e => !e.distance_miles).length;
+
+  async function handleRecover() {
+    setRecovering(true);
+    setRecoverMsg(null);
+    try {
+      const result = await recoverAddressesFromNotes();
+      if (result.error) {
+        setRecoverMsg(`Error: ${result.error}`);
+      } else {
+        setRecoverMsg(result.recovered > 0
+          ? `Recovered ${result.recovered} address${result.recovered !== 1 ? "es" : ""} from notes`
+          : "No recoverable addresses found");
+      }
+      await load();
+    } catch (err) {
+      setRecoverMsg(`Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setRecovering(false);
+    }
+  }
 
   async function handleBackfill() {
     setBackfilling(true);
@@ -122,6 +144,23 @@ export function MileageTab() {
           <p className="text-[10px] text-zinc-600">no distance</p>
         </div>
       </div>
+
+      {/* Recover addresses from notes (one-time) */}
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+        <MapPin size={14} className="text-zinc-500 shrink-0" />
+        <p className="flex-1 text-xs text-zinc-500">
+          Recover missing addresses from booking notes (admin-created bookings).
+        </p>
+        <button
+          onClick={handleRecover}
+          disabled={recovering}
+          className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 py-1.5 text-xs font-bold text-zinc-400 hover:text-white transition-colors disabled:opacity-50 shrink-0"
+        >
+          {recovering ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+          {recovering ? "Scanning…" : "Recover"}
+        </button>
+      </div>
+      {recoverMsg && <p className="text-center text-xs text-zinc-500">{recoverMsg}</p>}
 
       {/* Backfill */}
       {missingCount > 0 && (

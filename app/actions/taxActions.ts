@@ -111,6 +111,40 @@ async function batchGetDistances(addresses: string[]): Promise<(number | null)[]
   }
 }
 
+/**
+ * One-time recovery: bookings created via the admin "Send Invoice" path before
+ * 2026-04-10 never had service_address persisted to the column even though the
+ * address was written into the notes field as "📍 Service Location: <addr>".
+ * This function parses those notes and backfills the column.
+ */
+export async function recoverAddressesFromNotes(): Promise<{ recovered: number; error?: string }> {
+  const supabase = createAdminClient();
+
+  // Fetch bookings that are missing a service_address but have notes containing the emoji marker.
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, notes")
+    .is("service_address", null)
+    .ilike("notes", "%📍 Service Location:%");
+
+  if (error) return { recovered: 0, error: error.message };
+  if (!data?.length) return { recovered: 0 };
+
+  let recovered = 0;
+  for (const row of data) {
+    const match = (row.notes as string).match(/📍 Service Location:\s*(.+?)(?:\n|$)/);
+    if (!match?.[1]?.trim()) continue;
+    const address = match[1].trim();
+    const { error: upErr } = await supabase
+      .from("bookings")
+      .update({ service_address: address })
+      .eq("id", row.id);
+    if (!upErr) recovered++;
+  }
+
+  return { recovered };
+}
+
 export async function backfillDistances(): Promise<{ processed: number; failed: number; remaining: number; error?: string }> {
   const supabase = createAdminClient();
 
