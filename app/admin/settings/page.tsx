@@ -13,13 +13,14 @@ import {
 } from "@/hooks/use-admin-data";
 import {
   getDiagnostics, sendTestEmailAction, triggerTestEmail,
-  runTestBookingAction,
+  runTestBookingAction, getCouponStats, toggleCouponAction, deleteCouponAction,
 } from "@/app/actions/adminActions";
+import { createCoupon } from "@/app/actions/createCoupon";
 import { useToast } from "@/components/admin/Toast";
 import {
   Clock, CalendarOff, Mail, Server, Activity, Check,
   AlertTriangle, CheckCircle2, Loader2, ChevronDown, ChevronUp,
-  Send, Target, Zap, RefreshCw, FlaskConical, X,
+  Send, Target, Zap, RefreshCw, FlaskConical, X, Ticket, Power, Trash2, Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -387,6 +388,173 @@ export default function SettingsPage() {
           )}
         </div>
       </Section>
+
+      {/* ── Discount Codes ────────────────────────────────────────────────── */}
+      <CouponsSection />
+    </div>
+  );
+}
+
+// ── Coupons section (isolated to keep settings page clean) ───────────────────
+function CouponsSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [open, setOpen] = useState(false);
+
+  const { data: coupons, isLoading } = useQuery({
+    queryKey: ["admin", "coupons"],
+    queryFn: getCouponStats,
+  });
+
+  const [code,        setCode]        = useState("");
+  const [type,        setType]        = useState<"amount" | "percentage">("amount");
+  const [value,       setValue]       = useState("");
+  const [creating,    setCreating]    = useState(false);
+  const [togglingId,  setTogglingId]  = useState<string | null>(null);
+  const [deletingId,  setDeletingId]  = useState<string | null>(null);
+
+  async function handleCreate() {
+    const v = Number(value);
+    if (!code.trim()) { toast("Enter a code", "error"); return; }
+    if (!v || v <= 0) { toast("Enter a valid discount value", "error"); return; }
+    setCreating(true);
+    try {
+      const r = await createCoupon({ code, discountType: type, discountValue: v, isActive: true });
+      if (!r.success) { toast(r.error ?? "Failed", "error"); }
+      else {
+        toast(`Code ${r.coupon?.code} created!`);
+        setCode(""); setValue("");
+        queryClient.invalidateQueries({ queryKey: ["admin", "coupons"] });
+      }
+    } catch (e: any) { toast(e.message ?? "Error", "error"); }
+    setCreating(false);
+  }
+
+  async function handleToggle(id: string, current: boolean) {
+    setTogglingId(id);
+    try {
+      await toggleCouponAction(id, !current);
+      queryClient.invalidateQueries({ queryKey: ["admin", "coupons"] });
+    } catch { toast("Failed to update", "error"); }
+    setTogglingId(null);
+  }
+
+  async function handleDelete(id: string, code: string) {
+    if (!confirm(`Delete code "${code}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await deleteCouponAction(id);
+      toast(`Deleted ${code}`);
+      queryClient.invalidateQueries({ queryKey: ["admin", "coupons"] });
+    } catch { toast("Failed to delete", "error"); }
+    setDeletingId(null);
+  }
+
+  // Reuse the Section styling via a plain card
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(p => !p)}
+        className="w-full flex items-center justify-between px-4 py-4 text-left"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-amber-500"><Ticket size={16} /></span>
+          <span className="text-sm font-black uppercase tracking-widest">Discount Codes</span>
+        </div>
+        {open ? <ChevronUp size={15} className="text-zinc-600" /> : <ChevronDown size={15} className="text-zinc-600" />}
+      </button>
+
+      {open && <div className="px-4 pb-4 border-t border-white/[0.04] pt-4 space-y-4">
+        {/* Create new code */}
+        <div className="space-y-2.5">
+          <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">New Code</p>
+          <input
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            placeholder="e.g. SUMMER20"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50 font-mono tracking-wider"
+          />
+          <div className="flex gap-2">
+            {/* Type toggle */}
+            <div className="flex rounded-xl border border-white/[0.08] overflow-hidden shrink-0">
+              <button
+                onClick={() => setType("amount")}
+                className={cn("px-3 py-2 text-xs font-black transition-colors", type === "amount" ? "bg-amber-500 text-black" : "text-zinc-500 hover:text-white")}
+              >$ Off</button>
+              <button
+                onClick={() => setType("percentage")}
+                className={cn("px-3 py-2 text-xs font-black transition-colors", type === "percentage" ? "bg-amber-500 text-black" : "text-zinc-500 hover:text-white")}
+              >% Off</button>
+            </div>
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-bold">
+                {type === "amount" ? "$" : "%"}
+              </span>
+              <input
+                type="number"
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                placeholder={type === "amount" ? "10" : "15"}
+                min="1"
+                max={type === "percentage" ? "100" : undefined}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="flex items-center gap-1.5 bg-amber-500 text-black text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60 shrink-0"
+            >
+              {creating ? <Loader2 className="animate-spin" size={13} /> : <><Plus size={12} /> Create</>}
+            </button>
+          </div>
+        </div>
+
+        {/* Existing codes */}
+        <div className="space-y-1.5">
+          {isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-amber-500" size={18} /></div>
+          ) : !coupons?.length ? (
+            <p className="text-xs text-zinc-600 py-2">No discount codes yet.</p>
+          ) : coupons.map((c: any) => (
+            <div key={c.id} className={cn(
+              "flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-opacity",
+              c.is_active ? "border-white/[0.06] bg-white/[0.02]" : "border-white/[0.03] bg-white/[0.01] opacity-50"
+            )}>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-white font-mono tracking-wider">{c.code}</p>
+                <p className="text-[10px] text-zinc-500">
+                  {c.discount_amount != null ? `$${c.discount_amount} off` : `${c.discount_percentage}% off`}
+                  {c.usage_count > 0 && ` · used ${c.usage_count}×`}
+                </p>
+              </div>
+              <span className={cn(
+                "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                c.is_active ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-600"
+              )}>
+                {c.is_active ? "Active" : "Off"}
+              </span>
+              <button
+                onClick={() => handleToggle(c.id, c.is_active)}
+                disabled={togglingId === c.id}
+                title={c.is_active ? "Deactivate" : "Activate"}
+                className="p-1.5 rounded-lg hover:bg-white/[0.06] text-zinc-500 hover:text-white transition-all"
+              >
+                {togglingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Power size={13} />}
+              </button>
+              <button
+                onClick={() => handleDelete(c.id, c.code)}
+                disabled={deletingId === c.id}
+                title="Delete"
+                className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-600 hover:text-red-400 transition-all"
+              >
+                {deletingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>}
     </div>
   );
 }
