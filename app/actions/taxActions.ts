@@ -263,6 +263,13 @@ export async function uploadReceipt(
   const ext = file.name.split(".").pop() ?? "jpg";
   const storageName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
+  // Create the bucket if it doesn't exist yet (first-time setup).
+  const { error: bucketErr } = await supabase.storage.createBucket("receipts", { public: true });
+  if (bucketErr && !bucketErr.message.toLowerCase().includes("already exists")) {
+    console.error("[uploadReceipt] bucket create error:", bucketErr.message);
+    return { ok: false, error: bucketErr.message };
+  }
+
   const arrayBuffer = await file.arrayBuffer();
   const { error } = await supabase.storage
     .from("receipts")
