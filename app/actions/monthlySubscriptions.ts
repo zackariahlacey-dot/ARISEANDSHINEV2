@@ -9,6 +9,7 @@ import { Resend } from "resend";
 import { getMonthlyPlanInviteHtml } from "@/emails/MonthlyPlanInvite";
 import { getMonthlyPlanConfirmationHtml } from "@/emails/MonthlyPlanConfirmation";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
+import { getMonthlyAppointmentConfirmationHtml } from "@/emails/MonthlyAppointmentConfirmation";
 
 const FROM  = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
 const OWNER = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
@@ -482,7 +483,7 @@ export async function getSchedulePageData(token: string): Promise<SchedulePageDa
   };
 }
 
-async function getAvailableDaysForMonth(month: string, planId: string): Promise<ScheduleDay[]> {
+export async function getAvailableDaysForMonth(month: string, planId: string): Promise<ScheduleDay[]> {
   const { MONTHLY_PLAN_DURATIONS } = await import("@/lib/monthlyPlans");
   const planNames: Record<string, string> = {
     interior_refresh: "Interior Refresh",
@@ -510,19 +511,26 @@ async function getAvailableDaysForMonth(month: string, planId: string): Promise<
 
   const { data: monthBookingsRaw } = await supabase
     .from("bookings")
-    .select("booking_date, booking_time, service_name, vehicle_size, status")
+    .select("booking_date, booking_time, service_name, vehicle_size, status, services(name)")
     .gte("booking_date", monthStart)
     .lte("booking_date", monthEnd)
-    .neq("status", "cancelled");
+    .neq("status", "cancelled")
+    .neq("status", "no-show");
 
-  // Group bookings by date
+  // Group bookings by date — prefer direct service_name, fall back to services join
   const bookingsByDate = new Map<string, BookingSlot[]>();
   for (const b of monthBookingsRaw ?? []) {
     const key = b.booking_date as string;
     if (!bookingsByDate.has(key)) bookingsByDate.set(key, []);
+    const directName = (b as any).service_name as string | null | undefined;
+    const s = (b as any).services;
+    const joinedName =
+      s == null ? null
+      : Array.isArray(s) ? (s[0] as { name?: string } | undefined)?.name ?? null
+      : (s as { name?: string }).name ?? null;
     bookingsByDate.get(key)!.push({
       booking_time: b.booking_time ?? "00:00",
-      service_name: b.service_name ?? null,
+      service_name: directName ?? joinedName,
       vehicle_size: b.vehicle_size ?? null,
       status:       b.status ?? "confirmed",
     });
@@ -641,6 +649,14 @@ export async function submitSchedulePick(params: {
   const { to24h } = await import("@/app/actions/bookDetailing");
   const bookingTime24 = await to24h(params.time12);
 
+  // Calculate driving distance for mileage tracking
+  let distanceMiles: number | null = null;
+  if (sub.service_address) {
+    const { getTravelFee } = await import("@/lib/travelFee");
+    const dist = await getTravelFee(sub.service_address);
+    if (dist.ok && dist.distanceMiles > 0) distanceMiles = dist.distanceMiles;
+  }
+
   // Create booking
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
@@ -660,7 +676,8 @@ export async function submitSchedulePick(params: {
       vehicle_year:    sub.vehicle_year,
       vehicle_size:    sub.vehicle_size,
       service_name:    sub.plan_name,
-      notes:           `Monthly plan: ${sub.plan_name} (${sub.payment_method === "cash" ? "pay at arrival" : "Stripe billing"})`,
+      notes:          `Monthly plan: ${sub.plan_name} (${sub.payment_method === "cash" ? "pay at arrival" : "Stripe billing"})`,
+      distance_miles: distanceMiles,
     })
     .select("id")
     .single();
@@ -686,35 +703,52 @@ export async function submitSchedulePick(params: {
     console.error("[submitSchedulePick] pick upsert error:", pickErr);
   }
 
-  // Send customer a confirmation email for their scheduled pick
-  try {
-    const resend    = new Resend(process.env.RESEND_API_KEY);
+  // Award loyalty points: 1 pt per $1 of plan price
+  if (profileId && sub.plan_price > 0) {
+    const pts = Math.floor(sub.plan_price);
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("reward_points, lifetime_points")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (prof && typeof prof.reward_points === "number") {
+      await supabase
+        .from("profiles")
+        .update({
+          reward_points:   prof.reward_points   + pts,
+          lifetime_points: (prof.lifetime_points ?? 0) + pts,
+        })
+        .eq("id", profileId);
+      await supabase.from("point_transactions").insert({
+        user_id:     profileId,
+        amount:      pts,
+        description: `Earned from ${sub.plan_name} (monthly)`,
+      });
+    }
+  }
+
+  // Send confirmation email to customer
+  if (sub.customer_email) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const firstName = (sub.customer_name ?? "there").trim().split(/\s+/)[0];
     const dateFormatted = new Date(params.date + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric",
     });
-    await resend.emails.send({
+    resend.emails.send({
       from:    FROM,
       to:      sub.customer_email,
-      subject: `Your detail is scheduled — ${dateFormatted} at ${params.time12}`,
-      html: `
-        <div style="background:#09090B;color:#fff;font-family:sans-serif;padding:40px 24px;max-width:560px;margin:0 auto;border-radius:16px">
-          <p style="font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#D4AF37;margin:0 0 8px">Booking Confirmed</p>
-          <h1 style="font-size:26px;font-weight:900;color:#fff;margin:0 0 20px">You're scheduled, ${firstName}!</h1>
-          <div style="background:#18181B;border-radius:12px;padding:20px;margin-bottom:20px">
-            <p style="margin:0 0 8px;font-size:13px;color:#A1A1AA">📅 <strong style="color:#fff">${dateFormatted}</strong> at <strong style="color:#fff">${params.time12}</strong></p>
-            <p style="margin:0 0 8px;font-size:13px;color:#A1A1AA">🚗 ${sub.vehicle_make || ""} ${sub.vehicle_model || ""}</p>
-            ${sub.service_address ? `<p style="margin:0;font-size:13px;color:#A1A1AA">📍 ${sub.service_address}</p>` : ""}
-          </div>
-          <p style="font-size:13px;color:#71717A;margin:0 0 16px">
-            ${sub.payment_method === "cash" ? "💵 Cash plan — please have payment ready at arrival." : "✅ Your card will be billed automatically each month."}
-          </p>
-          <p style="font-size:12px;color:#52525B;margin:0">Questions? Reply to this email or call <strong style="color:#D4AF37">802-585-5563</strong>.</p>
-        </div>`,
+      subject: `Confirmed: ${dateFormatted} at ${params.time12} — Arise & Shine VT`,
+      html:    getMonthlyAppointmentConfirmationHtml({
+        firstName,
+        planName:       sub.plan_name,
+        date:           dateFormatted,
+        time:           params.time12,
+        serviceAddress: sub.service_address ?? "",
+        paymentMethod:  sub.payment_method === "cash" ? "cash" : "stripe",
+        reschedulePath: "/protected",
+      }),
       replyTo: "contact@ariseandshinevt.com",
-    });
-  } catch (emailErr) {
-    console.error("[submitSchedulePick] confirmation email error:", emailErr);
+    }).catch(err => console.error("[submitSchedulePick] confirmation email error:", err));
   }
 
   return { ok: true };
@@ -769,19 +803,57 @@ export async function getSchedulePageDataBySubId(
   };
 }
 
-// ── Dashboard: get active subscription for a user ────────────────────────────
+// ── Dashboard: get active subscription + this month's pick ───────────────────
 
 export async function getMyActiveSubscription(userId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("monthly_subscriptions")
-    .select("id, plan_name, plan_price, payment_method, status, signup_date, vehicle_make, vehicle_model")
+    .select("id, plan_id, plan_name, plan_price, payment_method, status, signup_date, vehicle_make, vehicle_model")
     .eq("profile_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data;
+  if (!data) return null;
+
+  // Scheduling target month: current if on or before the 25th, otherwise next month.
+  // Must match the ≤25 cutoff used in sendFirstMonthScheduleReminder.
+  const now = new Date();
+  const useDate = now.getDate() <= 25
+    ? new Date(now.getFullYear(), now.getMonth(), 1)
+    : new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const scheduleMonth = `${useDate.getFullYear()}-${String(useDate.getMonth() + 1).padStart(2, "0")}`;
+
+  const { data: pick } = await supabase
+    .from("monthly_schedule_picks")
+    .select("chosen_date, chosen_time, status, month")
+    .eq("subscription_id", data.id)
+    .eq("month", scheduleMonth)
+    .maybeSingle();
+
+  return { ...data, thisMonthPick: pick ?? null, scheduleMonth };
+}
+
+// ── Dashboard: past monthly visit history ─────────────────────────────────────
+
+export async function getMyMonthlyHistory(userId: string) {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("bookings")
+    .select("id, booking_date, booking_time, service_name, total_price, status")
+    .eq("user_id", userId)
+    .ilike("notes", "%Monthly plan:%")
+    .order("booking_date", { ascending: false })
+    .limit(24);
+  return (data ?? []) as {
+    id: string;
+    booking_date: string;
+    booking_time: string | null;
+    service_name: string | null;
+    total_price: number;
+    status: string;
+  }[];
 }
 
 // ── Cancel subscription ───────────────────────────────────────────────────────

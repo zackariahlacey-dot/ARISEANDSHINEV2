@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 import { signScheduleToken } from "@/lib/monthlyToken";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
+import { getMonthlyAppointmentConfirmationHtml } from "@/emails/MonthlyAppointmentConfirmation";
 import Stripe from "stripe";
 
 const FROM  = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
@@ -55,9 +56,41 @@ export async function updateSubscriberDetails(
     plan_id?: string;
     plan_name?: string;
     plan_price?: number;
+    admin_notes?: string;
   }
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = createAdminClient();
+
+  // If plan price is changing, sync to Stripe
+  if (updates.plan_price !== undefined && process.env.STRIPE_SECRET_KEY) {
+    const { data: sub } = await supabase
+      .from("monthly_subscriptions")
+      .select("stripe_subscription_id, plan_name")
+      .eq("id", subscriptionId)
+      .maybeSingle();
+    if (sub?.stripe_subscription_id) {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" });
+      const planName = updates.plan_name ?? sub.plan_name ?? "Monthly Detail Plan";
+      await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
+        .then(async (stripeSub) => {
+          const itemId = stripeSub.items.data[0]?.id;
+          if (!itemId) return;
+          await stripe.subscriptions.update(sub.stripe_subscription_id!, {
+            items: [{
+              id: itemId,
+              price_data: {
+                currency: "usd",
+                recurring: { interval: "month" },
+                unit_amount: Math.round(updates.plan_price! * 100),
+              } as any,
+            }],
+            proration_behavior: "none",
+          });
+        })
+        .catch(err => console.error("[updateSubscriberDetails] Stripe update failed:", err));
+    }
+  }
+
   const { error } = await supabase
     .from("monthly_subscriptions")
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -74,17 +107,47 @@ export async function setSubscriptionStatus(
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = createAdminClient();
 
-  // If cancelling, also cancel Stripe subscription
-  if (status === "cancelled") {
+  // Sync pause / resume / cancel to Stripe
+  if (status === "cancelled" || status === "paused" || status === "active") {
     const { data: sub } = await supabase
       .from("monthly_subscriptions")
-      .select("stripe_subscription_id, profile_id")
+      .select("stripe_subscription_id, profile_id, status")
       .eq("id", subscriptionId)
       .maybeSingle();
 
     if (sub?.stripe_subscription_id && process.env.STRIPE_SECRET_KEY) {
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" });
-      await stripe.subscriptions.cancel(sub.stripe_subscription_id).catch(console.error);
+      if (status === "cancelled") {
+        await stripe.subscriptions.cancel(sub.stripe_subscription_id).catch(console.error);
+      } else if (status === "paused") {
+        await stripe.subscriptions.update(sub.stripe_subscription_id, {
+          pause_collection: { behavior: "void" },
+        }).catch(console.error);
+      } else if (status === "active" && sub.status === "paused") {
+        // Resuming from pause
+        await stripe.subscriptions.update(sub.stripe_subscription_id, {
+          pause_collection: "",
+        } as any).catch(console.error);
+      }
+    }
+
+    if (status !== "cancelled") {
+      const { error } = await supabase
+        .from("monthly_subscriptions")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", subscriptionId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+
+    // For cancel path, continue below to also cancel future bookings
+    if (!sub) {
+      const { error } = await supabase
+        .from("monthly_subscriptions")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", subscriptionId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
     }
 
     // Cancel future bookings
@@ -175,9 +238,32 @@ export async function adminSetSchedulePick(params: {
 
   if (!sub) return { ok: false, error: "Subscription not found." };
 
+  // Cancel existing booking for this month if rescheduling
+  const { data: existingPick } = await supabase
+    .from("monthly_schedule_picks")
+    .select("booking_id")
+    .eq("subscription_id", params.subscriptionId)
+    .eq("month", params.month)
+    .maybeSingle();
+
+  if (existingPick?.booking_id) {
+    await supabase
+      .from("bookings")
+      .update({ status: "cancelled" })
+      .eq("id", existingPick.booking_id);
+  }
+
   // Convert 12h to 24h
   const { to24h } = await import("@/app/actions/bookDetailing");
   const time24 = await to24h(params.time12);
+
+  // Calculate driving distance for mileage tracking
+  let distanceMiles: number | null = null;
+  if (sub.service_address) {
+    const { getTravelFee } = await import("@/lib/travelFee");
+    const dist = await getTravelFee(sub.service_address);
+    if (dist.ok && dist.distanceMiles > 0) distanceMiles = dist.distanceMiles;
+  }
 
   // Create booking
   const { data: booking, error: bookingErr } = await supabase
@@ -198,7 +284,8 @@ export async function adminSetSchedulePick(params: {
       vehicle_year:    sub.vehicle_year,
       vehicle_size:    sub.vehicle_size,
       service_name:    sub.plan_name,
-      notes:           `Monthly plan: ${sub.plan_name} (${sub.payment_method === "cash" ? "pay at arrival" : "Stripe billing"}) — booked by admin`,
+      notes:          `Monthly plan: ${sub.plan_name} (${sub.payment_method === "cash" ? "pay at arrival" : "Stripe billing"}) — booked by admin`,
+      distance_miles: distanceMiles,
     })
     .select("id")
     .single();
@@ -215,5 +302,126 @@ export async function adminSetSchedulePick(params: {
     booking_id:      booking.id,
   }, { onConflict: "subscription_id,month" });
 
+  // Notify customer — fire-and-forget
+  if (sub.customer_email) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const firstName = (sub.customer_name ?? "there").trim().split(/\s+/)[0];
+    const dateFormatted = new Date(params.date + "T12:00:00").toLocaleDateString("en-US", {
+      weekday: "long", month: "long", day: "numeric",
+    });
+    resend.emails.send({
+      from:    FROM,
+      to:      sub.customer_email,
+      subject: `Confirmed: ${dateFormatted} at ${params.time12} — Arise & Shine VT`,
+      html:    getMonthlyAppointmentConfirmationHtml({
+        firstName,
+        planName:       sub.plan_name,
+        date:           dateFormatted,
+        time:           params.time12,
+        serviceAddress: sub.service_address ?? "",
+        paymentMethod:  sub.payment_method === "cash" ? "cash" : "stripe",
+        reschedulePath: "/protected",
+      }),
+      replyTo: "contact@ariseandshinevt.com",
+    }).catch(err => console.error("[adminSetSchedulePick] confirmation email error:", err));
+  }
+
   return { ok: true };
+}
+
+// ── Admin: Create subscription over the phone ────────────────────────────────
+
+export async function adminCreateSubscription(params: {
+  name: string;
+  email: string;
+  phone: string;
+  planId: string;
+  paymentMethod: "cash" | "card";
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleYear: string;
+  vehicleSize: string;
+  serviceAddress: string;
+}): Promise<{ ok: boolean; checkoutUrl?: string; subscriptionId?: string; error?: string }> {
+  const { MONTHLY_PLANS } = await import("@/lib/monthlyPlans");
+  const plan = MONTHLY_PLANS.find(p => p.id === params.planId);
+  if (!plan) return { ok: false, error: "Invalid plan." };
+
+  const mod = await import("@/app/actions/monthlySubscriptions");
+
+  if (params.paymentMethod === "cash") {
+    const result = await mod.createCashMonthlySubscription({
+      planId:         plan.id,
+      email:          params.email,
+      name:           params.name,
+      phone:          params.phone,
+      vehicleMake:    params.vehicleMake,
+      vehicleModel:   params.vehicleModel,
+      vehicleYear:    params.vehicleYear,
+      vehicleSize:    params.vehicleSize,
+      serviceAddress: params.serviceAddress,
+    });
+    if (!result.success) return { ok: false, error: (result as any).error };
+    return { ok: true, subscriptionId: (result as any).subscriptionId };
+  } else {
+    const result = await mod.createStripeMonthlyCheckout({
+      planId:         plan.id,
+      email:          params.email,
+      name:           params.name,
+      phone:          params.phone,
+      vehicleMake:    params.vehicleMake,
+      vehicleModel:   params.vehicleModel,
+      vehicleYear:    params.vehicleYear,
+      vehicleSize:    params.vehicleSize,
+      serviceAddress: params.serviceAddress,
+    });
+    if (!result.success) return { ok: false, error: (result as any).error };
+    return { ok: true, checkoutUrl: (result as any).checkoutUrl };
+  }
+}
+
+// ── Admin: Get full booking history for a subscriber ─────────────────────────
+
+export async function getSubscriberHistory(subscriptionId: string) {
+  const supabase = createAdminClient();
+  const { data: sub } = await supabase
+    .from("monthly_subscriptions")
+    .select("customer_email")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+  if (!sub?.customer_email) return [];
+  const { data } = await supabase
+    .from("bookings")
+    .select("id, booking_date, booking_time, status, total_price, service_name")
+    .eq("customer_email", sub.customer_email)
+    .ilike("notes", "%Monthly plan:%")
+    .order("booking_date", { ascending: false })
+    .limit(36);
+  return (data ?? []) as {
+    id: string;
+    booking_date: string;
+    booking_time: string | null;
+    status: string;
+    total_price: number;
+    service_name: string | null;
+  }[];
+}
+
+// ── Admin: Get available days for booking on subscriber's behalf ──────────────
+
+export async function adminGetScheduleAvailability(
+  subscriptionId: string,
+  month: string
+): Promise<import("@/app/actions/monthlySubscriptions").ScheduleDay[]> {
+  const supabase = createAdminClient();
+  const { data: sub } = await supabase
+    .from("monthly_subscriptions")
+    .select("plan_id")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+
+  if (!sub) return [];
+
+  const { getAvailableDaysForMonth } = await import("@/app/actions/monthlySubscriptions");
+  return getAvailableDaysForMonth(month, sub.plan_id);
 }

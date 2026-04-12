@@ -19,10 +19,14 @@ import {
   DollarSign, CreditCard, Banknote, TrendingUp, Target, Ticket,
   ChevronLeft, ChevronRight, Plus, Trash2, Power, Loader2,
   Link, Check, CalendarClock, Receipt, Info, Gift,
+  MapPin, FileSpreadsheet, FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { to12h } from "@/lib/availability";
+import { MileageTab } from "./_tax-mileage";
+import { ExpensesTab } from "./_tax-expenses";
+import { TaxReportTab } from "./_tax-report";
 
 type RevExtras = {
   monthUpcomingCount?: number;
@@ -73,6 +77,8 @@ export default function MoneyPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [monthOffset, setMonthOffset] = useState(0);
+  const [section,  setSection]  = useState<"revenue" | "tax">("revenue");
+  const [taxTab,   setTaxTab]   = useState<"mileage" | "expenses" | "tax_report">("mileage");
   const [tab, setTab] = useState<"overview" | "pipeline" | "unpaid" | "services" | "coupons" | "gift_cards">("overview");
   const [showGoalEdit, setShowGoalEdit] = useState(false);
   const [goalInput, setGoalInput] = useState("");
@@ -220,6 +226,60 @@ export default function MoneyPage() {
   return (
     <div className="px-4 pt-4 pb-10 max-w-2xl mx-auto space-y-5">
 
+      {/* Section toggle */}
+      <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1">
+        <button
+          type="button"
+          onClick={() => setSection("revenue")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-black uppercase tracking-wider transition-all",
+            section === "revenue" ? "bg-amber-500 text-black" : "text-zinc-500"
+          )}
+        >
+          <DollarSign size={12} /> Revenue
+        </button>
+        <button
+          type="button"
+          onClick={() => setSection("tax")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-black uppercase tracking-wider transition-all",
+            section === "tax" ? "bg-amber-500 text-black" : "text-zinc-500"
+          )}
+        >
+          <FileSpreadsheet size={12} /> Tax Tools
+        </button>
+      </div>
+
+      {section === "tax" && (
+        <>
+          {/* Tax sub-tabs */}
+          <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1">
+            {([
+              { id: "mileage",    label: "Mileage",    icon: <MapPin size={11} /> },
+              { id: "expenses",   label: "Expenses",   icon: <Receipt size={11} /> },
+              { id: "tax_report", label: "Tax Report", icon: <FileText size={11} /> },
+            ] as const).map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTaxTab(t.id)}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg py-2 text-[10px] font-black uppercase tracking-wider transition-all",
+                  taxTab === t.id ? "bg-white/[0.08] text-white" : "text-zinc-600"
+                )}
+              >
+                {t.icon} {t.label}
+              </button>
+            ))}
+          </div>
+
+          {taxTab === "mileage"    && <MileageTab />}
+          {taxTab === "expenses"   && <ExpensesTab />}
+          {taxTab === "tax_report" && <TaxReportTab />}
+        </>
+      )}
+
+      {section === "revenue" && <>
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-xl font-black">Money</h1>
         {atLoading ? (
@@ -670,6 +730,8 @@ export default function MoneyPage() {
           )}
         </div>
       )}
+
+      </> /* end revenue section */}
 
       <Modal open={showGoalEdit} onClose={() => setShowGoalEdit(false)}>
         <div className="space-y-4">

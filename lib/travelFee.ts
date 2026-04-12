@@ -52,9 +52,12 @@ export async function getTravelFee(
     units: "imperial",
   });
 
+  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+
   try {
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?${params.toString()}`;
-    const res = await fetch(url);
+    // Include Referer so API keys with HTTP referrer restrictions work when called server-side
+    const res = await fetch(url, { headers: { Referer: SITE } });
     const data = await res.json();
 
     if (data.status !== "OK") {
