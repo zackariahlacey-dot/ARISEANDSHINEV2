@@ -20,7 +20,7 @@ import {
   Zap, AlertTriangle, Send, RotateCcw, X, TrendingUp, RefreshCw,
   CreditCard, Banknote,
 } from "lucide-react";
-import { format, isToday, parseISO, isTomorrow, differenceInMinutes } from "date-fns";
+import { format, isToday, parseISO, isTomorrow, isYesterday, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
 import { to12h, timeToMins } from "@/lib/availability";
 
@@ -148,17 +148,14 @@ export default function TodayPage() {
     if (!bookings) return [];
     return bookings
       .filter((b: any) =>
-        b.booking_date < todayStr &&
-        (b.status === "completed" || b.status === "confirmed" || b.status === "no-show") &&
+        b.status !== "cancelled" &&
         b.service_name !== "Personal Block"
       )
-      .sort((a: any, b: any) => {
-        const dateCmp = b.booking_date.localeCompare(a.booking_date);
-        if (dateCmp !== 0) return dateCmp;
-        return (b.booking_time ?? "").localeCompare(a.booking_time ?? "");
-      })
-      .slice(0, 8);
-  }, [bookings, todayStr]);
+      .sort((a: any, b: any) =>
+        (b.created_at ?? "").localeCompare(a.created_at ?? "")
+      )
+      .slice(0, 10);
+  }, [bookings]);
 
   const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
 
@@ -414,37 +411,39 @@ export default function TodayPage() {
       {/* ── Recent Bookings ──────────────────────────────────────────────── */}
       {recentBookings.length > 0 && (
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2">Recent Bookings</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2">Recently Booked</p>
           <div className="space-y-1.5">
-            {recentBookings.map((b: any) => (
+            {recentBookings.map((b: any) => {
+              const bookedAt = b.created_at ? new Date(b.created_at) : null;
+              const bookedLabel = bookedAt
+                ? isToday(bookedAt)     ? `Today ${format(bookedAt, "h:mm a")}`
+                : isYesterday(bookedAt) ? "Yesterday"
+                : format(bookedAt, "MMM d")
+                : "";
+              return (
               <button
                 key={b.id}
                 onClick={() => setActiveBooking(b)}
                 className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
               >
-                {/* Date badge */}
-                <div className="shrink-0 w-10 text-center">
-                  <p className="text-[9px] font-black uppercase text-zinc-600">{format(parseISO(b.booking_date + "T12:00:00"), "MMM")}</p>
-                  <p className="text-base font-black text-zinc-400 leading-tight">{format(parseISO(b.booking_date + "T12:00:00"), "d")}</p>
-                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
-                  <p className="text-xs text-zinc-600 truncate">{b.service_name ?? "Detail"} · {b.vehicle_make ?? ""} {b.vehicle_model ?? ""}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
+                  </div>
+                  <p className="text-xs text-zinc-600 truncate">
+                    {b.service_name ?? "Detail"} · appt {dayLabel(b.booking_date)}
+                  </p>
                 </div>
                 <div className="shrink-0 text-right space-y-0.5">
                   <p className="text-sm font-black text-zinc-300">${Number(b.total_price).toFixed(0)}</p>
                   <div className="flex items-center justify-end gap-1">
                     <PayBadge b={b} />
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-wider",
-                      b.status === "completed" ? "text-emerald-500" :
-                      b.status === "no-show"   ? "text-red-400" : "text-zinc-600"
-                    )}>{b.status}</span>
                   </div>
+                  <p className="text-[9px] text-zinc-600">{bookedLabel}</p>
                 </div>
                 <ChevronRight size={13} className="text-zinc-700 shrink-0" />
               </button>
-            ))}
+            )})}
           </div>
         </div>
       )}
