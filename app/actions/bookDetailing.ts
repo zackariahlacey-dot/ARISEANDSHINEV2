@@ -183,7 +183,7 @@ export async function bookDetailing(
     totalBookingDur > primaryDur ? totalBookingDur : undefined
   );
   if (!isAvailable) {
-    logError({ type: "booking_attempt", source: "bookDetailing", message: "Slot unavailable at checkout", details: { email: payload.email, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
+    logError({ type: "booking_attempt", source: "bookDetailing", message: "Slot unavailable at checkout", details: { name: payload.name, email: payload.email, phone: toPhoneDigits(payload.phone), service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
     return {
       success: false,
       error: "This time slot was just taken. Please go back and select a different time.",
@@ -296,7 +296,7 @@ export async function bookDetailing(
 
           if (profileErr || !created) {
             console.error("Profile Creation Error (Guest):", profileErr);
-            logError({ type: "booking_attempt", source: "bookDetailing/profile", message: profileErr?.message ?? "Profile creation failed", details: { email: emailLower, phone: phoneDigits } });
+            logError({ type: "booking_attempt", source: "bookDetailing/profile", message: profileErr?.message ?? "Profile creation failed", details: { name: payload.name, email: emailLower, phone: phoneDigits, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
             return {
               success: false,
               error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
@@ -371,7 +371,7 @@ export async function bookDetailing(
 
   if (vehicleErr || !vehicle) {
     console.error("[bookDetailing] vehicle insert error:", vehicleErr);
-    logError({ type: "booking_attempt", source: "bookDetailing/vehicle", message: vehicleErr?.message ?? "Vehicle insert failed", details: { email: emailLower, service: payload.serviceName } });
+    logError({ type: "booking_attempt", source: "bookDetailing/vehicle", message: vehicleErr?.message ?? "Vehicle insert failed", details: { name: payload.name, email: emailLower, phone: phoneDigits, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
     return {
       success: false,
       error: `Could not save vehicle info: ${vehicleErr?.message || "Unknown error"}. Please try again.`,
@@ -633,7 +633,7 @@ export async function bookDetailing(
 
   if (bookingErr || !booking) {
     console.error("[bookDetailing] booking insert:", bookingErr);
-    logError({ type: "booking_attempt", source: "bookDetailing/insert", message: bookingErr?.message ?? "Booking insert failed", details: { email: emailLower, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
+    logError({ type: "booking_attempt", source: "bookDetailing/insert", message: bookingErr?.message ?? "Booking insert failed", details: { name: payload.name, email: emailLower, phone: phoneDigits, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
     return {
       success: false,
       error: "Could not finalize your booking. Please try again.",
