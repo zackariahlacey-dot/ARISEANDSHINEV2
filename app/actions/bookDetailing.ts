@@ -8,6 +8,7 @@ import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import Stripe from "stripe";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
+import { logError } from "@/app/actions/logError";
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
 
@@ -139,9 +140,12 @@ export async function checkAvailability(
   return true;
 }
 
-/** Normalize phone to raw 10 digits for database storage and lookups */
+/** Normalize phone to raw 10 digits for database storage and lookups.
+ *  Strips country code +1 / 1 prefix so "18025550100" → "8025550100". */
 function toPhoneDigits(phone: string): string {
-  return phone.replace(/\D/g, "").slice(0, 10);
+  const digits = phone.replace(/\D/g, "");
+  // Strip leading US country code (1) if total length is 11 and starts with 1
+  return digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits.slice(0, 10);
 }
 
 export async function bookDetailing(
@@ -179,6 +183,7 @@ export async function bookDetailing(
     totalBookingDur > primaryDur ? totalBookingDur : undefined
   );
   if (!isAvailable) {
+    logError({ type: "booking_attempt", source: "bookDetailing", message: "Slot unavailable at checkout", details: { email: payload.email, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
     return {
       success: false,
       error: "This time slot was just taken. Please go back and select a different time.",
@@ -291,6 +296,7 @@ export async function bookDetailing(
 
           if (profileErr || !created) {
             console.error("Profile Creation Error (Guest):", profileErr);
+            logError({ type: "booking_attempt", source: "bookDetailing/profile", message: profileErr?.message ?? "Profile creation failed", details: { email: emailLower, phone: phoneDigits } });
             return {
               success: false,
               error: `Could not create profile: ${profileErr?.message || "Unknown error"}.`,
@@ -365,6 +371,7 @@ export async function bookDetailing(
 
   if (vehicleErr || !vehicle) {
     console.error("[bookDetailing] vehicle insert error:", vehicleErr);
+    logError({ type: "booking_attempt", source: "bookDetailing/vehicle", message: vehicleErr?.message ?? "Vehicle insert failed", details: { email: emailLower, service: payload.serviceName } });
     return {
       success: false,
       error: `Could not save vehicle info: ${vehicleErr?.message || "Unknown error"}. Please try again.`,
@@ -626,6 +633,7 @@ export async function bookDetailing(
 
   if (bookingErr || !booking) {
     console.error("[bookDetailing] booking insert:", bookingErr);
+    logError({ type: "booking_attempt", source: "bookDetailing/insert", message: bookingErr?.message ?? "Booking insert failed", details: { email: emailLower, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
     return {
       success: false,
       error: "Could not finalize your booking. Please try again.",

@@ -8,6 +8,7 @@ import {
   updateBookingStatusAction,
   sendOnMyWayEmail,
   rescheduleBookingAction,
+  getErrorLogs,
 } from "@/app/actions/adminActions";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
@@ -123,6 +124,12 @@ export default function TodayPage() {
     queryKey: ["admin", "bookings"],
     queryFn: async () => await getAllBookings(),
     staleTime: 30_000,
+  });
+
+  const { data: errorLogs = [] } = useQuery({
+    queryKey: ["admin", "error-logs"],
+    queryFn: () => getErrorLogs(30),
+    staleTime: 60_000,
   });
 
   const updateStatus = useMutation({
@@ -426,24 +433,75 @@ export default function TodayPage() {
                 onClick={() => setActiveBooking(b)}
                 className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
+                {/* Large date badge — when they booked */}
+                {bookedAt && (
+                  <div className="shrink-0 w-10 text-center">
+                    <p className="text-[9px] font-black uppercase text-zinc-600">{format(bookedAt, "MMM")}</p>
+                    <p className="text-xl font-black text-zinc-300 leading-tight">{format(bookedAt, "d")}</p>
+                    <p className="text-[8px] text-zinc-700">{format(bookedAt, "h:mma")}</p>
                   </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
                   <p className="text-xs text-zinc-600 truncate">
                     {b.service_name ?? "Detail"} · appt {dayLabel(b.booking_date)}
                   </p>
                 </div>
                 <div className="shrink-0 text-right space-y-0.5">
                   <p className="text-sm font-black text-zinc-300">${Number(b.total_price).toFixed(0)}</p>
-                  <div className="flex items-center justify-end gap-1">
-                    <PayBadge b={b} />
-                  </div>
-                  <p className="text-[9px] text-zinc-600">{bookedLabel}</p>
+                  <PayBadge b={b} />
                 </div>
                 <ChevronRight size={13} className="text-zinc-700 shrink-0" />
               </button>
             )})}
+          </div>
+        </div>
+      )}
+
+      {/* ── Failed booking attempts ──────────────────────────────────────── */}
+      {errorLogs.filter((e: any) => e.type === "booking_attempt").length > 0 && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/70 mb-2">Failed Booking Attempts</p>
+          <div className="space-y-1.5">
+            {errorLogs.filter((e: any) => e.type === "booking_attempt").slice(0, 5).map((e: any) => (
+              <div key={e.id} className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl px-4 py-3 flex items-start gap-3">
+                <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-zinc-300 truncate">
+                    {e.details?.email ?? "Unknown"} — {e.details?.service ?? ""}
+                  </p>
+                  <p className="text-[10px] text-zinc-600 mt-0.5">{e.message}</p>
+                  {e.details?.date && (
+                    <p className="text-[10px] text-zinc-700">Slot: {e.details.date} {e.details.time}</p>
+                  )}
+                </div>
+                <p className="text-[9px] text-zinc-700 shrink-0">
+                  {e.created_at ? format(new Date(e.created_at), "MMM d h:mma") : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Site error log ───────────────────────────────────────────────── */}
+      {errorLogs.filter((e: any) => e.type !== "booking_attempt").length > 0 && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-500/70 mb-2">Site Errors</p>
+          <div className="space-y-1.5">
+            {errorLogs.filter((e: any) => e.type !== "booking_attempt").slice(0, 8).map((e: any) => (
+              <div key={e.id} className="bg-red-500/[0.04] border border-red-500/15 rounded-xl px-4 py-3 flex items-start gap-3">
+                <AlertTriangle size={13} className="text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-0.5">{e.source ?? e.type}</p>
+                  <p className="text-xs text-zinc-300 truncate">{e.message}</p>
+                  {e.details?.email && <p className="text-[10px] text-zinc-600">{e.details.email}</p>}
+                </div>
+                <p className="text-[9px] text-zinc-700 shrink-0">
+                  {e.created_at ? format(new Date(e.created_at), "MMM d h:mma") : ""}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}

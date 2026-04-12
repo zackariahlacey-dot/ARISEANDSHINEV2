@@ -1412,3 +1412,16 @@ export async function runTestBookingAction(adminEmail: string): Promise<{ succes
   return { success: true, log };
 }
 
+
+// ── Error Logs ────────────────────────────────────────────────────────────────
+
+export async function getErrorLogs(limit = 50) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("error_logs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

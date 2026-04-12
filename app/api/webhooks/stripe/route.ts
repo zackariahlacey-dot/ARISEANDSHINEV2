@@ -13,6 +13,7 @@ import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import { checkAvailability } from "@/app/actions/bookDetailing";
 import { VEHICLE_SIZE_MAP } from "@/lib/constants";
 import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
+import { logError } from "@/app/actions/logError";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
@@ -309,6 +310,7 @@ export async function POST(req: NextRequest) {
         bookingDate: m.bookingDate, bookingTime: m.bookingTime,
         hasAdditionalVehicles: !!m.additionalVehiclesJson,
       });
+      logError({ type: "webhook", source: "stripe_webhook/insert", message: insertErr?.message ?? "Booking insert failed after payment", details: { email: m.customerEmail, service: m.serviceName, date: m.bookingDate, time: m.bookingTime, sessionId: session.id } });
       return NextResponse.json({ error: "Booking insert failed" }, { status: 500 });
     }
 
