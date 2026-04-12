@@ -18,6 +18,7 @@ import {
   Navigation, Phone, MessageSquare, Check, DollarSign,
   Car, Clock, MapPin, ChevronRight, CalendarDays, Loader2,
   Zap, AlertTriangle, Send, RotateCcw, X, TrendingUp, RefreshCw,
+  CreditCard, Banknote,
 } from "lucide-react";
 import { format, isToday, parseISO, isTomorrow, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -430,13 +431,16 @@ export default function TodayPage() {
                   <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
                   <p className="text-xs text-zinc-600 truncate">{b.service_name ?? "Detail"} · {b.vehicle_make ?? ""} {b.vehicle_model ?? ""}</p>
                 </div>
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 text-right space-y-0.5">
                   <p className="text-sm font-black text-zinc-300">${Number(b.total_price).toFixed(0)}</p>
-                  <span className={cn(
-                    "text-[8px] font-black uppercase tracking-wider",
-                    b.status === "completed" ? "text-emerald-500" :
-                    b.status === "no-show"   ? "text-red-400" : "text-zinc-600"
-                  )}>{b.status}</span>
+                  <div className="flex items-center justify-end gap-1">
+                    <PayBadge b={b} />
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-wider",
+                      b.status === "completed" ? "text-emerald-500" :
+                      b.status === "no-show"   ? "text-red-400" : "text-zinc-600"
+                    )}>{b.status}</span>
+                  </div>
                 </div>
                 <ChevronRight size={13} className="text-zinc-700 shrink-0" />
               </button>
@@ -597,11 +601,32 @@ export default function TodayPage() {
   );
 }
 
+// ── helpers ────────────────────────────────────────────────────────────────
+function isStripePaid(b: any): boolean {
+  return !!b.stripe_checkout_session_id || (b.notes ?? "").includes("Pay Now (Stripe)");
+}
+
 // ── Sub-components ──────────────────────────────────────────────────────────
+function PayBadge({ b }: { b: any }) {
+  const stripe = isStripePaid(b);
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+      stripe
+        ? "bg-sky-500/10 text-sky-400 border border-sky-500/20"
+        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+    )}>
+      {stripe ? <CreditCard size={8} /> : <Banknote size={8} />}
+      {stripe ? "Stripe" : "Cash"}
+    </span>
+  );
+}
+
 function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
+  const stripe = isStripePaid(b);
   const statusColor: Record<string, string> = {
-    confirmed: "border-l-amber-500",
-    completed: "border-l-emerald-500",
+    confirmed: stripe ? "border-l-sky-500" : "border-l-emerald-500",
+    completed: stripe ? "border-l-sky-400" : "border-l-emerald-400",
     "no-show": "border-l-red-500",
     cancelled: "border-l-zinc-700",
   };
@@ -620,9 +645,12 @@ function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
         </div>
         <p className="text-xs text-zinc-500 truncate">{b.service_name ?? "Detail"}</p>
       </div>
-      <div className="text-right shrink-0">
+      <div className="text-right shrink-0 space-y-0.5">
         <p className="text-sm font-black">${Number(b.total_price).toFixed(0)}</p>
-        <StatusBadge status={b.status} />
+        <div className="flex items-center justify-end gap-1">
+          <PayBadge b={b} />
+          <StatusBadge status={b.status} />
+        </div>
       </div>
       <ChevronRight size={14} className="text-zinc-700 shrink-0" />
     </button>
