@@ -24,10 +24,11 @@ import { cn } from "@/lib/utils";
 import type { AdminBooking } from "@/types/admin";
 
 const STATUS_CONFIG = {
-  confirmed:  { color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
-  completed:  { color: "text-blue-400 bg-blue-500/10 border-blue-500/20",           icon: CheckCircle2 },
-  cancelled:  { color: "text-rose-400 bg-rose-500/10 border-rose-500/20",           icon: XCircle },
-  "no-show":  { color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",           icon: Clock },
+  confirmed:        { color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
+  completed:        { color: "text-blue-400 bg-blue-500/10 border-blue-500/20",           icon: CheckCircle2 },
+  cancelled:        { color: "text-rose-400 bg-rose-500/10 border-rose-500/20",           icon: XCircle },
+  "no-show":        { color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",           icon: Clock },
+  pending_payment:  { color: "text-sky-400 bg-sky-500/10 border-sky-500/20",              icon: Clock },
 };
 
 /** Resolve a field: prefer the direct lead column, fall back to join */
