@@ -487,9 +487,7 @@ export async function getAvailableDaysForMonth(month: string, planId: string): P
   const { MONTHLY_PLAN_DURATIONS } = await import("@/lib/monthlyPlans");
   const planNames: Record<string, string> = {
     interior_refresh: "Interior Refresh",
-    interior_elite:   "Interior Elite",
     full_maintenance: "Full Maintenance",
-    full_elite:       "Full Elite",
   };
   const planName     = planNames[planId] || "Interior Refresh";
   const durationMins = MONTHLY_PLAN_DURATIONS[planName] ?? 90;

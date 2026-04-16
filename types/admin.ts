@@ -20,7 +20,7 @@ export const AdminBookingSchema = z.object({
   id: z.string().uuid(),
   booking_date: z.string(),
   booking_time: z.string(),
-  status: z.enum(["confirmed", "completed", "cancelled", "no-show"]),
+  status: z.enum(["confirmed", "completed", "cancelled", "no-show", "pending_payment"]),
   total_price: z.number(),
   notes: z.string().nullable(),
   created_at: z.string(),

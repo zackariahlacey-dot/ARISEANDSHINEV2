@@ -471,7 +471,8 @@ export async function bookDetailing(
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
     if (isSubscription) {
-      const monthlyPrice = payload.serviceName.toLowerCase().includes("full detail") ? 150 : 100;
+      const addonsTotal = (payload.selectedAddons ?? []).reduce((sum, a) => sum + a.price, 0);
+      const monthlyPrice = payload.totalPrice - (payload.setupFee ?? 0) - (payload.travelFee ?? 0) - addonsTotal;
       line_items.push({
         price_data: {
           currency: "usd",

@@ -76,9 +76,7 @@ export function getMonthlyPlanInviteHtml(firstName: string, inviteLink: string):
               </td></tr>
               ${[
                 ["Interior Refresh",  "$75/mo",  "Vacuum, wipe-down, interior glass"],
-                ["Interior Elite",    "$110/mo", "Refresh + leather, UV protectant, odor treatment"],
                 ["Full Maintenance",  "$120/mo", "Exterior wash + Interior Refresh"],
-                ["Full Elite",        "$165/mo", "Exterior wash + sealant + Interior Elite"],
               ].map(([name, price, desc]) => `
               <tr><td style="padding:12px 20px;">
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">

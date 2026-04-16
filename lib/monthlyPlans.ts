@@ -15,22 +15,6 @@ export const MONTHLY_PLANS = [
     ],
   },
   {
-    id: "interior_elite",
-    name: "Interior Elite",
-    price: 110,
-    cashPrice: 100,
-    durationMins: 120,
-    tagline: "Deep clean + conditioning.",
-    description: "Everything in Refresh plus leather conditioning, deep crevice clean, UV dash protectant, and odor neutralizer.",
-    features: [
-      "Everything in Interior Refresh",
-      "Leather conditioning & treatment",
-      "Deep crevice clean",
-      "UV dash protectant",
-      "Odor neutralizer spray",
-    ],
-  },
-  {
     id: "full_maintenance",
     name: "Full Maintenance",
     price: 120,
@@ -44,21 +28,7 @@ export const MONTHLY_PLANS = [
       "Everything in Interior Refresh",
     ],
   },
-  {
-    id: "full_elite",
-    name: "Full Elite",
-    price: 165,
-    cashPrice: 155,
-    durationMins: 180,
-    tagline: "Showroom condition, guaranteed.",
-    description: "Exterior hand wash + spray sealant protection combined with the full Interior Elite package.",
-    features: [
-      "Exterior hand wash & dry",
-      "Spray sealant (paint protection)",
-      "Tire shine",
-      "Everything in Interior Elite",
-    ],
-  },
+
 ] as const;
 
 export type MonthlyPlanId = typeof MONTHLY_PLANS[number]["id"];
@@ -71,7 +41,5 @@ export function getPlanById(id: string): MonthlyPlan | undefined {
 /** Duration map for checkAvailability calls */
 export const MONTHLY_PLAN_DURATIONS: Record<string, number> = {
   "Interior Refresh": 90,
-  "Interior Elite":   120,
   "Full Maintenance": 150,
-  "Full Elite":       180,
 };

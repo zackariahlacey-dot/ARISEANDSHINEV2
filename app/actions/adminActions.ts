@@ -184,21 +184,20 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
   }
 
   // 4. Check Availability First — prevent double booking
+  const { checkSlotConflict: _checkConflict, getDurationMins: _getDur, timeToMins: _toMins, to24h: _to24h } = await import("@/lib/availability");
+
   const { data: existingOnDate } = await supabase
     .from("bookings")
-    .select("booking_time")
+    .select("booking_time, service_name, vehicle_size, status")
     .eq("booking_date", payload.bookingDate)
     .neq("status", "cancelled");
 
-  const bookedTime24 = to24h(payload.bookingTime);
-  const requestedSlot = timeToMins(bookedTime24);
-  const newDur = SERVICE_DURATIONS[payload.serviceName]?.["sedan"] ?? 180;
+  const bookedTime24 = _to24h(payload.bookingTime);
+  const requestedSlot = _toMins(bookedTime24);
+  const newDur = _getDur(payload.serviceName, payload.vehicleSize);
 
-  for (const row of existingOnDate ?? []) {
-    const takenSlot = timeToMins(String(row.booking_time ?? ""));
-    if (Math.abs(requestedSlot - takenSlot) < newDur) {
-      return { success: false, error: "That time is already booked. Please pick a different time slot." };
-    }
+  if (_checkConflict(existingOnDate ?? [], requestedSlot, newDur)) {
+    return { success: false, error: "That time is already booked. Please pick a different time slot." };
   }
 
   // 5. Insert Booking

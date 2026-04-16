@@ -87,8 +87,8 @@ const RV_ADDON_IDS       = ["rv_awning","rv_slide_seal","rv_roof_coat","rv_gener
 
 const VEHICLE_SIZES_ADMIN = [
   { value: "compact", label: "Compact / Small",  key: "price_small"       },
-  { value: "sedan",   label: "Sedan / Midsize",  key: "price_sedan"       },
-  { value: "suv",     label: "SUV / Truck",       key: "price_suv"         },
+  { value: "sedan",   label: "Sedan / Midsize",  key: "price_medium"      },
+  { value: "suv",     label: "SUV / Truck",       key: "price_large"       },
   { value: "xl",      label: "XL / Van",          key: "price_extra_large" },
 ];
 
@@ -248,8 +248,8 @@ export function NewBookingForm({
       return Math.max(minFt, ft) * rate;
     }
     const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize);
-    const key = sizeEntry?.key ?? "price_sedan";
-    return Number(selectedService[key] ?? selectedService.price_sedan ?? selectedService.price_small ?? 0);
+    const key = sizeEntry?.key ?? "price_medium";
+    return Number(selectedService[key] ?? selectedService.price_medium ?? selectedService.price_small ?? 0);
   }, [selectedService, pathway, footage, vehicleSize]);
 
   const addonTotal  = selectedAddons.reduce((sum, id) => sum + (ADMIN_ADDONS.find(a => a.id === id)?.price ?? 0), 0);
@@ -485,8 +485,8 @@ export function NewBookingForm({
               <div className="space-y-2">
                 {vehicleServices.map((svc: any) => {
                   const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize);
-                  const priceKey = sizeEntry?.key ?? "price_sedan";
-                  const displayPrice = svc[priceKey] ?? svc.price_sedan ?? svc.price_small ?? 0;
+                  const priceKey = sizeEntry?.key ?? "price_medium";
+                  const displayPrice = svc[priceKey] ?? svc.price_medium ?? svc.price_small ?? 0;
                   return (
                     <button key={svc.id} onClick={() => setServiceId(svc.id)}
                       className={cn("w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center justify-between",

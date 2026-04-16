@@ -59,7 +59,7 @@ import { MONTHLY_PLAN_DURATIONS } from "@/lib/monthlyPlans";
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
 const MAX_REDEEMABLE_POINTS = 1000;
-/** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $100 */
+/** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $120 */
 function getMaintenanceSetupFee(serviceName: string): number {
   return serviceName.toLowerCase().includes("full") ? 100 : 75;
 }
