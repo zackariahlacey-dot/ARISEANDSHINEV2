@@ -80,7 +80,7 @@ async function Dashboard() {
       <div className="relative z-10">
         <SiteHeader />
 
-        <div className="max-w-2xl mx-auto px-4 pt-10 sm:pt-6 pb-20">
+        <div className="max-w-2xl mx-auto px-4 pt-16 sm:pt-8 pb-20">
 
           {/* ── Page heading ───────────────────────────────────────────── */}
           <div className="mb-6">
