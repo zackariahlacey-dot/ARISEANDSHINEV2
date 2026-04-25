@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Check, Calendar, Clock, MapPin, Smartphone, Mail, ChevronDown, ExternalLink, UserPlus } from "lucide-react";
+import { X, Check, Calendar, Clock, MapPin, Smartphone, ChevronDown, ExternalLink, UserPlus, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 
@@ -14,9 +14,7 @@ export interface SuccessModalData {
   firstName: string;
   serviceAddress?: string;
   isGuest?: boolean;
-  /** Optional: email to pre-fill sign-up form from guest nudge */
   email?: string;
-  /** Optional: phone for modal to re-fetch latest points when user is guest */
   phone?: string;
 }
 
@@ -43,9 +41,7 @@ function fireGoldConfetti() {
   }, 200);
 }
 
-/** Parse "9:00 AM", "2:30 PM", or "14:30" / "09:00" → { h, m } */
 function parseTime(time: string): { h: number; m: number } | null {
-  // 12-hour: "9:00 AM"
   const twelveHour = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (twelveHour) {
     let h = parseInt(twelveHour[1], 10);
@@ -55,7 +51,6 @@ function parseTime(time: string): { h: number; m: number } | null {
     if (period === "AM" && h === 12) h = 0;
     return { h, m };
   }
-  // 24-hour: "14:30" or "09:00"
   const twentyFour = time.match(/^(\d{2}):(\d{2})$/);
   if (twentyFour) {
     return { h: parseInt(twentyFour[1], 10), m: parseInt(twentyFour[2], 10) };
@@ -63,11 +58,9 @@ function parseTime(time: string): { h: number; m: number } | null {
   return null;
 }
 
-/** Format a parsed time for display, e.g. { h:14, m:0 } → "2:00 PM" */
 function formatTimeDisplay(time: string): string {
   const parsed = parseTime(time);
   if (!parsed) return time;
-  // Already 12h format — return as-is
   if (/AM|PM/i.test(time)) return time;
   const { h, m } = parsed;
   const period = h >= 12 ? "PM" : "AM";
@@ -75,7 +68,22 @@ function formatTimeDisplay(time: string): string {
   return `${displayH}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-/** Build a Google Calendar event URL. Uses floating (local) time. */
+function formatModalDate(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  if (/[a-zA-Z]{3,}/.test(dateStr)) return dateStr;
+  try {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 function buildGoogleCalendarUrl(data: SuccessModalData): string {
   const [year, month, day] = data.date.split("-").map(Number);
   let startH = 9, startM = 0;
@@ -83,7 +91,6 @@ function buildGoogleCalendarUrl(data: SuccessModalData): string {
     const parsed = parseTime(data.time);
     if (parsed) { startH = parsed.h; startM = parsed.m; }
   }
-  // End = start + 2 hours
   let endH = startH + 2;
   let endM = startM;
   if (endH >= 24) endH = 23;
@@ -92,13 +99,10 @@ function buildGoogleCalendarUrl(data: SuccessModalData): string {
   const fmt = (y: number, mo: number, d: number, h: number, mi: number) =>
     `${y}${pad(mo)}${pad(d)}T${pad(h)}${pad(mi)}00`;
 
-  const start = fmt(year, month, day, startH, startM);
-  const end   = fmt(year, month, day, endH, endM);
-
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: `Auto Detailing — ${data.serviceName}`,
-    dates: `${start}/${end}`,
+    dates: `${fmt(year, month, day, startH, startM)}/${fmt(year, month, day, endH, endM)}`,
     details: "Your Arise & Shine VT mobile detailing appointment.",
     ...(data.serviceAddress ? { location: data.serviceAddress } : {}),
   });
@@ -106,7 +110,6 @@ function buildGoogleCalendarUrl(data: SuccessModalData): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-/** Generate and download an .ics file for Apple Calendar / Outlook. */
 function downloadIcs(data: SuccessModalData) {
   const [year, month, day] = data.date.split("-").map(Number);
   let startH = 9, startM = 0;
@@ -163,9 +166,12 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
+  // NOTE: body scroll intentionally NOT locked — background remains scrollable
   useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    if (!isOpen) {
+      hasFiredConfetti.current = false;
+      setShowCalendarOptions(false);
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -173,10 +179,6 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
       hasFiredConfetti.current = true;
       const t = setTimeout(fireGoldConfetti, 350);
       return () => clearTimeout(t);
-    }
-    if (!isOpen) {
-      hasFiredConfetti.current = false;
-      setShowCalendarOptions(false);
     }
   }, [isOpen, data]);
 
@@ -190,136 +192,160 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
             onClick={onClose}
           />
 
           {/* Scroll container */}
-          <div className="flex min-h-full items-end sm:items-center justify-center sm:p-4 sm:py-8">
+          <div className="flex min-h-full items-end sm:items-center justify-center sm:p-4 sm:py-8 pointer-events-none">
             {/* Panel */}
             <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              transition={{ type: "spring", damping: 30, stiffness: 340 }}
-              className="relative z-10 w-full sm:max-w-sm bg-zinc-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
+              initial={{ opacity: 0, y: 50, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className="pointer-events-auto relative z-10 w-full sm:max-w-md bg-zinc-900 rounded-t-[28px] sm:rounded-[24px] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.6)]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Top gold accent */}
-              <div className="h-px w-full bg-gradient-to-r from-transparent via-[#d4af37]/70 to-transparent" />
+              {/* Gradient header band */}
+              <div className="relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 pt-10 pb-8 px-7 text-center overflow-hidden border-b border-white/[0.06]">
+                {/* Gold shimmer lines */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent" />
+                  <div
+                    className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-40 rounded-full"
+                    style={{ background: "radial-gradient(circle, rgba(212,175,55,0.12) 0%, transparent 70%)" }}
+                  />
+                </div>
 
-              {/* Close */}
-              <button
-                onClick={onClose}
-                className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-zinc-500 hover:text-white transition-colors z-20"
-              >
-                <X size={16} />
-              </button>
-
-              <div className="px-6 pt-10 pb-8 flex flex-col items-center text-center">
-                {/* Checkmark */}
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.08, type: "spring", damping: 18, stiffness: 280 }}
-                  className="w-14 h-14 rounded-full bg-gradient-to-br from-[#d4af37] to-[#AA771C] p-px mb-5 shadow-[0_0_24px_rgba(212,175,55,0.3)]"
+                {/* Close */}
+                <button
+                  onClick={onClose}
+                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-500 hover:text-white transition-colors"
                 >
-                  <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center">
-                    <Check size={24} className="text-[#d4af37]" strokeWidth={3} />
-                  </div>
+                  <X size={15} />
+                </button>
+
+                {/* Animated checkmark */}
+                <motion.div
+                  initial={{ scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.1, type: "spring", damping: 16, stiffness: 260 }}
+                  className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+                  style={{
+                    background: "linear-gradient(135deg, #d4af37 0%, #f0d060 50%, #AA771C 100%)",
+                    boxShadow: "0 0 32px rgba(212,175,55,0.4), 0 0 64px rgba(212,175,55,0.15)",
+                  }}
+                >
+                  <Check size={28} className="text-zinc-900" strokeWidth={3} />
                 </motion.div>
 
-                {/* Heading */}
                 <motion.div
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.18, duration: 0.35 }}
-                  className="mb-6"
+                  transition={{ delay: 0.2, duration: 0.3 }}
                 >
-                  <h2 className="text-[22px] font-black text-white leading-tight mb-1">
-                    You&apos;re all set{data?.firstName ? `, ${data.firstName}` : ""}.
+                  <h2 className="text-2xl font-black text-white tracking-tight mb-1">
+                    You&apos;re all set{data?.firstName ? `, ${data.firstName}` : ""}!
                   </h2>
-                  <p className="text-sm text-zinc-400">Confirmation details sent to your email.</p>
+                  <p className="text-sm text-zinc-400">
+                    Confirmation sent to your email.
+                  </p>
                 </motion.div>
+              </div>
 
+              <div className="px-6 pt-5 pb-7 flex flex-col gap-3">
                 {/* Details card */}
                 {data && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.28, duration: 0.35 }}
-                    className="w-full mb-4"
+                    transition={{ delay: 0.25, duration: 0.3 }}
                   >
-                    <div className="bg-zinc-950/70 border border-white/[0.07] rounded-2xl overflow-hidden divide-y divide-white/[0.05] text-left">
-                      {/* Service */}
-                      <div className="px-5 py-3.5">
-                        <p className="text-[11px] text-zinc-500 mb-0.5 uppercase tracking-wide">Service</p>
-                        <p className="text-sm font-semibold text-white">{data.serviceName}</p>
+                    <div className="rounded-2xl border border-white/[0.08] bg-zinc-950/60 overflow-hidden divide-y divide-white/[0.05]">
+                      {/* Service name */}
+                      <div className="px-5 py-3.5 flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0">
+                          <Sparkles size={13} className="text-[#d4af37]" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">Service</p>
+                          <p className="text-sm font-bold text-white">{data.serviceName}</p>
+                        </div>
                       </div>
 
                       {/* Date + Time */}
-                      <div className="px-5 py-3.5 flex gap-8">
-                        <div>
-                          <p className="text-[11px] text-zinc-500 mb-0.5 flex items-center gap-1 uppercase tracking-wide">
-                            <Calendar size={9} />Date
-                          </p>
-                          <p className="text-sm font-semibold text-white">{data.date}</p>
+                      <div className="px-5 py-3.5 grid grid-cols-2 gap-4">
+                        <div className="flex items-center gap-2.5">
+                          <Calendar size={13} className="text-zinc-500 shrink-0" />
+                          <div>
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">Date</p>
+                            <p className="text-sm font-semibold text-white leading-tight">{formatModalDate(data.date)}</p>
+                          </div>
                         </div>
                         {data.time && (
-                          <div>
-                            <p className="text-[11px] text-zinc-500 mb-0.5 flex items-center gap-1 uppercase tracking-wide">
-                              <Clock size={9} />Time
-                            </p>
-                            <p className="text-sm font-semibold text-white">{formatTimeDisplay(data.time)}</p>
+                          <div className="flex items-center gap-2.5">
+                            <Clock size={13} className="text-zinc-500 shrink-0" />
+                            <div>
+                              <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">Time</p>
+                              <p className="text-sm font-semibold text-white">{formatTimeDisplay(data.time)}</p>
+                            </div>
                           </div>
                         )}
                       </div>
 
                       {/* Address */}
                       {data.serviceAddress && (
-                        <div className="px-5 py-3.5">
-                          <p className="text-[11px] text-zinc-500 mb-0.5 flex items-center gap-1 uppercase tracking-wide">
-                            <MapPin size={9} />Address
-                          </p>
-                          <p className="text-sm font-semibold text-white leading-snug">{data.serviceAddress}</p>
+                        <div className="px-5 py-3.5 flex items-start gap-2.5">
+                          <MapPin size={13} className="text-zinc-500 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">Location</p>
+                            <p className="text-sm font-semibold text-white leading-snug">{data.serviceAddress}</p>
+                          </div>
                         </div>
                       )}
 
                       {/* Confirmation ID */}
                       {data.confirmationId && (
-                        <div className="px-5 py-3.5">
-                          <p className="text-[11px] text-zinc-500 mb-0.5 uppercase tracking-wide">Confirmation</p>
-                          <p className="text-sm font-mono font-semibold text-zinc-300">#{data.confirmationId}</p>
+                        <div className="px-5 py-3 bg-zinc-950/40">
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">Confirmation #</p>
+                          <p className="text-xs font-mono text-zinc-400">#{data.confirmationId.slice(0, 8).toUpperCase()}</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Points badge */}
+                    {/* Points earned */}
                     {data.pointsEarned > 0 && (
-                      <div className="mt-2.5 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#d4af37]/[0.07] border border-[#d4af37]/20">
-                        <span className="text-[#d4af37] text-xs font-bold">+{data.pointsEarned.toLocaleString()} pts</span>
-                        <span className="text-zinc-600 text-xs">{data.isGuest ? "create an account to claim" : "credited to your account"}</span>
-                      </div>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.38, duration: 0.3 }}
+                        className="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[#d4af37]/10 to-[#d4af37]/5 border border-[#d4af37]/20"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/25 flex items-center justify-center shrink-0 text-base">
+                          🎁
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-[#d4af37]">+{data.pointsEarned.toLocaleString()} loyalty points earned</p>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            {data.isGuest ? "Create an account to claim your points" : "Added to your rewards balance"}
+                          </p>
+                        </div>
+                      </motion.div>
                     )}
 
-                    {/* Reminder notice */}
-                    <div className="mt-2.5 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800/50 border border-white/[0.05]">
-                      <Mail size={11} className="text-zinc-500 shrink-0" />
-                      <span className="text-zinc-500 text-xs">Reminder email coming the day before</span>
-                    </div>
-
                     {/* Add to Calendar */}
-                    <div className="mt-2.5">
+                    <div className="mt-3">
                       <button
                         type="button"
                         onClick={() => setShowCalendarOptions((v) => !v)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800/50 border border-white/[0.05] hover:border-white/10 hover:bg-zinc-800/80 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.06] hover:bg-zinc-800 hover:border-white/[0.1] transition-colors"
                       >
-                        <Calendar size={11} className="text-zinc-400 shrink-0" />
-                        <span className="text-zinc-400 text-xs font-medium">Add to Calendar</span>
+                        <Calendar size={12} className="text-zinc-400" />
+                        <span className="text-xs font-medium text-zinc-400">Add to Calendar</span>
                         <ChevronDown
-                          size={11}
-                          className={`text-zinc-500 transition-transform duration-200 ${showCalendarOptions ? "rotate-180" : ""}`}
+                          size={12}
+                          className={`text-zinc-600 transition-transform duration-200 ${showCalendarOptions ? "rotate-180" : ""}`}
                         />
                       </button>
 
@@ -329,26 +355,26 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            transition={{ duration: 0.18 }}
                             className="overflow-hidden"
                           >
-                            <div className="pt-1.5 grid grid-cols-2 gap-1.5">
+                            <div className="pt-2 grid grid-cols-2 gap-2">
                               <a
                                 href={buildGoogleCalendarUrl(data)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.05] hover:border-white/10 hover:bg-zinc-800 transition-colors"
+                                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.06] hover:bg-zinc-800 hover:border-white/[0.1] transition-colors"
                               >
-                                <ExternalLink size={10} className="text-zinc-500" />
-                                <span className="text-zinc-300 text-xs font-medium">Google</span>
+                                <ExternalLink size={11} className="text-zinc-500" />
+                                <span className="text-xs font-medium text-zinc-300">Google</span>
                               </a>
                               <button
                                 type="button"
                                 onClick={() => downloadIcs(data)}
-                                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.05] hover:border-white/10 hover:bg-zinc-800 transition-colors"
+                                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.06] hover:bg-zinc-800 hover:border-white/[0.1] transition-colors"
                               >
-                                <Calendar size={10} className="text-zinc-500" />
-                                <span className="text-zinc-300 text-xs font-medium">Apple / iCal</span>
+                                <Calendar size={11} className="text-zinc-500" />
+                                <span className="text-xs font-medium text-zinc-300">Apple / iCal</span>
                               </button>
                             </div>
                           </motion.div>
@@ -358,45 +384,49 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                   </motion.div>
                 )}
 
-                {/* Guest account nudge */}
+                {/* Guest sign-up nudge */}
                 {data?.isGuest && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.36, duration: 0.35 }}
-                    className="w-full mb-4"
+                    transition={{ delay: 0.42, duration: 0.3 }}
                   >
                     <a
                       href={`/auth/login?signup=true${data?.email ? `&email=${encodeURIComponent(data.email)}` : ""}`}
-                      className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800/50 border border-white/[0.07] hover:border-[#d4af37]/30 hover:bg-zinc-800/80 transition-colors text-left group"
+                      className="flex items-start gap-3 px-4 py-3.5 rounded-xl border border-[#d4af37]/20 bg-[#d4af37]/[0.04] hover:bg-[#d4af37]/[0.08] hover:border-[#d4af37]/35 transition-all text-left group"
                     >
-                      <div className="w-7 h-7 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-[#d4af37]/20 transition-colors">
-                        <UserPlus size={13} className="text-[#d4af37]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <UserPlus size={14} className="text-[#d4af37]" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-white mb-0.5">Save this booking to your account</p>
-                        <p className="text-[11px] text-zinc-500 leading-snug">Create a free account to track your appointment and earn loyalty points.</p>
+                        <p className="text-xs font-bold text-white mb-0.5">Save booking + claim your points</p>
+                        <p className="text-[11px] text-zinc-500 leading-snug">Create a free account to track appointments and redeem loyalty rewards.</p>
                       </div>
                     </a>
                   </motion.div>
                 )}
 
-                {/* CTA */}
+                {/* Done CTA */}
                 <motion.div
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: data?.isGuest ? 0.44 : 0.38, duration: 0.35 }}
-                  className="w-full space-y-3"
+                  transition={{ delay: data?.isGuest ? 0.5 : 0.42, duration: 0.3 }}
+                  className="space-y-2.5"
                 >
                   <button
                     onClick={onClose}
-                    className="w-full py-3.5 rounded-xl bg-[#d4af37] text-zinc-950 font-black text-sm tracking-wide hover:bg-amber-400 active:scale-[0.98] transition-all"
+                    className="w-full py-4 rounded-xl font-black text-sm tracking-wide text-zinc-950 transition-all active:scale-[0.98]"
+                    style={{
+                      background: "linear-gradient(135deg, #d4af37 0%, #f0d060 50%, #d4af37 100%)",
+                      boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
+                    }}
                   >
                     Done
                   </button>
+
                   <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600">
-                    <Smartphone size={11} />
-                    <span>Questions? Call <span className="text-zinc-400">802-585-5563</span></span>
+                    <Smartphone size={10} />
+                    <span>Questions? Call or text <span className="text-zinc-400 font-medium">802-585-5563</span></span>
                   </div>
                 </motion.div>
               </div>

@@ -71,6 +71,9 @@ export type BookingPayload = {
   giftCardDiscount?: number;
   /** Gift card UUID — needed to deduct the balance */
   giftCardId?: string;
+  /** Whether customer is providing water & power, or needs us to (+$10) */
+  waterPower?: "provided" | "needed";
+  waterPowerFee?: number;
 };
 
 export type BookingResult =
@@ -170,8 +173,8 @@ export async function bookDetailing(
   const primaryDur =
     SERVICE_DURATIONS[payload.serviceName]?.[VEHICLE_SIZE_MAP[payload.vehicleSize]] ?? 180;
   const additionalDur = (payload.additionalVehicles ?? []).reduce((sum, av) => {
-    const base = SERVICE_DURATIONS[av.serviceName]?.[VEHICLE_SIZE_MAP[av.vehicleSize]] ?? 180;
-    return sum + Math.max(60, base - 60); // each extra vehicle: -1 hr, minimum 1 hr
+    const base = getDurationMins(av.serviceName, av.vehicleSize);
+    return sum + Math.max(30, base - 30); // -30 min efficiency discount per extra vehicle
   }, 0);
   const totalBookingDur = primaryDur + additionalDur;
 
@@ -310,7 +313,7 @@ export async function bookDetailing(
 
   const isPayNow = payload.paymentMethod === "pay_now";
 
-  // ── 1b. Redeem points (Pay at Arrival only) ─────────────────────────────
+  // ── 1b. Validate point redemption (Pay at Arrival only) — deduction deferred until booking confirmed
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
     const { data: profileRow } = await adminSupabase
       .from("profiles")
@@ -327,17 +330,6 @@ export async function bookDetailing(
         error: "You don't have enough reward points to redeem. Please adjust or continue without redeeming.",
       };
     }
-    await adminSupabase
-      .from("profiles")
-      .update({ reward_points: profileRow.reward_points - payload.pointsToRedeem })
-      .eq("id", profileId);
-
-    // Record the redemption in the ledger
-    await adminSupabase.from("point_transactions").insert({
-      user_id:     profileId,
-      amount:      -payload.pointsToRedeem,
-      description: `Redeemed for ${payload.serviceName}`,
-    });
   }
 
   // ── 1c. Deduct gift card balance (Pay at Arrival only) ──────────────────
@@ -578,6 +570,8 @@ export async function bookDetailing(
             giftCardCode: payload.giftCardCode ?? "",
             giftCardDiscount: String(payload.giftCardDiscount),
           }),
+          ...(payload.waterPower && { waterPower: payload.waterPower }),
+          ...(payload.waterPowerFee != null && payload.waterPowerFee > 0 && { waterPowerFee: String(payload.waterPowerFee) }),
         },
         success_url: `${origin}/?stripe=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/?stripe=cancelled`,
@@ -627,6 +621,7 @@ export async function bookDetailing(
           ? payload.selectedAddons
           : null,
       additional_vehicles_json: additionalVehiclesForDb,
+      water_power: payload.waterPower ?? null,
       ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
     })
     .select("id")
@@ -639,6 +634,26 @@ export async function bookDetailing(
       success: false,
       error: "Could not finalize your booking. Please try again.",
     };
+  }
+
+  // ── 3a. Deduct redeemed points — now that booking is confirmed ───────────
+  if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
+    const { data: redeemRow } = await adminSupabase
+      .from("profiles")
+      .select("reward_points")
+      .eq("id", profileId)
+      .single();
+    if (redeemRow && typeof redeemRow.reward_points === "number") {
+      await adminSupabase
+        .from("profiles")
+        .update({ reward_points: Math.max(0, redeemRow.reward_points - payload.pointsToRedeem) })
+        .eq("id", profileId);
+      await adminSupabase.from("point_transactions").insert({
+        user_id:     profileId,
+        amount:      -payload.pointsToRedeem,
+        description: `Redeemed for ${payload.serviceName}`,
+      });
+    }
   }
 
   // ── 3b. Earn points (1 pt per $1 of service cost, excluding travel) ─────
@@ -731,6 +746,9 @@ export async function bookDetailing(
         bookingTime: payload.bookingTime,
         travelFee: Math.round(payload.travelFee ?? 0),
         totalPrice: payload.totalPrice,
+        waterPower: payload.waterPower,
+        waterPowerFee: payload.waterPowerFee,
+        addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
         additionalVehicles: (payload.additionalVehicles ?? []).length > 0
           ? payload.additionalVehicles!.map(av => ({
               vehicleYear: av.vehicleYear,
@@ -738,6 +756,7 @@ export async function bookDetailing(
               vehicleModel: av.vehicleModel,
               serviceName: av.serviceName,
               servicePrice: av.servicePrice,
+              selectedAddons: av.selectedAddons,
             }))
           : undefined,
       },
@@ -777,6 +796,19 @@ export async function bookDetailing(
       distanceMiles: payload.distanceMiles || undefined,
       paymentMethod: payload.paymentMethod,
       notes: payload.notes || undefined,
+      waterPower: payload.waterPower,
+      waterPowerFee: payload.waterPowerFee,
+      addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
+      additionalVehicles: (payload.additionalVehicles ?? []).length > 0
+        ? payload.additionalVehicles!.map(av => ({
+            vehicleYear: av.vehicleYear,
+            vehicleMake: av.vehicleMake,
+            vehicleModel: av.vehicleModel,
+            serviceName: av.serviceName,
+            servicePrice: av.servicePrice,
+            selectedAddons: av.selectedAddons,
+          }))
+        : undefined,
     },
     { skipCustomerEmail: true }
   ).catch((err) => console.error("[bookDetailing] admin email error:", err));

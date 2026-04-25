@@ -59,6 +59,7 @@ import { MONTHLY_PLAN_DURATIONS } from "@/lib/monthlyPlans";
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
 const MAX_REDEEMABLE_POINTS = 1000;
+const WATER_POWER_FEE = 10;
 /** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $120 */
 function getMaintenanceSetupFee(serviceName: string): number {
   return serviceName.toLowerCase().includes("full") ? 100 : 75;
@@ -67,9 +68,9 @@ function getMaintenanceSetupFee(serviceName: string): number {
 const ALL_ADD_ONS = [
   // ── Vehicle / Standard ────────────────────────────────────────────────────
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
-  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
-  { id: "odor_bomb",         label: "Odor Eliminator Treatment",             price: 40,  desc: "Activated neutralizer bombs combat smoke, food & mild pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",label: "Upholstery & Floorboard Shampoo",      price: 90,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source." },
+  { id: "headlight_restore",   label: "Headlight Restoration",               price: 40,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
+  { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 60,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
+  { id: "upholstery_shampoo",  label: "Upholstery & Floorboard Shampoo",    price: 50,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $65." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
   { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
@@ -102,6 +103,12 @@ const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "uph
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
+
+/** Upholstery shampoo is $15 more for XL vehicles (3rd row). All other addons use their base price. */
+function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
+  if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 15;
+  return addon.price;
+}
 
 /**
  * Returns add-ons relevant to a given service.
@@ -175,6 +182,15 @@ function isBoatService(name: string): boolean {
   return name.toLowerCase().includes("boat");
 }
 
+/** Maps boat/RV footage to a size tier for duration lookups. */
+function boatLengthToSize(feet: number | ""): VehicleSizeSlug {
+  if (typeof feet !== "number") return "compact";
+  if (feet >= 46) return "xl";
+  if (feet >= 31) return "suv";
+  if (feet >= 21) return "sedan";
+  return "compact";
+}
+
 /**
  * Returns a display label for the service category.
  */
@@ -194,23 +210,29 @@ function getServiceCategory(service: Service): { label: string; color: string } 
 
 /** Per-foot rates for footage-based services (boat / RV) */
 const FOOTAGE_RATE: Record<string, number> = {
-  // Boats — 15 ft minimum (Waterline Up model)
-  "Boat Interior Detail": 20,   // Marine Express
-  "Boat Exterior Detail": 30,   // The Deep Reset
-  "Full Boat Detail":     55,   // Showroom Restoration
+  // Boats — 15 ft minimum
+  "Boat Interior":          15,
+  "Boat Exterior":          20,
+  "Boat Full Detail":       32,
+  "Boat Showroom Package":  55,
   // RVs — 20 ft minimum
-  "RV Interior Detail":   20,
-  "RV Exterior Detail":   22,
-  "RV Full Detail":       38,
+  "RV Interior":            15,
+  "RV Exterior":            12,
+  "RV Full Detail":         25,
+  "RV Showroom 1-Step":     25,
+  "RV Showroom 2-Step":     40,
 };
 /** Minimum footage per service */
 const FOOTAGE_MIN_FEET: Record<string, number> = {
-  "Boat Interior Detail": 15,
-  "Boat Exterior Detail": 15,
-  "Full Boat Detail":     15,
-  "RV Interior Detail":   20,
-  "RV Exterior Detail":   20,
-  "RV Full Detail":       20,
+  "Boat Interior":          15,
+  "Boat Exterior":          15,
+  "Boat Full Detail":       15,
+  "Boat Showroom Package":  15,
+  "RV Interior":            20,
+  "RV Exterior":            20,
+  "RV Full Detail":         20,
+  "RV Showroom 1-Step":     20,
+  "RV Showroom 2-Step":     20,
 };
 // backward-compat aliases used in a few inline JSX references
 const BOAT_RATE = FOOTAGE_RATE;
@@ -227,11 +249,12 @@ const SERVICE_DESCRIPTION_OVERRIDES: Record<string, string> = {
     "Showroom quality inside and out. Full interior deep clean combined with a complete exterior decontamination wash, clay bar, iron & fallout removal, ceramic sealant application, and all trim/glass dressing. No machine polishing.",
 };
 
-/** Maps DB service names → Waterline Up marketing display names */
+/** Maps DB service names → display names shown on the booking confirmation screen */
 const BOAT_DISPLAY_NAMES: Record<string, { name: string; tagline: string }> = {
-  "Boat Interior Detail": { name: "Marine Express",        tagline: "Maintenance detail — decontamination wash, UV vinyl protect & window clarity" },
-  "Boat Exterior Detail": { name: "The Deep Reset",        tagline: "Flagship deep clean — steam sanitation, hot-water extraction & marine wax" },
-  "Full Boat Detail":     { name: "Showroom Restoration",  tagline: "Total restoration — everything in Deep Reset + machine polish & gel coat gloss" },
+  "Boat Interior":         { name: "Boat Interior",         tagline: "Full interior clean — vinyl, carpet, dash, storage & odor treatment. No buffing or polishing." },
+  "Boat Exterior":         { name: "Boat Exterior",         tagline: "Hull wash, oxidation removal, wax/sealant & deck rinse. No buffing or polishing." },
+  "Boat Full Detail":      { name: "Boat Full Detail",      tagline: "Complete interior + exterior — hull, wax, interior vacuum & vinyl protect. No buffing or polishing." },
+  "Boat Showroom Package": { name: "Boat Showroom Package", tagline: "Exterior detail + machine polish — showroom-ready finish with ceramic or carnauba wax." },
 };
 
 const VEHICLE_SIZES: {
@@ -770,7 +793,19 @@ export function BookingSection({
     setAdditionalVehicles(prev => prev.filter((_, i) => i !== idx));
 
   const updateAdditionalVehicle = (idx: number, patch: Partial<AdditionalVehicleForm>) =>
-    setAdditionalVehicles(prev => prev.map((v, i) => i === idx ? { ...v, ...patch } : v));
+    setAdditionalVehicles(prev => prev.map((v, i) => {
+      if (i !== idx) return v;
+      const updated = { ...v, ...patch };
+      if ("vehicleSize" in patch) {
+        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 50;
+        updated.selectedAddons = updated.selectedAddons.map(a =>
+          a.id === "upholstery_shampoo"
+            ? { ...a, price: updated.vehicleSize === "xl" ? base + 15 : base }
+            : a
+        );
+      }
+      return updated;
+    }));
 
   const toggleAdditionalAddon = (idx: number, addon: { id: string; label: string; price: number }) =>
     setAdditionalVehicles(prev => prev.map((v, i) => {
@@ -793,7 +828,7 @@ export function BookingSection({
         if (FLOOR_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
         }
-        return [...filtered, { id: addon.id, label: addon.label, price: addon.price }];
+        return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string) }];
       }
     });
   };
@@ -819,6 +854,9 @@ export function BookingSection({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Water & power
+  const [waterPower, setWaterPower] = useState<"provided" | "needed" | null>(null);
 
   // Travel fee from distance (over 10 mi from home base: $0.50/mi)
   const [travelFee, setTravelFee] = useState(0);
@@ -887,7 +925,11 @@ export function BookingSection({
 
   const formatPhoneNumber = (value: string) => {
     if (!value) return value;
-    const phoneNumber = value.replace(/[^\d]/g, "");
+    let phoneNumber = value.replace(/[^\d]/g, "");
+    // Strip leading US country code (1) from autofill like "18025551234"
+    if (phoneNumber.length === 11 && phoneNumber.startsWith("1")) {
+      phoneNumber = phoneNumber.slice(1);
+    }
     const phoneNumberLength = phoneNumber.length;
     if (phoneNumberLength < 4) return phoneNumber;
     if (phoneNumberLength < 7) {
@@ -929,7 +971,7 @@ export function BookingSection({
       if (!av.serviceName || !av.vehicleSize) return sum;
       const avKey = VEHICLE_SIZE_MAP[av.vehicleSize as VehicleSizeSlug] || av.vehicleSize || "medium";
       const base = SERVICE_DURATIONS[av.serviceName]?.[avKey] ?? 180;
-      return sum + Math.max(60, base - 60);
+      return sum + Math.max(30, base - 30);
     }, 0);
 
     const total = primaryMins + addlMins;
@@ -958,8 +1000,9 @@ export function BookingSection({
   const giftCardDiscount = appliedGiftCard
     ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
     : 0;
+  const waterPowerFee = waterPower === "needed" ? WATER_POWER_FEE : 0;
   const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
+    servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + waterPowerFee + addonsTotal + additionalVehiclesTotal;
   const availablePoints = rewardPoints ?? 0;
 
   // 10 points = $1. Max redeemable is 1000 pts ($100).
@@ -1047,14 +1090,19 @@ export function BookingSection({
     selectedService && MULTI_VEHICLE_SERVICE_NAMES.includes(selectedService.name)
   );
 
-  // Total booking duration accounts for all vehicles (each additional = base - 60 min, min 60)
+  // Total booking duration: each additional vehicle gets -30 min efficiency discount (min 30)
   const primaryDurationMins = selectedService
-    ? getDurationForService(selectedService.name, (vehicleSize || "compact") as VehicleSizeSlug)
+    ? getDurationForService(
+        selectedService.name,
+        (isFootageService(selectedService.name)
+          ? boatLengthToSize(boatLength)
+          : (vehicleSize || "compact")) as VehicleSizeSlug
+      )
     : 120;
   const additionalDurationMins = additionalVehicles.reduce((sum, v) => {
     if (!v.serviceName || !v.vehicleSize) return sum;
     const base = getDurationForService(v.serviceName, v.vehicleSize as VehicleSizeSlug);
-    return sum + Math.max(60, base - 60);
+    return sum + Math.max(30, base - 30);
   }, 0);
   const totalBookingDurationMins = primaryDurationMins + additionalDurationMins;
   useEffect(() => {
@@ -1206,6 +1254,9 @@ export function BookingSection({
       travelFee, distanceMiles, couponCode, appliedCoupon, pointsToRedeemInput,
       boatLength, selectedAddons, additionalVehicles, bookingCategory]);
 
+  // Step 3 — collapsible booking details summary
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+
   // ── Restore from localStorage when form opens (after the reset effect) ────
   const [showResumeToast, setShowResumeToast] = useState(false);
   useEffect(() => {
@@ -1327,13 +1378,14 @@ export function BookingSection({
   }, [vehicleMake, vehicleModel]);
 
   // ── Fetch bookings when date changes (for Schedule step availability) ───
+  // Time management is handled explicitly in the UI handlers and restore paths —
+  // this effect only fetches the booked slots for the chosen date.
   useEffect(() => {
     if (!selectedDate) {
       setExistingBookingsForDate(null);
-      setSelectedTime("");
+      setSlotsLoading(false);
       return;
     }
-    setSelectedTime("");
     setSlotsLoading(true);
     getBookingsForDate(selectedDate)
       .then(setExistingBookingsForDate)
@@ -1354,6 +1406,16 @@ export function BookingSection({
       .finally(() => { if (!cancelled) setNextAvailLoading(false); });
     return () => { cancelled = true; };
   }, [selectedService?.name, vehicleSize, step, totalBookingDurationMins]);
+
+  // ── Re-price upholstery shampoo if vehicle size changes after selection ────
+  useEffect(() => {
+    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 50;
+    setSelectedAddons(prev => prev.map(a =>
+      a.id === "upholstery_shampoo"
+        ? { ...a, price: vehicleSize === "xl" ? base + 15 : base }
+        : a
+    ));
+  }, [vehicleSize]);
 
   // ── Travel fee when address changes (debounced) ─────────────────────────────
   useEffect(() => {
@@ -1473,7 +1535,7 @@ export function BookingSection({
       if (selectedService && selectedDate) {
         const slots = await getAvailableSlots(
           selectedService.name,
-          vehicleSize || "compact",
+          isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : (vehicleSize || "compact"),
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate,
@@ -1485,7 +1547,7 @@ export function BookingSection({
       }
     }
     updateAvailable();
-  }, [selectedService, selectedDate, vehicleSize, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon, effectiveDurationOverride]);
+  }, [selectedService, selectedDate, vehicleSize, boatLength, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon, effectiveDurationOverride]);
 
   // Remove past times for today so they don't render at all (pass full slot so regex can read .time or .label)
   const displaySlots = selectedDate
@@ -1504,7 +1566,7 @@ export function BookingSection({
         // Also check if it's still available in the new slots
         const available = await getAvailableSlots(
           selectedService?.name ?? "",
-          vehicleSize || "compact",
+          (selectedService && isFootageService(selectedService.name)) ? boatLengthToSize(boatLength) : (vehicleSize || "compact"),
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate,
@@ -1553,7 +1615,8 @@ export function BookingSection({
       serviceAddress.trim() &&
       name.trim() &&
       phone.trim() &&
-      selectedService
+      selectedService &&
+      waterPower !== null
     );
 
   const handleNext = () => {
@@ -1588,7 +1651,7 @@ export function BookingSection({
       serviceId: selectedService!.id,
       serviceName: selectedService!.name,
       totalPrice: totalAfterDiscount,
-      vehicleSize: (selectedService && isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+      vehicleSize: (selectedService && isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : vehicleSize) as VehicleSizeSlug,
       vehicleYear: vehicleYear,
       vehicleMake: vehicleMake,
       vehicleModel: selectedService && isFootageService(selectedService.name)
@@ -1605,6 +1668,8 @@ export function BookingSection({
       ...(addlVehicles.length > 0 && { additionalVehicles: addlVehicles }),
       ...(travelFee > 0 && { travelFee }),
       ...(setupFee > 0 && { setupFee }),
+      waterPower: waterPower ?? "provided",
+      ...(waterPowerFee > 0 && { waterPowerFee }),
       ...(pointsToRedeem > 0 && { pointsToRedeem }),
       ...(referralEligible && { isApplyingReferralDiscount: true }),
       ...(authUserId && { authUserId }),
@@ -1660,7 +1725,7 @@ export function BookingSection({
     if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize)) return;
     const draft: DraftBooking = {
       serviceId: selectedService.id,
-      vehicleSize: (isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+      vehicleSize: (isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : vehicleSize) as VehicleSizeSlug,
       vehicleYear: vehicleYear,
       vehicleMake: vehicleMake,
       vehicleModel: isFootageService(selectedService.name) ? `${vehicleModel} (${boatLength}ft)` : vehicleModel,
@@ -1682,13 +1747,21 @@ export function BookingSection({
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
     }
-    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}/?restore_booking=1` : "/?restore_booking=1";
+    const returnPath = typeof window !== "undefined"
+      ? window.location.pathname.replace(/\/$/, "") || "/"
+      : "/";
+    const returnUrl = typeof window !== "undefined"
+      ? `${window.location.origin}${returnPath}?restore_booking=1`
+      : "/?restore_booking=1";
     window.location.href = `/auth/login?signup=true&redirect=${encodeURIComponent(returnUrl)}`;
   };
 
   // ── Pay Now via Stripe ───────────────────────────────────────────────────
+  const stripeAbortRef = useRef(false);
+
   const handlePayNow = async () => {
     if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize) || !canConfirm()) return;
+    stripeAbortRef.current = false;
     setIsStripeLoading(true);
     setStripeError(null);
     setBookingResult(null);
@@ -1700,7 +1773,7 @@ export function BookingSection({
           : "";
       const draft: DraftBooking = {
         serviceId: selectedService.id,
-        vehicleSize: (isFootageService(selectedService.name) ? "compact" : vehicleSize) as VehicleSizeSlug,
+        vehicleSize: (isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : vehicleSize) as VehicleSizeSlug,
         vehicleYear: vehicleYear,
         vehicleMake: vehicleMake,
         vehicleModel: isFootageService(selectedService.name) ? `${vehicleModel} (${boatLength}ft)` : vehicleModel,
@@ -1723,12 +1796,16 @@ export function BookingSection({
         sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
       }
       try { localStorage.removeItem(PERSISTENT_DRAFT_KEY); } catch {}
-      const result = await bookDetailing({
-        ...buildPayload(),
-        paymentMethod: "pay_now",
-        successUrl: pageBase,
-        cancelUrl: pageBase,
-      });
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("TIMEOUT")), 28_000)
+      );
+      const result = await Promise.race([
+        bookDetailing({ ...buildPayload(), paymentMethod: "pay_now", successUrl: pageBase, cancelUrl: pageBase }),
+        timeout,
+      ]);
+
+      if (stripeAbortRef.current) return;
       if (!result.success) {
         setStripeError(result.error);
         setIsStripeLoading(false);
@@ -1758,8 +1835,13 @@ export function BookingSection({
         });
       }
     } catch (err) {
+      if (stripeAbortRef.current) return;
       setIsStripeLoading(false);
-      setStripeError(err instanceof Error ? err.message : "Something went wrong.");
+      if (err instanceof Error && err.message === "TIMEOUT") {
+        setStripeError("This is taking longer than expected. Please try again — if the problem persists, call us at 802-585-5563.");
+      } else {
+        setStripeError(err instanceof Error ? err.message : "Something went wrong.");
+      }
     }
   };
 
@@ -2116,8 +2198,8 @@ export function BookingSection({
             !bookingCategory ? (
               /* ── Step 0: Pick a Category ── */
               <div className="px-6 py-6">
-                <h2 className="text-xl font-black text-white">Book a Service</h2>
-                <p className="text-sm text-zinc-500 mt-0.5 mb-6">
+                <h2 className="text-xl font-black text-white text-center">Book a Service</h2>
+                <p className="text-sm text-zinc-500 mt-0.5 mb-6 text-center">
                   What are we detailing today?
                 </p>
                 <div className="flex flex-col gap-3">
@@ -2125,13 +2207,13 @@ export function BookingSection({
                   <button
                     type="button"
                     onClick={() => setBookingCategory("vehicle")}
-                    className="w-full p-5 rounded-2xl border border-[#252525] text-left bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                    className="w-full p-5 rounded-2xl border border-[#252525] bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center shrink-0">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center">
                         <Car size={20} className="text-[#D4AF37]" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div>
                         <div className="font-bold text-white group-hover:text-[#D4AF37] transition-colors">
                           Vehicle Detailing
                         </div>
@@ -2139,7 +2221,6 @@ export function BookingSection({
                           Cars, trucks, SUVs &amp; more — interior, exterior &amp; full detail packages
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors shrink-0" />
                     </div>
                   </button>
 
@@ -2147,13 +2228,13 @@ export function BookingSection({
                   <button
                     type="button"
                     onClick={() => setBookingCategory("boat")}
-                    className="w-full p-5 rounded-2xl border border-[#252525] text-left bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                    className="w-full p-5 rounded-2xl border border-[#252525] bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center shrink-0">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center">
                         <Waves size={20} className="text-[#D4AF37]" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div>
                         <div className="font-bold text-white group-hover:text-[#D4AF37] transition-colors">
                           Boat / Marine Detailing
                         </div>
@@ -2161,7 +2242,6 @@ export function BookingSection({
                           Dockside specialist — waterline up, no haul-out required
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors shrink-0" />
                     </div>
                   </button>
 
@@ -2169,13 +2249,13 @@ export function BookingSection({
                   <button
                     type="button"
                     onClick={() => setBookingCategory("rv")}
-                    className="w-full p-5 rounded-2xl border border-[#252525] text-left bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                    className="w-full p-5 rounded-2xl border border-[#252525] bg-zinc-900/40 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04] active:scale-[0.99] transition-all duration-150 group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center shrink-0">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center">
                         <Layers size={20} className="text-[#D4AF37]" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div>
                         <div className="font-bold text-white group-hover:text-[#D4AF37] transition-colors">
                           RV Detailing
                         </div>
@@ -2183,7 +2263,6 @@ export function BookingSection({
                           Motorhomes &amp; campers — mobile service, priced per foot
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors shrink-0" />
                     </div>
                   </button>
                 </div>
@@ -2217,13 +2296,13 @@ export function BookingSection({
                   return (
                     <div className="space-y-8">
                       <div>
-                        <h2 className="text-xl font-black text-white mb-1">Vehicle Detailing</h2>
-                        <p className="text-sm text-zinc-500 mb-6">Price varies by vehicle size</p>
+                        <h2 className="text-xl font-black text-white mb-1 text-center">Vehicle Detailing</h2>
+                        <p className="text-sm text-zinc-500 mb-6 text-center">Price varies by vehicle size</p>
 
                         {/* Standard packages */}
                         {standard.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center justify-center gap-2 mb-3">
                               <Sparkles size={14} className="text-[#D4AF37]" />
                               <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Detailing Packages</h3>
                             </div>
@@ -2233,7 +2312,7 @@ export function BookingSection({
                                   key={service.id}
                                   type="button"
                                   onClick={() => onSelectService(service)}
-                                  className="p-4 rounded-xl border border-[#252525] text-left transition-all duration-150 hover:border-[#D4AF37]/40 hover:bg-white/[0.02] active:scale-[0.99] group"
+                                  className="p-4 rounded-xl border border-[#252525] text-center transition-all duration-150 hover:border-[#D4AF37]/40 hover:bg-white/[0.02] active:scale-[0.99] group"
                                 >
                                   <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
                                     {service.name}
@@ -2255,11 +2334,11 @@ export function BookingSection({
                         {/* Ultimate Series — visually distinct */}
                         {ultimate.length > 0 && (
                           <div className={standard.length > 0 ? "mt-6" : ""}>
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center justify-center gap-2 mb-1">
                               <Gem size={14} className="text-[#D4AF37]" />
                               <h3 className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">Ultimate Series</h3>
                             </div>
-                            <p className="text-[11px] text-zinc-600 mb-3">The full deep-clean experience — flat rate, no size upcharge</p>
+                            <p className="text-[11px] text-zinc-600 mb-3 text-center">The full deep-clean experience — flat rate, no size upcharge</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {ultimate.map((service) => {
                                 const flatPrice = service.price_small === service.price_large
@@ -2271,12 +2350,12 @@ export function BookingSection({
                                     key={service.id}
                                     type="button"
                                     onClick={() => onSelectService(service)}
-                                    className="relative p-4 rounded-xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.06] to-[#D4AF37]/[0.02] text-left transition-all duration-150 hover:border-[#D4AF37]/60 hover:from-[#D4AF37]/[0.10] hover:to-[#D4AF37]/[0.04] active:scale-[0.99] group overflow-hidden"
+                                    className="relative p-4 rounded-xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.06] to-[#D4AF37]/[0.02] text-center transition-all duration-150 hover:border-[#D4AF37]/60 hover:from-[#D4AF37]/[0.10] hover:to-[#D4AF37]/[0.04] active:scale-[0.99] group overflow-hidden"
                                   >
                                     <div className="absolute top-2 right-2">
                                       <Crown size={12} className="text-[#D4AF37]/40" />
                                     </div>
-                                    <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors pr-5">
+                                    <div className="font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors px-5">
                                       {service.name}
                                     </div>
                                     <div className="text-sm text-[#D4AF37] font-black mt-1">
@@ -2287,7 +2366,7 @@ export function BookingSection({
                                         {SERVICE_DESCRIPTION_OVERRIDES[service.name] ?? service.description}
                                       </div>
                                     )}
-                                    <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#D4AF37]/70 bg-[#D4AF37]/10 rounded-full px-2 py-0.5">
+                                    <div className="mt-2 inline-flex items-center justify-center gap-1 text-[10px] font-semibold text-[#D4AF37]/70 bg-[#D4AF37]/10 rounded-full px-2 py-0.5">
                                       <Crown size={9} />
                                       {isInterior ? "Deep Interior Reset" : "Full Exterior + Interior"}
                                     </div>
@@ -2604,7 +2683,7 @@ export function BookingSection({
                       {/* Year, Make, Model — Make/Model autocomplete with size auto-select on pick */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
                             Year
                           </label>
                           <input
@@ -2613,11 +2692,11 @@ export function BookingSection({
                             onChange={(e) => setVehicleYear(e.target.value)}
                             placeholder="2022"
                             maxLength={4}
-                            className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                            className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm text-center"
                           />
                         </div>
                         <div>
-                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
                             Make
                           </label>
                           <MakeAutocomplete
@@ -2631,7 +2710,7 @@ export function BookingSection({
                           />
                         </div>
                         <div>
-                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">
+                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
                             Model
                           </label>
                           <ModelAutocomplete
@@ -2649,18 +2728,16 @@ export function BookingSection({
 
                       {/* Vehicle Size — hidden for flat-rate Ultimate packages */}
                       {isUltimateService ? (
-                        <div className="flex items-center gap-3 rounded-2xl border border-[#D4AF37]/25 bg-[#D4AF37]/[0.05] px-5 py-4">
-                          <Crown size={16} className="text-[#D4AF37] shrink-0" />
-                          <div>
-                            <p className="text-sm font-bold text-white">
-                              {selectedService?.price_small != null ? `$${selectedService.price_small}` : ""} — Flat Rate
-                            </p>
-                            <p className="text-[11px] text-zinc-500 mt-0.5">One price for all vehicle sizes. No upsell.</p>
-                          </div>
+                        <div className="flex flex-col items-center text-center gap-1.5 rounded-2xl border border-[#D4AF37]/25 bg-[#D4AF37]/[0.05] px-5 py-4">
+                          <Crown size={16} className="text-[#D4AF37]" />
+                          <p className="text-sm font-bold text-white">
+                            {selectedService?.price_small != null ? `$${selectedService.price_small}` : ""} — Flat Rate
+                          </p>
+                          <p className="text-[11px] text-zinc-500">One price for all vehicle sizes. No upsell.</p>
                         </div>
                       ) : (
                         <div>
-                          <div className="flex items-center justify-between mb-3">
+                          <div className="flex flex-col items-center mb-3 gap-1">
                             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
                               Vehicle Size
                             </label>
@@ -2673,8 +2750,8 @@ export function BookingSection({
 
                           {!vehicleSize ? (
                             /* ── No size yet: prompt to enter vehicle ── */
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-zinc-950/40 px-5 py-4 text-zinc-600">
-                              <Car size={16} className="shrink-0 opacity-50" />
+                            <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/[0.06] bg-zinc-950/40 px-5 py-4 text-zinc-600 text-center">
+                              <Car size={16} className="opacity-50" />
                               <p className="text-sm">Enter your vehicle above to get your price</p>
                             </div>
                           ) : (
@@ -2683,9 +2760,9 @@ export function BookingSection({
                               {VEHICLE_SIZES.filter(s => s.id === vehicleSize).map((size) => (
                                 <div
                                   key={size.id}
-                                  className="w-full p-4 rounded-2xl border border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_18px_rgba(212,175,55,0.12)] text-left"
+                                  className="w-full p-4 rounded-2xl border border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_18px_rgba(212,175,55,0.12)] text-center"
                                 >
-                                  <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center justify-center gap-2 mb-1">
                                     <span className="text-sm font-bold text-[#D4AF37]">{size.label}</span>
                                     <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />
                                   </div>
@@ -2697,7 +2774,6 @@ export function BookingSection({
                                   )}
                                 </div>
                               ))}
-
                             </>
                           )}
 
@@ -2721,7 +2797,7 @@ export function BookingSection({
                         if (!standAlone.length && !floorOpts.length) return null;
                         return (
                           <div>
-                            <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center justify-center gap-2 mb-3">
                               <Sparkles size={14} className="text-[#D4AF37]" />
                               <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400">
                                 {isMarine ? "Marine Specialist Add-ons" : isRV ? "RV Specialist Add-ons" : isUltimate ? "Ultimate Upgrades" : "Enhance Your Detail"}
@@ -2729,16 +2805,16 @@ export function BookingSection({
                             </div>
 
                             {note && (
-                              <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 mb-3">
-                                <Check size={12} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
+                              <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 mb-3 text-center">
+                                <Check size={12} className="text-emerald-400 shrink-0" strokeWidth={2.5} />
                                 <p className="text-[11px] text-emerald-300/80 leading-relaxed">{note}</p>
                               </div>
                             )}
 
                             {/* Full-day notice when 1-step polish is selected */}
                             {hasFullDayAddon && (
-                              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 mb-3">
-                                <Zap size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                              <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 mb-3 text-center">
+                                <Zap size={12} className="text-amber-400 shrink-0" />
                                 <p className="text-[11px] text-amber-300/90 leading-relaxed">
                                   <span className="font-bold">Full-day appointment required.</span> Machine polishing takes the full day — only morning start times will be available.
                                 </p>
@@ -2754,25 +2830,23 @@ export function BookingSection({
                                     key={addon.id}
                                     type="button"
                                     onClick={() => toggleAddon(addon)}
-                                    className={`w-full p-4 rounded-2xl border text-left transition-all duration-200 group flex items-center justify-between gap-4 ${
+                                    className={`w-full p-4 rounded-2xl border text-center transition-all duration-200 group flex flex-col items-center gap-1 ${
                                       isSelected
                                         ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
                                         : "bg-zinc-950/40 border-white/5 hover:border-white/20"
                                     }`}
                                   >
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
-                                          {addon.label}
-                                        </span>
-                                        {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
-                                      </div>
-                                      <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
-                                        {addon.desc}
-                                      </p>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
+                                        {addon.label}
+                                      </span>
+                                      {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
                                     </div>
-                                    <div className={`shrink-0 font-black text-sm tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                      +${addon.price}
+                                    <p className="text-[11px] text-zinc-500 leading-relaxed">
+                                      {addon.desc}
+                                    </p>
+                                    <div className={`font-black text-sm tabular-nums mt-0.5 ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                      +${getEffectiveAddonPrice(addon, vehicleSize as string)}
                                     </div>
                                   </button>
                                 );
@@ -2785,7 +2859,7 @@ export function BookingSection({
                                     ? "border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
                                     : "border-white/5"
                                 }`}>
-                                  <div className={`px-4 py-3 border-b border-white/[0.06] ${
+                                  <div className={`px-4 py-3 border-b border-white/[0.06] text-center ${
                                     selectedAddons.some(a => FLOOR_ADDON_IDS.includes(a.id))
                                       ? "bg-[#D4AF37]/10"
                                       : "bg-zinc-950/40"
@@ -2826,7 +2900,7 @@ export function BookingSection({
                       {supportsMultiVehicle && (
                         <div className="pt-2">
                           {/* Savings banner */}
-                          <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 mb-4">
+                          <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 mb-4 text-center">
                             <Tag size={14} className="text-emerald-400 shrink-0" />
                             <p className="text-[11px] text-emerald-300/90 leading-relaxed">
                               <span className="font-bold">Save $25 on each additional vehicle</span> — bring multiple cars and we'll detail them all in one visit!
@@ -2860,7 +2934,7 @@ export function BookingSection({
                                     <span className="text-sm font-bold text-white">Vehicle {idx + 2}</span>
                                     {avBasePrice > 0 && (
                                       <span className="text-xs text-emerald-400 font-semibold">
-                                        ${avBasePrice} <span className="line-through text-zinc-500">${avBasePrice + MULTI_VEHICLE_DISCOUNT}</span> (–${MULTI_VEHICLE_DISCOUNT} off)
+                                        ${Math.max(0, avBasePrice - MULTI_VEHICLE_DISCOUNT)} <span className="line-through text-zinc-500">${avBasePrice}</span> (–${MULTI_VEHICLE_DISCOUNT} off)
                                       </span>
                                     )}
                                   </div>
@@ -2875,146 +2949,137 @@ export function BookingSection({
                                 </div>
 
                                 <div className="p-4 space-y-4">
-                                  {/* Service selector */}
-                                  <div>
-                                    <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Service</label>
-                                    <div className="grid grid-cols-1 gap-1.5">
-                                      {eligibleServices.map(svc => {
-                                        const isUlt = svc.name.toLowerCase().includes("ultimate");
-                                        const selected = av.serviceId === svc.id;
-                                        const price = isUlt
-                                          ? svc.price_small ?? 0
-                                          : av.vehicleSize
-                                            ? getPriceForSize(svc, av.vehicleSize as VehicleSizeSlug)
-                                            : svc.price_small ?? 0;
-                                        return (
-                                          <button
-                                            key={svc.id}
-                                            type="button"
-                                            onClick={() => {
-                                              const isUltSvc = svc.name.toLowerCase().includes("ultimate");
-                                              updateAdditionalVehicle(idx, {
-                                                serviceId: svc.id,
-                                                serviceName: svc.name,
-                                                servicePrice: price,
-                                                selectedAddons: [],
-                                                ...(isUltSvc ? { vehicleSize: "compact" } : {}),
-                                              });
-                                            }}
-                                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
-                                              selected
-                                                ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 text-[#D4AF37]"
-                                                : "border-white/[0.06] hover:border-white/20 text-zinc-300 hover:text-white"
-                                            }`}
-                                          >
-                                            <span className="text-sm font-semibold">{svc.name}</span>
-                                            <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
-                                              ${Math.max(0, price - MULTI_VEHICLE_DISCOUNT)}
-                                            </span>
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-
-                                  {/* Year / Make / Model */}
+                                  {/* Step 1: Year / Make / Model */}
                                   <div className="grid grid-cols-3 gap-2">
                                     <div>
-                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Year</label>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5 text-center">Year</label>
                                       <input
                                         type="text"
                                         value={av.vehicleYear}
                                         onChange={e => updateAdditionalVehicle(idx, { vehicleYear: e.target.value })}
                                         placeholder="2022"
                                         maxLength={4}
-                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm"
+                                        className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm text-center"
                                       />
                                     </div>
                                     <div>
-                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">Make</label>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5 text-center">Make</label>
                                       <MakeAutocomplete
                                         value={av.vehicleMake}
-                                        onChange={v => updateAdditionalVehicle(idx, { vehicleMake: v, vehicleModel: "" })}
-                                        onSelect={make => updateAdditionalVehicle(idx, { vehicleMake: make, vehicleModel: "" })}
+                                        onChange={v => updateAdditionalVehicle(idx, { vehicleMake: v, vehicleModel: "", vehicleSize: "" })}
+                                        onSelect={make => updateAdditionalVehicle(idx, { vehicleMake: make, vehicleModel: "", vehicleSize: "" })}
                                         placeholder="Toyota"
                                       />
                                     </div>
                                     <div>
-                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5">
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-1.5 text-center">
                                         Model
-                                        {av.vehicleSize && !avIsUltimate && (
-                                          <span className="ml-1.5 inline-flex items-center gap-0.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wide">
-                                            <Zap size={7} className="fill-[#D4AF37]" /> Auto
-                                          </span>
-                                        )}
                                       </label>
                                       <ModelAutocomplete
                                         value={av.vehicleModel}
                                         onChange={v => updateAdditionalVehicle(idx, { vehicleModel: v })}
                                         make={av.vehicleMake}
                                         onSelect={(model, sizeSlug) => {
-                                          const isUltSvc = av.serviceName.toLowerCase().includes("ultimate");
-                                          const patch: Partial<AdditionalVehicleForm> = { vehicleModel: model };
-                                          if (!isUltSvc && sizeSlug) {
+                                          if (!avIsUltimate && sizeSlug) {
                                             const svcObj = services.find(s => s.id === av.serviceId);
                                             const price = svcObj ? getPriceForSize(svcObj, sizeSlug) : av.servicePrice;
-                                            patch.vehicleSize = sizeSlug;
-                                            patch.servicePrice = price;
+                                            updateAdditionalVehicle(idx, { vehicleModel: model, vehicleSize: sizeSlug, servicePrice: price });
+                                          } else {
+                                            updateAdditionalVehicle(idx, { vehicleModel: model });
                                           }
-                                          updateAdditionalVehicle(idx, patch);
                                         }}
                                         placeholder="Camry"
                                       />
                                     </div>
                                   </div>
 
-                                  {/* Vehicle Size — hidden for Ultimate */}
-                                  {!avIsUltimate && av.serviceId && (
+                                  {/* Step 2: Service — shown once make is entered */}
+                                  {av.vehicleMake && (
                                     <div>
-                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Vehicle Size</label>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        {VEHICLE_SIZES.map(size => {
-                                          const selected = av.vehicleSize === size.id;
-                                          const svcForPrice = avServiceObj;
-                                          const sizePrice = svcForPrice
-                                            ? getPriceForSize(svcForPrice, size.id)
-                                            : 0;
-                                          return (
-                                            <button
-                                              key={size.id}
-                                              type="button"
-                                              onClick={() => {
-                                                const newPrice = avServiceObj
-                                                  ? getPriceForSize(avServiceObj, size.id)
-                                                  : 0;
-                                                updateAdditionalVehicle(idx, {
-                                                  vehicleSize: size.id,
-                                                  servicePrice: newPrice,
-                                                });
-                                              }}
-                                              className={`p-3 rounded-xl border text-left transition-all ${
-                                                selected
-                                                  ? "bg-[#D4AF37]/10 border-[#D4AF37]/60"
-                                                  : "border-white/[0.06] hover:border-white/20"
-                                              }`}
-                                            >
-                                              <div className={`text-xs font-bold ${selected ? "text-[#D4AF37]" : "text-zinc-300"}`}>{size.label}</div>
-                                              {svcForPrice && (
-                                                <div className={`text-sm font-black mt-0.5 tabular-nums ${selected ? "text-white" : "text-zinc-400"}`}>
-                                                  ${Math.max(0, sizePrice - MULTI_VEHICLE_DISCOUNT)}
+                                      {/* Standard services */}
+                                      {(() => {
+                                        const stdSvcs = eligibleServices.filter(s => !s.name.toLowerCase().includes("ultimate"));
+                                        const ultSvcs = eligibleServices.filter(s => s.name.toLowerCase().includes("ultimate"));
+                                        return (
+                                          <div className="space-y-3">
+                                            {stdSvcs.length > 0 && (
+                                              <div>
+                                                <div className="flex items-center justify-center gap-1.5 mb-2">
+                                                  <Sparkles size={11} className="text-zinc-500" />
+                                                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Standard Services</span>
                                                 </div>
-                                              )}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
+                                                <div className="grid grid-cols-1 gap-1.5">
+                                                  {stdSvcs.map(svc => {
+                                                    const selected = av.serviceId === svc.id;
+                                                    const price = av.vehicleSize
+                                                      ? getPriceForSize(svc, av.vehicleSize as VehicleSizeSlug)
+                                                      : svc.price_small ?? 0;
+                                                    return (
+                                                      <button
+                                                        key={svc.id}
+                                                        type="button"
+                                                        onClick={() => updateAdditionalVehicle(idx, { serviceId: svc.id, serviceName: svc.name, servicePrice: price, selectedAddons: [] })}
+                                                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                                                          selected ? "bg-[#D4AF37]/10 border-[#D4AF37]/50" : "border-white/[0.06] hover:border-white/20"
+                                                        }`}
+                                                      >
+                                                        <span className={`text-sm font-semibold ${selected ? "text-[#D4AF37]" : "text-zinc-300"}`}>{svc.name}</span>
+                                                        <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
+                                                          ${Math.max(0, price - MULTI_VEHICLE_DISCOUNT)}
+                                                        </span>
+                                                      </button>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {ultSvcs.length > 0 && (
+                                              <div>
+                                                <div className="flex items-center justify-center gap-1.5 mb-2">
+                                                  <Crown size={11} className="text-[#D4AF37]" />
+                                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Ultimate Series — Flat Rate</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-1.5">
+                                                  {ultSvcs.map(svc => {
+                                                    const selected = av.serviceId === svc.id;
+                                                    const price = svc.price_small ?? 0;
+                                                    return (
+                                                      <button
+                                                        key={svc.id}
+                                                        type="button"
+                                                        onClick={() => updateAdditionalVehicle(idx, { serviceId: svc.id, serviceName: svc.name, servicePrice: price, selectedAddons: [], vehicleSize: "compact" })}
+                                                        className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                                                          selected
+                                                            ? "bg-[#D4AF37]/15 border-[#D4AF37]/60"
+                                                            : "border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] hover:border-[#D4AF37]/40"
+                                                        }`}
+                                                      >
+                                                        <div className="min-w-0">
+                                                          <span className={`text-sm font-semibold ${selected ? "text-[#D4AF37]" : "text-zinc-200"}`}>{svc.name}</span>
+                                                          <p className="text-[10px] text-zinc-500 mt-0.5">Deep clean — flat rate, any size</p>
+                                                        </div>
+                                                        <div className="shrink-0 flex flex-col items-end gap-0.5 ml-2">
+                                                          <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
+                                                            ${Math.max(0, price - MULTI_VEHICLE_DISCOUNT)}
+                                                          </span>
+                                                          <Crown size={10} className={selected ? "text-[#D4AF37]" : "text-[#D4AF37]/40"} />
+                                                        </div>
+                                                      </button>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                   )}
 
                                   {/* Add-ons for this vehicle */}
                                   {avAddons.length > 0 && (
                                     <div>
-                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2">Add-ons</label>
+                                      <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">Add-ons</label>
                                       <div className="space-y-1.5">
                                         {avAddons.filter(a => !FLOOR_ADDON_IDS.includes(a.id)).map(addon => {
                                           const sel = av.selectedAddons.some(a => a.id === addon.id);
@@ -3022,15 +3087,15 @@ export function BookingSection({
                                             <button
                                               key={addon.id}
                                               type="button"
-                                              onClick={() => toggleAdditionalAddon(idx, { id: addon.id, label: addon.label, price: addon.price })}
-                                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                                              onClick={() => toggleAdditionalAddon(idx, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, av.vehicleSize) })}
+                                              className={`w-full flex flex-col items-center px-3 py-2.5 rounded-xl border text-center transition-all ${
                                                 sel
                                                   ? "bg-[#D4AF37]/10 border-[#D4AF37]/50"
                                                   : "border-white/[0.06] hover:border-white/15"
                                               }`}
                                             >
                                               <span className={`text-xs font-semibold ${sel ? "text-[#D4AF37]" : "text-zinc-300"}`}>{addon.label}</span>
-                                              <span className={`text-xs font-black ${sel ? "text-white" : "text-[#D4AF37]"}`}>+${addon.price}</span>
+                                              <span className={`text-xs font-black ${sel ? "text-white" : "text-[#D4AF37]"}`}>+${getEffectiveAddonPrice(addon, av.vehicleSize)}</span>
                                             </button>
                                           );
                                         })}
@@ -3269,50 +3334,102 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                       </a>
                     </div>
 
-                    {/* Booking summary — receipt-style card */}
-                    <div className="rounded-xl border border-white/[0.08] bg-[#0d0d0d] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] p-4">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-3">
-                        Booking Details
-                      </div>
-                      <div className="space-y-2.5 text-sm">
-                        <ReceiptRow label="Service" value={selectedService?.name ?? "—"} />
-                        <ReceiptRow
-                          label="Vehicle"
-                          value={
-                            vehicleYear && vehicleMake && vehicleModel
-                              ? `${vehicleYear} ${vehicleMake} ${vehicleModel} (${vehicleSizeLabel})`
-                              : "—"
-                          }
-                        />
-                        <ReceiptRow
-                          label="Appointment"
-                          value={
-                            selectedDate && selectedTime
-                              ? `${selectedDate} at ${selectedTime}`
-                              : "—"
-                          }
-                        />
-                        {durationLabel && (
+                    {/* Booking summary — collapsible receipt card */}
+                    <div className="rounded-xl border border-white/[0.08] bg-[#0d0d0d] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
+                      {/* Always-visible summary header */}
+                      <button
+                        type="button"
+                        onClick={() => setSummaryExpanded(v => !v)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500 mb-0.5">Booking Summary</p>
+                          <p className="text-sm font-semibold text-white truncate">
+                            {selectedService?.name ?? "—"}
+                            {selectedDate && selectedTime && (
+                              <span className="text-zinc-400 font-normal"> · {selectedDate} @ {selectedTime}</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                          <span className="text-xs text-[#D4AF37]">{summaryExpanded ? "Hide" : "Details"}</span>
+                          <ChevronRight size={14} className={`text-zinc-500 transition-transform ${summaryExpanded ? "rotate-90" : ""}`} />
+                        </div>
+                      </button>
+
+                      {/* Expandable details */}
+                      {summaryExpanded && (
+                        <div className="px-4 pb-4 pt-1 border-t border-white/[0.05] space-y-2.5 text-sm">
+                          <ReceiptRow label="Service" value={selectedService?.name ?? "—"} />
                           <ReceiptRow
-                            label="Est. Duration"
-                            value={durationLabel}
+                            label="Vehicle"
+                            value={
+                              vehicleYear && vehicleMake && vehicleModel
+                                ? `${vehicleYear} ${vehicleMake} ${vehicleModel} (${vehicleSizeLabel})`
+                                : "—"
+                            }
                           />
-                        )}
-                        <ReceiptRow label="Location" value={serviceAddress || "—"} />
-                        {selectedAddons.length > 0 && (
-                          <div className="flex flex-col gap-1.5 pt-1.5">
-                            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.15em]">Applied Add-ons</span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {selectedAddons.map(a => (
-                                <span key={a.id} className="px-2 py-0.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-[10px] font-bold rounded-lg uppercase">
-                                  {a.label}
-                                </span>
-                              ))}
+                          <ReceiptRow
+                            label="Appointment"
+                            value={
+                              selectedDate && selectedTime
+                                ? `${selectedDate} at ${selectedTime}`
+                                : "—"
+                            }
+                          />
+                          {durationLabel && (
+                            <ReceiptRow label="Est. Duration" value={durationLabel} />
+                          )}
+                          <ReceiptRow label="Location" value={serviceAddress || "—"} />
+                          {selectedAddons.length > 0 && (
+                            <div className="flex flex-col gap-1.5 pt-1">
+                              <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.15em]">Add-ons</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {selectedAddons.map(a => (
+                                  <span key={a.id} className="px-2 py-0.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-[10px] font-bold rounded-lg uppercase">
+                                    {a.label}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Use Points at Checkout — standalone card for logged-in users */}
+                    {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <HandCoins size={14} className="text-amber-400 shrink-0" />
+                            <span className="text-sm font-bold text-amber-300">Use Points at Checkout</span>
+                          </div>
+                          <span className="text-xs text-zinc-500">{availablePoints} pts available</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min={0}
+                            max={redeemablePoints}
+                            step={10}
+                            value={pointsToRedeemInput}
+                            onChange={(e) => setPointsToRedeemInput(Number(e.target.value))}
+                            className="flex-1 h-2 rounded-full appearance-none bg-zinc-800 accent-[#D4AF37]"
+                          />
+                          <span className="text-sm font-bold text-[#D4AF37] tabular-nums w-16 text-right">
+                            {pointsToRedeemInput} pts
+                          </span>
+                        </div>
+                        {pointsToRedeemInput > 0 && (
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-amber-500/10">
+                            <span className="text-xs text-zinc-400">Discount applied</span>
+                            <span className="text-xs font-bold text-emerald-400">−${pointsDiscountAmount.toFixed(2)}</span>
                           </div>
                         )}
+                        <p className="text-[10px] text-zinc-600 mt-2">10 pts = $1 off · Max ${(redeemablePoints / POINTS_PER_DOLLAR).toFixed(0)} off this booking</p>
                       </div>
-                    </div>
+                    )}
 
                     {/* Pricing breakdown — subscription vs one-off */}
                     {isSubscription ? (
@@ -3381,61 +3498,14 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </span>
                               </div>
                             )}
+                            {waterPowerFee > 0 && (
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
+                                <span className="text-zinc-400">Water &amp; Power</span>
+                                <span className="font-semibold text-white">+${waterPowerFee.toFixed(2)}</span>
+                              </div>
+                            )}
                             {renderCouponUI()}
                             {renderGiftCardUI()}
-                            {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
-                              <div className="pt-3 space-y-2">
-                                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                                  Redeem Reward Points
-                                </label>
-                                <div className="flex items-center gap-3">
-                                  <input
-                                    type="range"
-                                    min={0}
-                                    max={redeemablePoints}
-                                    step={10}
-                                    value={pointsToRedeemInput}
-                                    onChange={(e) => setPointsToRedeemInput(Number(e.target.value))}
-                                    className="flex-1 h-2 rounded-full appearance-none bg-zinc-800 accent-[#D4AF37]"
-                                  />
-                                  <span className="text-sm font-semibold text-[#D4AF37] tabular-nums w-16 text-right">
-                                    {pointsToRedeemInput} pts
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-zinc-500">
-                                  You have {availablePoints} points. 10 pts = $1 off. You can redeem up to {redeemablePoints} points (${redeemablePoints / POINTS_PER_DOLLAR} off).
-                                </p>
-                              </div>
-                            )}
-                            {!authUserId && selectedService && vehicleSize && (
-                              <div className="pt-3">
-                                <div className="rounded-xl p-5 bg-black/60 backdrop-blur-md border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.08)]">
-                                  <div className="flex flex-col gap-3">
-                                    <div className="flex items-center gap-2">
-                                      <Sparkles className="h-5 w-5 text-amber-400 shrink-0" aria-hidden />
-                                      <h4 className="text-base font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
-                                        Loyalty Club
-                                      </h4>
-                                    </div>
-                                    <p className="text-sm text-zinc-300 leading-relaxed">
-                                      Create an account right now to earn points on today&apos;s detail! Plus, get an instant 100-Point Welcome Bonus.
-                                    </p>
-                                    <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                                      <li>Earn 1 pt for every $1 spent</li>
-                                      <li>10 points = $1 off anything</li>
-                                      <li>Redeem up to $100 per booking</li>
-                                    </ul>
-                                    <button
-                                      type="button"
-                                      onClick={handleCreateAccountClick}
-                                      className="mt-2 w-full py-3 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_24px_rgba(212,175,55,0.45)] transition-all duration-200"
-                                    >
-                                      Create Account & Claim Points
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                             {pointsToRedeem > 0 && (
                               <>
                                 <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
@@ -3496,7 +3566,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                   </span>
                                   <span className="font-semibold text-white">${discountedPrice.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between text-[11px] text-emerald-400 pl-2">
+                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-[11px] text-emerald-400 pl-2 min-w-0">
                                   <span>Multi-vehicle discount</span>
                                   <span>−${MULTI_VEHICLE_DISCOUNT.toFixed(2)}</span>
                                 </div>
@@ -3554,59 +3624,6 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             </div>
                           )}
                           {renderCouponUI()}
-                          {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
-                            <div className="pt-3 space-y-2">
-                              <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                                Redeem Reward Points
-                              </label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="range"
-                                  min={0}
-                                  max={redeemablePoints}
-                                  step={10}
-                                  value={pointsToRedeemInput}
-                                  onChange={(e) => setPointsToRedeemInput(Number(e.target.value))}
-                                  className="flex-1 h-2 rounded-full appearance-none bg-zinc-800 accent-[#D4AF37]"
-                                />
-                                <span className="text-sm font-semibold text-[#D4AF37] tabular-nums w-16 text-right">
-                                  {pointsToRedeemInput} pts
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-zinc-500">
-                                You have {availablePoints} points. 10 pts = $1 off. You can redeem up to {redeemablePoints} points (${redeemablePoints / POINTS_PER_DOLLAR} off).
-                              </p>
-                            </div>
-                          )}
-                          {!authUserId && selectedService && vehicleSize && (
-                            <div className="pt-3">
-                              <div className="rounded-xl p-5 bg-black/60 backdrop-blur-md border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.08)]">
-                                <div className="flex flex-col gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-amber-400 shrink-0" aria-hidden />
-                                    <h4 className="text-base font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
-                                      Loyalty Club
-                                    </h4>
-                                  </div>
-                                  <p className="text-sm text-zinc-300 leading-relaxed">
-                                    Create an account right now to earn points on today&apos;s detail! Plus, get an instant 100-Point Welcome Bonus.
-                                  </p>
-                                  <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                                    <li>Earn 1 pt for every $1 spent</li>
-                                    <li>10 points = $1 off anything</li>
-                                    <li>Redeem up to $100 per booking</li>
-                                  </ul>
-                                  <button
-                                    type="button"
-                                    onClick={handleCreateAccountClick}
-                                    className="mt-2 w-full py-3 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_24px_rgba(212,175,55,0.45)] transition-all duration-200"
-                                  >
-                                    Create Account & Claim Points
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                           {pointsToRedeem > 0 && (
                             <>
                               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
@@ -3635,6 +3652,30 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             +{Math.floor(totalAfterDiscount)} loyalty points earned
                           </p>
                         )}
+                      </div>
+                    )}
+
+                    {/* Guest loyalty sign-up prompt */}
+                    {!authUserId && selectedService && vehicleSize && (
+                      <div className="rounded-xl p-4 bg-black/60 backdrop-blur-md border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.08)]">
+                        <div className="flex items-start gap-3">
+                          <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" aria-hidden />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent mb-1">
+                              Earn Points on This Booking
+                            </h4>
+                            <p className="text-xs text-zinc-400 leading-relaxed mb-3">
+                              Create an account to earn {Math.floor(totalAfterDiscount)} points on today&apos;s detail + 100 bonus welcome points.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleCreateAccountClick}
+                              className="w-full py-2.5 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_16px_rgba(212,175,55,0.3)] transition-all duration-200"
+                            >
+                              Create Account & Claim Points
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -3733,6 +3774,42 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                       </div>
                     </div>
 
+                    {/* Water & Power selector — required */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] mb-2">
+                        Water &amp; Power
+                        <span className="text-red-500 ml-0.5">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setWaterPower("provided")}
+                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3.5 text-sm font-semibold transition-all duration-200 ${
+                            waterPower === "provided"
+                              ? "border-emerald-500/60 bg-emerald-950/30 text-emerald-300"
+                              : "border-white/10 bg-zinc-950/50 text-zinc-400 hover:border-white/20 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span className="text-lg">🔌</span>
+                          <span>I'll provide</span>
+                          <span className="text-[10px] font-normal text-zinc-500">water &amp; power</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWaterPower("needed")}
+                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3.5 text-sm font-semibold transition-all duration-200 ${
+                            waterPower === "needed"
+                              ? "border-amber-500/60 bg-amber-950/30 text-amber-300"
+                              : "border-white/10 bg-zinc-950/50 text-zinc-400 hover:border-white/20 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span className="text-lg">💧</span>
+                          <span>Please provide</span>
+                          <span className="text-[10px] font-normal text-zinc-500">+$10 fee</span>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Payment options — in-flow (no sticky); compact premium buttons */}
                     <div className="flex flex-col gap-3 w-full mt-6">
                       {isSubscription && (
@@ -3808,6 +3885,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           <ChevronRight className="w-5 h-5 text-[#d4af37]/70 shrink-0 relative z-[1]" />
                         )}
                       </button>
+
+                      {isStripeLoading && (
+                        <button
+                          type="button"
+                          onClick={() => { stripeAbortRef.current = true; setIsStripeLoading(false); setStripeError("Checkout cancelled. Please try again."); }}
+                          className="w-full flex items-center justify-center py-2 text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
 
                       <button
                         onClick={handleBack}

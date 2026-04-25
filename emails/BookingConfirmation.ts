@@ -19,6 +19,8 @@ export type BookingConfirmationDetails = {
   bookingTime: string;
   travelFee: number;
   totalPrice: number;
+  waterPower?: "provided" | "needed";
+  waterPowerFee?: number;
   /** Extra vehicles on the same booking (multi-vehicle discount) */
   additionalVehicles?: Array<{
     vehicleYear: string;
@@ -26,7 +28,9 @@ export type BookingConfirmationDetails = {
     vehicleModel: string;
     serviceName: string;
     servicePrice: number;
+    selectedAddons?: { id: string; label: string; price: number }[];
   }>;
+  addonsJson?: Array<{ id: string; label: string; price: number }>;
 };
 
 const esc = (s: string | number): string =>
@@ -57,16 +61,19 @@ function getServiceType(serviceName: string): ServiceType {
 
 /** Maps DB service names to display names for boats */
 const BOAT_DISPLAY: Record<string, string> = {
-  "Boat Interior Detail": "Marine Express",
-  "Boat Exterior Detail": "The Deep Reset",
-  "Full Boat Detail": "Showroom Restoration",
+  "Boat Interior":         "Boat Interior",
+  "Boat Exterior":         "Boat Exterior",
+  "Boat Full Detail":      "Boat Full Detail",
+  "Boat Showroom Package": "Marine Showroom Polish",
 };
 
 /** Maps DB service names to display names for RVs */
 const RV_DISPLAY: Record<string, string> = {
-  "RV Interior Detail": "Interior Refresh",
-  "RV Exterior Detail": "Road Revival",
-  "RV Full Detail": "Full Rig Overhaul",
+  "RV Interior":        "RV Interior",
+  "RV Exterior":        "RV Exterior",
+  "RV Full Detail":     "RV Full Detail",
+  "RV Showroom 1-Step": "RV Showroom — 1-Step Polish",
+  "RV Showroom 2-Step": "RV Showroom — 2-Step Polish",
 };
 
 function getDisplayServiceName(serviceName: string, type: ServiceType): string {
@@ -156,15 +163,23 @@ const emailFooter = `
 
 function additionalVehicleRows(vehicles: BookingConfirmationDetails["additionalVehicles"]): string {
   if (!vehicles?.length) return "";
-  return vehicles.map((v, i) => `
+  return vehicles.map((v, i) => {
+    const addonsHtml = v.selectedAddons?.length
+      ? `<ul style="margin:4px 0 0;padding-left:14px;">${v.selectedAddons.map(a =>
+          `<li style="font-size:11px;color:#888888;">+ ${esc(a.label)} ($${a.price})</li>`
+        ).join("")}</ul>`
+      : "";
+    return `
   <tr>
     <td style="padding:10px 22px;border-top:1px solid #e8e8e8;">
       <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0 0 2px;
                 letter-spacing:0.15em;text-transform:uppercase;">Vehicle ${i + 2}</p>
       <p style="font-size:14px;font-weight:600;color:#111111;margin:0;">${esc(v.vehicleYear)} ${esc(v.vehicleMake)} ${esc(v.vehicleModel)}</p>
       <p style="font-size:12px;color:#888888;margin:2px 0 0;">${esc(v.serviceName)} — $${esc(v.servicePrice)}</p>
+      ${addonsHtml}
     </td>
-  </tr>`).join("");
+  </tr>`;
+  }).join("");
 }
 
 function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): string {
@@ -219,6 +234,21 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
           ${d.travelFee > 0 ? detailRow("Travel Fee", travelStr) : ""}
+          ${d.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(d.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
+          ${d.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
+          ${d.addonsJson?.length ? `
+          <tr>
+            <td style="padding:12px 22px;border-top:1px solid #e8e8e8;">
+              <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0 0 8px;
+                        letter-spacing:0.15em;text-transform:uppercase;">Add-Ons</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${d.addonsJson.map((a: { label: string; price: number }) => `<tr>
+                  <td style="font-size:13px;color:#333333;padding:2px 0;">+ ${esc(a.label)}</td>
+                  <td align="right" style="font-size:13px;color:#555555;font-weight:600;padding:2px 0;">$${a.price}</td>
+                </tr>`).join("")}
+              </table>
+            </td>
+          </tr>` : ""}
           <tr>
             <td style="padding:16px 22px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -356,6 +386,21 @@ function boatCustomerHtml(d: BookingConfirmationDetails, date: string): string {
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Service Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
           ${d.travelFee > 0 ? detailRow("Travel Fee", travelStr) : ""}
+          ${d.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(d.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
+          ${d.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
+          ${d.addonsJson?.length ? `
+          <tr>
+            <td style="padding:12px 22px;border-top:1px solid #e8e8e8;">
+              <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0 0 8px;
+                        letter-spacing:0.15em;text-transform:uppercase;">Add-Ons</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${d.addonsJson.map((a: { label: string; price: number }) => `<tr>
+                  <td style="font-size:13px;color:#333333;padding:2px 0;">+ ${esc(a.label)}</td>
+                  <td align="right" style="font-size:13px;color:#555555;font-weight:600;padding:2px 0;">$${a.price}</td>
+                </tr>`).join("")}
+              </table>
+            </td>
+          </tr>` : ""}
           <tr>
             <td style="padding:16px 22px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -495,6 +540,21 @@ function rvCustomerHtml(d: BookingConfirmationDetails, date: string): string {
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Service Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
           ${d.travelFee > 0 ? detailRow("Travel Fee", travelStr) : ""}
+          ${d.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(d.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
+          ${d.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
+          ${d.addonsJson?.length ? `
+          <tr>
+            <td style="padding:12px 22px;border-top:1px solid #e8e8e8;">
+              <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0 0 8px;
+                        letter-spacing:0.15em;text-transform:uppercase;">Add-Ons</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${d.addonsJson.map((a: { label: string; price: number }) => `<tr>
+                  <td style="font-size:13px;color:#333333;padding:2px 0;">+ ${esc(a.label)}</td>
+                  <td align="right" style="font-size:13px;color:#555555;font-weight:600;padding:2px 0;">$${a.price}</td>
+                </tr>`).join("")}
+              </table>
+            </td>
+          </tr>` : ""}
           <tr>
             <td style="padding:16px 22px;">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">

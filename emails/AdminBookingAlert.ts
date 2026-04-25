@@ -24,6 +24,16 @@ export type AdminBookingAlertOptions = {
   distanceMiles?: number;
   notes?: string;
   addonsJson?: { id: string; label: string; price: number }[];
+  waterPower?: "provided" | "needed";
+  waterPowerFee?: number;
+  additionalVehicles?: Array<{
+    vehicleYear: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    serviceName: string;
+    servicePrice: number;
+    selectedAddons?: { id: string; label: string; price: number }[];
+  }>;
 };
 
 const esc = (s: string | number): string =>
@@ -43,15 +53,18 @@ function getServiceType(n: string): ServiceType {
 }
 
 const BOAT_DISPLAY: Record<string, string> = {
-  "Boat Interior Detail": "Marine Express",
-  "Boat Exterior Detail": "The Deep Reset",
-  "Full Boat Detail": "Showroom Restoration",
+  "Boat Interior":         "Boat Interior",
+  "Boat Exterior":         "Boat Exterior",
+  "Boat Full Detail":      "Boat Full Detail",
+  "Boat Showroom Package": "Marine Showroom Polish",
 };
 
 const RV_DISPLAY: Record<string, string> = {
-  "RV Interior Detail": "Interior Refresh",
-  "RV Exterior Detail": "Road Revival",
-  "RV Full Detail": "Full Rig Overhaul",
+  "RV Interior":        "RV Interior",
+  "RV Exterior":        "RV Exterior",
+  "RV Full Detail":     "RV Full Detail",
+  "RV Showroom 1-Step": "RV Showroom — 1-Step Polish",
+  "RV Showroom 2-Step": "RV Showroom — 2-Step Polish",
 };
 
 function displayService(name: string, type: ServiceType): string {
@@ -94,6 +107,44 @@ const logoBlock = `
   <p style="color:#d4af37;font-size:14px;font-weight:900;margin:0;
              letter-spacing:0.08em;text-transform:uppercase;">Arise And Shine VT</p>`;
 
+// ── Shared: additional vehicles rows ──────────────────────────────────────────
+
+function additionalVehicleRows(vehicles: AdminBookingAlertOptions["additionalVehicles"]): string {
+  if (!vehicles?.length) return "";
+  return vehicles.map((av, i) => {
+    const avAddons = av.selectedAddons?.length
+      ? `<ul style="margin:4px 0 0;padding-left:16px;">${av.selectedAddons.map(a =>
+          `<li style="font-size:11px;color:#555;">+ ${esc(a.label)} ($${a.price})</li>`
+        ).join("")}</ul>`
+      : "";
+    return row(
+      `Vehicle ${i + 2}`,
+      `<strong>${esc(av.vehicleYear)} ${esc(av.vehicleMake)} ${esc(av.vehicleModel)}</strong>` +
+      `<br/><span style="font-size:12px;color:#888;">${esc(av.serviceName)} — ` +
+      `<span style="color:#16a34a;">$${esc(av.servicePrice)} (−$25 multi-vehicle)</span></span>` +
+      avAddons
+    );
+  }).join("");
+}
+
+function waterPowerBanner(o: AdminBookingAlertOptions): string {
+  if (o.waterPower !== "needed") return "";
+  return `
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:#fef3c7;border:2px solid #d97706;border-radius:10px;margin-bottom:20px;">
+    <tr><td style="padding:16px 20px;text-align:center;">
+      <p style="font-size:16px;font-weight:900;color:#92400e;margin:0 0 5px;letter-spacing:0.02em;">
+        &#9888;&#65039; BRING WATER &amp; POWER
+      </p>
+      <p style="font-size:13px;color:#b45309;margin:0;line-height:1.5;">
+        Customer <strong>cannot provide</strong> water &amp; power —<br/>
+        load the tank &amp; generator before leaving.<br/>
+        <span style="font-size:11px;color:#d97706;font-weight:700;">+$${(o.waterPowerFee ?? 10).toFixed(2)} fee included in total</span>
+      </p>
+    </td></tr>
+  </table>`;
+}
+
 // ── Vehicle admin email ────────────────────────────────────────────────────────
 
 function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
@@ -132,6 +183,8 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
       <!-- BODY -->
       <tr><td style="background-color:#ffffff;padding:28px;border-radius:0 0 14px 14px;">
 
+        ${waterPowerBanner(o)}
+
         ${sectionHeader("Customer")}
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
@@ -150,11 +203,14 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
           ${row("Service", esc(o.serviceName))}
-          ${row("Vehicle", esc(vehicleLabel) + (o.vehicleSize ? `<span style="color:#999;font-size:11px;"> — ${esc(o.vehicleSize)}</span>` : ""))}
+          ${row("Vehicle 1", esc(vehicleLabel) + (o.vehicleSize ? `<span style="color:#999;font-size:11px;"> — ${esc(o.vehicleSize)}</span>` : ""))}
+          ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
           ${row("Payment", o.paymentMethod === "pay_now" ? "<strong style='color:#16a34a;'>PAID ONLINE</strong>" : "Due at Arrival")}
-          ${row("Total", `<strong style="font-size:18px;color:#111;">$${esc(o.totalPrice.toFixed(2))}</strong>`, !addonsHtml && !o.notes)}
+          ${row("Total", `<strong style="font-size:18px;color:#111;">$${esc(o.totalPrice.toFixed(2))}</strong>`, !addonsHtml && !o.notes && !o.waterPower)}
+          ${o.waterPower === "needed" ? row("Water &amp; Power", `<strong style="color:#d97706;">&#128166; We Provide</strong> <span style="color:#999;font-size:11px;">(+$${(o.waterPowerFee ?? 10).toFixed(2)})</span>`) : ""}
+          ${o.waterPower === "provided" ? row("Water &amp; Power", `<strong style="color:#16a34a;">&#10003; Customer Provides</strong>`) : ""}
           ${addonsHtml ? row("Add-ons", `<ul style="margin:4px 0;padding-left:16px;">${addonsHtml}</ul>`) : ""}
           ${o.notes ? row("Notes", `<em style="color:#555;">${esc(o.notes)}</em>`, true) : ""}
         </table>
@@ -231,6 +287,8 @@ function boatAdminHtml(o: AdminBookingAlertOptions): string {
       <!-- BODY -->
       <tr><td style="background-color:#ffffff;padding:28px;border-radius:0 0 14px 14px;">
 
+        ${waterPowerBanner(o)}
+
         ${sectionHeader("Customer")}
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
@@ -249,11 +307,14 @@ function boatAdminHtml(o: AdminBookingAlertOptions): string {
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
           ${row("Package", `<strong>${esc(pkgDisplay)}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>`)}
-          ${row("Boat", esc(boatLabel))}
+          ${row("Boat 1", esc(boatLabel))}
+          ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
           ${row("Payment", o.paymentMethod === "pay_now" ? "<strong style='color:#16a34a;'>PAID ONLINE</strong>" : "Due at Arrival")}
-          ${row("Total", `<strong style="font-size:18px;color:#111;">$${esc(o.totalPrice.toFixed(2))}</strong>`, !addonsHtml && !o.notes)}
+          ${row("Total", `<strong style="font-size:18px;color:#111;">$${esc(o.totalPrice.toFixed(2))}</strong>`, !addonsHtml && !o.notes && !o.waterPower)}
+          ${o.waterPower === "needed" ? row("Water &amp; Power", `<strong style="color:#d97706;">&#128166; We Provide</strong> <span style="color:#999;font-size:11px;">(+$${(o.waterPowerFee ?? 10).toFixed(2)})</span>`) : ""}
+          ${o.waterPower === "provided" ? row("Water &amp; Power", `<strong style="color:#16a34a;">&#10003; Customer Provides</strong>`) : ""}
           ${addonsHtml ? row("Add-ons", `<ul style="margin:4px 0;padding-left:16px;">${addonsHtml}</ul>`) : ""}
           ${o.notes ? row("Notes", `<em style="color:#555;">${esc(o.notes)}</em>`, true) : ""}
         </table>
@@ -347,6 +408,8 @@ function rvAdminHtml(o: AdminBookingAlertOptions): string {
       <!-- BODY -->
       <tr><td style="background-color:#ffffff;padding:28px;border-radius:0 0 14px 14px;">
 
+        ${waterPowerBanner(o)}
+
         ${sectionHeader("Customer")}
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
@@ -365,11 +428,14 @@ function rvAdminHtml(o: AdminBookingAlertOptions): string {
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
           ${row("Package", `<strong>${esc(pkgDisplay)}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>`)}
-          ${row("Rig", esc(rigLabel))}
+          ${row("Rig 1", esc(rigLabel))}
+          ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
           ${row("Payment", o.paymentMethod === "pay_now" ? "<strong style='color:#16a34a;'>PAID ONLINE</strong>" : "Due at Arrival")}
-          ${row("Total", `<strong style="font-size:18px;color:#111;">$${esc(o.totalPrice.toFixed(2))}</strong>`, !addonsHtml && !o.notes)}
+          ${row("Total", `<strong style="font-size:18px;color:#111;">$${esc(o.totalPrice.toFixed(2))}</strong>`, !addonsHtml && !o.notes && !o.waterPower)}
+          ${o.waterPower === "needed" ? row("Water &amp; Power", `<strong style="color:#d97706;">&#128166; We Provide</strong> <span style="color:#999;font-size:11px;">(+$${(o.waterPowerFee ?? 10).toFixed(2)})</span>`) : ""}
+          ${o.waterPower === "provided" ? row("Water &amp; Power", `<strong style="color:#16a34a;">&#10003; Customer Provides</strong>`) : ""}
           ${addonsHtml ? row("Add-ons", `<ul style="margin:4px 0;padding-left:16px;">${addonsHtml}</ul>`) : ""}
           ${o.notes ? row("Notes", `<em style="color:#555;">${esc(o.notes)}</em>`, true) : ""}
         </table>

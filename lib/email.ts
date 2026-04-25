@@ -42,6 +42,17 @@ export type BookingEmailData = {
   distanceMiles?: number;
   paymentMethod?: "pay_at_arrival" | "pay_now";
   notes?: string;
+  waterPower?: "provided" | "needed";
+  waterPowerFee?: number;
+  additionalVehicles?: Array<{
+    vehicleYear: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    serviceName: string;
+    servicePrice: number;
+    selectedAddons?: { id: string; label: string; price: number }[];
+  }>;
+  addonsJson?: { id: string; label: string; price: number }[];
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -61,11 +72,18 @@ function getGoogleCalendarUrl(data: BookingEmailData): string {
   }
 
   const start = date.toISOString().replace(/-|:|\.\d\d\d/g, "");
-  // Duration approx 3 hours
-  const end = new Date(date.getTime() + 3 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+  // Base 3 hours per vehicle, each additional vehicle adds ~1 hour
+  const addlCount = (data.additionalVehicles?.length ?? 0);
+  const durationMs = (3 + addlCount) * 60 * 60 * 1000;
+  const end = new Date(date.getTime() + durationMs).toISOString().replace(/-|:|\.\d\d\d/g, "");
   
-  const title = `Detailing: ${data.customerName} (${data.serviceName})`;
-  const details = `Vehicle: ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}\nPhone: ${data.customerPhone}\nService: ${data.serviceName}\nTotal: $${data.servicePrice}`;
+  const addlVehicleCount = data.additionalVehicles?.length ?? 0;
+  const title = `Detailing: ${data.customerName} (${data.serviceName}${addlVehicleCount > 0 ? ` +${addlVehicleCount} more` : ""})`;
+  const addlLines = (data.additionalVehicles ?? []).map((av, i) =>
+    `Vehicle ${i + 2}: ${av.vehicleYear} ${av.vehicleMake} ${av.vehicleModel} — ${av.serviceName} ($${av.servicePrice})`
+  ).join("\n");
+  const wpLine = data.waterPower === "needed" ? "\nWater & Power: We provide (+$10)" : data.waterPower === "provided" ? "\nWater & Power: Customer provides" : "";
+  const details = `Vehicle 1: ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}\n${addlLines ? addlLines + "\n" : ""}Phone: ${data.customerPhone}\nService: ${data.serviceName}\nTotal: $${data.servicePrice}${wpLine}`;
   const location = data.serviceAddress ?? "Customer Location";
 
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
@@ -243,12 +261,35 @@ function customerEmailHtml(
                 ${detailRow("Time", esc(data.bookingTime))}
                 ${data.serviceAddress ? detailRow("Service Location", `&#128205;&nbsp;${esc(data.serviceAddress)}`) : ""}
                 ${detailRow(
-                  "Vehicle",
+                  "Vehicle 1",
                   `${esc(data.vehicleYear)} ${esc(data.vehicleMake)} ${esc(data.vehicleModel)}
                    <span style="font-size:12px;color:#999999;font-weight:400;">
                      &nbsp;&mdash;&nbsp;${esc(VEHICLE_SIZE_LABELS[data.vehicleSize] ?? data.vehicleSize)}
                    </span>`
                 )}
+                ${(data.additionalVehicles ?? []).map((av, i) => detailRow(
+                  `Vehicle ${i + 2}`,
+                  `${esc(av.vehicleYear)} ${esc(av.vehicleMake)} ${esc(av.vehicleModel)}
+                   <span style="font-size:12px;color:#999999;font-weight:400;">
+                     &nbsp;&mdash;&nbsp;${esc(av.serviceName)} &nbsp;
+                     <span style="color:#16a34a;">$${esc(av.servicePrice)} (−$25 multi-vehicle)</span>
+                   </span>`
+                )).join("")}
+                ${data.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(data.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
+                ${data.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
+                ${data.addonsJson?.length ? `
+                <tr>
+                  <td style="padding:12px 24px;border-top:1px solid #27272a;">
+                    <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0 0 8px;
+                              letter-spacing:0.12em;text-transform:uppercase;">Add-Ons</p>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      ${data.addonsJson.map((a: { label: string; price: number }) => `<tr>
+                        <td style="font-size:13px;color:#e4e4e7;padding:2px 0;">+ ${esc(a.label)}</td>
+                        <td align="right" style="font-size:13px;color:#a1a1aa;font-weight:600;padding:2px 0;">$${a.price}</td>
+                      </tr>`).join("")}
+                    </table>
+                  </td>
+                </tr>` : ""}
                 ${data.notes ? detailRow("Your Notes", esc(data.notes)) : ""}
                 <tr>
                   <td style="padding:16px 24px;">
@@ -257,7 +298,7 @@ function customerEmailHtml(
                         <td>
                           <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0;
                                     letter-spacing:0.12em;text-transform:uppercase;">
-                            Total Due
+                            Total Due at Arrival
                           </p>
                         </td>
                         <td align="right">
@@ -1080,7 +1121,7 @@ export async function sendReviewFollowupEmail(data: {
   });
 }
 
-// ─── Day-before appointment reminder ─────────────────────────────────────────
+// ─── Appointment reminder emails (1-day, 3-day, 7-day) ──────────────────────
 
 function reminderEmailHtml(data: {
   customerName: string;
@@ -1088,15 +1129,33 @@ function reminderEmailHtml(data: {
   bookingDate: string;
   bookingTime: string;
   serviceAddress?: string;
-}, formattedDate: string): string {
+}, formattedDate: string, daysOut: 1 | 3 | 7): string {
   const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+
+  const headline =
+    daysOut === 1 ? "Your Detail is Tomorrow!" :
+    daysOut === 3 ? "Your Detail is in 3 Days!" :
+                    "Your Detail is Coming Up!";
+
+  const bodyLine =
+    daysOut === 1
+      ? `Just a friendly reminder that your <strong>${esc(data.serviceName)}</strong> appointment is scheduled for <strong>tomorrow</strong>. We're looking forward to making your vehicle shine!`
+      : daysOut === 3
+      ? `Your <strong>${esc(data.serviceName)}</strong> appointment is coming up in <strong>3 days</strong>. A great time to make sure you're all set!`
+      : `Your <strong>${esc(data.serviceName)}</strong> appointment is <strong>one week away</strong>. We wanted to give you a heads-up so you can plan accordingly.`;
+
+  const accessibilityNote =
+    daysOut === 1
+      ? "Please make sure your vehicle is accessible at the scheduled time.<br/>If you need to reschedule, contact us as soon as possible."
+      : "If you need to make any changes, now's a great time to reach out.";
+
   return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Your Detail is Tomorrow — Arise And Shine VT</title>
+  <title>${headline} — Arise And Shine VT</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1112,7 +1171,7 @@ function reminderEmailHtml(data: {
             <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
               <div style="font-size:48px;margin-bottom:16px;">📅</div>
               <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">
-                Your Detail is Tomorrow!
+                ${headline}
               </h1>
               <p style="color:#999999;font-size:14px;margin:0;">
                 <strong style="color:#ffffff;">${esc(formattedDate)}</strong> at
@@ -1124,8 +1183,7 @@ function reminderEmailHtml(data: {
             <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
               <p style="font-size:16px;font-weight:700;color:#111111;margin:0 0 6px;">Hi ${firstName},</p>
               <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
-                Just a friendly reminder that your <strong>${esc(data.serviceName)}</strong> appointment
-                is scheduled for tomorrow. We're looking forward to making your vehicle shine!
+                ${bodyLine}
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
                      style="background-color:#f7f7f7;border-radius:14px;overflow:hidden;margin-bottom:24px;">
@@ -1135,8 +1193,7 @@ function reminderEmailHtml(data: {
                 ${data.serviceAddress ? detailRow("Location", `&#128205;&nbsp;${esc(data.serviceAddress)}`, true) : ""}
               </table>
               <p style="font-size:13px;color:#888888;margin:0 0 24px;line-height:1.6;text-align:center;">
-                Please make sure your vehicle is accessible at the scheduled time.<br/>
-                If you need to reschedule, contact us as soon as possible.
+                ${accessibilityNote}
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
                      style="background-color:#f7f7f7;border-radius:12px;">
@@ -1172,24 +1229,30 @@ export type ReminderEmailData = {
 };
 
 /**
- * Sends a day-before appointment reminder email to the customer.
+ * Sends an appointment reminder email. daysOut controls the copy and subject line.
  */
-export async function sendReminderEmail(data: ReminderEmailData): Promise<void> {
+export async function sendReminderEmail(data: ReminderEmailData, daysOut: 1 | 3 | 7 = 1): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY not set — skipping reminder email.");
     return;
   }
   const resend = new Resend(process.env.RESEND_API_KEY);
   const formattedDate = formatDate(data.bookingDate);
+
+  const subject =
+    daysOut === 1 ? `Reminder: Your detail is tomorrow — ${formattedDate}` :
+    daysOut === 3 ? `Your detail is in 3 days — ${formattedDate}` :
+                    `Your detail is one week away — ${formattedDate}`;
+
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.customerEmail,
     replyTo: REPLY_TO,
-    subject: `Reminder: Your detail is tomorrow — ${formattedDate}`,
-    html: reminderEmailHtml(data, formattedDate),
+    subject,
+    html: reminderEmailHtml(data, formattedDate, daysOut),
   });
   if (result.error) {
-    console.error("[email] reminder send failed:", result.error);
+    console.error(`[email] reminder (${daysOut}d) send failed:`, result.error);
   }
 }
 
@@ -1384,6 +1447,10 @@ export async function sendBookingEmails(
         paymentMethod: data.paymentMethod,
         distanceMiles: data.distanceMiles,
         notes: data.notes,
+        waterPower: data.waterPower,
+        waterPowerFee: data.waterPowerFee,
+        addonsJson: data.addonsJson,
+        additionalVehicles: data.additionalVehicles,
       }),
     }),
   ]);
