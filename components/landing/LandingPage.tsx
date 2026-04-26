@@ -26,20 +26,17 @@ import {
   CalendarRange,
   CircleSlash,
   Crown,
-  Menu,
-  X,
   CheckCircle,
   Phone,
   Gem,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking, BookingProgressData } from "./BookingModal";
-import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
-import { BookingFlowSelector } from "./BookingFlowSelector";
-import { TrackAppointmentModal } from "./TrackAppointmentModal";
+import { SiteHeader } from "./SiteHeader";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
 const BookingSection = dynamic(
@@ -148,9 +145,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
   const [stripeVerifying, setStripeVerifying] = useState(false);
   const [stripeRecoveryError, setStripeRecoveryError] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
-  const [trackOpen, setTrackOpen] = useState(false);
   const [bookingProgress, setBookingProgress] = useState<BookingProgressData | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
@@ -332,11 +326,8 @@ export function LandingPage({ services }: { services: Service[] }) {
   };
 
   const scrollToServices = useCallback(() => {
-    setMobileMenuOpen(false);
     document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
   }, []);
-
-  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   const handleBookingSuccess = useCallback((data: SuccessModalData) => {
     setExpandedBookingId(null);
@@ -371,29 +362,6 @@ export function LandingPage({ services }: { services: Service[] }) {
     if (!el) return;
     const idx = Math.round(el.scrollLeft / el.clientWidth);
     setUltimateCarouselActiveIdx(Math.min(Math.max(0, idx), 1));
-  }, []);
-
-  // Lock body scroll when mobile menu is open
-  useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    } else {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-    };
-  }, [mobileMenuOpen]);
-
-  // Close mobile menu if viewport widens to desktop
-  useEffect(() => {
-    const onResize = () => { if (window.innerWidth >= 768) setMobileMenuOpen(false); };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   // Scroll service carousel to Full Detail on first mount (no animation so it's instant)
@@ -498,202 +466,8 @@ export function LandingPage({ services }: { services: Service[] }) {
           mixBlendMode: "overlay",
         }}
       />
-      {/* ─── Sticky Header ─────────────────────────────────────── */}
-      <header
-        className={`fixed top-0 inset-x-0 z-50 w-full py-3 md:h-[68px] transition-all duration-500 ${
-          isScrolled || mobileMenuOpen
-            ? "bg-black/40 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_32px_rgba(0,0,0,0.4)]"
-            : "bg-transparent backdrop-blur-none"
-        }`}
-      >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-full">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 shrink-0">
-          <Image
-            src="/e.png"
-            alt="Arise And Shine VT Logo"
-            width={38}
-            height={38}
-            className="object-contain drop-shadow-md shrink-0"
-            priority
-          />
-          <span className="font-semibold tracking-wide text-[13px] hidden sm:block text-white/90">
-            Arise And Shine VT
-          </span>
-        </Link>
-
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-7 text-[13px]">
-          {SERVICE_LINKS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200"
-            >
-              {item.label}
-            </Link>
-          ))}
-          <a href="#why-us" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Why Us</a>
-          <a href="#contact" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Contact</a>
-          <button
-            type="button"
-            onClick={() => setTrackOpen(true)}
-            className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200"
-          >
-            Track
-          </button>
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-all text-xs font-bold uppercase tracking-wider"
-            >
-              <LayoutDashboard size={13} />
-              Admin
-            </Link>
-          )}
-        </nav>
-
-        {/* Right: desktop (call + loyalty + book) and mobile (call + hamburger) */}
-        <div className="flex items-center gap-2 md:gap-3">
-          <a
-            href="tel:8025855563"
-            className="hidden md:flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-[13px] transition-colors duration-200"
-          >
-            <Phone className="w-3.5 h-3.5" />
-            <span>802-585-5563</span>
-          </a>
-          <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
-          <LoyaltyHeaderButton />
-          <button
-            type="button"
-            onClick={() => {
-              window.scrollTo({ top: 0, behavior: "smooth" });
-              openBooking();
-            }}
-            className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-9 px-5 rounded-lg font-semibold tracking-wide text-[13px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 overflow-hidden"
-          >
-            <span className="relative z-[1]">Book Now</span>
-          </button>
-
-          {/* Mobile: quick-call + hamburger */}
-          <a
-            href="tel:8025855563"
-            className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors"
-            aria-label="Call 802-585-5563"
-          >
-            <Phone className="w-4 h-4" />
-          </a>
-          <button
-            onClick={() => setMobileMenuOpen((o) => !o)}
-            className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors"
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
-        </div>
-        </div>
-      </header>
-
-      {/* ─── Mobile Menu ──────────────────────────────────────── */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 top-16 bg-black/30 backdrop-blur-sm z-[54] md:hidden"
-          onClick={closeMobileMenu}
-          aria-hidden
-        />
-      )}
-      <div
-        className={`md:hidden fixed inset-x-0 top-16 z-[55] flex justify-center px-4 transition-all duration-250 ease-out ${
-          mobileMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
-        }`}
-        aria-hidden={!mobileMenuOpen}
-      >
-        <div className="w-full max-w-sm bg-black/50 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden mt-2">
-          <div className="p-2 flex flex-col items-center">
-            <Link
-              href="/"
-              onClick={closeMobileMenu}
-              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-semibold text-[#D4AF37] bg-[#D4AF37]/8 transition-colors"
-            >
-              Home
-            </Link>
-
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 pt-4 pb-2 text-center">Services</p>
-            <div className="w-full flex flex-col gap-1">
-              {SERVICE_LINKS.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={closeMobileMenu}
-                    className="flex flex-col items-center text-center gap-1 py-3 px-3 rounded-xl hover:bg-white/[0.05] transition-colors"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.08] flex items-center justify-center text-zinc-400">
-                      <Icon size={14} strokeWidth={1.75} />
-                    </div>
-                    <p className="text-sm font-semibold text-white">{item.label}</p>
-                    <p className="text-[11px] text-zinc-500 leading-snug">{item.desc}</p>
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className="w-full h-px bg-white/[0.06] my-2" />
-
-            <button
-              type="button"
-              onClick={() => { closeMobileMenu(); document.getElementById("why-us")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
-            >
-              Why Us
-            </button>
-            <button
-              type="button"
-              onClick={() => { closeMobileMenu(); document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
-            >
-              Contact
-            </button>
-            <button
-              type="button"
-              onClick={() => { closeMobileMenu(); setTrackOpen(true); }}
-              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
-            >
-              Track My Appointment
-            </button>
-
-            {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={closeMobileMenu}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 text-amber-400 font-bold text-xs uppercase tracking-wider hover:bg-amber-500/20 transition-all mt-1"
-              >
-                <LayoutDashboard size={14} />
-                Admin
-              </Link>
-            )}
-          </div>
-
-          <div className="px-3 pb-3 pt-1 border-t border-white/[0.07] flex flex-col gap-2 mt-1">
-            <button
-              type="button"
-              onClick={() => { closeMobileMenu(); openBooking(); }}
-              className="btn-primary-gold-shimmer w-full bg-white/[0.06] border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
-            >
-              <span className="relative z-[1]">Book Your Detail</span>
-            </button>
-            <a
-              href="tel:8025855563"
-              onClick={closeMobileMenu}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-zinc-400 hover:text-white text-sm font-medium transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#D4AF37]/70" />
-              802-585-5563
-            </a>
-          </div>
-        </div>
-      </div>
+      {/* ─── Shared Site Header (with mobile drawer) ───────────── */}
+      <SiteHeader onBookNow={() => { window.scrollTo({ top: 0, behavior: "smooth" }); openBooking(); }} />
 
       {/* ─── Hero ───────────────────────────────────────────────── */}
       <motion.section
@@ -972,10 +746,20 @@ export function LandingPage({ services }: { services: Service[] }) {
 
           {/* ── Ultimate Series ──────────────────────────────────────── */}
           <div className="mt-14 md:mt-20">
-            <div className="flex items-center gap-3 mb-8">
-              <Gem size={14} className="text-[#D4AF37]" />
-              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Ultimate Series</h3>
-              <div className="flex-1 h-px bg-white/[0.05]" />
+            {/* Ultimate Series intro */}
+            <div className="mb-8 md:mb-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 h-px bg-white/[0.05]" />
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 shrink-0">
+                  <Gem size={11} className="text-[#D4AF37]" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">Ultimate Series</span>
+                </div>
+                <div className="flex-1 h-px bg-white/[0.05]" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl md:text-3xl font-black text-white mb-2">The Premium Tier.</h3>
+                <p className="text-sm text-zinc-500 max-w-xl mx-auto leading-relaxed">For those who want it done completely right — hot water extraction, ceramic protection, full decontamination. This is the service your vehicle deserves once a year.</p>
+              </div>
             </div>
 
             {/* Mobile: Ultimate carousel */}
@@ -1063,30 +847,53 @@ export function LandingPage({ services }: { services: Service[] }) {
             <div className="flex-1 h-px bg-white/[0.05]" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* ── Boat / Marine Card ── */}
-            <div className="relative rounded-2xl border border-[#D4AF37]/20 bg-zinc-900/50 overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/[0.04] to-transparent pointer-events-none" />
-              <div className="relative p-6 sm:p-8">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
-                    <Anchor size={20} className="text-[#D4AF37]" />
-                  </div>
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[9px] font-bold tracking-widest uppercase mb-1.5">
-                      Dockside Specialist
+            <div
+              className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:-translate-y-1.5 border border-[#D4AF37]/30 hover:border-[#D4AF37]/55 hover:shadow-[0_24px_60px_rgba(212,175,55,0.2)]"
+              style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
+            >
+              {/* Gold top glow */}
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 110% 40% at 50% 0%, rgba(212,175,55,0.11) 0%, transparent 65%)" }} />
+              {/* Top stripe */}
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent shrink-0" />
+
+              <div className="relative p-7 sm:p-8">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-3">
+                      <Anchor size={9} className="text-[#D4AF37]" strokeWidth={2} />
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Dockside Specialist</span>
                     </div>
-                    <h3 className="text-lg font-black text-white leading-tight">Boat & Marine Detailing</h3>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                      Waterline-up service — no haul-out required. Priced per foot, 15 ft minimum. 100% lake-safe, biodegradable chemicals.
+                    <h3 className="text-2xl font-black text-white tracking-tight leading-tight">Boat & Marine Detailing</h3>
+                    <p className="text-sm text-zinc-500 mt-1.5 leading-relaxed">
+                      We come to the dock — no haul-out required. 15 ft minimum. Lake Champlain specialists using biodegradable marine products.
                     </p>
                   </div>
+                  <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center shrink-0 mt-0.5">
+                    <Anchor size={22} className="text-[#D4AF37]" strokeWidth={1.5} />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-5">
-                  {["Marine Express — $20/ft", "The Deep Reset — $30/ft", "Showroom Restoration — $55/ft"].map((tag) => (
-                    <span key={tag} className="text-[10px] font-medium text-zinc-400 bg-zinc-800/60 border border-white/[0.06] px-2 py-1 rounded-lg">{tag}</span>
+
+                <div className="h-px bg-white/[0.06] mb-5" />
+
+                {/* Pricing rows */}
+                <div className="space-y-2 mb-6">
+                  {[
+                    { label: "Marine Interior Reset",  price: "$18/ft" },
+                    { label: "Marine Exterior Shine",  price: "$22/ft" },
+                    { label: "Captain's Full Detail",  price: "$35/ft" },
+                    { label: "Showroom Restoration",   price: "from $65/ft" },
+                  ].map(({ label, price }) => (
+                    <div key={label} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-zinc-950/60 border border-white/[0.05]">
+                      <span className="text-sm text-zinc-300 font-medium">{label}</span>
+                      <span className="text-sm font-black text-[#D4AF37] tabular-nums">{price}</span>
+                    </div>
                   ))}
                 </div>
+
+                {/* CTAs */}
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -1094,18 +901,19 @@ export function LandingPage({ services }: { services: Service[] }) {
                       setSelectedService(null);
                       setExpandedBookingId(expandedBookingId === "boat" ? null : "boat");
                     }}
-                    className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] text-black text-sm font-black hover:bg-amber-400 active:scale-[0.98] transition-all duration-200"
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-sm font-black hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_16px_rgba(212,175,55,0.3)]"
                   >
                     Book Now
                   </button>
                   <Link
                     href="/boat-detailing"
-                    className="flex-1 py-2.5 rounded-xl border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+                    className="flex-1 py-3 rounded-xl border border-[#D4AF37]/35 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.08] transition-all duration-200"
                   >
                     View Packages
                   </Link>
                 </div>
               </div>
+
               {/* Inline booking (Boat) */}
               {mounted && expandedBookingId === "boat" && (
                 <div className="border-t border-white/[0.06] animate-in fade-in slide-in-from-top-3 duration-400">
@@ -1125,28 +933,52 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
 
             {/* ── RV Card ── */}
-            <div className="relative rounded-2xl border border-[#D4AF37]/20 bg-zinc-900/50 overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/[0.04] to-transparent pointer-events-none" />
-              <div className="relative p-6 sm:p-8">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
-                    <Truck size={20} className="text-[#D4AF37]" />
-                  </div>
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[9px] font-bold tracking-widest uppercase mb-1.5">
-                      Mobile Service
+            <div
+              className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:-translate-y-1.5 border border-[#D4AF37]/30 hover:border-[#D4AF37]/55 hover:shadow-[0_24px_60px_rgba(212,175,55,0.2)]"
+              style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
+            >
+              {/* Gold top glow */}
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 110% 40% at 50% 0%, rgba(212,175,55,0.11) 0%, transparent 65%)" }} />
+              {/* Top stripe */}
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent shrink-0" />
+
+              <div className="relative p-7 sm:p-8">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-3">
+                      <Truck size={9} className="text-[#D4AF37]" strokeWidth={2} />
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Mobile Service</span>
                     </div>
-                    <h3 className="text-lg font-black text-white leading-tight">RV Detailing</h3>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                      Full-service detailing for motorhomes &amp; campers. We come to you — priced per foot, 20 ft minimum.
+                    <h3 className="text-2xl font-black text-white tracking-tight leading-tight">RV & Camper Detailing</h3>
+                    <p className="text-sm text-zinc-500 mt-1.5 leading-relaxed">
+                      Full-service detailing for motorhomes &amp; campers at your site or home. 20 ft minimum, priced per foot.
                     </p>
                   </div>
+                  <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center shrink-0 mt-0.5">
+                    <Truck size={22} className="text-[#D4AF37]" strokeWidth={1.5} />
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-5">
-                  {["Interior — $20/ft", "Exterior — $22/ft", "Full Detail — $38/ft"].map((tag) => (
-                    <span key={tag} className="text-[10px] font-medium text-zinc-400 bg-zinc-800/60 border border-white/[0.06] px-2 py-1 rounded-lg">{tag}</span>
+
+                <div className="h-px bg-white/[0.06] mb-5" />
+
+                {/* Pricing rows */}
+                <div className="space-y-2 mb-3">
+                  {[
+                    { label: "Exterior Wash & Guard",      price: "$15/ft" },
+                    { label: "Living Space Reset",         price: "$22/ft" },
+                    { label: "Full Transformation",        price: "$45/ft" },
+                    { label: "+ Oxidation Removal",        price: "+$15/ft", muted: true },
+                  ].map(({ label, price, muted }) => (
+                    <div key={label} className={`flex items-center justify-between py-2.5 px-4 rounded-xl border ${muted ? "bg-transparent border-dashed border-white/[0.04]" : "bg-zinc-950/60 border-white/[0.05]"}`}>
+                      <span className={`text-sm font-medium ${muted ? "text-zinc-600" : "text-zinc-300"}`}>{label}</span>
+                      <span className={`text-sm font-black tabular-nums ${muted ? "text-zinc-600" : "text-[#D4AF37]"}`}>{price}</span>
+                    </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-zinc-700 mb-5 px-1">$50 per slide-out · Slide tops &amp; seal treatment included</p>
+
+                {/* CTAs */}
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -1154,18 +986,19 @@ export function LandingPage({ services }: { services: Service[] }) {
                       setSelectedService(null);
                       setExpandedBookingId(expandedBookingId === "rv" ? null : "rv");
                     }}
-                    className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] text-black text-sm font-black hover:bg-amber-400 active:scale-[0.98] transition-all duration-200"
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-sm font-black hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_16px_rgba(212,175,55,0.3)]"
                   >
                     Book Now
                   </button>
                   <Link
                     href="/rv-detailing"
-                    className="flex-1 py-2.5 rounded-xl border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+                    className="flex-1 py-3 rounded-xl border border-[#D4AF37]/35 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.08] transition-all duration-200"
                   >
                     View Packages
                   </Link>
                 </div>
               </div>
+
               {/* Inline booking (RV) */}
               {mounted && expandedBookingId === "rv" && (
                 <div className="border-t border-white/[0.06] animate-in fade-in slide-in-from-top-3 duration-400">
@@ -1306,6 +1139,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                       src={`https://i.pravatar.cc/100?img=${i+15}`} 
                       alt="User"
                       fill
+                      sizes="(max-width: 768px) 40px, 48px"
                       className="object-cover grayscale"
                     />
                   </div>
@@ -1320,28 +1154,26 @@ export function LandingPage({ services }: { services: Service[] }) {
       </motion.section>
 
 
-      {/* ─── Trust Banner (Our Promise) — 2x2 grid on mobile ─────────────────── */}
-      <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 w-full lg:max-w-7xl mx-auto">
+      {/* ─── Trust Banner (Our Promise) ─────────────────────────────────────── */}
+      <section id="why-us" className="border-t border-white/[0.06] bg-zinc-900/30 py-6 md:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 w-full lg:max-w-7xl mx-auto">
           {[
-            { icon: Car,       title: "We Come To You",     desc: "Fully mobile — at home or work." },
-            { icon: Shield,    title: "100% Satisfaction", desc: "We make it right, no questions asked." },
-            { icon: Star,      title: "Premium Products",   desc: "Pro-grade coatings & polishes." },
-            { icon: Sparkles,  title: "Loyalty Rewards",    desc: "Earn points on every booking." },
+            { icon: Car,      title: "We Come To You",        desc: "Your driveway, office, or anywhere in Vermont." },
+            { icon: Shield,   title: "Satisfaction Guaranteed", desc: "Not happy? We'll make it right, every time." },
+            { icon: Star,     title: "Premium Products",       desc: "Pro-grade polishes, coatings & protectants." },
+            { icon: Sparkles, title: "Earn Rewards",           desc: "1 point per dollar — redeem for free details." },
           ].map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
-              className="flex flex-col items-center justify-center text-center p-5 md:p-8 bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-2xl md:rounded-[2rem] hover:bg-zinc-800/50 hover:border-[#D4AF37]/20 transition-all duration-300 group relative overflow-hidden"
+              className="flex items-center gap-3 p-3.5 md:p-4 bg-zinc-900/40 border border-white/[0.06] rounded-xl hover:border-[#D4AF37]/20 hover:bg-zinc-900/60 transition-all duration-300 group"
             >
-              {/* Subtle accent glow */}
-              <div className="absolute -inset-x-10 -top-10 h-20 bg-[#D4AF37]/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center mb-4 md:mb-6 border border-white/5 group-hover:border-[#D4AF37]/30 group-hover:bg-zinc-900 transition-all duration-300">
-                <Icon className="w-5 h-5 md:w-7 md:h-7 text-[#D4AF37] group-hover:scale-110 transition-transform duration-300" strokeWidth={1.5} />
+              <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-white/[0.05] flex items-center justify-center shrink-0 group-hover:border-[#D4AF37]/25 transition-all duration-300">
+                <Icon className="w-4 h-4 text-[#D4AF37]" strokeWidth={1.5} />
               </div>
-              
-              <p className="text-xs md:text-sm font-bold text-zinc-100 mb-2 uppercase tracking-wider">{title}</p>
-              <p className="text-[10px] md:text-xs text-zinc-500 leading-relaxed max-w-[140px] md:max-w-none">{desc}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-zinc-100 leading-tight">{title}</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">{desc}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -1449,7 +1281,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Yes, we require access to both a water spigot and a standard electrical outlet to properly service your vehicle. Please ensure your vehicle is parked within a reasonable distance of these hookups.
+              Yes — please make sure your vehicle is parked within reach of a water spigot and a standard electrical outlet. We&apos;ll handle everything else from there.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1870,8 +1702,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       )}
 
-      <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
-      <TrackAppointmentModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
+
     </div>
   );
 }
@@ -1910,6 +1741,12 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 
 // ─── Service Card ──────────────────────────────────────────────────────────────
 
+const SERVICE_CARD_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
+  "Interior Detail": Brush,
+  "Exterior Detail": Car,
+  "Full Detail": Sparkles,
+};
+
 function ServiceCard({
   service,
   onBook,
@@ -1919,71 +1756,85 @@ function ServiceCard({
 }) {
   const isPopular = service.name === "Full Detail";
   const inclusions = SERVICE_INCLUSIONS[service.name] ?? [];
+  const Icon = SERVICE_CARD_ICONS[service.name] ?? Sparkles;
 
   return (
-    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1.5 group ${
       isPopular
-        ? "border border-[#D4AF37]/45 shadow-[0_0_40px_rgba(212,175,55,0.1)] bg-zinc-900/70 hover:shadow-[0_16px_50px_rgba(212,175,55,0.15)]"
-        : "border border-white/[0.07] bg-zinc-900/50 hover:border-[#D4AF37]/25 hover:shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+        ? "border border-[#D4AF37]/40 shadow-[0_0_50px_rgba(212,175,55,0.12)] bg-gradient-to-b from-zinc-900 to-zinc-950 hover:shadow-[0_20px_60px_rgba(212,175,55,0.2)]"
+        : "border border-white/[0.07] bg-gradient-to-b from-zinc-900/80 to-zinc-950 hover:border-[#D4AF37]/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.7)]"
     }`}>
 
-      {/* Top gold accent line for popular */}
-      {isPopular && (
-        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent shrink-0" />
+      {/* Top accent line — gold on popular, dim on others but brightens on hover */}
+      <div className={`h-[2px] w-full bg-gradient-to-r from-transparent to-transparent shrink-0 transition-all duration-500 ${
+        isPopular ? "via-[#D4AF37]" : "via-white/10 group-hover:via-[#D4AF37]/50"
+      }`} />
+
+      {/* Card header — icon + name */}
+      <div className={`px-7 pt-6 pb-5 ${isPopular ? "bg-[#D4AF37]/[0.03]" : ""}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            {isPopular && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <Crown size={10} className="text-[#D4AF37]" strokeWidth={2} />
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">
+                  Most Popular
+                </span>
+              </div>
+            )}
+            <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+              {service.name}
+            </h3>
+            {service.description && (
+              <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{service.description}</p>
+            )}
+          </div>
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${
+            isPopular
+              ? "bg-[#D4AF37]/15 border border-[#D4AF37]/25"
+              : "bg-zinc-800/80 border border-white/[0.06] group-hover:border-[#D4AF37]/25 group-hover:bg-[#D4AF37]/[0.07]"
+          }`}>
+            <Icon size={18} className={`transition-colors duration-300 ${isPopular ? "text-[#D4AF37]" : "text-zinc-500 group-hover:text-[#D4AF37]"}`} strokeWidth={1.5} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-7 h-px bg-white/[0.05]" />
+
+      {/* Pricing — side-by-side boxes */}
+      <div className="px-7 py-5">
+        <div className="flex gap-3">
+          <div className="flex-1 rounded-xl p-4 bg-zinc-950/60 border border-white/[0.05] text-center">
+            <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mb-1.5">Normal</div>
+            <div className="text-3xl font-black text-white tabular-nums">${service.price_small}</div>
+          </div>
+          <div className={`flex-1 rounded-xl p-4 text-center border ${
+            isPopular ? "bg-[#D4AF37]/[0.07] border-[#D4AF37]/20" : "bg-zinc-950/60 border-white/[0.05]"
+          }`}>
+            <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mb-1.5">Large / 3-Row</div>
+            <div className={`text-3xl font-black tabular-nums ${isPopular ? "text-[#D4AF37]" : "text-zinc-300"}`}>${service.price_large}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Inclusions */}
+      {inclusions.length > 0 && (
+        <div className="px-7 pb-6 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mb-3">What&apos;s Included</p>
+          <ul className="space-y-2.5">
+            {inclusions.map((item) => (
+              <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-400 leading-snug">
+                <CheckCircle size={14} className="shrink-0 mt-[1px] text-[#D4AF37]/70" strokeWidth={2} />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
+      {inclusions.length === 0 && <div className="flex-1" />}
 
-      <div className="p-7 flex flex-col flex-1">
-
-        {/* Header: badge + name */}
-        <div className="mb-6">
-          {isPopular && (
-            <div className="flex items-center gap-1.5 mb-2.5">
-              <Crown size={11} className="text-[#D4AF37]" strokeWidth={2} />
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">
-                Most Popular
-              </span>
-            </div>
-          )}
-          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
-            {service.name}
-          </h3>
-          {service.description && (
-            <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{service.description}</p>
-          )}
-        </div>
-
-        {/* Pricing — Normal / Large side-by-side */}
-        <div className={`flex rounded-xl mb-7 overflow-hidden border ${isPopular ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
-          <div className="flex-1 py-4 text-center bg-white/[0.02]">
-            <div className="text-2xl font-black text-white tabular-nums">${service.price_small}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
-          </div>
-          <div className="w-px bg-white/[0.06]" />
-          <div className={`flex-1 py-4 text-center ${isPopular ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-            <div className={`text-2xl font-black tabular-nums ${isPopular ? "text-[#D4AF37]" : "text-zinc-200"}`}>${service.price_large}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
-          </div>
-        </div>
-
-        {/* Inclusions — always visible */}
-        {inclusions.length > 0 && (
-          <div className="mb-7 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">What&apos;s Included</p>
-            <ul className="space-y-2.5">
-              {inclusions.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
-                  <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
-                    <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {inclusions.length === 0 && <div className="flex-1" />}
-
-        {/* CTA */}
+      {/* CTA */}
+      <div className="px-7 pb-7">
         <button
           onClick={onBook}
           className={`w-full py-3.5 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
@@ -1996,7 +1847,6 @@ function ServiceCard({
           <Sparkles size={13} className="shrink-0" />
         </button>
 
-        {/* Reward points hint */}
         <p className="text-center text-[11px] text-zinc-600 mt-3">
           <Sparkles size={9} className="inline mr-1" />
           Earn {service.price_small}–{service.price_large} reward points
@@ -2012,30 +1862,27 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 250, priceLarge: 250, pointsNormal: 275, pointsLarge: 275,
+    priceNormal: 250, priceLarge: 250, pointsNormal: 250, pointsLarge: 250,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
-      "Everything in Full Detail",
-      "Hot Water Extraction & Shampooing (Carpets & Seats)",
-      "High-Pressure Steam Sanitation (Vents, Cup Holders, Crevices)",
-      "Vermont Road Salt & Calcium Neutralization",
-      "Engine Bay Deep Clean & Dressing (Add-On Available)",
-      "6-Month Ceramic Sealant Upgrade",
+      "Everything in Interior Detail",
+      "UV Protection on All Interior Plastics & Surfaces",
+      "Full Interior Dressing (Dash, Doors, Trim)",
+      "Hot Water Extraction & Deep Shampooing (Seats & Carpets)",
+      "Dog Hair & Heavy Dirt Removal",
     ],
     isFlagship: false,
   },
   {
     name: "Ultimate Interior + Exterior Reset",
-    tagline: "Showroom quality — every surface, inside and out. No polishing required.",
-    priceNormal: 325, priceLarge: 325, pointsNormal: 360, pointsLarge: 360,
+    tagline: "Showroom quality — every surface, inside and out.",
+    priceNormal: 350, priceLarge: 350, pointsNormal: 350, pointsLarge: 350,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
-      "Full Exterior Decontamination Wash & Clay Bar Treatment",
-      "Iron & Fallout Decontamination (Paint Prep)",
-      "Ceramic Sealant Application — 12-Month Protection",
-      "All Exterior Trim, Rubber & Glass Dressing",
-      "Exhaust Tips & Wheel Barrels Deep Cleaned",
+      "Full Exterior Hand Wash & Dry",
+      "Plastic Trim Restoration",
+      "12-Month Ceramic Spray Coating",
     ],
     isFlagship: true,
   },
@@ -2055,73 +1902,119 @@ function UltimateServiceCard({
   isFlagship: boolean;
 }) {
   return (
-    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
-      isFlagship
-        ? "border border-[#D4AF37]/60 shadow-[0_0_50px_rgba(212,175,55,0.2)] bg-zinc-900/70 hover:shadow-[0_16px_60px_rgba(212,175,55,0.3)]"
-        : "border border-white/[0.08] bg-zinc-900/50 hover:border-[#D4AF37]/30 hover:shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
-    }`}>
-      <div className={`h-[2px] w-full shrink-0 ${
+    <div
+      className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 group ${
         isFlagship
-          ? "bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40"
-          : "bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent"
+          ? "border border-[#D4AF37]/55 shadow-[0_0_80px_rgba(212,175,55,0.22)] hover:shadow-[0_28px_90px_rgba(212,175,55,0.36)]"
+          : "border border-[#D4AF37]/25 shadow-[0_0_40px_rgba(212,175,55,0.08)] hover:border-[#D4AF37]/45 hover:shadow-[0_24px_60px_rgba(212,175,55,0.18)]"
+      }`}
+      style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
+    >
+      {/* Gold inner glow at top */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: isFlagship
+            ? "radial-gradient(ellipse 110% 45% at 50% 0%, rgba(212,175,55,0.14) 0%, transparent 65%)"
+            : "radial-gradient(ellipse 110% 35% at 50% 0%, rgba(212,175,55,0.07) 0%, transparent 65%)",
+        }}
+      />
+
+      {/* Top accent stripe */}
+      <div className={`w-full shrink-0 ${
+        isFlagship
+          ? "h-[3px] bg-gradient-to-r from-[#C9A227]/60 via-[#F3E5AB] to-[#C9A227]/60"
+          : "h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent"
       }`} />
-      {isFlagship && (
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.07) 0%, transparent 60%)" }} />
-      )}
-      <div className="p-7 flex flex-col flex-1 relative">
-        <div className="mb-6">
-          <div className="flex items-center gap-1.5 mb-2.5">
-            {badge.icon === "gem"
-              ? <Gem size={11} className="text-[#D4AF37]" strokeWidth={2} />
-              : <Star size={11} className="text-[#D4AF37]" strokeWidth={2} fill="currentColor" />
-            }
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">{badge.label}</span>
+
+      {/* Header */}
+      <div className="px-7 pt-7 pb-6 relative">
+        <div className="flex items-start justify-between gap-4 mb-5">
+          {/* Badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D4AF37]/12 border border-[#D4AF37]/30">
+              {badge.icon === "gem"
+                ? <Gem size={9} className="text-[#D4AF37]" strokeWidth={2} />
+                : <Star size={9} className="text-[#D4AF37]" strokeWidth={2} fill="currentColor" />
+              }
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">{badge.label}</span>
+            </div>
+            {isFlagship && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08]">
+                <span className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-400">Most Complete</span>
+              </div>
+            )}
           </div>
-          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{name}</h3>
-          <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{tagline}</p>
+          {/* Icon orb */}
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+            isFlagship
+              ? "bg-gradient-to-br from-[#D4AF37]/25 to-[#D4AF37]/08 border border-[#D4AF37]/35"
+              : "bg-zinc-800/60 border border-[#D4AF37]/20 group-hover:border-[#D4AF37]/40 group-hover:bg-[#D4AF37]/[0.1]"
+          }`}>
+            {badge.icon === "gem"
+              ? <Gem size={20} className="text-[#D4AF37]" strokeWidth={1.5} />
+              : <Star size={20} className="text-[#D4AF37]" strokeWidth={1.5} fill="currentColor" />
+            }
+          </div>
         </div>
-        <div className={`rounded-xl mb-7 overflow-hidden border ${isFlagship ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
-          {priceNormal === priceLarge ? (
-            <div className={`py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-              <div className={`text-3xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-white"}`}>${priceNormal}</div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Flat Rate — All Vehicle Sizes</div>
-            </div>
-          ) : (
-            <div className="flex">
-              <div className="flex-1 py-4 text-center bg-white/[0.02]">
-                <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
-              </div>
-              <div className="w-px bg-white/[0.06]" />
-              <div className={`flex-1 py-4 text-center ${isFlagship ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-                <div className={`text-2xl font-black tabular-nums ${isFlagship ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large / 3-Row</div>
-              </div>
-            </div>
-          )}
+
+        <h3 className={`text-2xl font-black tracking-tight leading-tight mb-2 ${
+          isFlagship
+            ? "bg-gradient-to-br from-white via-zinc-100 to-[#D4AF37] bg-clip-text text-transparent"
+            : "text-white"
+        }`}>{name}</h3>
+        <p className="text-sm text-zinc-500 leading-relaxed">{tagline}</p>
+      </div>
+
+      <div className="mx-7 h-px bg-white/[0.06]" />
+
+      {/* Price — big and prominent */}
+      <div className="px-7 py-6">
+        <div className={`relative rounded-2xl p-5 border overflow-hidden ${
+          isFlagship
+            ? "bg-gradient-to-br from-[#D4AF37]/[0.13] to-[#D4AF37]/[0.04] border-[#D4AF37]/30"
+            : "bg-zinc-950/60 border-[#D4AF37]/18"
+        }`}>
+          <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-2">Flat Rate — All Vehicle Sizes</div>
+          <div className={`text-5xl font-black tabular-nums leading-none ${isFlagship ? "text-[#D4AF37]" : "text-white"}`}>
+            ${priceNormal}
+          </div>
+          <div className="text-xs text-zinc-600 mt-2">No hidden fees · We bring everything</div>
+          {/* Decorative gem watermark */}
+          <div className="absolute right-4 bottom-3 opacity-[0.12]">
+            <Gem size={56} className="text-[#D4AF37]" strokeWidth={0.8} />
+          </div>
         </div>
-        <div className="mb-7 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">What&apos;s Included</p>
-          <ul className="space-y-2.5">
-            {features.map((item) => (
-              <li key={item} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
-                <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
-                  <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
-                </span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
+      </div>
+
+      {/* Features */}
+      <div className="px-7 pb-6 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-4">Everything Included</p>
+        <ul className="space-y-3">
+          {features.map((item) => (
+            <li key={item} className="flex items-start gap-3 leading-snug">
+              <CheckCircle
+                size={15}
+                className={`shrink-0 mt-[1px] ${isFlagship ? "text-[#D4AF37]" : "text-[#D4AF37]/65"}`}
+                strokeWidth={2}
+              />
+              <span className={`text-sm ${isFlagship ? "text-zinc-200" : "text-zinc-300"}`}>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* CTA */}
+      <div className="px-7 pb-7">
         <button
           onClick={() => onBook(name)}
-          className={`w-full py-3.5 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
+          className={`w-full py-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
             isFlagship
-              ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_20px_rgba(212,175,55,0.35)]"
+              ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_24px_rgba(212,175,55,0.45)] hover:shadow-[0_8px_32px_rgba(212,175,55,0.6)]"
               : "btn-primary-gold-shimmer bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:scale-[1.02]"
           }`}
         >
-          Book This Service <Sparkles size={13} className="shrink-0" />
+          Book This Service <Sparkles size={14} className="shrink-0" />
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-3">
           <Sparkles size={9} className="inline mr-1" />

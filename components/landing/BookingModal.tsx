@@ -59,7 +59,6 @@ import { MONTHLY_PLAN_DURATIONS } from "@/lib/monthlyPlans";
 /** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
 const POINTS_PER_DOLLAR = 10;
 const MAX_REDEEMABLE_POINTS = 1000;
-const WATER_POWER_FEE = 10;
 /** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $120 */
 function getMaintenanceSetupFee(serviceName: string): number {
   return serviceName.toLowerCase().includes("full") ? 100 : 75;
@@ -855,9 +854,6 @@ export function BookingSection({
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Water & power
-  const [waterPower, setWaterPower] = useState<"provided" | "needed" | null>(null);
-
   // Travel fee from distance (over 10 mi from home base: $0.50/mi)
   const [travelFee, setTravelFee] = useState(0);
   const [distanceMiles, setDistanceMiles] = useState<number | null>(null);
@@ -1000,9 +996,8 @@ export function BookingSection({
   const giftCardDiscount = appliedGiftCard
     ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
     : 0;
-  const waterPowerFee = waterPower === "needed" ? WATER_POWER_FEE : 0;
   const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + waterPowerFee + addonsTotal + additionalVehiclesTotal;
+    servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
   const availablePoints = rewardPoints ?? 0;
 
   // 10 points = $1. Max redeemable is 1000 pts ($100).
@@ -1615,8 +1610,7 @@ export function BookingSection({
       serviceAddress.trim() &&
       name.trim() &&
       phone.trim() &&
-      selectedService &&
-      waterPower !== null
+      selectedService
     );
 
   const handleNext = () => {
@@ -1668,9 +1662,7 @@ export function BookingSection({
       ...(addlVehicles.length > 0 && { additionalVehicles: addlVehicles }),
       ...(travelFee > 0 && { travelFee }),
       ...(setupFee > 0 && { setupFee }),
-      waterPower: waterPower ?? "provided",
-      ...(waterPowerFee > 0 && { waterPowerFee }),
-      ...(pointsToRedeem > 0 && { pointsToRedeem }),
+...(pointsToRedeem > 0 && { pointsToRedeem }),
       ...(referralEligible && { isApplyingReferralDiscount: true }),
       ...(authUserId && { authUserId }),
       ...(appliedCoupon && {
@@ -3498,13 +3490,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </span>
                               </div>
                             )}
-                            {waterPowerFee > 0 && (
-                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
-                                <span className="text-zinc-400">Water &amp; Power</span>
-                                <span className="font-semibold text-white">+${waterPowerFee.toFixed(2)}</span>
-                              </div>
-                            )}
-                            {renderCouponUI()}
+{renderCouponUI()}
                             {renderGiftCardUI()}
                             {pointsToRedeem > 0 && (
                               <>
@@ -3771,42 +3757,6 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           rows={3}
                           className="w-full text-center min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm resize-none"
                         />
-                      </div>
-                    </div>
-
-                    {/* Water & Power selector — required */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] mb-2">
-                        Water &amp; Power
-                        <span className="text-red-500 ml-0.5">*</span>
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setWaterPower("provided")}
-                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3.5 text-sm font-semibold transition-all duration-200 ${
-                            waterPower === "provided"
-                              ? "border-emerald-500/60 bg-emerald-950/30 text-emerald-300"
-                              : "border-white/10 bg-zinc-950/50 text-zinc-400 hover:border-white/20 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span className="text-lg">🔌</span>
-                          <span>I'll provide</span>
-                          <span className="text-[10px] font-normal text-zinc-500">water &amp; power</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setWaterPower("needed")}
-                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3.5 text-sm font-semibold transition-all duration-200 ${
-                            waterPower === "needed"
-                              ? "border-amber-500/60 bg-amber-950/30 text-amber-300"
-                              : "border-white/10 bg-zinc-950/50 text-zinc-400 hover:border-white/20 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span className="text-lg">💧</span>
-                          <span>Please provide</span>
-                          <span className="text-[10px] font-normal text-zinc-500">+$10 fee</span>
-                        </button>
                       </div>
                     </div>
 

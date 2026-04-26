@@ -19,8 +19,6 @@ export type BookingConfirmationDetails = {
   bookingTime: string;
   travelFee: number;
   totalPrice: number;
-  waterPower?: "provided" | "needed";
-  waterPowerFee?: number;
   /** Extra vehicles on the same booking (multi-vehicle discount) */
   additionalVehicles?: Array<{
     vehicleYear: string;
@@ -234,8 +232,6 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
           ${d.travelFee > 0 ? detailRow("Travel Fee", travelStr) : ""}
-          ${d.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(d.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
-          ${d.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
           ${d.addonsJson?.length ? `
           <tr>
             <td style="padding:12px 22px;border-top:1px solid #e8e8e8;">
@@ -386,8 +382,6 @@ function boatCustomerHtml(d: BookingConfirmationDetails, date: string): string {
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Service Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
           ${d.travelFee > 0 ? detailRow("Travel Fee", travelStr) : ""}
-          ${d.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(d.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
-          ${d.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
           ${d.addonsJson?.length ? `
           <tr>
             <td style="padding:12px 22px;border-top:1px solid #e8e8e8;">
@@ -540,8 +534,6 @@ function rvCustomerHtml(d: BookingConfirmationDetails, date: string): string {
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Service Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
           ${d.travelFee > 0 ? detailRow("Travel Fee", travelStr) : ""}
-          ${d.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(d.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
-          ${d.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
           ${d.addonsJson?.length ? `
           <tr>
             <td style="padding:12px 22px;border-top:1px solid #e8e8e8;">

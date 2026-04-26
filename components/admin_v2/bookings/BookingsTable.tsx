@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useAdminBookings, useUpdateBookingStatus } from "@/hooks/use-admin-data";
+import { useAdminBookings, useUpdateBookingStatus, useSendOnMyWay } from "@/hooks/use-admin-data";
 import { sendTestReviewEmail } from "@/app/actions/sendTestReviewEmail";
 import {
   CheckCircle2,
@@ -18,6 +18,8 @@ import {
   StickyNote,
   ShieldCheck,
   AlertCircle,
+  Package,
+  Navigation,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -274,88 +276,305 @@ function BookingDetail({
   onUpdateStatus: (args: { id: string; status: AdminBooking["status"] }) => void;
 }) {
   const statuses: AdminBooking["status"][] = ["confirmed", "completed", "cancelled", "no-show"];
+  const sendOnMyWay = useSendOnMyWay();
+  const [onMyWayMsg, setOnMyWayMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const phone = displayPhone(booking);
+  const address = displayAddress(booking);
+  const mapsUrl = address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    : null;
+  const additionalVehicles = booking.additional_vehicles_json ?? [];
+  const totalVehicles = 1 + additionalVehicles.length;
+
+  function handleOnMyWay() {
+    setOnMyWayMsg(null);
+    sendOnMyWay.mutate(booking.id, {
+      onSuccess: () => setOnMyWayMsg({ ok: true, text: "On My Way email sent!" }),
+      onError: () => setOnMyWayMsg({ ok: false, text: "Failed to send." }),
+    });
+    setTimeout(() => setOnMyWayMsg(null), 5000);
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="space-y-5">
 
-      {/* Column 1: Customer info */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Lead Info</p>
-        <InfoRow icon={User} label="Name" value={displayName(booking)} />
-        <InfoRow icon={Phone} label="Phone" value={displayPhone(booking)} mono />
-        <InfoRow icon={Mail} label="Email" value={displayEmail(booking)} mono />
-        <InfoRow icon={MapPin} label="Address" value={displayAddress(booking)} />
-        {hasLinkedAccount(booking) ? (
-          <div className="flex items-center gap-2 mt-2">
-            <ShieldCheck size={12} className="text-[#D4AF37]" />
-            <span className="text-[10px] text-[#D4AF37] font-bold">
-              Linked Account · {booking.profiles?.reward_points ?? 0} pts
-            </span>
+      {/* ── Top strip: date/time + actions ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.05]">
+        <div className="flex items-center gap-5">
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-0.5">Date</p>
+            <p className="text-sm font-bold text-white">
+              {format(new Date(booking.booking_date + "T12:00:00"), "EEE, MMM d, yyyy")}
+            </p>
           </div>
-        ) : (
-          <div className="flex items-center gap-2 mt-2">
-            <AlertCircle size={12} className="text-zinc-600" />
-            <span className="text-[10px] text-zinc-600">Guest booking — no account</span>
+          <div className="w-px h-8 bg-white/[0.06]" />
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-0.5">Time</p>
+            <p className="text-sm font-bold text-[#D4AF37]">{booking.booking_time}</p>
           </div>
-        )}
-      </div>
-
-      {/* Column 2: Service + vehicle */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Service Details</p>
-        <InfoRow icon={Briefcase} label="Service" value={displayService(booking)} />
-        <InfoRow icon={Car} label="Vehicle" value={displayVehicle(booking)} />
-        {(booking.vehicle_size ?? booking.vehicles?.size) && (
-          <InfoRow icon={Car} label="Size" value={booking.vehicle_size ?? booking.vehicles?.size ?? null} />
-        )}
-        {booking.addons_json && booking.addons_json.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Add-ons</p>
-            {booking.addons_json.map((a) => (
-              <div key={a.id} className="flex justify-between text-xs">
-                <span className="text-zinc-400">{a.label}</span>
-                <span className="text-zinc-500 font-mono">${a.price}</span>
+          <div className="w-px h-8 bg-white/[0.06]" />
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-0.5">Total</p>
+            <p className="text-sm font-bold text-white">${booking.total_price}</p>
+          </div>
+          {totalVehicles > 1 && (
+            <>
+              <div className="w-px h-8 bg-white/[0.06]" />
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-0.5">Vehicles</p>
+                <p className="text-sm font-bold text-amber-400">{totalVehicles}</p>
               </div>
-            ))}
-          </div>
-        )}
-        <div className="pt-1 border-t border-white/[0.04] flex justify-between text-sm font-bold">
-          <span className="text-zinc-400">Total</span>
-          <span className="text-white">${booking.total_price}</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {onMyWayMsg && (
+            <span className={cn("text-[11px] font-medium", onMyWayMsg.ok ? "text-emerald-400" : "text-rose-400")}>
+              {onMyWayMsg.text}
+            </span>
+          )}
+          <button
+            onClick={handleOnMyWay}
+            disabled={sendOnMyWay.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 text-[11px] font-bold text-sky-400 hover:bg-sky-500/20 transition-colors disabled:opacity-50"
+          >
+            <Navigation size={11} />
+            {sendOnMyWay.isPending ? "Sending…" : "On My Way"}
+          </button>
         </div>
       </div>
 
-      {/* Column 3: Notes + status update */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Notes & Status</p>
-        {booking.notes ? (
-          <div className="flex items-start gap-2">
-            <StickyNote size={12} className="text-zinc-600 mt-0.5 shrink-0" />
-            <pre className="text-[10px] text-zinc-500 leading-relaxed whitespace-pre-wrap font-sans">
-              {booking.notes}
-            </pre>
-          </div>
-        ) : (
-          <p className="text-[10px] text-zinc-700 italic">No notes</p>
-        )}
+      {/* ── Main 3-col grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
-        <div className="pt-3 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Update Status</p>
-          <div className="flex flex-wrap gap-2">
-            {statuses.map((s) => (
-              <button
-                key={s}
-                onClick={() => onUpdateStatus({ id: booking.id, status: s })}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border transition-all",
-                  booking.status === s
-                    ? STATUS_CONFIG[s].color + " opacity-100"
-                    : "border-white/[0.06] text-zinc-600 hover:text-zinc-300"
+        {/* Column 1: Customer info */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Customer</p>
+          <InfoRow icon={User} label="Name" value={displayName(booking)} />
+          {phone && (
+            <div className="flex items-start gap-2">
+              <Phone size={12} className="text-zinc-600 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[9px] uppercase tracking-widest text-zinc-700 font-bold">Phone</p>
+                <div className="flex items-center gap-2">
+                  <a href={`tel:${phone}`} className="text-xs text-zinc-300 font-mono hover:text-white transition-colors">
+                    {phone}
+                  </a>
+                  <a href={`sms:${phone}`} className="text-[10px] text-[#D4AF37] font-bold hover:text-amber-300 transition-colors">
+                    Text
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+          <InfoRow icon={Mail} label="Email" value={displayEmail(booking)} mono />
+          {address && (
+            <div className="flex items-start gap-2">
+              <MapPin size={12} className="text-zinc-600 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[9px] uppercase tracking-widest text-zinc-700 font-bold">Address</p>
+                {mapsUrl ? (
+                  <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                     className="text-xs text-[#D4AF37] hover:text-amber-300 transition-colors break-words">
+                    {address}
+                  </a>
+                ) : (
+                  <p className="text-xs text-zinc-300 break-words">{address}</p>
                 )}
-              >
-                {s}
-              </button>
-            ))}
+              </div>
+            </div>
+          )}
+          {hasLinkedAccount(booking) ? (
+            <div className="flex items-center gap-2 mt-1">
+              <ShieldCheck size={12} className="text-[#D4AF37]" />
+              <span className="text-[10px] text-[#D4AF37] font-bold">
+                Linked Account · {booking.profiles?.reward_points ?? 0} pts
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mt-1">
+              <AlertCircle size={12} className="text-zinc-600" />
+              <span className="text-[10px] text-zinc-600">Guest — no account</span>
+            </div>
+          )}
+        </div>
+
+        {/* Column 2: Vehicles & services */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+            Services & Vehicles
+          </p>
+
+          {/* Vehicle 1 */}
+          {(() => {
+            const primaryAddonsTotal = (booking.addons_json ?? []).reduce((s, a) => s + a.price, 0);
+            const avTotal = additionalVehicles.reduce((s, av) => {
+              return s + (av.servicePrice ?? 0) + (av.selectedAddons ?? []).reduce((as, a) => as + a.price, 0);
+            }, 0);
+            const v1ServicePrice = booking.total_price - primaryAddonsTotal - avTotal;
+
+            return (
+              <>
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+                      Vehicle {totalVehicles > 1 ? "1" : ""}
+                    </span>
+                    {booking.vehicle_size && (
+                      <span className="text-[9px] text-zinc-600 capitalize">{booking.vehicle_size}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Car size={11} className="text-zinc-500 shrink-0" />
+                    <span className="text-xs font-semibold text-zinc-200">{displayVehicle(booking)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase size={11} className="text-amber-500/60 shrink-0" />
+                      <span className="text-[11px] text-zinc-400 font-medium">{displayService(booking)}</span>
+                    </div>
+                    {v1ServicePrice > 0 && (
+                      <span className="text-[11px] text-emerald-400 font-mono font-semibold">${v1ServicePrice}</span>
+                    )}
+                  </div>
+                  {booking.addons_json && booking.addons_json.length > 0 && (
+                    <div className="pt-1.5 border-t border-white/[0.04] space-y-1">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 flex items-center gap-1">
+                        <Package size={9} /> Add-ons
+                      </p>
+                      {booking.addons_json.map((a) => (
+                        <div key={a.id} className="flex justify-between text-[11px]">
+                          <span className="text-zinc-400">+ {a.label}</span>
+                          <span className="text-zinc-500 font-mono">${a.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional vehicles */}
+                {additionalVehicles.map((av, i) => (
+                  <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+                        Vehicle {i + 2}
+                      </span>
+                      {av.vehicleSize && (
+                        <span className="text-[9px] text-zinc-600 capitalize">{av.vehicleSize}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Car size={11} className="text-zinc-500 shrink-0" />
+                      <span className="text-xs font-semibold text-zinc-200">
+                        {[av.vehicleYear, av.vehicleMake, av.vehicleModel].filter(Boolean).join(" ") || "—"}
+                      </span>
+                    </div>
+                    {av.serviceName && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Briefcase size={11} className="text-amber-500/60 shrink-0" />
+                          <span className="text-[11px] text-zinc-400 font-medium">{av.serviceName}</span>
+                        </div>
+                        {av.servicePrice != null && (
+                          <span className="text-[11px] text-emerald-400 font-mono font-semibold">
+                            ${av.servicePrice} <span className="text-zinc-600 text-[10px]">(-$25)</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {av.selectedAddons && av.selectedAddons.length > 0 && (
+                      <div className="pt-1.5 border-t border-white/[0.04] space-y-1">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 flex items-center gap-1">
+                          <Package size={9} /> Add-ons
+                        </p>
+                        {av.selectedAddons.map((a) => (
+                          <div key={a.id} className="flex justify-between text-[11px]">
+                            <span className="text-zinc-400">+ {a.label}</span>
+                            <span className="text-zinc-500 font-mono">${a.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Price Breakdown */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Price Breakdown</p>
+
+                  {/* Vehicle 1 */}
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-zinc-500">Vehicle 1{totalVehicles > 1 ? "" : ""} — {displayService(booking) || "Service"}</span>
+                    <span className="text-zinc-400 font-mono">${v1ServicePrice}</span>
+                  </div>
+                  {(booking.addons_json ?? []).map((a) => (
+                    <div key={a.id} className="flex justify-between text-[10px]">
+                      <span className="text-zinc-600 pl-3">+ {a.label}</span>
+                      <span className="text-zinc-600 font-mono">${a.price}</span>
+                    </div>
+                  ))}
+
+                  {/* Additional vehicles */}
+                  {additionalVehicles.map((av, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-[11px] mt-1">
+                        <span className="text-zinc-500">Vehicle {i + 2} — {av.serviceName || "Service"}</span>
+                        <span className="text-zinc-400 font-mono">
+                          ${av.servicePrice ?? 0}
+                          <span className="text-zinc-700 ml-1">(-$25)</span>
+                        </span>
+                      </div>
+                      {(av.selectedAddons ?? []).map((a) => (
+                        <div key={a.id} className="flex justify-between text-[10px]">
+                          <span className="text-zinc-600 pl-3">+ {a.label}</span>
+                          <span className="text-zinc-600 font-mono">${a.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+
+                  <div className="border-t border-white/[0.06] pt-2 mt-1.5 flex justify-between text-sm font-bold">
+                    <span className="text-zinc-300">Total</span>
+                    <span className="text-white">${booking.total_price}</span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+
+        {/* Column 3: Notes + status update */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Notes & Status</p>
+          {booking.notes ? (
+            <div className="flex items-start gap-2">
+              <StickyNote size={12} className="text-zinc-600 mt-0.5 shrink-0" />
+              <pre className="text-[10px] text-zinc-500 leading-relaxed whitespace-pre-wrap font-sans">
+                {booking.notes}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-[10px] text-zinc-700 italic">No notes</p>
+          )}
+
+          <div className="pt-3 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Update Status</p>
+            <div className="flex flex-wrap gap-2">
+              {statuses.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onUpdateStatus({ id: booking.id, status: s })}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border transition-all",
+                    booking.status === s
+                      ? STATUS_CONFIG[s].color + " opacity-100"
+                      : "border-white/[0.06] text-zinc-600 hover:text-zinc-300"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

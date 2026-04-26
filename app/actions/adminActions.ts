@@ -50,13 +50,14 @@ export async function getBookedSlotsAction(date: string): Promise<BookedSlot[]> 
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, customer_name, profiles(first_name, last_name)")
+    .select("booking_time, service_name, vehicle_size, customer_name, duration_override, profiles(first_name, last_name)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
   return (data ?? []).map(r => {
     const svcName = (r as any).service_name ?? "";
     const vSize   = (r as any).vehicle_size ?? "medium";
-    const dur     = SERVICE_DURATIONS[svcName]?.[vSize] ?? 180;
+    const override = (r as any).duration_override;
+    const dur = override != null ? override : (SERVICE_DURATIONS[svcName]?.[vSize] ?? 180);
     const profileName = [(r as any).profiles?.first_name, (r as any).profiles?.last_name].filter(Boolean).join(" ");
     const custName = ((r as any).customer_name ?? profileName) || "Client";
     return {
@@ -188,15 +189,19 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   const { data: existingOnDate } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, status")
+    .select("booking_time, service_name, vehicle_size, status, duration_override")
     .eq("booking_date", payload.bookingDate)
     .neq("status", "cancelled");
 
   const bookedTime24 = _to24h(payload.bookingTime);
   const requestedSlot = _toMins(bookedTime24);
   const newDur = _getDur(payload.serviceName, payload.vehicleSize);
+  const slotsWithDur = (existingOnDate ?? []).map((b: any) => ({
+    ...b,
+    total_duration_mins: b.duration_override ?? undefined,
+  }));
 
-  if (_checkConflict(existingOnDate ?? [], requestedSlot, newDur)) {
+  if (_checkConflict(slotsWithDur, requestedSlot, newDur)) {
     return { success: false, error: "That time is already booked. Please pick a different time slot." };
   }
 
@@ -1307,12 +1312,18 @@ export async function adminQuickBookV2(payload: any): Promise<{ success: boolean
   const { checkSlotConflict, timeToMins, getDurationMins, to24h } = await import("@/lib/availability");
   const supabase = createAdminClient();
 
-  // Check operating hours
-  const { data: opHours } = await supabase
+  // Check operating hours — prefer seasonal (month-specific) row over default
+  const _d = new Date(payload.bookingDate + "T12:00:00");
+  const _dow = _d.getDay();
+  const _month = _d.getMonth() + 1;
+  const { data: allOpHours } = await supabase
     .from("operating_hours")
     .select("*")
-    .eq("day_of_week", new Date(payload.bookingDate + "T12:00:00").getDay())
-    .maybeSingle();
+    .eq("day_of_week", _dow);
+  const opHours =
+    (allOpHours ?? []).find((h: any) => h.month === _month) ??
+    (allOpHours ?? []).find((h: any) => h.month == null) ??
+    null;
 
   // Check blocked dates
   const { data: blocked } = await supabase
@@ -1322,17 +1333,21 @@ export async function adminQuickBookV2(payload: any): Promise<{ success: boolean
     .maybeSingle();
   if (blocked) return { success: false, error: "That date is blocked." };
 
-  // Fetch existing bookings for that date
+  // Fetch existing bookings for that date (include duration_override for accurate conflict detection)
   const { data: existing } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, status")
+    .select("booking_time, service_name, vehicle_size, status, duration_override")
     .eq("booking_date", payload.bookingDate)
     .neq("status", "cancelled");
 
   const bookedTime24 = to24h(payload.bookingTime);
   const newStartMins = timeToMins(bookedTime24);
   const newDuration  = getDurationMins(payload.serviceName, payload.vehicleSize);
-  const hasConflict  = checkSlotConflict(existing ?? [], newStartMins, newDuration);
+  const existingWithDur = (existing ?? []).map((b: any) => ({
+    ...b,
+    total_duration_mins: b.duration_override ?? undefined,
+  }));
+  const hasConflict = checkSlotConflict(existingWithDur, newStartMins, newDuration);
   if (hasConflict) return { success: false, error: "That time slot conflicts with an existing booking." };
 
   // Delegate the rest to the existing action (profile/vehicle/booking/emails)
@@ -1423,4 +1438,97 @@ export async function getErrorLogs(limit = 50) {
     .limit(limit);
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// ── Block rest of day ─────────────────────────────────────────────────────────
+
+/** Creates a Personal Block from the end of the last active booking to the end of operating hours.
+ *  If no bookings exist yet, blocks the entire operating day. */
+export async function blockRestOfDayAction(date: string): Promise<{ success: boolean; error?: string; blockedFrom?: string; blockedTo?: string }> {
+  const supabase = createAdminClient();
+
+  // Get operating hours — prefer month-specific seasonal row over null-month default
+  const d = new Date(date + "T12:00:00");
+  const dow   = d.getDay();        // 0=Sun
+  const month = d.getMonth() + 1; // 1-12
+  const { data: allHours } = await supabase
+    .from("operating_hours")
+    .select("start_time, end_time, is_open, month")
+    .eq("day_of_week", dow);
+  const seasonal = (allHours ?? []).find((h: any) => h.month === month);
+  const fallback = (allHours ?? []).find((h: any) => h.month == null);
+  const opHours  = seasonal ?? fallback ?? null;
+
+  const dayEnd   = opHours?.end_time   ? timeToMins(opHours.end_time)   : 19 * 60;
+  const dayStart = opHours?.start_time ? timeToMins(opHours.start_time) : 7 * 60;
+
+  if (opHours && !opHours.is_open) return { success: false, error: "That day is marked closed." };
+
+  // Get all active bookings for this date
+  const { data: existing } = await supabase
+    .from("bookings")
+    .select("booking_time, service_name, vehicle_size, status, duration_override")
+    .eq("booking_date", date)
+    .neq("status", "cancelled")
+    .neq("status", "no-show");
+
+  const { getDurationMins, timeToMins: tToM } = await import("@/lib/availability");
+
+  // Find latest end time among real bookings (not existing blocks)
+  let latestEnd = dayStart;
+  for (const b of existing ?? []) {
+    const start = tToM((b as any).booking_time ?? "00:00");
+    const override = (b as any).duration_override;
+    const dur = override != null ? override : getDurationMins((b as any).service_name ?? "", (b as any).vehicle_size ?? "sedan");
+    const end = start + dur;
+    if (end > latestEnd) latestEnd = end;
+  }
+
+  if (latestEnd >= dayEnd) {
+    return { success: false, error: "The rest of the day is already blocked or booked." };
+  }
+
+  const blockDuration = dayEnd - latestEnd;
+  const hh = String(Math.floor(latestEnd / 60)).padStart(2, "0");
+  const mm = String(latestEnd % 60).padStart(2, "0");
+
+  const { error: insertErr } = await supabase.from("bookings").insert({
+    booking_date: date,
+    booking_time: `${hh}:${mm}:00`,
+    service_name: "Personal Block",
+    vehicle_size: String(blockDuration),
+    customer_name: "Admin Block",
+    status: "blocked",
+    total_price: 0,
+    notes: "Blocked — rest of day",
+    user_id: null,
+    vehicle_id: null,
+    service_id: null,
+  });
+
+  if (insertErr) return { success: false, error: insertErr.message };
+
+  const endH = Math.floor(dayEnd / 60) % 12 || 12;
+  const endPeriod = Math.floor(dayEnd / 60) >= 12 ? "PM" : "AM";
+  const startH = Math.floor(latestEnd / 60) % 12 || 12;
+  const startPeriod = Math.floor(latestEnd / 60) >= 12 ? "PM" : "AM";
+
+  return {
+    success: true,
+    blockedFrom: `${startH}:${mm} ${startPeriod}`,
+    blockedTo: `${endH}:${String(dayEnd % 60).padStart(2, "0")} ${endPeriod}`,
+  };
+}
+
+// ── Update booking duration ────────────────────────────────────────────────────
+
+/** Silently updates the duration_override for a booking (no customer notification). */
+export async function updateBookingDurationAction(bookingId: string, durationMins: number): Promise<{ success: boolean; error?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("bookings")
+    .update({ duration_override: durationMins })
+    .eq("id", bookingId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }

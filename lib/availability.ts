@@ -16,7 +16,7 @@ export interface BookingSlot {
 
 /**
  * Compute extra minutes added by additional vehicles stored in additional_vehicles_json.
- * Each vehicle adds max(60, baseDuration - 60) — matching the booking form logic.
+ * Each vehicle adds (baseDuration - 30), minimum 30 min — 30-min efficiency discount per extra vehicle.
  * Handles both full DB format ({ serviceName, vehicleSize }) and Stripe compact format ({ sn, sz }).
  */
 export function getAdditionalVehiclesDuration(additionalVehiclesJson: unknown): number {
@@ -25,7 +25,7 @@ export function getAdditionalVehiclesDuration(additionalVehiclesJson: unknown): 
     const name = av.serviceName ?? av.sn ?? "";
     const size = av.vehicleSize ?? av.sz ?? "sedan";
     const base = getDurationMins(name, size);
-    return sum + Math.max(60, base - 60);
+    return sum + Math.max(30, base - 30);
   }, 0);
 }
 

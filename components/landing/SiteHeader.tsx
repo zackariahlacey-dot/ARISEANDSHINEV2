@@ -3,206 +3,384 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Phone, Menu, X, Sparkles, Anchor, Truck } from "lucide-react";
-import { LoyaltyHeaderButton } from "./LoyaltyHeaderButton";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Phone, Menu, X, Sparkles, Anchor, Truck,
+  LogIn, LogOut, LayoutDashboard, Gift, User,
+  HelpCircle, MapPin, CalendarSearch, ChevronRight,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { getAuthProfile, type AuthProfile } from "@/app/actions/getAuthProfile";
 import { BookingFlowSelector } from "./BookingFlowSelector";
 import { TrackAppointmentModal } from "./TrackAppointmentModal";
 
-const SERVICE_LINKS = [
-  { href: "/detailing", label: "Auto Detailing", icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
-  { href: "/boat-detailing", label: "Boat Detailing", icon: Anchor, desc: "Marine interior, exterior & full detail" },
-  { href: "/rv-detailing", label: "RV Detailing", icon: Truck, desc: "Per-foot pricing for motorhomes & trailers" },
+const ADMIN_EMAIL = "zackariahlacey@gmail.com";
+
+const NAV_LINKS = [
+  { href: "/",               label: "Home"            },
+  { href: "/detailing",      label: "Auto Detailing" },
+  { href: "/boat-detailing", label: "Boat Detailing" },
+  { href: "/rv-detailing",   label: "RV Detailing"   },
+  { href: "/about",          label: "About"           },
+  { href: "/contact",        label: "Contact"         },
 ];
 
-type SiteHeaderProps = {
-  onBookNow?: () => void;
-};
+const SERVICE_LINKS = [
+  { href: "/detailing",      label: "Auto Detailing", icon: Sparkles, desc: "Cars, trucks & SUVs"        },
+  { href: "/boat-detailing", label: "Boat Detailing", icon: Anchor,   desc: "Marine interior & exterior" },
+  { href: "/rv-detailing",   label: "RV Detailing",   icon: Truck,    desc: "Per-foot pricing"            },
+];
+
+const MORE_LINKS = [
+  { href: "/about",        label: "About Us",     icon: User        },
+  { href: "/faq",          label: "FAQ",          icon: HelpCircle  },
+  { href: "/service-area", label: "Service Area", icon: MapPin      },
+];
+
+type SiteHeaderProps = { onBookNow?: () => void };
 
 export function SiteHeader({ onBookNow }: SiteHeaderProps) {
   const pathname = usePathname();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const router   = useRouter();
+
+  const [isScrolled,       setIsScrolled]      = useState(false);
+  const [mobileOpen,       setMobileOpen]       = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
-  const [trackOpen, setTrackOpen] = useState(false);
+  const [trackOpen,        setTrackOpen]        = useState(false);
+  const [profile,          setProfile]          = useState<AuthProfile | undefined>(undefined);
+  const [authLoading,      setAuthLoading]      = useState(true);
 
   const handleBookNow = onBookNow ?? (() => setFlowSelectorOpen(true));
+  const isLoggedIn    = !!profile;
+  const isAdmin       = profile?.email?.toLowerCase() === ADMIN_EMAIL;
 
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  // onAuthStateChange fires immediately on mount with INITIAL_SESSION — no
+  // separate getUser() call needed, and no lock race condition.
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const supabase = createClient();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!session?.user) {
+          setProfile(null);
+          setAuthLoading(false);
+          return;
+        }
+        try {
+          const p = await getAuthProfile();
+          setProfile(p ?? null);
+        } catch {
+          setProfile(null);
+        } finally {
+          setAuthLoading(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const handleSignOut = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  }, []);
+
+  // ── Scroll ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const fn = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  // ── Body scroll lock ──────────────────────────────────────────────────────
+  useEffect(() => {
     if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow            = "hidden";
     } else {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow            = "";
     }
     return () => {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow            = "";
     };
   }, [mobileOpen]);
 
+  // ── Close on resize ───────────────────────────────────────────────────────
   useEffect(() => {
-    const onResize = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const fn = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
   }, []);
 
-  const isServicesActive = SERVICE_LINKS.some((l) => pathname === l.href);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   return (
     <>
-      <header className={`fixed top-0 inset-x-0 z-50 py-3 md:h-[68px] transition-all duration-500 ${isScrolled || mobileOpen ? "bg-black/40 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_32px_rgba(0,0,0,0.4)]" : "bg-transparent backdrop-blur-none"}`}>
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-full">
+      {/* ── Header bar ──────────────────────────────────────────────────── */}
+      <header
+        className={`fixed top-0 inset-x-0 z-50 h-16 transition-all duration-500 ${
+          isScrolled || mobileOpen
+            ? "bg-black/60 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_32px_rgba(0,0,0,0.4)]"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-6">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 shrink-0">
-            <Image src="/e.png" alt="Arise And Shine VT Logo" width={38} height={38} className="object-contain drop-shadow-md shrink-0" priority />
-            <span className="font-semibold tracking-wide text-[13px] hidden sm:block text-white/90">Arise And Shine VT</span>
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <Image src="/e.png" alt="Arise And Shine VT" width={34} height={34} className="object-contain drop-shadow-md shrink-0" priority />
+            <span className="font-semibold tracking-wide text-[13px] hidden sm:block text-white/90 whitespace-nowrap">
+              Arise And Shine VT
+            </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-7 text-[13px]">
-            <Link
-              href="/"
-              className={`relative py-1 transition-colors duration-200 ${pathname === "/" ? "text-white after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-[#D4AF37] after:rounded-full" : "text-zinc-400 hover:text-zinc-100"}`}
-            >
-              Home
-            </Link>
-            {SERVICE_LINKS.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`relative py-1 transition-colors duration-200 ${pathname === href ? "text-[#D4AF37] after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-[#D4AF37] after:rounded-full" : "text-zinc-400 hover:text-zinc-100"}`}
-              >
+          <nav className="hidden md:flex items-center gap-6 text-[13px]">
+            {NAV_LINKS.map(({ href, label }) => (
+              <Link key={href} href={href} className={`relative py-1 whitespace-nowrap transition-colors duration-200 ${
+                pathname === href
+                  ? "text-[#D4AF37] after:absolute after:bottom-0 after:inset-x-0 after:h-px after:bg-[#D4AF37] after:rounded-full"
+                  : "text-zinc-400 hover:text-zinc-100"
+              }`}>
                 {label}
               </Link>
             ))}
-            <a href="/#why-us" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Why Us</a>
-            <a href="/#contact" className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200">Contact</a>
-            <button
-              type="button"
-              onClick={() => setTrackOpen(true)}
-              className="relative py-1 text-zinc-400 hover:text-zinc-100 transition-colors duration-200"
-            >
-              Track
-            </button>
           </nav>
 
-          {/* Right controls */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <a href="tel:8025855563" className="hidden md:flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-[13px] transition-colors duration-200">
-              <Phone className="w-3.5 h-3.5" /><span>802-585-5563</span>
+          {/* Desktop right */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <button type="button" onClick={() => setTrackOpen(true)}
+              className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors whitespace-nowrap px-1">
+              Track
+            </button>
+            <div className="w-px h-4 bg-white/10 mx-0.5" />
+            <a href="tel:8025855563" aria-label="Call us"
+              className="flex items-center justify-center w-8 h-8 rounded-full text-zinc-500 hover:text-[#D4AF37] transition-colors">
+              <Phone className="w-3.5 h-3.5" />
             </a>
-            <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
-            <LoyaltyHeaderButton />
-            <button
-              type="button"
-              onClick={handleBookNow}
-              className="btn-primary-gold-shimmer hidden md:flex items-center justify-center h-9 px-5 rounded-lg font-semibold tracking-wide text-[13px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 overflow-hidden"
-            >
+            <div className="w-px h-4 bg-white/10 mx-0.5" />
+
+            {/* Auth — always visible; shows Sign In while loading */}
+            {!authLoading && isLoggedIn ? (
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link href="/admin"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all text-[11px] font-bold uppercase tracking-wider">
+                    <LayoutDashboard size={11} />
+                    Admin
+                  </Link>
+                )}
+                <Link href="/protected" title="Loyalty dashboard"
+                  className="flex items-center gap-1.5 text-[12px] text-zinc-300 hover:text-white transition-colors">
+                  <Gift size={13} className="text-amber-400/80" />
+                  <span>{profile!.rewardPoints} pts</span>
+                </Link>
+                <button type="button" onClick={handleSignOut} title="Sign out"
+                  className="flex items-center justify-center w-7 h-7 rounded-full text-zinc-500 hover:text-zinc-200 transition-colors">
+                  <LogOut size={13} />
+                </button>
+              </div>
+            ) : (
+              <Link href="/auth/login?redirect=/"
+                className="flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 transition-colors whitespace-nowrap">
+                <LogIn size={13} />
+                Sign In
+              </Link>
+            )}
+
+            <button type="button" onClick={handleBookNow}
+              className="btn-primary-gold-shimmer ml-1 flex items-center justify-center h-9 px-5 rounded-lg font-semibold tracking-wide text-[13px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 overflow-hidden">
               <span className="relative z-[1]">Book Now</span>
             </button>
-            {/* Mobile: call + hamburger */}
-            <a href="tel:8025855563" className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors" aria-label="Call">
+          </div>
+
+          {/* Mobile: sign in/out + call + hamburger */}
+          <div className="flex md:hidden items-center gap-2 shrink-0">
+            {/* Auth button — always visible; shows Sign In while loading */}
+            {!authLoading && isLoggedIn ? (
+              <button type="button" onClick={handleSignOut} aria-label="Sign out"
+                className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-zinc-900/80 border border-white/10 text-zinc-300 hover:text-red-400 hover:border-red-400/30 transition-all duration-200">
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-[11px] font-semibold">Log Out</span>
+              </button>
+            ) : (
+              <Link href="/auth/login?redirect=/" aria-label="Sign in"
+                className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-zinc-900/80 border border-white/10 text-zinc-300 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all duration-200">
+                <LogIn className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-[11px] font-semibold">Sign In</span>
+              </Link>
+            )}
+            <a href="tel:8025855563" aria-label="Call"
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-zinc-900/80 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors">
               <Phone className="w-4 h-4" />
             </a>
-            <button onClick={() => setMobileOpen((o) => !o)} className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors" aria-label="Menu">
+            <button type="button" aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              onClick={() => setMobileOpen(o => !o)}
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-zinc-900/80 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors">
               {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
       </header>
 
+      {/* ── Mobile overlay + drawer ───────────────────────────────────────── */}
       {/* Backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 top-16 bg-black/30 backdrop-blur-sm z-[54] md:hidden"
-          onClick={closeMobile}
-          aria-hidden
-        />
-      )}
-
-      {/* Mobile menu */}
       <div
-        className={`md:hidden fixed inset-x-0 top-16 z-[55] flex justify-center px-4 transition-all duration-250 ease-out ${
-          mobileOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
+        onClick={closeMobile}
+        aria-hidden
+        className={`md:hidden fixed inset-0 z-[998] bg-black/70 backdrop-blur-lg transition-opacity duration-300 ${
+          mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
-        aria-hidden={!mobileOpen}
-      >
-        <div className="w-full max-w-sm bg-black/50 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden mt-2">
-          <div className="p-2 flex flex-col items-center">
-            <Link
-              href="/"
-              onClick={closeMobile}
-              className={`w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                pathname === "/" ? "text-[#D4AF37] bg-[#D4AF37]/8" : "text-zinc-200 hover:text-white hover:bg-white/[0.05]"
-              }`}
-            >
-              Home
-            </Link>
+      />
 
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 pt-4 pb-2 text-center">Services</p>
-            <div className="w-full flex flex-col gap-1">
+      {/* Drawer slides in from the right */}
+      <div
+        inert={!mobileOpen || undefined}
+        className={`md:hidden fixed top-0 right-0 bottom-0 z-[999] w-[min(340px,90vw)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          mobileOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{
+          background:   "linear-gradient(180deg,#111113 0%,#0d0d10 100%)",
+          borderLeft:   "1px solid rgba(255,255,255,0.06)",
+          boxShadow:    "-20px 0 60px rgba(0,0,0,0.8)",
+        }}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Image src="/e.png" alt="" width={26} height={26} className="object-contain" />
+            <span className="text-[13px] font-semibold text-white/70 tracking-wide">Arise And Shine VT</span>
+          </div>
+          <button type="button" onClick={closeMobile} aria-label="Close menu"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Auth card */}
+        <div className="px-4 pt-4 pb-3 shrink-0">
+          {!authLoading && (
+            isLoggedIn ? (
+              <div className="flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center shrink-0">
+                    <User size={14} className="text-[#D4AF37]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-white leading-tight">Signed in</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{profile!.rewardPoints} reward pts</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-2">
+                  <Link href="/protected" onClick={closeMobile}
+                    className="text-[12px] font-semibold text-amber-400 hover:text-amber-300 transition-colors">
+                    Dashboard
+                  </Link>
+                  <button type="button" onClick={() => { closeMobile(); handleSignOut(); }} title="Sign out"
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <LogOut size={15} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link href="/auth/login?redirect=/" onClick={closeMobile}
+                className="flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] hover:border-white/[0.12] transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
+                    <User size={14} className="text-zinc-400" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-white leading-tight">Sign In</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">Rewards & booking history</p>
+                  </div>
+                </div>
+                <LogIn size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
+              </Link>
+            )
+          )}
+        </div>
+
+        {/* Scrollable nav */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
+
+          {/* Services */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 mb-2 px-1">Services</p>
+            <div className="space-y-1">
               {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => {
                 const active = pathname === href;
                 return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={closeMobile}
-                    className={`flex flex-col items-center text-center gap-1 py-3 px-3 rounded-xl transition-colors ${
-                      active ? "bg-[#D4AF37]/10" : "hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${active ? "bg-[#D4AF37]/15 text-[#D4AF37]" : "bg-white/[0.08] text-zinc-400"}`}>
-                      <Icon size={14} strokeWidth={1.75} />
+                  <Link key={href} href={href} onClick={closeMobile}
+                    className={`group flex items-center gap-3 px-3 py-3 rounded-xl border transition-all duration-200 ${
+                      active
+                        ? "bg-[#D4AF37]/[0.09] border-[#D4AF37]/20"
+                        : "border-transparent hover:bg-white/[0.04] hover:border-white/[0.05]"
+                    }`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                      active ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/[0.05] text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.08]"
+                    }`}>
+                      <Icon size={15} strokeWidth={1.75} />
                     </div>
-                    <p className={`text-sm font-semibold ${active ? "text-[#D4AF37]" : "text-white"}`}>{label}</p>
-                    <p className="text-[11px] text-zinc-500 leading-snug">{desc}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[13px] font-semibold leading-tight ${active ? "text-[#D4AF37]" : "text-white/90"}`}>{label}</p>
+                      <p className="text-[11px] text-zinc-500 mt-0.5 leading-tight">{desc}</p>
+                    </div>
+                    <ChevronRight size={13} className={`shrink-0 ${active ? "text-[#D4AF37]/50" : "text-zinc-700 group-hover:text-zinc-500"}`} />
                   </Link>
                 );
               })}
             </div>
-
-            <div className="w-full h-px bg-white/[0.06] my-2" />
-
-            <Link href="/#why-us" onClick={closeMobile} className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">Why Us</Link>
-            <Link href="/#contact" onClick={closeMobile} className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">Contact</Link>
-            <button
-              type="button"
-              onClick={() => { closeMobile(); setTrackOpen(true); }}
-              className="w-full flex justify-center px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors"
-            >
-              Track My Appointment
-            </button>
           </div>
 
-          <div className="px-3 pb-3 pt-1 border-t border-white/[0.07] flex flex-col gap-2 mt-1">
-            <button
-              type="button"
-              onClick={() => { closeMobile(); handleBookNow(); }}
-              className="btn-primary-gold-shimmer w-full bg-white/[0.06] border border-[#D4AF37]/40 text-[#D4AF37] font-semibold py-3 rounded-xl text-sm hover:text-black transition-all duration-500 overflow-hidden"
-            >
-              <span className="relative z-[1]">Book Your Detail</span>
-            </button>
-            <a
-              href="tel:8025855563"
-              onClick={closeMobile}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-zinc-400 hover:text-white text-sm font-medium transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#D4AF37]/70" />
-              802-585-5563
-            </a>
+          {/* More links */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 mb-2 px-1">More</p>
+            <div className="space-y-1">
+              {MORE_LINKS.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href;
+                return (
+                  <Link key={href} href={href} onClick={closeMobile}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                      active ? "text-[#D4AF37] bg-[#D4AF37]/[0.07]" : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+                    }`}>
+                    <Icon size={15} strokeWidth={1.75} className="shrink-0" />
+                    <span className="text-[13px] font-medium">{label}</span>
+                  </Link>
+                );
+              })}
+
+              <button type="button" onClick={() => { closeMobile(); setTrackOpen(true); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-all duration-200">
+                <CalendarSearch size={15} strokeWidth={1.75} className="shrink-0" />
+                <span className="text-[13px] font-medium">Track My Appointment</span>
+              </button>
+
+              {isAdmin && (
+                <Link href="/admin" onClick={closeMobile}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/15 text-amber-400 hover:bg-amber-500/20 transition-all duration-200">
+                  <LayoutDashboard size={15} strokeWidth={1.75} className="shrink-0" />
+                  <span className="text-[13px] font-bold">Admin Dashboard</span>
+                </Link>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Drawer footer CTAs */}
+        <div className="px-4 pt-3 pb-6 border-t border-white/[0.05] space-y-2.5 shrink-0">
+          <button type="button" onClick={() => { closeMobile(); handleBookNow(); }}
+            className="btn-primary-gold-shimmer w-full flex items-center justify-center bg-zinc-900 border border-[#D4AF37]/50 text-[#D4AF37] font-semibold py-3.5 rounded-xl text-[13px] hover:text-black transition-all duration-500 overflow-hidden">
+            <span className="relative z-[1]">Book Your Detail</span>
+          </button>
+          <a href="tel:8025855563" onClick={closeMobile}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.06] text-zinc-400 hover:text-white hover:border-white/[0.12] text-[13px] font-medium transition-all duration-200">
+            <Phone className="w-3.5 h-3.5 text-[#D4AF37]/60" />
+            802-585-5563
+          </a>
         </div>
       </div>
 

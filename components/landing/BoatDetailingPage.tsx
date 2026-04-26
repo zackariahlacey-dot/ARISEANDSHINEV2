@@ -10,11 +10,13 @@ import {
   BadgeCheck, Phone, ArrowRight, Anchor, Waves,
   Droplets, Leaf, Calculator, ChevronRight,
   Minus, Plus, Zap, FlaskConical, Eye, Wrench, Snowflake,
+  AlertTriangle, X,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
+import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -34,22 +36,23 @@ const carouselScrollClass =
 
 const BOAT_MIN_FEET = 15;
 
-// ── Waterline Up packages — DB name is used for booking, displayName for UI ──
+// ── Boat services — DB name is used for booking, displayName for UI ──
 const BOAT_SERVICES_STATIC = [
   {
-    dbName: "Boat Interior Detail",   // matches Supabase service name
-    displayName: "Marine Express",
-    ratePerFoot: 20,
+    dbName: "Boat Interior",
+    displayName: "Boat Interior",
+    ratePerFoot: 15,
     badge: null as string | null,
-    tagline: "Maintenance detail — keep the shine between deep cleans.",
+    tagline: "Full interior clean — vinyl, carpet, dash, storage & odor treatment.",
     icon: Zap,
     features: [
-      "Full decontamination wash & rinse",
+      "Full vacuum of all flooring & carpet",
+      "Vinyl seat & cushion clean + UV protect",
+      "Dashboard, console & gauge wipe-down",
+      "Cup holders, storage compartments & bimini",
       "Window & windscreen clarity treatment",
-      "Cockpit vacuum & full wipe-down",
-      "UV-protectant applied to all vinyl surfaces",
-      "Metal brightening & chrome polish",
-      "Quick-dry marine spray wax",
+      "Odor treatment & deodorize",
+      "No buffing or polishing",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/20",
@@ -57,19 +60,19 @@ const BOAT_SERVICES_STATIC = [
     popular: false,
   },
   {
-    dbName: "Boat Exterior Detail",
-    displayName: "The Deep Reset",
-    ratePerFoot: 30,
+    dbName: "Boat Exterior",
+    displayName: "Boat Exterior",
+    ratePerFoot: 20,
     badge: "Most Popular" as string | null,
-    tagline: "Our flagship full deep clean — inside and out.",
+    tagline: "Hull wash, oxidation removal, wax/sealant & deck rinse.",
     icon: Droplets,
     features: [
-      "Full steam sanitation of all surfaces",
-      "Hot water extraction (deep shampoo)",
-      "Mold & mildew removal treatment",
-      "Hull, waterline & transom scrub",
-      "Light oxidation removal",
-      "Premium marine paste wax applied",
+      "Full hull, transom & waterline wash",
+      "Light oxidation removal by hand",
+      "Paste wax or ceramic spray sealant",
+      "Deck rinse & dry",
+      "Metal brightening & chrome polish",
+      "No buffing or polishing",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/40",
@@ -77,23 +80,42 @@ const BOAT_SERVICES_STATIC = [
     popular: true,
   },
   {
-    dbName: "Full Boat Detail",
-    displayName: "Showroom Restoration",
-    ratePerFoot: 55,
-    badge: "Best for VT Winters" as string | null,
-    tagline: "Total restoration — everything in Deep Reset plus machine polish.",
+    dbName: "Boat Full Detail",
+    displayName: "Boat Full Detail",
+    ratePerFoot: 32,
+    badge: null as string | null,
+    tagline: "Complete interior + exterior detail. No buffing or polishing.",
     icon: Sparkles,
     features: [
-      "Everything in The Deep Reset",
-      "1-Step Machine Polish (heavy oxidation removal)",
-      "Full gel coat gloss restoration",
-      "Bilge area detail & deodorize",
-      "Wire brush hardware & fittings",
-      "Ceramic-grade marine sealant applied",
+      "Everything in Boat Interior",
+      "Full hull wash, oxidation removal & wax",
+      "Deck rinse, metal & chrome polish",
+      "Bilge area wipe & deodorize",
+      "No buffing or polishing",
     ],
-    accent: "text-[#F3E5AB]",
+    accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/30",
     bg: "bg-[#D4AF37]/[0.04]",
+    popular: false,
+  },
+  {
+    dbName: "Boat Showroom Package",
+    displayName: "Boat Showroom Package",
+    ratePerFoot: 55,
+    badge: "Premium" as string | null,
+    tagline: "Exterior detail + machine polish — showroom-ready finish.",
+    icon: Sparkles,
+    features: [
+      "Full hull wash & decontamination",
+      "Heavy oxidation removal by machine",
+      "Machine polish for gel coat gloss restoration",
+      "Ceramic or carnauba wax topcoat",
+      "Deck rinse, metal & chrome polish",
+      "Includes buffing & machine polishing",
+    ],
+    accent: "text-[#F3E5AB]",
+    border: "border-[#D4AF37]/50",
+    bg: "bg-[#D4AF37]/[0.06]",
     popular: false,
   },
 ] as const;
@@ -229,6 +251,8 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
   const [scrolledPastHero, setScrolledPastHero] = useState(false);
   const [initialDraft, setInitialDraft] = useState<DraftBooking | null>(null);
   const [showRestoreToast, setShowRestoreToast] = useState(false);
+  const [stripeVerifying, setStripeVerifying] = useState(false);
+  const [stripeRecoveryError, setStripeRecoveryError] = useState<string | null>(null);
   const bookingRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
 
@@ -238,25 +262,75 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
     if (searchParams.get("book") === "1") setBookingOpen(true);
   }, [searchParams]);
 
-  // Restore booking draft when returning from a cancelled Stripe checkout
+  // Handle Stripe return + post-signup restore
   useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
-    const stripe = searchParams.get("stripe");
-    if (stripe !== "cancelled" && stripe !== "success") return;
+    const stripeParam = searchParams.get("stripe");
+    const stripeCancelled = stripeParam === "cancelled";
+    const stripeSuccess = stripeParam === "success";
+    const restoreBooking = searchParams.get("restore_booking") === "1";
+    if (!stripeCancelled && !stripeSuccess && !restoreBooking) return;
     const raw = sessionStorage.getItem("draftBooking");
+    window.history.replaceState(null, "", window.location.pathname);
     if (!raw) return;
     try {
       const draft = JSON.parse(raw) as DraftBooking;
       sessionStorage.removeItem("draftBooking");
-      const matchedService = services.find((s) => s.id === draft.serviceId);
-      if (matchedService) setSelectedService(matchedService);
-      setInitialDraft(draft);
-      setBookingOpen(true);
-      setShowRestoreToast(true);
-      window.history.replaceState(null, "", window.location.pathname);
-      setTimeout(() => {
-        bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      if (stripeSuccess) {
+        const sessionId = searchParams.get("session_id");
+        const service = services.find((s) => s.id === draft.serviceId);
+        const firstName = draft.name?.trim().split(/\s+/)[0] ?? "there";
+        const fallbackData: SuccessModalData = {
+          confirmationId: "",
+          date: draft.selectedDate ?? "",
+          time: draft.selectedTime || undefined,
+          serviceName: service?.name ?? "Detailing Service",
+          pointsEarned: 0,
+          firstName,
+          serviceAddress: draft.serviceAddress || undefined,
+          phone: draft.phone,
+        };
+        if (sessionId) {
+          setStripeVerifying(true);
+          recoverStripeBooking(sessionId)
+            .then((result) => {
+              setStripeVerifying(false);
+              if (result.status === "error") {
+                setStripeRecoveryError("Your payment was received but we had trouble confirming your booking. Please contact us and we'll sort it out right away.");
+                return;
+              }
+              if (result.status === "overbooked") {
+                setStripeRecoveryError("Your payment went through but the time slot was just taken by someone else. We'll contact you to reschedule or issue a full refund.");
+                return;
+              }
+              setSuccessData({
+                ...fallbackData,
+                date: "bookingDate" in result ? result.bookingDate : fallbackData.date,
+                time: "bookingTime" in result ? result.bookingTime : fallbackData.time,
+                serviceName: "serviceName" in result ? result.serviceName : fallbackData.serviceName,
+              });
+              setShowSuccess(true);
+            })
+            .catch(() => {
+              setStripeVerifying(false);
+              setSuccessData(fallbackData);
+              setShowSuccess(true);
+            });
+        } else {
+          setSuccessData(fallbackData);
+          setShowSuccess(true);
+        }
+      } else {
+        // Cancelled or returning after signup — restore the booking form
+        const matchedService = services.find((s) => s.id === draft.serviceId);
+        if (matchedService) setSelectedService(matchedService);
+        setInitialDraft(draft);
+        setBookingOpen(true);
+        setShowRestoreToast(true);
+        setTimeout(() => {
+          bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     } catch {
       // invalid draft
     }
@@ -296,7 +370,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
   }));
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-950 text-white">
       {/* Grain */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-[25]"
         style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px 256px", opacity: 0.035, mixBlendMode: "overlay" }} />
@@ -324,7 +398,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
 
           {/* Rates */}
           <p className="text-sm font-bold text-[#D4AF37] mb-6 px-2 leading-relaxed text-center">
-            Marine Express $20/ft · Deep Reset $30/ft · Showroom Restoration $55/ft
+            Boat Interior $15/ft · Boat Exterior $20/ft · Full Detail $32/ft · Showroom Package $55/ft
           </p>
 
           {/* CTAs */}
@@ -394,6 +468,58 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
           )}
         </div>
       </div>
+
+      {/* ── How It Works ──────────────────────────────────────────────── */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="py-10 px-4 sm:px-6 lg:px-8"
+      >
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Simple Process</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">How It Works</h2>
+            <p className="text-zinc-500 mt-2 text-sm">From booking to a showroom-clean boat — here's what to expect.</p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              {
+                step: "01",
+                title: "Book Online",
+                desc: "Choose your package, enter your boat's length for an instant price, and pick a date that works. Pay online or at arrival.",
+                icon: "📅",
+              },
+              {
+                step: "02",
+                title: "We Come to You",
+                desc: "We arrive at your marina, dock, launch site, or storage yard — fully self-contained with water, power, and all equipment.",
+                icon: "⚓",
+              },
+              {
+                step: "03",
+                title: "Enjoy the Shine",
+                desc: "Walk away to a spotless boat. No drop-off, no waiting room, no trailering. We send you a text when we're done.",
+                icon: "✨",
+              },
+            ].map(({ step, title, desc, icon }) => (
+              <div
+                key={step}
+                className="relative rounded-2xl border border-white/[0.06] bg-zinc-900/60 p-6 text-center"
+              >
+                <div className="text-3xl mb-3">{icon}</div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]/60 mb-1">{step}</p>
+                <p className="text-sm font-bold text-white mb-2">{title}</p>
+                <p className="text-xs text-zinc-500 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 rounded-xl border border-white/[0.05] bg-zinc-900/40 px-5 py-4 flex items-start gap-3">
+            <span className="text-lg shrink-0">🌊</span>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              <strong className="text-zinc-300">100% lake-safe products.</strong> All chemicals we use on boats are
+              EPA-approved and biodegradable — safe for Vermont's lakes and waterways.
+            </p>
+          </div>
+        </div>
+      </motion.section>
 
       {/* ── Waterline Up Packages ─────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
@@ -607,6 +733,32 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
         onClose={() => { setShowSuccess(false); setSuccessData(null); }}
         data={successData}
       />
+
+      {stripeVerifying && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 text-center px-6">
+            <div className="w-14 h-14 rounded-full border-2 border-[#D4AF37]/30 border-t-[#D4AF37] animate-spin" />
+            <p className="text-white font-semibold text-lg">Confirming your booking…</p>
+            <p className="text-zinc-400 text-sm">Just a moment while we verify your payment.</p>
+          </div>
+        </div>
+      )}
+
+      {stripeRecoveryError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md px-4">
+          <div className="rounded-2xl border border-red-500/30 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-2xl flex items-start gap-3">
+            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-zinc-100 mb-1">Payment received — booking needs attention</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">{stripeRecoveryError}</p>
+              <a href="tel:8025855563" className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline">Call or text us →</a>
+            </div>
+            <button type="button" onClick={() => setStripeRecoveryError(null)} className="text-zinc-600 hover:text-zinc-300 shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

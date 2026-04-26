@@ -41,6 +41,28 @@ export const AdminBookingSchema = z.object({
     .nullable()
     .optional(),
 
+  water_power: z.string().nullable().optional(),
+  duration_override: z.number().nullable().optional(),
+
+  additional_vehicles_json: z
+    .array(z.object({
+      vehicleSize:    z.string().optional(),
+      vehicleYear:    z.string().optional(),
+      vehicleMake:    z.string().optional(),
+      vehicleModel:   z.string().optional(),
+      serviceId:      z.string().optional(),
+      serviceName:    z.string().optional(),
+      servicePrice:   z.number().optional(),
+      vehicleDbId:    z.string().optional(),
+      selectedAddons: z.array(z.object({
+        id:    z.string(),
+        label: z.string(),
+        price: z.number(),
+      })).optional(),
+    }))
+    .nullable()
+    .optional(),
+
   // ── Relationship joins (used for account linking badge + points display) ─
   profiles: AdminProfileSchema.nullable(),
   vehicles: AdminVehicleSchema.nullable(),

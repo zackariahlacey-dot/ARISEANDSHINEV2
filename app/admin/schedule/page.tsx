@@ -12,6 +12,7 @@ import {
   useOperatingHours,
   useBlockedDates,
   useToggleBlockedDate,
+  useUpdateOperatingHours,
 } from "@/hooks/use-admin-data";
 import {
   adminQuickBookAction,
@@ -19,6 +20,8 @@ import {
   blockPersonalTimeAction,
   deletePersonalBlockAction,
   updateBookingDetailsAction,
+  blockRestOfDayAction,
+  updateBookingDurationAction,
 } from "@/app/actions/adminActions";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
@@ -93,26 +96,32 @@ const VEHICLE_SIZES_ADMIN = [
 ];
 
 const FOOTAGE_RATES: Record<string, number> = {
-  "Boat Interior Detail": 20,
-  "Boat Exterior Detail": 30,
-  "Full Boat Detail":     55,
-  "RV Interior Detail":   20,
-  "RV Exterior Detail":   22,
-  "RV Full Detail":       38,
+  "Boat Interior":          15,
+  "Boat Exterior":          20,
+  "Boat Full Detail":       32,
+  "Boat Showroom Package":  55,
+  "RV Interior":            15,
+  "RV Exterior":            12,
+  "RV Full Detail":         25,
+  "RV Showroom 1-Step":     25,
+  "RV Showroom 2-Step":     40,
 };
 const FOOTAGE_MIN: Record<string, number> = {
-  "Boat Interior Detail": 15, "Boat Exterior Detail": 15, "Full Boat Detail": 15,
-  "RV Interior Detail":   20, "RV Exterior Detail":   20, "RV Full Detail":   20,
+  "Boat Interior": 15, "Boat Exterior": 15, "Boat Full Detail": 15, "Boat Showroom Package": 15,
+  "RV Interior":   20, "RV Exterior":   20, "RV Full Detail":   20, "RV Showroom 1-Step": 20, "RV Showroom 2-Step": 20,
 };
 const BOAT_DISPLAY: Record<string, { name: string; sub: string }> = {
-  "Boat Interior Detail": { name: "Marine Express",       sub: "$20/ft · 15 ft min" },
-  "Boat Exterior Detail": { name: "The Deep Reset",       sub: "$30/ft · 15 ft min" },
-  "Full Boat Detail":     { name: "Showroom Restoration", sub: "$55/ft · 15 ft min" },
+  "Boat Interior":         { name: "Boat Interior",         sub: "$15/ft · 15 ft min" },
+  "Boat Exterior":         { name: "Boat Exterior",         sub: "$20/ft · 15 ft min" },
+  "Boat Full Detail":      { name: "Boat Full Detail",      sub: "$32/ft · 15 ft min" },
+  "Boat Showroom Package": { name: "Marine Showroom Polish", sub: "$55/ft · 15 ft min" },
 };
 const RV_DISPLAY: Record<string, { name: string; sub: string }> = {
-  "RV Interior Detail": { name: "RV Interior Detail", sub: "$20/ft · 20 ft min" },
-  "RV Exterior Detail": { name: "RV Exterior Detail", sub: "$22/ft · 20 ft min" },
-  "RV Full Detail":     { name: "RV Full Detail",     sub: "$38/ft · 20 ft min" },
+  "RV Interior":        { name: "RV Interior",              sub: "$15/ft · 20 ft min" },
+  "RV Exterior":        { name: "RV Exterior",              sub: "$12/ft · 20 ft min" },
+  "RV Full Detail":     { name: "RV Full Detail",           sub: "$25/ft · 20 ft min" },
+  "RV Showroom 1-Step": { name: "RV Showroom — 1-Step",     sub: "$25/ft · 20 ft min" },
+  "RV Showroom 2-Step": { name: "RV Showroom — 2-Step",     sub: "$40/ft · 20 ft min" },
 };
 
 type Pathway = "vehicle" | "boat" | "rv";
@@ -955,12 +964,14 @@ export default function SchedulePage() {
   const { data: bookings, isLoading, refetch } = useAdminBookings();
   const { data: services } = useServices();
   const { data: blockedDates } = useBlockedDates();
+  const { data: opHoursAll } = useOperatingHours();
   const updateStatus  = useUpdateBookingStatus();
   const sendOmw       = useSendOnMyWay();
   const handleNoShow  = useHandleNoShow();
   const reschedule    = useRescheduleBooking();
-  const deleteBooking = useDeleteBooking();
-  const { toast }     = useToast();
+  const deleteBooking   = useDeleteBooking();
+  const updateOpHours   = useUpdateOperatingHours();
+  const { toast }       = useToast();
 
   const [viewMode, setViewMode]   = useState<"month" | "day">("month");
   const [monthDate, setMonthDate] = useState(new Date());
@@ -977,8 +988,16 @@ export default function SchedulePage() {
   const [editPriceVal,  setEditPriceVal]    = useState("");
   const [editNotesMode, setEditNotesMode]   = useState(false);
   const [editNotesVal,  setEditNotesVal]    = useState("");
+  const [editDurMode,   setEditDurMode]     = useState(false);
+  const [editDurVal,    setEditDurVal]      = useState(0);
   const [savingDetails, setSavingDetails]   = useState(false);
   const [copied, setCopied]                 = useState<string | null>(null);
+  const [blockingDay,   setBlockingDay]     = useState(false);
+  const [editHoursMode, setEditHoursMode]   = useState(false);
+  const [editHoursOpen, setEditHoursOpen]   = useState(true);
+  const [editHoursStart,setEditHoursStart]  = useState("07:00");
+  const [editHoursEnd,  setEditHoursEnd]    = useState("19:00");
+  const [savingHours,   setSavingHours]     = useState(false);
 
   // On mount: read ?date= param
   useEffect(() => {
@@ -989,6 +1008,9 @@ export default function SchedulePage() {
     if (d) { setSelectedDay(parseISO(d + "T12:00:00")); setViewMode("day"); }
     if (n) setShowNewBooking(true);
   }, []);
+
+  // Close hours edit when navigating to a different day
+  useEffect(() => { setEditHoursMode(false); }, [selectedDay]);
 
   const getBookingsForDate = useCallback((date: Date) => {
     if (!bookings) return [];
@@ -1103,6 +1125,73 @@ export default function SchedulePage() {
     setSavingDetails(false);
   }
 
+  async function handleSaveDuration() {
+    if (!activeBooking || editDurVal <= 0) return;
+    setSavingDetails(true);
+    try {
+      const res = await updateBookingDurationAction(activeBooking.id, editDurVal);
+      if (res.success) {
+        setActiveBooking({ ...activeBooking, duration_override: editDurVal });
+        setEditDurMode(false);
+        toast("Duration updated!");
+        refetch();
+      } else {
+        toast(res.error ?? "Failed", "error");
+      }
+    } catch { toast("Failed to save", "error"); }
+    setSavingDetails(false);
+  }
+
+  async function handleBlockRestOfDay() {
+    setBlockingDay(true);
+    try {
+      const res = await blockRestOfDayAction(format(selectedDay, "yyyy-MM-dd"));
+      if (res.success) {
+        toast(`Blocked ${res.blockedFrom} – ${res.blockedTo}`);
+        refetch();
+      } else {
+        toast(res.error ?? "Failed", "error");
+      }
+    } catch { toast("Failed", "error"); }
+    setBlockingDay(false);
+  }
+
+  /** Returns the operating-hours row that actually applies to a given date.
+   *  Prefers a month-specific seasonal row over the null-month default. */
+  function getOpHoursForDay(date: Date): any | null {
+    const dow   = date.getDay();
+    const month = date.getMonth() + 1; // 1-12
+    const all   = opHoursAll ?? [];
+    const seasonal = all.find((h: any) => h.day_of_week === dow && h.month === month);
+    const fallback = all.find((h: any) => h.day_of_week === dow && h.month == null);
+    return seasonal ?? fallback ?? null;
+  }
+
+  function openHoursEdit() {
+    const dayOp = getOpHoursForDay(selectedDay);
+    setEditHoursOpen(dayOp?.is_open ?? true);
+    setEditHoursStart(dayOp?.start_time ? dayOp.start_time.slice(0, 5) : "07:00");
+    setEditHoursEnd(dayOp?.end_time ? dayOp.end_time.slice(0, 5) : "19:00");
+    setEditHoursMode(true);
+  }
+
+  async function handleSaveHours() {
+    setSavingHours(true);
+    const dayOp = getOpHoursForDay(selectedDay);
+    try {
+      await updateOpHours.mutateAsync([{
+        ...(dayOp ?? {}),
+        day_of_week: selectedDay.getDay(),
+        is_open: editHoursOpen,
+        start_time: editHoursOpen ? editHoursStart + ":00" : (dayOp?.start_time ?? "07:00:00"),
+        end_time:   editHoursOpen ? editHoursEnd   + ":00" : (dayOp?.end_time   ?? "19:00:00"),
+      }]);
+      setEditHoursMode(false);
+      toast("Hours updated!");
+    } catch { toast("Failed to save hours", "error"); }
+    setSavingHours(false);
+  }
+
   // ── MONTH VIEW ────────────────────────────────────────────────────────────
   function MonthView() {
     const firstDay    = startOfMonth(monthDate);
@@ -1113,6 +1202,18 @@ export default function SchedulePage() {
     );
     const weeks: (Date | null)[][] = [];
     for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+    function getDayStatus(day: Date): "full" | "partial" | "open" {
+      const ds = format(day, "yyyy-MM-dd");
+      const dayBks = (bookings ?? []).filter((b: any) => b.booking_date === ds && b.status !== "cancelled" && b.status !== "no-show");
+      const realBks = dayBks.filter((b: any) => b.service_name !== "Personal Block");
+      if (realBks.length === 0 && !dayBks.some((b: any) => b.service_name === "Personal Block")) return "open";
+      const dayOp = getOpHoursForDay(day);
+      const dayStart = dayOp?.start_time ? timeToMins(dayOp.start_time) : DAY_START_HOUR * 60;
+      const dayEnd   = dayOp?.end_time   ? timeToMins(dayOp.end_time)   : DAY_END_HOUR   * 60;
+      const slots = getAvailableSlots(dayBks.map((b: any) => ({ ...b, service_name: b.service_name ?? null })), "Exterior Detail", "sedan", dayStart, dayEnd, 60);
+      return slots.length === 0 ? "full" : "partial";
+    }
 
     return (
       <div className="space-y-3">
@@ -1147,6 +1248,8 @@ export default function SchedulePage() {
                 const dayBks = getBookingsForDate(day).filter(b => b.service_name !== "Personal Block");
                 const hasBlk = getBookingsForDate(day).some(b => b.service_name === "Personal Block");
                 const isBlocked = isBlockedDate(day);
+                const status = !isBlocked ? getDayStatus(day) : null;
+                const isFull = status === "full";
 
                 return (
                   <button
@@ -1155,23 +1258,41 @@ export default function SchedulePage() {
                     className={cn(
                       "aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all active:scale-90 relative text-xs font-bold",
                       isBlocked  ? "bg-red-500/10 text-red-400" :
+                      isFull     ? "bg-amber-500/15 text-amber-300" :
                       isSel      ? "bg-amber-500 text-black" :
                       isT        ? "bg-amber-500/20 text-amber-400" :
                                    "text-zinc-400 hover:bg-white/[0.04]"
                     )}
                   >
                     <span>{day.getDate()}</span>
-                    <div className="flex gap-0.5">
-                      {dayBks.slice(0, 3).map((_, i) => (
-                        <span key={i} className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : "bg-amber-500")} />
-                      ))}
-                      {hasBlk && <span className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : "bg-zinc-500")} />}
-                    </div>
+                    {isFull && !isSel ? (
+                      <span className="text-[7px] font-black uppercase tracking-widest text-amber-500/80 leading-none">full</span>
+                    ) : (
+                      <div className="flex gap-0.5">
+                        {dayBks.slice(0, 3).map((_, i) => (
+                          <span key={i} className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : "bg-amber-500")} />
+                        ))}
+                        {hasBlk && <span className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : "bg-zinc-500")} />}
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </div>
           ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-4 pt-1 border-t border-white/[0.04]">
+          <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />Booked
+          </div>
+          <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500/40" />Full
+          </div>
+          <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />Blocked
+          </div>
         </div>
       </div>
     );
@@ -1181,7 +1302,7 @@ export default function SchedulePage() {
   function DayView() {
     function timeRange(b: any): string {
       const startMins = timeToMins((b.booking_time ?? "00:00").slice(0, 5));
-      const dur       = getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
+      const dur = b.duration_override ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
       const endMins   = startMins + dur;
       return `${minsToDisplay(startMins)} – ${minsToDisplay(endMins)}`;
     }
@@ -1225,6 +1346,81 @@ export default function SchedulePage() {
           </button>
         </div>
 
+        {/* Operating hours for this day */}
+        {(() => {
+          const dayOp = getOpHoursForDay(selectedDay);
+          const isOpen = dayOp?.is_open ?? true;
+          const startLabel = dayOp?.start_time ? to12h(dayOp.start_time.slice(0, 5)) : "7:00 AM";
+          const endLabel   = dayOp?.end_time   ? to12h(dayOp.end_time.slice(0, 5))   : "7:00 PM";
+
+          return editHoursMode ? (
+            <div className="bg-white/[0.03] border border-amber-500/20 rounded-xl p-3 space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Edit Hours</p>
+
+              {/* Open / Closed toggle */}
+              <div className="flex gap-2">
+                <button onClick={() => setEditHoursOpen(true)}
+                  className={cn("flex-1 py-2 rounded-xl border text-xs font-black transition-all",
+                    editHoursOpen ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400" : "border-white/[0.08] text-zinc-500")}>
+                  Open
+                </button>
+                <button onClick={() => setEditHoursOpen(false)}
+                  className={cn("flex-1 py-2 rounded-xl border text-xs font-black transition-all",
+                    !editHoursOpen ? "bg-red-500/15 border-red-500/40 text-red-400" : "border-white/[0.08] text-zinc-500")}>
+                  Closed
+                </button>
+              </div>
+
+              {editHoursOpen && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-1">From</p>
+                    <input type="time" value={editHoursStart} onChange={e => setEditHoursStart(e.target.value)}
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-1">To</p>
+                    <input type="time" value={editHoursEnd} onChange={e => setEditHoursEnd(e.target.value)}
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button onClick={() => setEditHoursMode(false)}
+                  className="flex-1 py-2 rounded-xl border border-white/[0.08] text-zinc-500 text-xs font-black">Cancel</button>
+                <button onClick={handleSaveHours} disabled={savingHours}
+                  className="flex-1 py-2 rounded-xl bg-amber-500 text-black text-xs font-black flex items-center justify-center gap-1 disabled:opacity-50">
+                  {savingHours ? <Loader2 size={11} className="animate-spin" /> : "Save"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+              <div className="flex items-center gap-2">
+                <div className={cn("w-1.5 h-1.5 rounded-full", isOpen ? "bg-emerald-500" : "bg-red-500")} />
+                <span className="text-xs font-bold text-zinc-400">
+                  {isOpen ? `${startLabel} – ${endLabel}` : "Closed"}
+                </span>
+              </div>
+              <button onClick={openHoursEdit}
+                className="flex items-center gap-1 text-[10px] font-black text-zinc-600 hover:text-amber-400 transition-all uppercase tracking-wider">
+                <Pencil size={10} /> Edit
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Block rest of day */}
+        <button
+          onClick={handleBlockRestOfDay}
+          disabled={blockingDay}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-zinc-700 text-zinc-400 text-xs font-black uppercase tracking-wider hover:bg-white/[0.03] active:scale-95 transition-all disabled:opacity-50"
+        >
+          {blockingDay ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
+          Block Remaining Day
+        </button>
+
         {/* Booking cards */}
         {dayBookings.length === 0 ? (
           <div className="text-center py-10 text-zinc-600 text-sm">
@@ -1239,13 +1435,16 @@ export default function SchedulePage() {
           <div className="space-y-2">
             {dayBookings.map((b: any) => {
               const isBlk = b.service_name === "Personal Block";
+              const Tag = isBlk ? "div" : "button";
               return (
-                <button
+                <Tag
                   key={b.id}
-                  onClick={() => { if (!isBlk) { setActiveBooking(b); setEditPriceMode(false); setEditPriceVal(String(b.total_price ?? "")); setEditNotesMode(false); setEditNotesVal(b.notes ?? ""); } }}
+                  {...(!isBlk && {
+                    onClick: () => { setActiveBooking(b); setEditPriceMode(false); setEditPriceVal(String(b.total_price ?? "")); setEditNotesMode(false); setEditNotesVal(b.notes ?? ""); setEditDurMode(false); setEditDurVal(b.duration_override ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan")); },
+                  })}
                   className={cn(
-                    "w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl overflow-hidden flex items-stretch transition-all active:scale-[0.98]",
-                    isBlk && "cursor-default opacity-70"
+                    "w-full text-left bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden flex items-stretch transition-all",
+                    isBlk ? "opacity-70" : "hover:bg-white/[0.04] active:scale-[0.98]"
                   )}
                 >
                   {/* Status stripe */}
@@ -1258,7 +1457,7 @@ export default function SchedulePage() {
                         <span className="text-sm font-bold text-zinc-400">{b.notes ?? "Personal Block"}</span>
                         <span className="text-xs text-zinc-600 ml-auto">{timeRange(b)}</span>
                         <button
-                          onClick={e => { e.stopPropagation(); if (confirm("Remove block?")) handleDeleteBooking(b); }}
+                          onClick={() => { if (confirm("Remove block?")) handleDeleteBooking(b); }}
                           className="ml-2 text-zinc-600 hover:text-red-400 shrink-0"
                         ><X size={13} /></button>
                       </div>
@@ -1289,7 +1488,7 @@ export default function SchedulePage() {
                       <ChevronRight size={14} />
                     </div>
                   )}
-                </button>
+                </Tag>
               );
             })}
           </div>
@@ -1367,7 +1566,7 @@ export default function SchedulePage() {
       </Modal>
 
       {/* ── Booking Detail / Action Sheet ────────────────────────────────── */}
-      <Modal open={!!activeBooking && !showReschedule} onClose={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); }}>
+      <Modal open={!!activeBooking && !showReschedule} onClose={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); setEditDurMode(false); }}>
         {activeBooking && (() => {
           const phone   = bPhone(activeBooking);
           const email   = bEmail(activeBooking);
@@ -1379,7 +1578,7 @@ export default function SchedulePage() {
           const startMins = /^\d{1,2}:\d{2}$/.test(rawTime)
             ? timeToMins(rawTime)
             : timeToMins(to24h(activeBooking.booking_time ?? "09:00"));
-          const dur       = getDurationMins(activeBooking.service_name ?? "", activeBooking.vehicle_size ?? "sedan");
+          const dur = activeBooking.duration_override ?? getDurationMins(activeBooking.service_name ?? "", activeBooking.vehicle_size ?? "sedan");
           const timeRangeStr = `${minsToDisplay(startMins)} – ${minsToDisplay(startMins + dur)}`;
           // Safely parse the booking date
           let formattedDate = activeBooking.booking_date ?? "";
@@ -1393,11 +1592,37 @@ export default function SchedulePage() {
                 {/* Amber accent top bar */}
                 <div className="h-1 bg-amber-500 w-full" />
                 <div className="p-4">
-                  {/* Time + date */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm font-black text-amber-400">{timeRangeStr}</span>
-                    <span className="text-zinc-700">·</span>
-                    <span className="text-xs text-zinc-500">{formattedDate}</span>
+                  {/* Time + date + duration edit */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    {editDurMode ? (
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {[30,60,90,120,150,180,210,240,270,300,330,360,390,420,450,480].map(m => (
+                            <button key={m} onClick={() => setEditDurVal(m)}
+                              className={cn("px-2 py-1 rounded-lg border text-[10px] font-black transition-all",
+                                editDurVal === m ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-500")}>
+                              {m < 60 ? `${m}m` : m % 60 === 0 ? `${m/60}h` : `${Math.floor(m/60)}h${m%60}`}
+                            </button>
+                          ))}
+                        </div>
+                        <button onClick={() => setEditDurMode(false)} className="text-zinc-600 hover:text-zinc-400 text-xs">✕</button>
+                        <button onClick={handleSaveDuration} disabled={savingDetails}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500 text-black text-[10px] font-black flex items-center gap-1">
+                          {savingDetails ? <Loader2 size={10} className="animate-spin" /> : "Save"}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-amber-400">{timeRangeStr}</span>
+                        <button onClick={() => setEditDurMode(true)}
+                          className="w-5 h-5 flex items-center justify-center rounded-md bg-white/[0.04] text-zinc-600 hover:text-amber-400 transition-all"
+                          title="Edit duration">
+                          <Pencil size={10} />
+                        </button>
+                        <span className="text-zinc-700">·</span>
+                        <span className="text-xs text-zinc-500">{formattedDate}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Name + price row */}

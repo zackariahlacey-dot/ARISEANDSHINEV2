@@ -29,20 +29,17 @@ const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@arise
 
 export async function checkUserExists(email: string) {
   const supabase = createAdminClient();
-  
-  // A user only truly "exists" in the sign-in sense if they have an Auth record.
-  // Profiles might exist for guests, but they can't "Sign In" without an Auth account.
-  const { data: { users }, error } = await supabase.auth.admin.listUsers();
-  
+  const emailLower = email.toLowerCase().trim();
+
+  // Use paginated search — avoids fetching all users
+  const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+
   if (error) {
     console.error("[checkUserExists] Error:", error);
     return { exists: false };
   }
 
-  // Find user by email and ensure they are NOT a guest (i.e., they have a password/provider)
-  const authUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase().trim());
-  
-  // If they have an auth record, they exist.
+  const authUser = data.users.find(u => u.email?.toLowerCase() === emailLower);
   return { exists: !!authUser };
 }
 

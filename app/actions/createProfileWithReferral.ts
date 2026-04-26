@@ -89,6 +89,19 @@ export async function createProfileWithReferral(
     return { ok: false, referralCode: referralCodeToSave };
   }
 
+  // 3b. Record welcome bonus in ledger (only if this is a genuinely new profile)
+  const { count: existingTxCount } = await supabase
+    .from("point_transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if ((existingTxCount ?? 0) === 0) {
+    await supabase.from("point_transactions").insert({
+      user_id:     userId,
+      amount:      WELCOME_BONUS_POINTS,
+      description: "Welcome bonus",
+    });
+  }
+
   // 4. Move Bookings, Vehicles, and Transactions if guests were found
   if (guestIds.length > 0) {
     try {

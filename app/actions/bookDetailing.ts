@@ -71,9 +71,6 @@ export type BookingPayload = {
   giftCardDiscount?: number;
   /** Gift card UUID — needed to deduct the balance */
   giftCardId?: string;
-  /** Whether customer is providing water & power, or needs us to (+$10) */
-  waterPower?: "provided" | "needed";
-  waterPowerFee?: number;
 };
 
 export type BookingResult =
@@ -120,7 +117,7 @@ export async function checkAvailability(
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, services(name), vehicles(size)")
+    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, duration_override, services(name), vehicles(size)")
     .eq("booking_date", date)
     .neq("status", "cancelled")
     .neq("status", "no-show");
@@ -135,8 +132,10 @@ export async function checkAvailability(
     const bStart = await timeToMinutes(b.booking_time);
     const bName = (b as any).service_name ?? (b.services as any)?.name ?? "";
     const bSize = (b as any).vehicle_size ?? (b.vehicles as any)?.size ?? "sedan";
-    const bDur  = getDurationMins(bName, bSize)
-                + getAdditionalVehiclesDuration((b as any).additional_vehicles_json);
+    const bOverride = (b as any).duration_override;
+    const bDur = bOverride != null
+      ? bOverride
+      : getDurationMins(bName, bSize) + getAdditionalVehiclesDuration((b as any).additional_vehicles_json);
     const bEnd = bStart + bDur;
     if (newStart < bEnd && newEnd > bStart) return false;
   }
@@ -570,9 +569,7 @@ export async function bookDetailing(
             giftCardCode: payload.giftCardCode ?? "",
             giftCardDiscount: String(payload.giftCardDiscount),
           }),
-          ...(payload.waterPower && { waterPower: payload.waterPower }),
-          ...(payload.waterPowerFee != null && payload.waterPowerFee > 0 && { waterPowerFee: String(payload.waterPowerFee) }),
-        },
+},
         success_url: `${origin}/?stripe=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/?stripe=cancelled`,
         expires_at: Math.floor(Date.now() / 1000) + 60 * 30,
@@ -621,8 +618,7 @@ export async function bookDetailing(
           ? payload.selectedAddons
           : null,
       additional_vehicles_json: additionalVehiclesForDb,
-      water_power: payload.waterPower ?? null,
-      ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
+...(payload.couponId ? { coupon_id: payload.couponId } : {}),
     })
     .select("id")
     .single();
@@ -746,8 +742,6 @@ export async function bookDetailing(
         bookingTime: payload.bookingTime,
         travelFee: Math.round(payload.travelFee ?? 0),
         totalPrice: payload.totalPrice,
-        waterPower: payload.waterPower,
-        waterPowerFee: payload.waterPowerFee,
         addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
         additionalVehicles: (payload.additionalVehicles ?? []).length > 0
           ? payload.additionalVehicles!.map(av => ({
@@ -796,8 +790,6 @@ export async function bookDetailing(
       distanceMiles: payload.distanceMiles || undefined,
       paymentMethod: payload.paymentMethod,
       notes: payload.notes || undefined,
-      waterPower: payload.waterPower,
-      waterPowerFee: payload.waterPowerFee,
       addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
       additionalVehicles: (payload.additionalVehicles ?? []).length > 0
         ? payload.additionalVehicles!.map(av => ({

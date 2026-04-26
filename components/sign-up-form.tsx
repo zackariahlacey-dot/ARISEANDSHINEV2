@@ -103,7 +103,7 @@ export function SignUpForm({
       const supabase = createClient();
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       if (loginError) throw loginError;
-      router.push("/protected");
+      router.push(redirectAfter ?? "/protected");
     } catch (err: any) {
       setError(err.message || "Invalid email or password.");
     } finally {

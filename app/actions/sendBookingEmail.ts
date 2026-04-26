@@ -89,7 +89,7 @@ export async function sendBookerAccountInviteEmail(params: {
     return { ok: false, error: "Email is not configured" };
   }
 
-  const signUpUrl = `${siteOrigin()}/auth/sign-up?email=${encodeURIComponent(customerEmail.toLowerCase())}`;
+  const signUpUrl = `${siteOrigin()}/auth/sign-up?email=${encodeURIComponent(customerEmail.toLowerCase())}&redirect=${encodeURIComponent("/#services")}`;
 
   try {
     const resend = new Resend(key);

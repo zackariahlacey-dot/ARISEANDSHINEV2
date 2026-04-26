@@ -24,12 +24,12 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
   },
   // Ultimate Series
   "Ultimate Interior Reset": {
-    small: 270, medium: 270, large: 270, extra_large: 270,
-    compact: 270, sedan: 270, suv: 270, xl: 270,
+    small: 210, medium: 210, large: 210, extra_large: 210,
+    compact: 210, sedan: 210, suv: 210, xl: 210,
   },
   "Ultimate Interior + Exterior Reset": {
-    small: 360, medium: 360, large: 360, extra_large: 360,
-    compact: 360, sedan: 360, suv: 360, xl: 360,
+    small: 270, medium: 270, large: 270, extra_large: 270,
+    compact: 270, sedan: 270, suv: 270, xl: 270,
   },
   // Paint Correction
   "Single-Stage Paint Enhancement": {
@@ -42,30 +42,42 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
   },
   // Boat Detailing — durations scale by length bracket
   // compact/small = 15–20ft, sedan/medium = 21–30ft, suv/large = 31–45ft, xl/extra_large = 46ft+
-  "Boat Interior Detail": {
+  "Boat Interior": {
     small: 180, medium: 240, large: 300, extra_large: 360,
     compact: 180, sedan: 240, suv: 300, xl: 360,
   },
-  "Boat Exterior Detail": {
+  "Boat Exterior": {
     small: 150, medium: 180, large: 240, extra_large: 300,
     compact: 150, sedan: 180, suv: 240, xl: 300,
   },
-  "Full Boat Detail": {
+  "Boat Full Detail": {
     small: 300, medium: 390, large: 480, extra_large: 600,
     compact: 300, sedan: 390, suv: 480, xl: 600,
   },
+  "Boat Showroom Package": {
+    small: 240, medium: 300, large: 420, extra_large: 540,
+    compact: 240, sedan: 300, suv: 420, xl: 540,
+  },
   // RV Detailing
-  "RV Interior Detail": {
+  "RV Interior": {
     small: 300, medium: 300, large: 360, extra_large: 360,
     compact: 300, sedan: 300, suv: 360, xl: 360,
   },
-  "RV Exterior Detail": {
+  "RV Exterior": {
     small: 240, medium: 240, large: 300, extra_large: 300,
     compact: 240, sedan: 240, suv: 300, xl: 300,
   },
   "RV Full Detail": {
     small: 480, medium: 480, large: 600, extra_large: 600,
     compact: 480, sedan: 480, suv: 600, xl: 600,
+  },
+  "RV Showroom 1-Step": {
+    small: 360, medium: 360, large: 480, extra_large: 600,
+    compact: 360, sedan: 360, suv: 480, xl: 600,
+  },
+  "RV Showroom 2-Step": {
+    small: 480, medium: 480, large: 600, extra_large: 720,
+    compact: 480, sedan: 480, suv: 600, xl: 720,
   },
 };
 

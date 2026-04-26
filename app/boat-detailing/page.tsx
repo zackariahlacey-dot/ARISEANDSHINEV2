@@ -40,7 +40,7 @@ async function DataProvider() {
     .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription")
     .order("price_small", { ascending: true });
 
-  const BOAT_NAMES = ["Boat Interior Detail", "Boat Exterior Detail", "Full Boat Detail"];
+  const BOAT_NAMES = ["Boat Interior", "Boat Exterior", "Boat Full Detail", "Boat Showroom Package"];
   return (
     <BoatDetailingPage
       services={(services ?? []).filter((s: Service) =>

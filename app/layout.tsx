@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import { PWARegistration } from "@/components/PWARegistration";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  themeColor: "#D4AF37",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.ariseandshinevt.com"),
@@ -13,11 +20,10 @@ export const metadata: Metadata = {
     "Vermont's premier mobile auto detailing service. We come to you.",
   keywords:
     "mobile detailing, Vermont, Williston, Burlington, auto detailing, car wash, ceramic coating, paint correction",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "A&S Admin",
+    statusBarStyle: "black-translucent",
+    title: "Arise & Shine VT",
   },
   formatDetection: {
     telephone: false,

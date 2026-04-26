@@ -8,12 +8,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Star, Phone, ArrowRight, Truck,
   Droplets, Calculator, ChevronRight,
-  Minus, Plus, Layers,
+  Minus, Plus, Layers, AlertTriangle, X,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
+import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -34,16 +35,19 @@ const RV_MIN_FEET = 20;
 
 const RV_SERVICES_STATIC = [
   {
-    dbName: "RV Interior Detail",
-    displayName: "Interior Refresh",
-    ratePerFoot: 20,
+    dbName: "RV Interior",
+    displayName: "RV Interior",
+    ratePerFoot: 15,
     badge: null as string | null,
-    tagline: "Interior deep clean & deodorize.",
+    tagline: "Full interior deep clean — living quarters, kitchen, bath & more.",
     icon: Droplets,
     features: [
-      "Vacuum, upholstery & dinette clean",
-      "Kitchen & bath deep clean",
-      "Dashboard, panels & odor treatment",
+      "Full vacuum of all flooring & carpet",
+      "Upholstery, dinette & cushion clean",
+      "Kitchen & bathroom deep clean",
+      "Dashboard, panels & overhead wipe-down",
+      "Odor treatment & deodorize",
+      "No buffing or polishing",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/20",
@@ -51,16 +55,18 @@ const RV_SERVICES_STATIC = [
     popular: false,
   },
   {
-    dbName: "RV Exterior Detail",
-    displayName: "Road Revival",
-    ratePerFoot: 22,
+    dbName: "RV Exterior",
+    displayName: "RV Exterior",
+    ratePerFoot: 12,
     badge: "Most Popular" as string | null,
-    tagline: "Exterior wash, polish & seal.",
+    tagline: "Full exterior wash, clay bar & wax. No buffing or polishing.",
     icon: Sparkles,
     features: [
-      "Hand wash roof to skirt + polish",
+      "Full hand wash roof to skirt",
+      "Clay bar treatment",
       "Wax or polymer sealant",
-      "Slides, wheels, awning track",
+      "Slides, wheels & awning track",
+      "No buffing or polishing",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/40",
@@ -69,19 +75,58 @@ const RV_SERVICES_STATIC = [
   },
   {
     dbName: "RV Full Detail",
-    displayName: "Full Rig Overhaul",
-    ratePerFoot: 38,
+    displayName: "RV Full Detail",
+    ratePerFoot: 25,
     badge: "Best Value" as string | null,
-    tagline: "Full interior + exterior.",
+    tagline: "Complete interior + exterior. No buffing or polishing.",
     icon: Layers,
     features: [
       "Full interior + exterior package",
-      "Slides, storage bays, roof vents",
-      "Windows in & out + walkthrough",
+      "Slides, storage bays & roof vents",
+      "Windows in & out",
+      "No buffing or polishing",
     ],
-    accent: "text-[#F3E5AB]",
+    accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/30",
     bg: "bg-[#D4AF37]/[0.04]",
+    popular: false,
+  },
+  {
+    dbName: "RV Showroom 1-Step",
+    displayName: "RV Showroom 1-Step",
+    ratePerFoot: 25,
+    badge: null as string | null,
+    tagline: "Exterior + single-stage machine polish for improved gloss & clarity.",
+    icon: Sparkles,
+    features: [
+      "Full hand wash & clay bar",
+      "1-step machine polish (paint enhancement)",
+      "Improved gloss & paint clarity",
+      "Wax or polymer sealant topcoat",
+      "Includes machine polishing",
+    ],
+    accent: "text-[#D4AF37]",
+    border: "border-[#D4AF37]/35",
+    bg: "bg-[#D4AF37]/[0.04]",
+    popular: false,
+  },
+  {
+    dbName: "RV Showroom 2-Step",
+    displayName: "RV Showroom 2-Step",
+    ratePerFoot: 40,
+    badge: "Premium" as string | null,
+    tagline: "Exterior + two-stage machine polish — maximum gloss & paint correction.",
+    icon: Sparkles,
+    features: [
+      "Full hand wash & clay bar",
+      "Stage 1: cut & paint correction",
+      "Stage 2: finish polish for maximum gloss",
+      "Ceramic or carnauba wax topcoat",
+      "Includes 2-step machine polishing",
+    ],
+    accent: "text-[#F3E5AB]",
+    border: "border-[#D4AF37]/50",
+    bg: "bg-[#D4AF37]/[0.06]",
     popular: false,
   },
 ] as const;
@@ -183,6 +228,8 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
   const [scrolledPastHero, setScrolledPastHero] = useState(false);
   const [initialDraft, setInitialDraft] = useState<DraftBooking | null>(null);
   const [showRestoreToast, setShowRestoreToast] = useState(false);
+  const [stripeVerifying, setStripeVerifying] = useState(false);
+  const [stripeRecoveryError, setStripeRecoveryError] = useState<string | null>(null);
   const bookingRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
 
@@ -192,25 +239,75 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
     if (searchParams.get("book") === "1") setBookingOpen(true);
   }, [searchParams]);
 
-  // Restore booking draft when returning from a cancelled Stripe checkout
+  // Handle Stripe return + post-signup restore
   useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
-    const stripe = searchParams.get("stripe");
-    if (stripe !== "cancelled" && stripe !== "success") return;
+    const stripeParam = searchParams.get("stripe");
+    const stripeCancelled = stripeParam === "cancelled";
+    const stripeSuccess = stripeParam === "success";
+    const restoreBooking = searchParams.get("restore_booking") === "1";
+    if (!stripeCancelled && !stripeSuccess && !restoreBooking) return;
     const raw = sessionStorage.getItem("draftBooking");
+    window.history.replaceState(null, "", window.location.pathname);
     if (!raw) return;
     try {
       const draft = JSON.parse(raw) as DraftBooking;
       sessionStorage.removeItem("draftBooking");
-      const matchedService = services.find((s) => s.id === draft.serviceId);
-      if (matchedService) setSelectedService(matchedService);
-      setInitialDraft(draft);
-      setBookingOpen(true);
-      setShowRestoreToast(true);
-      window.history.replaceState(null, "", window.location.pathname);
-      setTimeout(() => {
-        bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      if (stripeSuccess) {
+        const sessionId = searchParams.get("session_id");
+        const service = services.find((s) => s.id === draft.serviceId);
+        const firstName = draft.name?.trim().split(/\s+/)[0] ?? "there";
+        const fallbackData: SuccessModalData = {
+          confirmationId: "",
+          date: draft.selectedDate ?? "",
+          time: draft.selectedTime || undefined,
+          serviceName: service?.name ?? "Detailing Service",
+          pointsEarned: 0,
+          firstName,
+          serviceAddress: draft.serviceAddress || undefined,
+          phone: draft.phone,
+        };
+        if (sessionId) {
+          setStripeVerifying(true);
+          recoverStripeBooking(sessionId)
+            .then((result) => {
+              setStripeVerifying(false);
+              if (result.status === "error") {
+                setStripeRecoveryError("Your payment was received but we had trouble confirming your booking. Please contact us and we'll sort it out right away.");
+                return;
+              }
+              if (result.status === "overbooked") {
+                setStripeRecoveryError("Your payment went through but the time slot was just taken by someone else. We'll contact you to reschedule or issue a full refund.");
+                return;
+              }
+              setSuccessData({
+                ...fallbackData,
+                date: "bookingDate" in result ? result.bookingDate : fallbackData.date,
+                time: "bookingTime" in result ? result.bookingTime : fallbackData.time,
+                serviceName: "serviceName" in result ? result.serviceName : fallbackData.serviceName,
+              });
+              setShowSuccess(true);
+            })
+            .catch(() => {
+              setStripeVerifying(false);
+              setSuccessData(fallbackData);
+              setShowSuccess(true);
+            });
+        } else {
+          setSuccessData(fallbackData);
+          setShowSuccess(true);
+        }
+      } else {
+        // Cancelled or returning after signup — restore the booking form
+        const matchedService = services.find((s) => s.id === draft.serviceId);
+        if (matchedService) setSelectedService(matchedService);
+        setInitialDraft(draft);
+        setBookingOpen(true);
+        setShowRestoreToast(true);
+        setTimeout(() => {
+          bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     } catch {
       // invalid draft
     }
@@ -249,7 +346,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
   }));
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-950 text-white">
       {/* Grain overlay */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-[25]"
         style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px 256px", opacity: 0.035, mixBlendMode: "overlay" }} />
@@ -279,7 +376,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
           </p>
 
           <p className="text-sm font-bold text-[#D4AF37] mb-8 px-2">
-            Interior Refresh $20/ft · Road Revival $22/ft · Full Rig Overhaul $38/ft
+            RV Interior $15/ft · RV Exterior $12/ft · Full Detail $25/ft · Showroom from $25/ft
           </p>
 
           {/* CTAs */}
@@ -334,6 +431,59 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
           )}
         </div>
       </div>
+
+      {/* ── How It Works ──────────────────────────────────────────────────── */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="py-10 px-4 sm:px-6 lg:px-8"
+      >
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Simple Process</p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">How It Works</h2>
+            <p className="text-zinc-500 mt-2 text-sm">No drop-off, no hassle — we come to your rig wherever it lives.</p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              {
+                step: "01",
+                title: "Book Online",
+                desc: "Pick your package, enter your RV's length for an instant price, choose a date. Pay online or at arrival — no commitment until you're ready.",
+                icon: "📅",
+              },
+              {
+                step: "02",
+                title: "We Come to You",
+                desc: "We arrive at your campground, storage facility, or driveway with everything we need. No hookups required — we're fully self-contained.",
+                icon: "🚐",
+              },
+              {
+                step: "03",
+                title: "Hit the Road Clean",
+                desc: "Walk back to an RV that looks and smells like new. We text you when we're done, and we stand behind the result.",
+                icon: "✨",
+              },
+            ].map(({ step, title, desc, icon }) => (
+              <div
+                key={step}
+                className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 p-6 text-center"
+              >
+                <div className="text-3xl mb-3">{icon}</div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]/60 mb-1">{step}</p>
+                <p className="text-sm font-bold text-white mb-2">{title}</p>
+                <p className="text-xs text-zinc-500 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 rounded-xl border border-white/[0.05] bg-zinc-900/40 px-5 py-4 flex items-start gap-3">
+            <span className="text-lg shrink-0">💡</span>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              <strong className="text-zinc-300">Not sure which package you need?</strong> Give us a call at{" "}
+              <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a> and
+              we'll help you pick the right service for your rig and budget.
+            </p>
+          </div>
+        </div>
+      </motion.section>
 
       {/* ── Service Packages ─────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
@@ -481,6 +631,32 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
         onClose={() => { setShowSuccess(false); setSuccessData(null); }}
         data={successData}
       />
+
+      {stripeVerifying && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 text-center px-6">
+            <div className="w-14 h-14 rounded-full border-2 border-[#D4AF37]/30 border-t-[#D4AF37] animate-spin" />
+            <p className="text-white font-semibold text-lg">Confirming your booking…</p>
+            <p className="text-zinc-400 text-sm">Just a moment while we verify your payment.</p>
+          </div>
+        </div>
+      )}
+
+      {stripeRecoveryError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md px-4">
+          <div className="rounded-2xl border border-red-500/30 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-2xl flex items-start gap-3">
+            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-zinc-100 mb-1">Payment received — booking needs attention</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">{stripeRecoveryError}</p>
+              <a href="tel:8025855563" className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline">Call or text us →</a>
+            </div>
+            <button type="button" onClick={() => setStripeRecoveryError(null)} className="text-zinc-600 hover:text-zinc-300 shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

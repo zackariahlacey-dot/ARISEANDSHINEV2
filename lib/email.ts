@@ -42,8 +42,6 @@ export type BookingEmailData = {
   distanceMiles?: number;
   paymentMethod?: "pay_at_arrival" | "pay_now";
   notes?: string;
-  waterPower?: "provided" | "needed";
-  waterPowerFee?: number;
   additionalVehicles?: Array<{
     vehicleYear: string;
     vehicleMake: string;
@@ -82,8 +80,7 @@ function getGoogleCalendarUrl(data: BookingEmailData): string {
   const addlLines = (data.additionalVehicles ?? []).map((av, i) =>
     `Vehicle ${i + 2}: ${av.vehicleYear} ${av.vehicleMake} ${av.vehicleModel} — ${av.serviceName} ($${av.servicePrice})`
   ).join("\n");
-  const wpLine = data.waterPower === "needed" ? "\nWater & Power: We provide (+$10)" : data.waterPower === "provided" ? "\nWater & Power: Customer provides" : "";
-  const details = `Vehicle 1: ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}\n${addlLines ? addlLines + "\n" : ""}Phone: ${data.customerPhone}\nService: ${data.serviceName}\nTotal: $${data.servicePrice}${wpLine}`;
+  const details = `Vehicle 1: ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}\n${addlLines ? addlLines + "\n" : ""}Phone: ${data.customerPhone}\nService: ${data.serviceName}\nTotal: $${data.servicePrice}`;
   const location = data.serviceAddress ?? "Customer Location";
 
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
@@ -275,9 +272,7 @@ function customerEmailHtml(
                      <span style="color:#16a34a;">$${esc(av.servicePrice)} (−$25 multi-vehicle)</span>
                    </span>`
                 )).join("")}
-                ${data.waterPower === "needed" ? detailRow("Water &amp; Power", `<span style="color:#d97706;font-weight:700;">Provided by us</span> <span style="color:#aaaaaa;font-size:12px;">+$${(data.waterPowerFee ?? 10).toFixed(2)}</span>`) : ""}
-                ${data.waterPower === "provided" ? detailRow("Water &amp; Power", `<span style="color:#16a34a;font-weight:700;">&#10003; Provided by customer</span>`) : ""}
-                ${data.addonsJson?.length ? `
+${data.addonsJson?.length ? `
                 <tr>
                   <td style="padding:12px 24px;border-top:1px solid #27272a;">
                     <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0 0 8px;
@@ -1447,8 +1442,6 @@ export async function sendBookingEmails(
         paymentMethod: data.paymentMethod,
         distanceMiles: data.distanceMiles,
         notes: data.notes,
-        waterPower: data.waterPower,
-        waterPowerFee: data.waterPowerFee,
         addonsJson: data.addonsJson,
         additionalVehicles: data.additionalVehicles,
       }),

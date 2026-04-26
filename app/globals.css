@@ -5,6 +5,7 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 100px; /* Programmatic scrolls respect sticky header */
+  overflow-x: hidden; /* Prevent horizontal scroll globally — keep it here, NOT on wrapper divs, so position:fixed children are never clipped */
 }
 
 /* ── Global text selection ─────────────────────────────────────────────── */

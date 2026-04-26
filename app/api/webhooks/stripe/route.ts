@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
         service_name:    m.serviceName ?? null,
         addons_json:     addonsJson,
         additional_vehicles_json: additionalVehiclesForDb,
-        ...(m.couponId ? { coupon_id: m.couponId } : {}),
+...(m.couponId ? { coupon_id: m.couponId } : {}),
         stripe_checkout_session_id: session.id,
       })
       .select("id")
@@ -448,6 +448,16 @@ export async function POST(req: NextRequest) {
       distanceMiles: m.distanceMiles ? Number(m.distanceMiles) : undefined,
       paymentMethod: "pay_now",
       notes: m.notes || undefined,
+      additionalVehicles: compactAddlVehicles.length > 0
+        ? compactAddlVehicles.map(av => ({
+            vehicleYear: av.yr,
+            vehicleMake: av.mk,
+            vehicleModel: av.md,
+            serviceName: av.sn,
+            servicePrice: av.sp,
+          }))
+        : undefined,
+      addonsJson: addonsJson ?? undefined,
     }).catch((err) => console.error("[webhooks/stripe] Email error:", err));
 
     const inviteEmail = m.customerEmail?.trim();

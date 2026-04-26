@@ -75,21 +75,22 @@ export async function getAvailableSlotsForReschedule(
   // Fetch existing bookings for this date, excluding the one being rescheduled
   const { data: existingData } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, status")
+    .select("booking_time, service_name, vehicle_size, status, duration_override")
     .eq("booking_date", date)
     .neq("status", "cancelled")
     .neq("id", bookingId);
 
   const existing: BookingSlot[] = (existingData ?? []).map((r: any) => ({
-    booking_time: r.booking_time ?? "00:00",
-    service_name: r.service_name ?? null,
-    vehicle_size: r.vehicle_size ?? null,
-    status: r.status ?? "confirmed",
+    booking_time:       r.booking_time ?? "00:00",
+    service_name:       r.service_name ?? null,
+    vehicle_size:       r.vehicle_size ?? null,
+    status:             r.status ?? "confirmed",
+    total_duration_mins: r.duration_override ?? undefined,
   }));
 
   const OVERTIME_GRACE_MINS = 60;
   const slots: string[] = [];
-  const interval = 60;
+  const interval = 30;
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);

@@ -509,7 +509,7 @@ export async function getAvailableDaysForMonth(month: string, planId: string): P
 
   const { data: monthBookingsRaw } = await supabase
     .from("bookings")
-    .select("booking_date, booking_time, service_name, vehicle_size, status, services(name)")
+    .select("booking_date, booking_time, service_name, vehicle_size, status, duration_override, services(name)")
     .gte("booking_date", monthStart)
     .lte("booking_date", monthEnd)
     .neq("status", "cancelled")
@@ -526,11 +526,13 @@ export async function getAvailableDaysForMonth(month: string, planId: string): P
       s == null ? null
       : Array.isArray(s) ? (s[0] as { name?: string } | undefined)?.name ?? null
       : (s as { name?: string }).name ?? null;
+    const override = (b as any).duration_override;
     bookingsByDate.get(key)!.push({
-      booking_time: b.booking_time ?? "00:00",
-      service_name: directName ?? joinedName,
-      vehicle_size: b.vehicle_size ?? null,
-      status:       b.status ?? "confirmed",
+      booking_time:        b.booking_time ?? "00:00",
+      service_name:        directName ?? joinedName,
+      vehicle_size:        b.vehicle_size ?? null,
+      status:              b.status ?? "confirmed",
+      total_duration_mins: override != null ? override : undefined,
     });
   }
   // ─────────────────────────────────────────────────────────────────────────

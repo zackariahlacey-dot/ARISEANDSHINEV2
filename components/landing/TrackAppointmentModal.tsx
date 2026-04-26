@@ -24,13 +24,15 @@ export function TrackAppointmentModal({ isOpen, onClose }: TrackAppointmentModal
   const [isPending, startTransition] = useTransition();
   const emailRef = useRef<HTMLInputElement>(null);
 
-  // Lock body scroll while open
+  // Lock scroll while open (body + documentElement for iOS Safari)
   useEffect(() => {
     if (!isOpen) return;
     const w = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     document.body.style.paddingRight = `${w}px`;
     return () => {
+      document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
       document.body.style.paddingRight = "";
     };

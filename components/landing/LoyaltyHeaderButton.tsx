@@ -13,36 +13,31 @@ export function LoyaltyHeaderButton() {
   const [loading, setLoading] = useState(true);
 
   const handleSignOut = async () => {
-    const confirmed = window.confirm("Are you sure you want to log out?");
-    if (confirmed) {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      router.refresh();
-    }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   useEffect(() => {
     const supabase = createClient();
 
-    const updateProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setProfile(null);
-        setLoading(false);
-        return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!session?.user) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        try {
+          const p = await getAuthProfile();
+          setProfile(p);
+        } catch {
+          setProfile(null);
+        } finally {
+          setLoading(false);
+        }
       }
-      const p = await getAuthProfile();
-      setProfile(p);
-      setLoading(false);
-    };
-
-    updateProfile();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      updateProfile();
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, []);

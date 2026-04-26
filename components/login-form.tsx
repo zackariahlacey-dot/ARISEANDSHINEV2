@@ -6,13 +6,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 const inputCls =
-  "w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-lg px-4 py-3 outline-none transition-all placeholder:text-zinc-600";
+  "w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3.5 pl-11 outline-none transition-all placeholder:text-zinc-600";
 
 const btnCls =
-  "btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] py-3 rounded-lg font-semibold mt-4 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out";
+  "btn-primary-gold-shimmer w-full bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] py-4 rounded-xl font-bold mt-2 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-500 ease-in-out";
 
 export function LoginForm({
   className,
@@ -35,103 +36,122 @@ export function LoginForm({
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push(redirectTo);
+      window.location.href = redirectTo;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "Invalid email or password.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn("w-full", className)} {...props}>
-      <div className="w-full max-w-md bg-zinc-900/40 backdrop-blur-md border border-[#D4AF37]/20 shadow-[0_0_40px_rgba(212,175,55,0.05)] rounded-3xl p-8 text-center">
-        <Image
-          src="/e.png"
-          alt="Arise and Shine VT Logo"
-          width={64}
-          height={64}
-          className="mx-auto mb-6 object-contain drop-shadow-md"
-        />
-        <h2 className="text-2xl font-black tracking-tight text-white text-center">
-          Welcome Back
-        </h2>
-        <p className="text-sm text-zinc-400 mt-1 text-center">
-          Sign in to access your loyalty rewards
-        </p>
+    <div className={cn("w-full max-w-md mx-auto", className)} {...props}>
+      <motion.div
+        layout
+        className="bg-zinc-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-5 mt-8 text-left">
-          <div>
-            <label htmlFor="email" className="text-sm font-medium text-zinc-300 mb-1.5 block text-left">
-              Email
+        <div className="text-center mb-8">
+          <Image
+            src="/e.png"
+            alt="Arise and Shine VT"
+            width={54}
+            height={54}
+            className="mx-auto mb-6 drop-shadow-2xl"
+          />
+          <h2 className="text-2xl font-black tracking-tight text-white uppercase italic leading-tight">
+            Welcome Back
+          </h2>
+          <p className="text-[10px] font-black text-[#D4AF37]/80 uppercase tracking-[0.3em] mt-2">
+            Sign in to rewards
+          </p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-600 ml-1">
+              Email Address
             </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputCls}
-            />
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
+              <input
+                type="email"
+                placeholder="you@example.com"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputCls}
+              />
+            </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="password" className="text-sm font-medium text-zinc-300 block text-left">
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-600">
                 Password
               </label>
               <Link
                 href="/auth/forgot-password"
-                className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors"
+                className="text-[9px] text-[#D4AF37]/60 hover:text-[#D4AF37] uppercase font-bold tracking-widest transition-colors"
               >
-                Forgot password?
+                Forgot?
               </Link>
             </div>
             <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
               <input
-                id="password"
                 type={showPassword ? "text" : "password"}
                 required
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={inputCls + " pr-12"}
+                className={cn(inputCls, "pr-12")}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((p) => !p)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-zinc-400 hover:text-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/50 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-950/40 border border-red-800/40 rounded-lg px-4 py-3">
+            <motion.p
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] font-bold text-red-500 uppercase tracking-widest text-center"
+            >
               {error}
-            </p>
+            </motion.p>
           )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={cn(btnCls, isLoading && "btn-loading")}
-          >
-            <span className="relative z-[1]">{isLoading ? "Processing…" : "Sign In"}</span>
+          <button type="submit" disabled={isLoading} className={btnCls}>
+            {isLoading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <span className="flex items-center gap-2">
+                Sign In
+                <ArrowRight size={18} />
+              </span>
+            )}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-zinc-500">
+        <p className="mt-8 text-center text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/sign-up" className="text-zinc-400 hover:text-[#D4AF37] transition-colors font-medium">
-            Sign up
+          <Link
+            href="/auth/sign-up"
+            className="text-[#D4AF37]/70 hover:text-[#D4AF37] transition-colors"
+          >
+            Join Rewards
           </Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

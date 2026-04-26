@@ -22,7 +22,7 @@ export async function getBookingsForDate(
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, services(name)")
+    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, duration_override, services(name)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
 
@@ -44,13 +44,14 @@ export async function getBookingsForDate(
           : (s as { name?: string }).name ?? null;
     const serviceName = directName ?? joinedName;
     const vehicleSize = (row as any).vehicle_size ?? null;
+    const override    = (row as any).duration_override;
     const primaryDur  = getDurationMins(serviceName ?? "", vehicleSize ?? "sedan");
     const addlDur     = getAdditionalVehiclesDuration((row as any).additional_vehicles_json);
     return {
-      booking_time:       String(row.booking_time ?? ""),
-      service_name:       serviceName,
-      vehicle_size:       vehicleSize,
-      total_duration_mins: primaryDur + addlDur,
+      booking_time:        String(row.booking_time ?? ""),
+      service_name:        serviceName,
+      vehicle_size:        vehicleSize,
+      total_duration_mins: override != null ? override : primaryDur + addlDur,
     };
   });
 }
