@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking, BookingProgressData } from "./BookingModal";
@@ -151,12 +152,12 @@ export function LandingPage({ services }: { services: Service[] }) {
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setAuthUserId(user?.id ?? null);
-      setAuthEmail(user?.email ?? null);
+    supabase.auth.getUser().then((result: { data: { user: { id: string; email?: string } | null } }) => {
+      setAuthUserId(result.data.user?.id ?? null);
+      setAuthEmail(result.data.user?.email ?? null);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_: AuthChangeEvent, session: Session | null) => {
       setAuthUserId(session?.user?.id ?? null);
       setAuthEmail(session?.user?.email ?? null);
     });

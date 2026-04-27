@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import type { AuthResponse } from "@supabase/supabase-js";
 import { 
   checkUserExists, 
   sendOtpAction, 
@@ -58,8 +59,8 @@ export function SignUpForm({
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.push("/protected");
+    supabase.auth.getSession().then((result: AuthResponse) => {
+      if (result.data.session) router.push("/protected");
     });
   }, [router]);
 

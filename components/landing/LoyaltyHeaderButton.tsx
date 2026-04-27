@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getAuthProfile, type AuthProfile } from "@/app/actions/getAuthProfile";
 import { Gift, LogOut, Loader2 } from "lucide-react";
 
@@ -22,7 +23,7 @@ export function LoyaltyHeaderButton() {
     const supabase = createClient();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: AuthChangeEvent, session: Session | null) => {
         if (!session?.user) {
           setProfile(null);
           setLoading(false);

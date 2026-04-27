@@ -10,6 +10,7 @@ import {
   HelpCircle, MapPin, CalendarSearch, ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getAuthProfile, type AuthProfile } from "@/app/actions/getAuthProfile";
 import { BookingFlowSelector } from "./BookingFlowSelector";
 import { TrackAppointmentModal } from "./TrackAppointmentModal";
@@ -61,7 +62,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
     const supabase = createClient();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: AuthChangeEvent, session: Session | null) => {
         if (!session?.user) {
           setProfile(null);
           setAuthLoading(false);
