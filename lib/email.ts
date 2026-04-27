@@ -13,7 +13,7 @@ const FROM_ADDRESS =
   process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
 const REPLY_TO = "contact@ariseandshinevt.com";
 
-/** Owner inbox for new booking notifications (zackariahlacey@gmail.com). Override with ADMIN_EMAIL in .env.local. From is always notifications@ariseandshinevt.com. */
+/** Owner inbox for new booking notifications. Override with ADMIN_EMAIL env var. */
 const OWNER_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ ${data.addonsJson?.length ? `
                         <td>
                           <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0;
                                     letter-spacing:0.12em;text-transform:uppercase;">
-                            Total Due at Arrival
+                            ${data.paymentMethod === "pay_now" ? "Total Paid Online" : "Total Due at Arrival"}
                           </p>
                         </td>
                         <td align="right">

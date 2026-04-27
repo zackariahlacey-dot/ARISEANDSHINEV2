@@ -180,26 +180,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    if (!m?.profileId || !m?.vehicleId || !m?.serviceId || !m?.bookingDate || !m?.bookingTime) {
-      // Payment link / manual Stripe sessions have no app metadata — acknowledge and ignore
-      return NextResponse.json({ received: true });
-    }
-
-    // Idempotency: if we already fulfilled this session, skip (prevents double-insert on webhook retry)
-    const { data: alreadyFulfilled } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("stripe_checkout_session_id", session.id)
-      .maybeSingle();
-
-    if (alreadyFulfilled) {
-      return NextResponse.json({ received: true });
-    }
-
     // ── Admin-created booking path ─────────────────────────────────────────
-    // If metadata contains a booking_id, this was an invoice sent by the admin.
-    // Update the existing pending_payment booking instead of inserting a new one.
-    if (m.booking_id) {
+    // Checked FIRST — admin payment links may only carry booking_id and won't
+    // pass the full-metadata guard below.
+    if (m?.booking_id) {
+      // Idempotency: skip if already confirmed via this session
+      const { data: alreadyDone } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("stripe_checkout_session_id", session.id)
+        .maybeSingle();
+      if (alreadyDone) return NextResponse.json({ received: true });
+
       const { error: updateErr } = await supabase
         .from("bookings")
         .update({ status: "confirmed", stripe_checkout_session_id: session.id })
@@ -211,7 +203,50 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Admin booking update failed" }, { status: 500 });
       }
 
-      // Points awarded when admin marks completed, not at payment time for admin bookings
+      // Fetch full booking so we can send confirmation emails
+      const { data: adminBooking } = await supabase
+        .from("bookings")
+        .select("id, customer_name, customer_email, customer_phone, service_name, vehicle_size, vehicle_make, vehicle_model, vehicle_year, booking_date, booking_time, total_price, service_address, notes")
+        .eq("id", m.booking_id)
+        .single();
+
+      if (adminBooking) {
+        sendBookingEmails({
+          bookingId:          adminBooking.id,
+          customerName:       (adminBooking as any).customer_name  ?? "",
+          customerEmail:      (adminBooking as any).customer_email ?? "",
+          customerPhone:      (adminBooking as any).customer_phone ?? "",
+          serviceName:        (adminBooking as any).service_name   ?? "Detailing Service",
+          servicePrice:       Number((adminBooking as any).total_price) || 0,
+          bookingDate:        (adminBooking as any).booking_date   ?? "",
+          bookingTime:        (adminBooking as any).booking_time   ?? "",
+          vehicleYear:        (adminBooking as any).vehicle_year   ?? "",
+          vehicleMake:        (adminBooking as any).vehicle_make   ?? "",
+          vehicleModel:       (adminBooking as any).vehicle_model  ?? "",
+          vehicleSize:        (adminBooking as any).vehicle_size   ?? "sedan",
+          rewardPointsEarned: 0,
+          serviceAddress:     (adminBooking as any).service_address || undefined,
+          notes:              (adminBooking as any).notes          || undefined,
+          paymentMethod:      "pay_now",
+        }).catch((err) => console.error("[webhooks/stripe] Admin booking email error:", err));
+      }
+
+      return NextResponse.json({ received: true });
+    }
+
+    if (!m?.profileId || !m?.vehicleId || !m?.serviceId || !m?.bookingDate || !m?.bookingTime) {
+      // Payment link / manual Stripe sessions with no app metadata — acknowledge and ignore
+      return NextResponse.json({ received: true });
+    }
+
+    // Idempotency: if we already fulfilled this session, skip (prevents double-insert on webhook retry)
+    const { data: alreadyFulfilled } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("stripe_checkout_session_id", session.id)
+      .maybeSingle();
+
+    if (alreadyFulfilled) {
       return NextResponse.json({ received: true });
     }
 
@@ -458,7 +493,10 @@ export async function POST(req: NextRequest) {
           }))
         : undefined,
       addonsJson: addonsJson ?? undefined,
-    }).catch((err) => console.error("[webhooks/stripe] Email error:", err));
+    }).catch((err) => {
+      console.error("[webhooks/stripe] Email error:", err);
+      logError({ type: "webhook", source: "stripe_webhook/email", message: err?.message ?? "sendBookingEmails failed", details: { email: m.customerEmail, service: m.serviceName, date: m.bookingDate, sessionId: session.id } });
+    });
 
     const inviteEmail = m.customerEmail?.trim();
     if (inviteEmail && m.profileId) {

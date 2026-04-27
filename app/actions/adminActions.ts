@@ -981,6 +981,46 @@ export async function updateCustomerProfile(id: string, payload: any) {
   return { success: true };
 }
 
+export async function awardPointsAction(
+  profileId: string,
+  points: number,
+  reason: string
+): Promise<{ success: boolean; newBalance?: number; error?: string }> {
+  if (!profileId) return { success: false, error: "Missing profile ID." };
+  const pts = Math.round(points);
+  if (!pts || pts === 0) return { success: false, error: "Points must be a non-zero number." };
+  if (Math.abs(pts) > 10000) return { success: false, error: "Points adjustment exceeds limit." };
+
+  const supabase = createAdminClient();
+  const { data: profile, error: fetchErr } = await supabase
+    .from("profiles")
+    .select("reward_points, lifetime_points")
+    .eq("id", profileId)
+    .single();
+
+  if (fetchErr || !profile) return { success: false, error: "Profile not found." };
+
+  const newReward   = Math.max(0, (profile.reward_points   ?? 0) + pts);
+  const newLifetime = pts > 0
+    ? (profile.lifetime_points ?? 0) + pts
+    : (profile.lifetime_points ?? 0); // deductions don't reduce lifetime
+
+  const { error: updateErr } = await supabase
+    .from("profiles")
+    .update({ reward_points: newReward, lifetime_points: newLifetime })
+    .eq("id", profileId);
+
+  if (updateErr) return { success: false, error: updateErr.message };
+
+  await supabase.from("point_transactions").insert({
+    user_id:     profileId,
+    amount:      pts,
+    description: reason.trim() || (pts > 0 ? "Admin points award" : "Admin points adjustment"),
+  });
+
+  return { success: true, newBalance: newReward };
+}
+
 // ── COUPONS ──
 export async function getCouponStats() {
   const supabase = createAdminClient();
