@@ -29,7 +29,7 @@ const FLOWS = [
     href: "/rv-detailing",
     icon: Truck,
     title: "My RV / Motorhome",
-    desc: "Class A/B/C motorhomes, travel trailers, fifth wheels & camper vans — from $20/ft",
+    desc: "Class A/B/C motorhomes, travel trailers, fifth wheels & camper vans — from $18/ft",
     border: "border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/[0.04]",
     iconColor: "text-emerald-400",
     iconBg: "bg-emerald-500/10",

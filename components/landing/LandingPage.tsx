@@ -965,10 +965,10 @@ export function LandingPage({ services }: { services: Service[] }) {
                 {/* Pricing rows */}
                 <div className="space-y-2 mb-3">
                   {[
-                    { label: "Exterior Wash & Guard",      price: "$15/ft" },
-                    { label: "Living Space Reset",         price: "$22/ft" },
-                    { label: "Full Transformation",        price: "$45/ft" },
-                    { label: "+ Oxidation Removal",        price: "+$15/ft", muted: true },
+                    { label: "Exterior Refresh",              price: "$18/ft" },
+                    { label: "Living Space Reset",            price: "$28/ft" },
+                    { label: "Ultimate Transformation",       price: "$50/ft" },
+                    { label: "+ Oxidation Restoration",       price: "$35–45/ft", muted: true },
                   ].map(({ label, price, muted }) => (
                     <div key={label} className={`flex items-center justify-between py-2.5 px-4 rounded-xl border ${muted ? "bg-transparent border-dashed border-white/[0.04]" : "bg-zinc-950/60 border-white/[0.05]"}`}>
                       <span className={`text-sm font-medium ${muted ? "text-zinc-600" : "text-zinc-300"}`}>{label}</span>
@@ -976,7 +976,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-zinc-700 mb-5 px-1">$50 per slide-out · Slide tops &amp; seal treatment included</p>
+                <p className="text-[10px] text-zinc-700 mb-5 px-1">Add-ons: $50/slide · Roof seal $200+ · Pet hair / mold $75–$150</p>
 
                 {/* CTAs */}
                 <div className="flex items-center gap-3">

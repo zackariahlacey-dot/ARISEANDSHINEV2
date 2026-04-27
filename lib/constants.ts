@@ -58,26 +58,22 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 240, medium: 300, large: 420, extra_large: 540,
     compact: 240, sedan: 300, suv: 420, xl: 540,
   },
-  // RV Detailing
-  "RV Interior": {
-    small: 300, medium: 300, large: 360, extra_large: 360,
-    compact: 300, sedan: 300, suv: 360, xl: 360,
+  // RV Detailing — sizes map to length brackets: small/compact=20-28ft, medium/sedan=29-36ft, large/suv=37-45ft, xl/extra_large=46ft+
+  "RV Exterior Refresh": {
+    small: 240, medium: 270, large: 330, extra_large: 390,
+    compact: 240, sedan: 270, suv: 330, xl: 390,
   },
-  "RV Exterior": {
-    small: 240, medium: 240, large: 300, extra_large: 300,
-    compact: 240, sedan: 240, suv: 300, xl: 300,
+  "RV Living Space Reset": {
+    small: 300, medium: 360, large: 420, extra_large: 480,
+    compact: 300, sedan: 360, suv: 420, xl: 480,
   },
-  "RV Full Detail": {
-    small: 480, medium: 480, large: 600, extra_large: 600,
-    compact: 480, sedan: 480, suv: 600, xl: 600,
+  "RV Ultimate Transformation": {
+    small: 480, medium: 570, large: 660, extra_large: 780,
+    compact: 480, sedan: 570, suv: 660, xl: 780,
   },
-  "RV Showroom 1-Step": {
-    small: 360, medium: 360, large: 480, extra_large: 600,
-    compact: 360, sedan: 360, suv: 480, xl: 600,
-  },
-  "RV Showroom 2-Step": {
-    small: 480, medium: 480, large: 600, extra_large: 720,
-    compact: 480, sedan: 480, suv: 600, xl: 720,
+  "RV Oxidation Restoration": {
+    small: 480, medium: 540, large: 660, extra_large: 780,
+    compact: 480, sedan: 540, suv: 660, xl: 780,
   },
 };
 

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Star, Phone, ArrowRight, Truck,
   Droplets, Calculator, ChevronRight,
-  Minus, Plus, Layers, AlertTriangle, X,
+  Minus, Plus, Layers, AlertTriangle, X, Zap,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import type { Service } from "@/app/page";
@@ -33,103 +33,115 @@ const carouselScrollClass =
 
 const RV_MIN_FEET = 20;
 
-const RV_SERVICES_STATIC = [
+type RVService = {
+  dbName: string;
+  displayName: string;
+  subtitle: string;
+  ratePerFoot: number;
+  rateMax: number | null;
+  badge: string | null;
+  tagline: string;
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  features: string[];
+  accent: string;
+  border: string;
+  bg: string;
+  popular: boolean;
+  premium: boolean;
+};
+
+const RV_SERVICES_STATIC: RVService[] = [
   {
-    dbName: "RV Interior",
-    displayName: "RV Interior",
-    ratePerFoot: 15,
-    badge: null as string | null,
-    tagline: "Full interior deep clean — living quarters, kitchen, bath & more.",
+    dbName: "RV Exterior Refresh",
+    displayName: "Exterior Refresh",
+    subtitle: "The Maintenance Detail",
+    ratePerFoot: 18,
+    rateMax: null,
+    badge: null,
+    tagline: "Best for well-maintained RVs needing a seasonal wash and protection.",
     icon: Droplets,
     features: [
-      "Full vacuum of all flooring & carpet",
-      "Upholstery, dinette & cushion clean",
-      "Kitchen & bathroom deep clean",
-      "Dashboard, panels & overhead wipe-down",
-      "Odor treatment & deodorize",
-      "No buffing or polishing",
+      "Foam Bath & Hand Wash — scratch-free contact wash",
+      "Roof Rinse — debris removal + visual seal inspection",
+      "Bug Removal — front cap, mirrors & grill treatment",
+      "Wheel & Tire Service — rims, wells + UV tire dressing",
+      "Glass — streak-free exterior window cleaning",
+      "6-Month Protection — high-gloss ceramic spray sealant",
+    ],
+    accent: "text-[#D4AF37]",
+    border: "border-white/[0.08]",
+    bg: "bg-zinc-900/50",
+    popular: false,
+    premium: false,
+  },
+  {
+    dbName: "RV Living Space Reset",
+    displayName: "Living Space Reset",
+    subtitle: "Interior Only",
+    ratePerFoot: 28,
+    rateMax: null,
+    badge: null,
+    tagline: "Best for deep cleaning lived-in rigs or preparing for a trip or sale.",
+    icon: Sparkles,
+    features: [
+      "Kitchen — countertops, microwave, stovetop & fridge",
+      "Bathroom — full wet bath sanitization",
+      "Living Area — deep vacuum of all floors & cubbies",
+      "Upholstery — steam clean dinette & captain's chairs",
+      "Detailing — AC vents, window tracks, UV dash protection",
+      "Full interior debris removal & cabinet wipe-downs",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/20",
     bg: "bg-[#D4AF37]/[0.03]",
     popular: false,
+    premium: false,
   },
   {
-    dbName: "RV Exterior",
-    displayName: "RV Exterior",
-    ratePerFoot: 12,
-    badge: "Most Popular" as string | null,
-    tagline: "Full exterior wash, clay bar & wax. No buffing or polishing.",
-    icon: Sparkles,
-    features: [
-      "Full hand wash roof to skirt",
-      "Clay bar treatment",
-      "Wax or polymer sealant",
-      "Slides, wheels & awning track",
-      "No buffing or polishing",
-    ],
-    accent: "text-[#D4AF37]",
-    border: "border-[#D4AF37]/40",
-    bg: "bg-[#D4AF37]/[0.05]",
-    popular: true,
-  },
-  {
-    dbName: "RV Full Detail",
-    displayName: "RV Full Detail",
-    ratePerFoot: 25,
-    badge: "Best Value" as string | null,
-    tagline: "Complete interior + exterior. No buffing or polishing.",
+    dbName: "RV Ultimate Transformation",
+    displayName: "Ultimate RV Transformation",
+    subtitle: "Full Detail",
+    ratePerFoot: 50,
+    rateMax: null,
+    badge: "Total Package",
+    tagline: "The complete restoration — showroom condition inside and out.",
     icon: Layers,
     features: [
-      "Full interior + exterior package",
-      "Slides, storage bays & roof vents",
-      "Windows in & out",
-      "No buffing or polishing",
+      "Everything in Exterior Refresh",
+      "Everything in Living Space Reset",
+      "Awning Service — deep clean underside & top",
+      "Storage Bays — degrease & vacuum all compartments",
+      "Metal Polishing — chrome/stainless ladders, handles & trim",
     ],
     accent: "text-[#D4AF37]",
-    border: "border-[#D4AF37]/30",
-    bg: "bg-[#D4AF37]/[0.04]",
-    popular: false,
-  },
-  {
-    dbName: "RV Showroom 1-Step",
-    displayName: "RV Showroom 1-Step",
-    ratePerFoot: 25,
-    badge: null as string | null,
-    tagline: "Exterior + single-stage machine polish for improved gloss & clarity.",
-    icon: Sparkles,
-    features: [
-      "Full hand wash & clay bar",
-      "1-step machine polish (paint enhancement)",
-      "Improved gloss & paint clarity",
-      "Wax or polymer sealant topcoat",
-      "Includes machine polishing",
-    ],
-    accent: "text-[#D4AF37]",
-    border: "border-[#D4AF37]/35",
-    bg: "bg-[#D4AF37]/[0.04]",
-    popular: false,
-  },
-  {
-    dbName: "RV Showroom 2-Step",
-    displayName: "RV Showroom 2-Step",
-    ratePerFoot: 40,
-    badge: "Premium" as string | null,
-    tagline: "Exterior + two-stage machine polish — maximum gloss & paint correction.",
-    icon: Sparkles,
-    features: [
-      "Full hand wash & clay bar",
-      "Stage 1: cut & paint correction",
-      "Stage 2: finish polish for maximum gloss",
-      "Ceramic or carnauba wax topcoat",
-      "Includes 2-step machine polishing",
-    ],
-    accent: "text-[#F3E5AB]",
     border: "border-[#D4AF37]/50",
-    bg: "bg-[#D4AF37]/[0.06]",
-    popular: false,
+    bg: "",
+    popular: true,
+    premium: true,
   },
-] as const;
+  {
+    dbName: "RV Oxidation Restoration",
+    displayName: "Oxidation Restoration",
+    subtitle: 'The "Chalky" Fix',
+    ratePerFoot: 35,
+    rateMax: 45,
+    badge: "Specialized",
+    tagline: "Best for faded, dull, or chalky fiberglass — exterior only.",
+    icon: Zap,
+    features: [
+      "Prep — full decon wash + iron fallout removal",
+      "Step 1 (Leveling) — heavy compound, strip dead oxidation",
+      "Step 2 (Refining) — machine polish for color depth & gloss",
+      "Step 3 (Seal) — 12-month marine-grade sealant application",
+      "Headlights — complimentary lens restoration included",
+    ],
+    accent: "text-amber-400",
+    border: "border-amber-500/30",
+    bg: "bg-amber-500/[0.025]",
+    popular: false,
+    premium: false,
+  },
+];
 
 // ── Touch-friendly Price Calculator ──────────────────────────────────────────
 function PriceCalculator({ onBook }: { onBook: () => void }) {
@@ -187,18 +199,35 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
       </div>
 
       <div
-        className={`flex md:grid md:grid-cols-3 gap-3 mb-5 ${carouselScrollClass} pb-2 -mx-1 px-1 md:mx-0 md:px-0 md:overflow-visible`}
+        className={`flex md:grid md:grid-cols-4 gap-3 mb-5 ${carouselScrollClass} pb-2 -mx-1 px-1 md:mx-0 md:px-0 md:overflow-visible`}
       >
         {RV_SERVICES_STATIC.map((svc) => (
           <div
             key={svc.dbName}
-            className={`snap-center shrink-0 w-[min(82vw,280px)] md:w-auto rounded-xl border p-4 text-center ${svc.popular ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}
+            className={`snap-center shrink-0 w-[min(72vw,220px)] md:w-auto rounded-xl border p-4 text-center ${
+              svc.premium
+                ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]"
+                : svc.rateMax != null
+                  ? "border-amber-500/25 bg-amber-500/[0.03]"
+                  : "border-white/[0.07] bg-zinc-900/40"
+            }`}
           >
             <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
-            <p className={`text-xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
-              ${calc(svc.ratePerFoot).toLocaleString()}
-            </p>
-            <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
+            {svc.rateMax != null ? (
+              <>
+                <p className="text-lg font-black tabular-nums text-amber-400">
+                  ${calc(svc.ratePerFoot).toLocaleString()}–${calc(svc.rateMax).toLocaleString()}
+                </p>
+                <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}–${svc.rateMax}/ft</p>
+              </>
+            ) : (
+              <>
+                <p className={`text-xl font-black tabular-nums ${svc.premium ? "text-[#D4AF37]" : "text-white"}`}>
+                  ${calc(svc.ratePerFoot).toLocaleString()}
+                </p>
+                <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -376,7 +405,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
           </p>
 
           <p className="text-sm font-bold text-[#D4AF37] mb-8 px-2">
-            RV Interior $15/ft · RV Exterior $12/ft · Full Detail $25/ft · Showroom from $25/ft
+            Exterior Refresh $18/ft · Living Space Reset $28/ft · Full Transformation $50/ft · Oxidation $35–45/ft
           </p>
 
           {/* CTAs */}
@@ -497,48 +526,99 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
 
           <p className="text-center text-[11px] text-zinc-600 mb-4 md:hidden">Swipe to compare packages</p>
           <div
-            className={`flex md:grid md:grid-cols-3 gap-4 ${carouselScrollClass} pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:pb-0`}
+            className={`flex md:grid md:grid-cols-2 gap-4 ${carouselScrollClass} pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:pb-0`}
           >
             {displayServices.map((svc) => {
               const Icon = svc.icon;
+              const isOxidation = svc.rateMax != null;
               return (
                 <div
                   key={svc.dbName}
-                  className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 md:hover:-translate-y-1 snap-center shrink-0 w-[min(88vw,380px)] md:w-auto md:min-w-0 md:snap-none md:shrink ${svc.border} ${svc.bg} ${svc.popular ? "shadow-[0_0_40px_rgba(212,175,55,0.08)]" : ""}`}
+                  className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 md:hover:-translate-y-1 snap-center shrink-0 w-[min(88vw,400px)] md:w-auto md:min-w-0 md:snap-none md:shrink ${svc.border} ${!svc.premium ? svc.bg : ""} ${
+                    svc.premium
+                      ? "shadow-[0_0_60px_rgba(212,175,55,0.18)]"
+                      : isOxidation
+                        ? "shadow-[0_0_20px_rgba(245,158,11,0.07)]"
+                        : ""
+                  }`}
+                  style={svc.premium ? { background: "linear-gradient(170deg, #131310 0%, #0b0b09 100%)" } : undefined}
                 >
-                  {svc.popular && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />}
+                  {/* Top stripe — premium only */}
+                  {svc.premium && (
+                    <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent shrink-0" />
+                  )}
 
                   <div className="p-5 sm:p-6 flex flex-col flex-1 text-center md:text-left items-center md:items-stretch">
                     {/* Badge row */}
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3 min-h-[22px] w-full">
-                      {svc.popular && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">
-                          <Star size={9} fill="currentColor" />Most Popular
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3 min-h-[24px] w-full">
+                      {svc.premium && (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-black bg-gradient-to-r from-[#D4AF37] to-[#F0D060] px-3 py-1 rounded-full shadow-[0_2px_8px_rgba(212,175,55,0.4)]">
+                          <Sparkles size={9} />Total Package
                         </span>
                       )}
-                      {svc.badge && !svc.popular && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#F3E5AB] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
-                          <Sparkles size={9} />
-                          {svc.badge}
+                      {isOxidation && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
+                          <Zap size={9} />Specialized
+                        </span>
+                      )}
+                      {!svc.premium && !isOxidation && svc.badge && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
+                          <Star size={9} />{svc.badge}
                         </span>
                       )}
                     </div>
 
-                    {/* Icon + name */}
-                    <div className="flex flex-col md:flex-row items-center gap-2 mb-1.5">
-                      <Icon size={22} className={svc.accent} />
-                      <h3 className="text-lg font-black text-white tracking-tight">{svc.displayName}</h3>
+                    {/* Icon + name + subtitle */}
+                    <div className="flex flex-col md:flex-row items-center gap-2 mb-0.5">
+                      <Icon size={svc.premium ? 26 : 22} className={svc.accent} />
+                      <div className="text-center md:text-left">
+                        <h3 className={`font-black tracking-tight text-white ${svc.premium ? "text-xl" : "text-lg"}`}>
+                          {svc.displayName}
+                        </h3>
+                        <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${isOxidation ? "text-amber-500/60" : "text-[#D4AF37]/55"}`}>
+                          {svc.subtitle}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-zinc-500 leading-relaxed mb-4 max-w-xs md:max-w-none mx-auto md:mx-0">{svc.tagline}</p>
+                    <p className="text-sm text-zinc-500 leading-relaxed mb-4 max-w-xs md:max-w-none mx-auto md:mx-0 mt-2">{svc.tagline}</p>
 
                     {/* Price badge */}
-                    <div className={`w-full rounded-xl mb-5 py-3 text-center border ${svc.popular ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.05]" : "border-white/[0.06] bg-white/[0.02]"}`}>
-                      <div className={`text-3xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
-                        ${svc.ratePerFoot}<span className="text-lg font-bold text-zinc-500">/ft</span>
-                      </div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
-                        Min {RV_MIN_FEET}ft · ${svc.ratePerFoot * RV_MIN_FEET} minimum
-                      </div>
+                    <div className={`w-full rounded-xl mb-5 py-3 text-center border ${
+                      svc.premium
+                        ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.05]"
+                        : isOxidation
+                          ? "border-amber-500/25 bg-amber-500/[0.03]"
+                          : "border-white/[0.06] bg-white/[0.02]"
+                    }`}>
+                      {isOxidation ? (
+                        <>
+                          <div className="text-3xl font-black tabular-nums text-amber-400">
+                            ${svc.ratePerFoot}–${svc.rateMax}<span className="text-lg font-bold text-zinc-500">/ft</span>
+                          </div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
+                            Min {RV_MIN_FEET}ft · Exterior only
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className={`tabular-nums font-black ${svc.premium ? "text-5xl" : "text-3xl"}`}>
+                            {svc.premium ? (
+                              <span
+                                className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
+                                style={{ filter: "drop-shadow(0 1px 10px rgba(212,175,55,0.5))" }}
+                              >
+                                ${svc.ratePerFoot}
+                              </span>
+                            ) : (
+                              <span className="text-[#D4AF37]">${svc.ratePerFoot}</span>
+                            )}
+                            <span className="text-lg font-bold text-zinc-500">/ft</span>
+                          </div>
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
+                            Min {RV_MIN_FEET}ft · ${svc.ratePerFoot * RV_MIN_FEET} minimum
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Feature list */}
@@ -546,10 +626,18 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                       {svc.features.map((f) => (
                         <li
                           key={f}
-                          className="flex items-start gap-3 text-sm text-zinc-300 leading-snug max-w-[min(100%,19rem)] mx-auto md:mx-0 md:max-w-none"
+                          className="flex items-start gap-3 text-sm text-zinc-300 leading-snug max-w-[min(100%,20rem)] mx-auto md:mx-0 md:max-w-none"
                         >
-                          <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
-                            <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
+                          <span className={`mt-[3px] w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
+                            svc.premium
+                              ? "bg-[#D4AF37]/30 border border-[#D4AF37]/60"
+                              : isOxidation
+                                ? "bg-amber-500/15 border border-amber-500/30"
+                                : "bg-[#D4AF37]/15 border border-[#D4AF37]/30"
+                          }`}>
+                            <span className={`rounded-full ${
+                              svc.premium ? "w-1.5 h-1.5 bg-[#D4AF37]" : isOxidation ? "w-1 h-1 bg-amber-400" : "w-1 h-1 bg-[#D4AF37]"
+                            }`} />
                           </span>
                           <span className="text-left">{f}</span>
                         </li>
@@ -559,9 +647,11 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                     <button
                       onClick={() => openBooking(svc.dbService ?? undefined)}
                       className={`w-full py-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] min-h-[52px] ${
-                        svc.popular
-                          ? "btn-primary-gold-shimmer bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] overflow-hidden"
-                          : "bg-zinc-950 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10"
+                        svc.premium
+                          ? "btn-primary-gold-shimmer bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_24px_rgba(212,175,55,0.35)] overflow-hidden"
+                          : isOxidation
+                            ? "bg-zinc-950 border border-amber-500/30 text-amber-400 hover:bg-amber-500/[0.08]"
+                            : "bg-zinc-950 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/[0.08]"
                       }`}
                     >
                       <span className="relative z-[1] flex items-center gap-2">
@@ -576,11 +666,40 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* Single-line disclaimers */}
+      {/* ── Add-Ons ──────────────────────────────────────────────────── */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="py-4 px-4 sm:px-6 lg:px-8"
+      >
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-5">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Custom Quotes</p>
+            <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">Available Add-Ons</h2>
+            <p className="text-zinc-500 mt-1.5 text-sm">Added to any service · priced separately at booking</p>
+          </div>
+          <div className="space-y-2">
+            {[
+              { name: "Slide-Out Service", price: "$50 / slide", desc: "Clean slide roofs + treat rubber seals with UV protectant" },
+              { name: "Roof Deep Clean & Seal", price: "$200+", desc: "Scrub rubber roofs to remove black streaks + UV blocker" },
+              { name: "Pet Hair / Excessive Mold", price: "$75–$150", desc: "Added for rigs requiring extra extraction time" },
+            ].map((addon) => (
+              <div key={addon.name} className="flex items-center gap-4 py-3 px-4 rounded-xl border border-white/[0.06] bg-zinc-900/40">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">{addon.name}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{addon.desc}</p>
+                </div>
+                <p className="text-sm font-black text-[#D4AF37] tabular-nums shrink-0">{addon.price}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Disclaimer */}
       <div className="px-4 sm:px-6 lg:px-8 pb-6 max-w-2xl mx-auto">
         <p className="text-[11px] text-zinc-500 text-center leading-relaxed">
-          Heavy mold/odor may add $75–$150. Rigs over 45ft may need a surcharge —{" "}
-          <a href="tel:8025855563" className="text-[#D4AF37]/80 hover:text-[#D4AF37]">call</a> first. Final price confirmed before we start.
+          Rigs over 45 ft may require a surcharge —{" "}
+          <a href="tel:8025855563" className="text-[#D4AF37]/80 hover:text-[#D4AF37]">call us first</a>.
+          {" "}Final price confirmed before any work begins.
         </p>
       </div>
 

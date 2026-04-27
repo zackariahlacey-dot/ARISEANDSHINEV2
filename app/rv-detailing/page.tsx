@@ -7,7 +7,7 @@ import type { Service } from "@/app/page";
 export const metadata: Metadata = {
   title: "Mobile RV Detailing Vermont | Per-Foot Pricing | Arise & Shine VT",
   description:
-    "Professional mobile RV detailing in Vermont. Interior from $20/ft, Exterior from $22/ft, Full Detail from $38/ft. We come to your campsite, driveway, or storage facility. Serving Lake Champlain area.",
+    "Professional mobile RV detailing in Vermont. Exterior Refresh from $18/ft, Living Space Reset from $28/ft, Ultimate Transformation from $50/ft. We come to your campsite, driveway, or storage facility.",
   keywords: [
     "RV detailing Vermont",
     "motorhome detailing Vermont",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "RV cleaning Vermont",
     "RV exterior detail Burlington VT",
     "motorhome interior detail Vermont",
-    "RV wax Vermont",
+    "RV oxidation restoration Vermont",
     "travel trailer detailing Vermont",
     "RV detailing price per foot Vermont",
     "camper detail Vermont",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Mobile RV Detailing Vermont | Arise & Shine VT",
-    description: "Per-foot RV detailing — interior from $20/ft, exterior from $22/ft, full detail from $38/ft. We come to you.",
+    description: "Per-foot RV detailing — exterior refresh $18/ft, living space reset $28/ft, full transformation $50/ft. We come to you.",
     url: "https://ariseandshinevt.com/rv-detailing",
     siteName: "Arise & Shine VT",
     locale: "en_US",
@@ -39,7 +39,7 @@ async function DataProvider() {
     .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription")
     .order("price_small", { ascending: true });
 
-  const RV_NAMES = ["RV Interior", "RV Exterior", "RV Full Detail", "RV Showroom 1-Step", "RV Showroom 2-Step"];
+  const RV_NAMES = ["RV Exterior Refresh", "RV Living Space Reset", "RV Ultimate Transformation", "RV Oxidation Restoration"];
   return (
     <RVDetailingPage
       services={(services ?? []).filter((s: Service) =>
