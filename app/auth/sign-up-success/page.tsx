@@ -2,7 +2,6 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, Trophy, ArrowRight, Star, Sparkles, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -41,14 +40,6 @@ function SuccessContent() {
     };
     frame();
 
-    // 2. Security Check: Redirect if not signed in after a delay
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        // We'll give them time to see the success screen, 
-        // but eventually they need to be signed in
-      }
-    });
   }, []);
 
   return (
