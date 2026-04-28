@@ -10,7 +10,6 @@ export interface SuccessModalData {
   date: string;
   time?: string;
   serviceName: string;
-  pointsEarned: number;
   firstName: string;
   serviceAddress?: string;
   isGuest?: boolean;
@@ -314,25 +313,6 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                       )}
                     </div>
 
-                    {/* Points earned */}
-                    {data.pointsEarned > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.38, duration: 0.3 }}
-                        className="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[#d4af37]/10 to-[#d4af37]/5 border border-[#d4af37]/20"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/25 flex items-center justify-center shrink-0 text-base">
-                          🎁
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-[#d4af37]">+{data.pointsEarned.toLocaleString()} loyalty points earned</p>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">
-                            {data.isGuest ? "Create an account to claim your points" : "Added to your rewards balance"}
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
 
                     {/* Add to Calendar */}
                     <div className="mt-3">
@@ -399,8 +379,8 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                         <UserPlus size={14} className="text-[#d4af37]" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white mb-0.5">Save booking + claim your points</p>
-                        <p className="text-[11px] text-zinc-500 leading-snug">Create a free account to track appointments and redeem loyalty rewards.</p>
+                        <p className="text-xs font-bold text-white mb-0.5">Save booking + track your loyalty tier</p>
+                        <p className="text-[11px] text-zinc-500 leading-snug">Create a free account to track appointments and unlock loyalty discounts.</p>
                       </div>
                     </a>
                   </motion.div>
