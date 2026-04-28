@@ -12,7 +12,7 @@ const FAQ_SECTIONS = [
       { q: "How do I book an appointment?", a: "Book online anytime at ariseandshinevt.com — pick your service, choose a date and time, and pay online or at arrival. You'll get a confirmation email right away with all your appointment details." },
       { q: "How much notice do I need?", a: "We typically have openings within the same week. The online calendar shows real-time availability, so you can book as soon as tonight for an upcoming slot — or plan ahead weeks in advance." },
       { q: "Can I cancel or reschedule?", a: "Yes. You can reschedule directly from your account dashboard, or reach out to us by phone or email. We just ask for as much notice as possible so we can fill the slot." },
-      { q: "Do I need an account to book?", a: "Nope — you can book as a guest using just your phone number and email. Creating a free account lets you earn loyalty points, track all your bookings, and use your referral link." },
+      { q: "Do I need an account to book?", a: "Nope — you can book as a guest using just your phone number and email. Creating a free account lets you track your loyalty tier, view all your bookings, and use your referral link." },
     ],
   },
   {
@@ -37,8 +37,8 @@ const FAQ_SECTIONS = [
   {
     category: "Loyalty, Referrals & Membership",
     items: [
-      { q: "How do loyalty points work?", a: "You earn 1 point for every $1 spent on services. At checkout, you can redeem points for a discount — 10 points = $1 off. Create a free account to start earning on your very first booking." },
-      { q: "How does the referral program work?", a: "Every account gets a unique referral link. When a friend books using your link, they get 10% off their first detail and you earn bonus loyalty points. There's no limit to how many friends you can refer." },
+      { q: "How do loyalty discounts work?", a: "Every car detail you complete counts toward your tier — no points to track. Member (1 detail): 5% off. Silver (3): 10% off. Gold (5): 15% off. VIP (10): 20% off every detail, forever. Discounts apply automatically at checkout." },
+      { q: "How does the referral program work?", a: "Every account gets a unique referral link. When a friend books using your link, they get 10% off their first detail. There's no limit to how many friends you can refer." },
       { q: "What is the Maintenance Club?", a: "The Maintenance Club is a monthly detail subscription — pick interior or full detail maintenance, and each month you'll get an email to choose your preferred date. Members enjoy priority scheduling and consistent pricing." },
     ],
   },
@@ -88,7 +88,7 @@ export default function FAQPage() {
       <div className="relative z-10">
         <SiteHeader />
 
-        <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-32 pb-20 flex flex-col gap-10">
+        <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-40 pb-20 flex flex-col gap-10">
 
           {/* Hero */}
           <div className="text-center">

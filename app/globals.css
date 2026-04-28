@@ -4,7 +4,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 100px; /* Programmatic scrolls respect sticky header */
+  scroll-padding-top: 132px; /* Programmatic scrolls respect sticky header (32px bar + 64px header + buffer) */
   overflow-x: hidden; /* Prevent horizontal scroll globally — keep it here, NOT on wrapper divs, so position:fixed children are never clipped */
 }
 
@@ -325,6 +325,18 @@ html {
 .btn-loading.btn-shimmer:hover::after {
   left: -80%;
   transition: none !important;
+}
+
+/* ── Announcement ticker (fixed top bar, infinite horizontal scroll) ───── */
+@keyframes announcement-ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+.announcement-ticker {
+  animation: announcement-ticker 40s linear infinite;
+  display: flex;
+  width: max-content;
+  align-items: center;
 }
 
 /* ── Trust badges marquee (infinite horizontal scroll) ──────────────────── */

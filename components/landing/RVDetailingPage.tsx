@@ -291,7 +291,6 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
           date: draft.selectedDate ?? "",
           time: draft.selectedTime || undefined,
           serviceName: service?.name ?? "Detailing Service",
-          pointsEarned: 0,
           firstName,
           serviceAddress: draft.serviceAddress || undefined,
           phone: draft.phone,
@@ -383,7 +382,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
       <SiteHeader />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section ref={heroRef} className="relative pt-28 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
+      <section ref={heroRef} className="relative pt-36 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,55,0.10) 0%, transparent 65%)" }} />
         <div className="relative z-10 max-w-3xl mx-auto">

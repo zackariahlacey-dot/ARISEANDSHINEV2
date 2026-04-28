@@ -14,6 +14,8 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getAuthProfile, type AuthProfile } from "@/app/actions/getAuthProfile";
 import { BookingFlowSelector } from "./BookingFlowSelector";
 import { TrackAppointmentModal } from "./TrackAppointmentModal";
+import { AnnouncementBar } from "./AnnouncementBar";
+import { SqueezeMeInModal } from "./SqueezeMeInModal";
 
 const ADMIN_EMAIL = "zackariahlacey@gmail.com";
 
@@ -48,6 +50,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
   const [mobileOpen,       setMobileOpen]       = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
   const [trackOpen,        setTrackOpen]        = useState(false);
+  const [squeezeOpen,      setSqueezeOpen]      = useState(false);
   const [profile,          setProfile]          = useState<AuthProfile | undefined>(undefined);
   const [authLoading,      setAuthLoading]      = useState(true);
 
@@ -121,9 +124,11 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
 
   return (
     <>
+      <AnnouncementBar />
+
       {/* ── Header bar ──────────────────────────────────────────────────── */}
       <header
-        className={`fixed top-0 inset-x-0 z-50 h-16 transition-all duration-500 ${
+        className={`fixed top-8 inset-x-0 z-50 h-16 transition-all duration-500 ${
           isScrolled || mobileOpen
             ? "bg-black/60 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_4px_32px_rgba(0,0,0,0.4)]"
             : "bg-transparent"
@@ -178,7 +183,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
                 <Link href="/protected" title="Loyalty dashboard"
                   className="flex items-center gap-1.5 text-[12px] text-zinc-300 hover:text-white transition-colors">
                   <Gift size={13} className="text-amber-400/80" />
-                  <span>{profile!.rewardPoints} pts</span>
+                  <span>{profile!.loyaltyDiscountPct}% off</span>
                 </Link>
                 <button type="button" onClick={handleSignOut} title="Sign out"
                   className="flex items-center justify-center w-7 h-7 rounded-full text-zinc-500 hover:text-zinc-200 transition-colors">
@@ -273,7 +278,7 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-white leading-tight">Signed in</p>
-                    <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{profile!.rewardPoints} reward pts</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{profile!.loyaltyDiscountPct}% loyalty discount</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-2">
@@ -385,8 +390,13 @@ export function SiteHeader({ onBookNow }: SiteHeaderProps) {
         </div>
       </div>
 
-      <BookingFlowSelector isOpen={flowSelectorOpen} onClose={() => setFlowSelectorOpen(false)} />
+      <BookingFlowSelector
+        isOpen={flowSelectorOpen}
+        onClose={() => setFlowSelectorOpen(false)}
+        onSqueeze={() => { setFlowSelectorOpen(false); setSqueezeOpen(true); }}
+      />
       <TrackAppointmentModal isOpen={trackOpen} onClose={() => setTrackOpen(false)} />
+      <SqueezeMeInModal isOpen={squeezeOpen} onClose={() => setSqueezeOpen(false)} />
     </>
   );
 }

@@ -42,8 +42,6 @@ const ULTIMATE_CARDS = [
     tagline: "The deep interior clean your vehicle deserves.",
     priceNormal: 250,
     priceLarge: 250,
-    pointsNormal: 275,
-    pointsLarge: 275,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Full Detail",
@@ -60,8 +58,6 @@ const ULTIMATE_CARDS = [
     tagline: "Showroom quality — every surface, inside and out. No polishing required.",
     priceNormal: 350,
     priceLarge: 350,
-    pointsNormal: 350,
-    pointsLarge: 350,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
@@ -84,7 +80,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
   const [mounted, setMounted] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [authRewardPoints] = useState<number | null>(null);
+  const [authLoyaltyDiscountPct] = useState<number | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
 
@@ -128,7 +124,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
       <SiteHeader onBookNow={() => openBooking()} />
 
       {/* ── Hero ── */}
-      <section className="relative pt-28 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
+      <section className="relative pt-36 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,55,0.14) 0%, transparent 65%)" }} />
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-6">
@@ -235,7 +231,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
                         Book This Service <Sparkles size={13} className="shrink-0" />
                       </button>
                       <p className="text-center text-[11px] text-zinc-600 mt-2.5">
-                        <Sparkles size={9} className="inline mr-1" />Earn {service.price_small}–{service.price_large} loyalty points
+                        <Sparkles size={9} className="inline mr-1" />Counts toward your loyalty tier
                       </p>
                     </div>
                   </div>
@@ -310,7 +306,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
               services={services}
               onSelectService={setSelectedService}
               onBookingSuccess={handleSuccess}
-              initialRewardPoints={authRewardPoints}
+              initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
               initialDraft={null}
               onDraftRestored={() => {}}
             />
@@ -353,8 +349,6 @@ function UltimateServiceCard({
   tagline,
   priceNormal,
   priceLarge,
-  pointsNormal,
-  pointsLarge,
   badge,
   features,
   onBook,
@@ -364,8 +358,6 @@ function UltimateServiceCard({
   tagline: string;
   priceNormal: number;
   priceLarge: number;
-  pointsNormal: number;
-  pointsLarge: number;
   badge: { label: string; icon: "star" | "gem" };
   features: readonly string[];
   onBook: () => void;
@@ -428,7 +420,7 @@ function UltimateServiceCard({
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-2.5">
           <Sparkles size={9} className="inline mr-1" />
-          Earn {pointsNormal === pointsLarge ? pointsNormal : `${pointsNormal}–${pointsLarge}`} loyalty points
+          Counts toward your loyalty tier
         </p>
       </div>
     </div>

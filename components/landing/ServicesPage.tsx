@@ -29,7 +29,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 250, priceLarge: 250, pointsNormal: 275, pointsLarge: 275,
+    priceNormal: 250, priceLarge: 250,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Full Detail",
@@ -44,7 +44,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom quality — every surface, inside and out. No polishing required.",
-    priceNormal: 350, priceLarge: 350, pointsNormal: 350, pointsLarge: 350,
+    priceNormal: 350, priceLarge: 350,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
@@ -145,7 +145,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
   const [mounted, setMounted] = useState(false);
   const [bookingCtx, setBookingCtx] = useState<BookingContext>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [authRewardPoints] = useState<number | null>(null);
+  const [authLoyaltyDiscountPct] = useState<number | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
 
@@ -180,7 +180,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
       <SiteHeader onBookNow={() => openBooking("standard")} />
 
       {/* ── Hero ── */}
-      <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
+      <section className="relative pt-40 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 50% at 50% -5%, rgba(212,175,55,0.12) 0%, transparent 65%)" }} />
         <div className="relative z-10 max-w-3xl mx-auto">
           <Link href="/" className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-[#D4AF37] text-xs font-semibold uppercase tracking-widest mb-8 transition-colors">
@@ -291,7 +291,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
               services={services}
               onSelectService={setSelectedService}
               onBookingSuccess={handleBookingSuccess}
-              initialRewardPoints={authRewardPoints}
+              initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
               initialDraft={null}
               onDraftRestored={() => {}}
             />
@@ -395,7 +395,7 @@ function ServiceCard({ service, onBook }: { service: Service; onBook: () => void
           Book This Service <Sparkles size={13} className="shrink-0" />
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-3">
-          <Sparkles size={9} className="inline mr-1" />Earn {service.price_small}–{service.price_large} reward points
+          <Sparkles size={9} className="inline mr-1" />Counts toward your loyalty tier
         </p>
       </div>
     </div>
@@ -404,9 +404,9 @@ function ServiceCard({ service, onBook }: { service: Service; onBook: () => void
 
 // ─── Ultimate Service Card ─────────────────────────────────────────────────────
 
-function UltimateServiceCard({ name, tagline, priceNormal, priceLarge, pointsNormal, pointsLarge, badge, features, onBook, isFlagship }: {
+function UltimateServiceCard({ name, tagline, priceNormal, priceLarge, badge, features, onBook, isFlagship }: {
   name: string; tagline: string; priceNormal: number; priceLarge: number;
-  pointsNormal: number; pointsLarge: number; badge: { label: string; icon: "star" | "gem" };
+  badge: { label: string; icon: "star" | "gem" };
   features: readonly string[]; onBook: () => void; isFlagship: boolean;
 }) {
   return (
@@ -460,7 +460,7 @@ function UltimateServiceCard({ name, tagline, priceNormal, priceLarge, pointsNor
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-3">
           <Sparkles size={9} className="inline mr-1" />
-          Earn {pointsNormal === pointsLarge ? pointsNormal : `${pointsNormal}–${pointsLarge}`} reward points
+          Counts toward your loyalty tier
         </p>
       </div>
     </div>

@@ -32,7 +32,7 @@ export default function ContactPage() {
       <div className="relative z-10">
         <SiteHeader />
 
-        <main className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-32 pb-20 flex flex-col gap-10">
+        <main className="w-full max-w-3xl mx-auto px-4 sm:px-6 pt-40 pb-20 flex flex-col gap-10">
 
           {/* Hero */}
           <div className="text-center">

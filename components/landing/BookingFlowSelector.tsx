@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Car, Anchor, Truck } from "lucide-react";
+import { X, Car, Anchor, Truck, Zap } from "lucide-react";
 
 const FLOWS = [
   {
@@ -40,9 +40,10 @@ const FLOWS = [
 interface BookingFlowSelectorProps {
   isOpen: boolean;
   onClose: () => void;
+  onSqueeze?: () => void;
 }
 
-export function BookingFlowSelector({ isOpen, onClose }: BookingFlowSelectorProps) {
+export function BookingFlowSelector({ isOpen, onClose, onSqueeze }: BookingFlowSelectorProps) {
   const router = useRouter();
 
   const handleSelect = (href: string) => {
@@ -115,7 +116,17 @@ export function BookingFlowSelector({ isOpen, onClose }: BookingFlowSelectorProp
                 ))}
               </div>
 
-              <div className="px-5 pb-4 pt-1">
+              <div className="px-3 pb-3 pt-0 space-y-2">
+                {onSqueeze && (
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); onSqueeze(); }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 text-[11px] font-black uppercase tracking-widest text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all active:scale-[0.99]"
+                  >
+                    <Zap size={12} />
+                    Need it urgently? Squeeze Me In
+                  </button>
+                )}
                 <p className="text-center text-[11px] text-zinc-600">
                   Questions?{" "}
                   <a href="tel:8025855563" className="text-zinc-400 hover:text-white transition-colors">

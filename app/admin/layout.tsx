@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Calendar, Users, DollarSign, Settings, Crown } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, Settings, Crown, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -10,6 +10,7 @@ const TABS = [
   { label: "Schedule", href: "/admin/schedule",   icon: Calendar,   exact: false },
   { label: "Clients",  href: "/admin/clients",    icon: Users,      exact: false },
   { label: "Monthly",  href: "/admin/monthly",    icon: Crown,      exact: false },
+  { label: "Squeeze",  href: "/admin/squeeze",    icon: Zap,        exact: false },
   { label: "Money",    href: "/admin/money",      icon: DollarSign, exact: false },
   { label: "Settings", href: "/admin/settings",   icon: Settings,   exact: false },
 ];

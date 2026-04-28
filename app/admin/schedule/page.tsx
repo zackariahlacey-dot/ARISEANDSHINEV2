@@ -24,6 +24,8 @@ import {
   updateBookingDurationAction,
 } from "@/app/actions/adminActions";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
+import { useQuery } from "@tanstack/react-query";
+import { getSqueezeRequests, updateSqueezeStatus, type SqueezeRequest } from "@/app/actions/squeezeActions";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
@@ -35,7 +37,7 @@ import {
 } from "lucide-react";
 import {
   format, startOfMonth, getDay, getDaysInMonth,
-  addMonths, subMonths, isSameDay, isToday, parseISO,
+  addMonths, subMonths, isSameDay, isToday, isBefore, startOfDay, parseISO,
 } from "date-fns";
 import { AddressAutocomplete } from "@/components/landing/AddressAutocomplete";
 import { cn } from "@/lib/utils";
@@ -96,19 +98,18 @@ const VEHICLE_SIZES_ADMIN = [
 ];
 
 const FOOTAGE_RATES: Record<string, number> = {
-  "Boat Interior":          15,
-  "Boat Exterior":          20,
-  "Boat Full Detail":       32,
-  "Boat Showroom Package":  55,
-  "RV Interior":            15,
-  "RV Exterior":            12,
-  "RV Full Detail":         25,
-  "RV Showroom 1-Step":     25,
-  "RV Showroom 2-Step":     40,
+  "Boat Interior":               15,
+  "Boat Exterior":               20,
+  "Boat Full Detail":            32,
+  "Boat Showroom Package":       55,
+  "RV Exterior Refresh":         18,
+  "RV Living Space Reset":       28,
+  "RV Ultimate Transformation":  50,
+  "RV Oxidation Restoration":    40,
 };
 const FOOTAGE_MIN: Record<string, number> = {
   "Boat Interior": 15, "Boat Exterior": 15, "Boat Full Detail": 15, "Boat Showroom Package": 15,
-  "RV Interior":   20, "RV Exterior":   20, "RV Full Detail":   20, "RV Showroom 1-Step": 20, "RV Showroom 2-Step": 20,
+  "RV Exterior Refresh": 20, "RV Living Space Reset": 20, "RV Ultimate Transformation": 20, "RV Oxidation Restoration": 20,
 };
 const BOAT_DISPLAY: Record<string, { name: string; sub: string }> = {
   "Boat Interior":         { name: "Boat Interior",         sub: "$15/ft · 15 ft min" },
@@ -117,11 +118,10 @@ const BOAT_DISPLAY: Record<string, { name: string; sub: string }> = {
   "Boat Showroom Package": { name: "Marine Showroom Polish", sub: "$55/ft · 15 ft min" },
 };
 const RV_DISPLAY: Record<string, { name: string; sub: string }> = {
-  "RV Interior":        { name: "RV Interior",              sub: "$15/ft · 20 ft min" },
-  "RV Exterior":        { name: "RV Exterior",              sub: "$12/ft · 20 ft min" },
-  "RV Full Detail":     { name: "RV Full Detail",           sub: "$25/ft · 20 ft min" },
-  "RV Showroom 1-Step": { name: "RV Showroom — 1-Step",     sub: "$25/ft · 20 ft min" },
-  "RV Showroom 2-Step": { name: "RV Showroom — 2-Step",     sub: "$40/ft · 20 ft min" },
+  "RV Exterior Refresh":       { name: "RV Exterior Refresh",       sub: "$18/ft · 20 ft min" },
+  "RV Living Space Reset":     { name: "RV Living Space Reset",     sub: "$28/ft · 20 ft min" },
+  "RV Ultimate Transformation":{ name: "RV Ultimate Transformation",sub: "$50/ft · 20 ft min" },
+  "RV Oxidation Restoration":  { name: "RV Oxidation Restoration",  sub: "$35–45/ft · 20 ft min" },
 };
 
 type Pathway = "vehicle" | "boat" | "rv";
@@ -134,6 +134,7 @@ export type ClientPrefillForBooking = {
   email: string;
   address: string;
   vehicles: { id: string; year: number | null; make: string; model: string; size: string }[];
+  pathwayHint?: Pathway;
 };
 
 function dbSizeToSlug(size: string | null | undefined): string {
@@ -210,6 +211,7 @@ export function NewBookingForm({
   const [bookedSlots,   setBookedSlots]   = useState<any[]>([]);
   const [slotsLoading,  setSlotsLoading]  = useState(false);
   const [operatingHours,setOperatingHours]= useState<any>(null);
+  const [showOverlapConfirm, setShowOverlapConfirm] = useState(false);
 
   /** When set, reuse this vehicles row instead of inserting a new one (vehicle pathway only) */
   const [existingVehicleId, setExistingVehicleId] = useState<string | null>(null);
@@ -221,6 +223,7 @@ export function NewBookingForm({
     setEmail(clientPrefill.email);
     setAddress(clientPrefill.address);
     setExistingVehicleId(null);
+    if (clientPrefill.pathwayHint) setPathway(clientPrefill.pathwayHint);
   }, [clientPrefill]);
 
   // Derived
@@ -291,9 +294,31 @@ export function NewBookingForm({
     setSelectedAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
   }
 
-  async function handleSubmit() {
+  function hasTimeOverlap(): boolean {
+    if (!bookingTime) return false;
+    const selMins = timeToMins(bookingTime);
+    const selDur  = getDurationMins(selectedService?.name ?? "", vehicleSize);
+    return checkSlotConflict(
+      bookedSlots.map(b => ({
+        booking_time: b.booking_time,
+        service_name: b.service_name,
+        vehicle_size: b.vehicle_size,
+        status: "confirmed",
+        total_duration_mins: b.duration_mins,
+      })),
+      selMins,
+      selDur
+    );
+  }
+
+  async function handleSubmit(allowOverlap = false) {
     if (!name || !phone || !serviceId || !bookingDate || !bookingTime) {
       toast("Fill in all required fields", "error"); return;
+    }
+    // If there's a conflict and we haven't confirmed override yet, show the dialog
+    if (!allowOverlap && hasTimeOverlap()) {
+      setShowOverlapConfirm(true);
+      return;
     }
     setLoading(true);
     try {
@@ -313,6 +338,7 @@ export function NewBookingForm({
         serviceId, serviceName: selectedService?.name ?? "",
         bookingDate, bookingTime: to12h(bookingTime),
         totalPrice,
+        allowOverlap,
         notes: [notes, footageNote, addonNote, addlVehicleNote].filter(Boolean).join(""),
         ...(clientPrefill?.profileId ? { preferredProfileId: clientPrefill.profileId } : {}),
         ...(pathway === "vehicle" && existingVehicleId ? { existingVehicleId } : {}),
@@ -883,10 +909,43 @@ export function NewBookingForm({
 
           <div className="flex gap-2">
             <button onClick={() => setStep(3)} className="flex-1 py-3.5 rounded-xl border border-white/[0.08] text-zinc-400 text-sm font-black">Back</button>
-            <button onClick={handleSubmit} disabled={loading || !bookingTime}
+            <button onClick={() => handleSubmit(false)} disabled={loading || !bookingTime}
               className="flex-grow py-3.5 rounded-xl bg-amber-500 text-black text-sm font-black active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? <Loader2 className="animate-spin" size={16} /> : <><Zap size={15} /> Book It</>}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Overlap override confirmation modal ─────────────────────────── */}
+      {showOverlapConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={22} className="text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-black text-white text-sm">Time Conflict — Override?</p>
+                <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+                  This slot overlaps an existing booking at <span className="text-amber-300 font-bold">{to12h(bookingTime)}</span>. You can force-book it anyway — both appointments will run at the same time.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowOverlapConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-white/[0.1] text-zinc-400 text-sm font-black"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowOverlapConfirm(false); handleSubmit(true); }}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-black text-sm font-black"
+              >
+                Force Book
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -998,6 +1057,18 @@ export default function SchedulePage() {
   const [editHoursStart,setEditHoursStart]  = useState("07:00");
   const [editHoursEnd,  setEditHoursEnd]    = useState("19:00");
   const [savingHours,   setSavingHours]     = useState(false);
+
+  // ── Squeeze Me In ────────────────────────────────────────────────────────
+  const [activeSqueeze,  setActiveSqueeze]  = useState<SqueezeRequest | null>(null);
+  const [squeezePrefill, setSqueezePrefill] = useState<ClientPrefillForBooking | null>(null);
+  const { data: squeezeData = [], refetch: refetchSqueeze } = useQuery({
+    queryKey: ["squeeze"],
+    queryFn:  () => getSqueezeRequests(),
+    refetchInterval: 60000,
+  });
+  const pendingSqueezes = (squeezeData as SqueezeRequest[]).filter(
+    r => r.status === "pending" || r.status === "contacted"
+  );
 
   // On mount: read ?date= param
   useEffect(() => {
@@ -1245,6 +1316,7 @@ export default function SchedulePage() {
                 if (!day) return <div key={di} className="aspect-square" />;
                 const isT    = isToday(day);
                 const isSel  = isSameDay(day, selectedDay);
+                const isPast = !isT && isBefore(day, startOfDay(new Date()));
                 const dayBks = getBookingsForDate(day).filter(b => b.service_name !== "Personal Block");
                 const hasBlk = getBookingsForDate(day).some(b => b.service_name === "Personal Block");
                 const isBlocked = isBlockedDate(day);
@@ -1257,6 +1329,7 @@ export default function SchedulePage() {
                     onClick={() => { setSelectedDay(day); setViewMode("day"); }}
                     className={cn(
                       "aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all active:scale-90 relative text-xs font-bold",
+                      isPast     ? "opacity-40 hover:opacity-60 hover:bg-white/[0.02]" :
                       isBlocked  ? "bg-red-500/10 text-red-400" :
                       isFull     ? "bg-amber-500/15 text-amber-300" :
                       isSel      ? "bg-amber-500 text-black" :
@@ -1264,15 +1337,25 @@ export default function SchedulePage() {
                                    "text-zinc-400 hover:bg-white/[0.04]"
                     )}
                   >
-                    <span>{day.getDate()}</span>
+                    <span className={cn(
+                      isPast ? "text-zinc-500" :
+                      isSel  ? "text-black" : ""
+                    )}>{day.getDate()}</span>
                     {isFull && !isSel ? (
-                      <span className="text-[7px] font-black uppercase tracking-widest text-amber-500/80 leading-none">full</span>
+                      <span className={cn(
+                        "text-[7px] font-black uppercase tracking-widest leading-none",
+                        isPast ? "text-zinc-600" : "text-amber-500/80"
+                      )}>full</span>
                     ) : (
                       <div className="flex gap-0.5">
                         {dayBks.slice(0, 3).map((_, i) => (
-                          <span key={i} className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : "bg-amber-500")} />
+                          <span key={i} className={cn(
+                            "w-1 h-1 rounded-full",
+                            isSel  ? "bg-black/40" :
+                            isPast ? "bg-zinc-600" : "bg-amber-500"
+                          )} />
                         ))}
-                        {hasBlk && <span className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : "bg-zinc-500")} />}
+                        {hasBlk && <span className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : isPast ? "bg-zinc-700" : "bg-zinc-500")} />}
                       </div>
                     )}
                   </button>
@@ -1294,6 +1377,111 @@ export default function SchedulePage() {
             <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />Blocked
           </div>
         </div>
+
+        {/* ── Squeeze Me In Requests ─────────────────────────────────────── */}
+        {pendingSqueezes.length > 0 && (
+          <div className="mt-4 space-y-2 pt-3 border-t border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap size={11} className="text-[#D4AF37]" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                Squeeze Me In
+              </span>
+              <span className="ml-auto text-[8px] font-black text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-1.5 py-0.5 rounded-full">
+                {pendingSqueezes.length} waiting
+              </span>
+            </div>
+
+            {pendingSqueezes.map((sq) => {
+              const urgencyConfig: Record<string, { label: string; cls: string }> = {
+                today:     { label: "Today",     cls: "text-red-400 bg-red-500/10 border-red-500/20"       },
+                tomorrow:  { label: "Tomorrow",  cls: "text-orange-400 bg-orange-500/10 border-orange-500/20" },
+                this_week: { label: "This Week", cls: "text-amber-400 bg-amber-500/10 border-amber-500/20"  },
+                soon:      { label: "Flexible",  cls: "text-zinc-500 bg-zinc-800/60 border-zinc-700/30"     },
+              };
+              const urg = urgencyConfig[sq.urgency] ?? urgencyConfig.soon;
+
+              const sqPathway: "vehicle" | "boat" | "rv" | undefined =
+                sq.service_type === "boat" ? "boat" :
+                sq.service_type === "rv"   ? "rv"   :
+                "vehicle";
+
+              return (
+                <div
+                  key={sq.id}
+                  className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] p-3 space-y-2"
+                >
+                  {/* Name + urgency */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-white leading-tight truncate">{sq.name}</p>
+                      <a href={`tel:${sq.phone}`} className="text-[10px] text-zinc-500 font-mono hover:text-[#D4AF37] transition-colors">
+                        {sq.phone}
+                      </a>
+                    </div>
+                    <span className={cn("text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border shrink-0", urg.cls)}>
+                      {urg.label}
+                    </span>
+                  </div>
+
+                  {/* Service + vehicle */}
+                  {(sq.specific_service || sq.vehicle_info) && (
+                    <div className="space-y-0.5">
+                      {sq.specific_service && (
+                        <p className="text-[10px] text-zinc-400 font-semibold">{sq.specific_service}</p>
+                      )}
+                      {sq.vehicle_info && (
+                        <p className="text-[10px] text-zinc-600">{sq.vehicle_info}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Address */}
+                  {sq.service_address && (
+                    <p className="text-[10px] text-zinc-600 flex items-start gap-1 leading-relaxed">
+                      <MapPin size={9} className="text-zinc-700 mt-0.5 shrink-0" />
+                      {sq.service_address}
+                    </p>
+                  )}
+
+                  {/* Availability */}
+                  <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 italic">
+                    &ldquo;{sq.available_dates}&rdquo;
+                  </p>
+
+                  {/* Actions */}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => {
+                        setSqueezePrefill({
+                          profileId:   "",
+                          name:        sq.name,
+                          phone:       sq.phone,
+                          email:       sq.email ?? "",
+                          address:     sq.service_address ?? "",
+                          vehicles:    [],
+                          pathwayHint: sqPathway,
+                        });
+                        setActiveSqueeze(sq);
+                        setShowNewBooking(true);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#D4AF37] text-zinc-950 text-[10px] font-black uppercase tracking-widest hover:bg-[#e6c84a] active:scale-95 transition-all"
+                    >
+                      <Zap size={11} /> Schedule
+                    </button>
+                    {sq.email && (
+                      <a
+                        href={`mailto:${sq.email}`}
+                        className="flex items-center justify-center w-9 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.09] transition-all active:scale-95"
+                      >
+                        <Mail size={13} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -1546,13 +1734,52 @@ export default function SchedulePage() {
       </div>
 
       {/* ── New Booking Modal ───────────────────────────────────────────── */}
-      <Modal open={showNewBooking} onClose={() => setShowNewBooking(false)}>
-        <h2 className="text-lg font-black mb-4">New Booking</h2>
+      <Modal open={showNewBooking} onClose={() => { setShowNewBooking(false); setActiveSqueeze(null); setSqueezePrefill(null); }}>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-black">New Booking</h2>
+          {activeSqueeze && (
+            <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
+              <Zap size={9} /> Squeeze
+            </span>
+          )}
+        </div>
+        {activeSqueeze && (
+          <div className="mb-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/15 p-3 space-y-1.5">
+            <div className="text-[11px] text-zinc-400 leading-relaxed">
+              <span className="font-bold text-[#D4AF37]">{activeSqueeze.name}</span>
+              {activeSqueeze.specific_service && (
+                <span className="text-zinc-400"> · {activeSqueeze.specific_service}</span>
+              )}
+              {activeSqueeze.vehicle_info && (
+                <span className="text-zinc-600"> ({activeSqueeze.vehicle_info})</span>
+              )}
+            </div>
+            {activeSqueeze.service_address && (
+              <p className="text-[10px] text-zinc-600 flex items-center gap-1">
+                <MapPin size={9} className="text-zinc-700" />
+                {activeSqueeze.service_address}
+              </p>
+            )}
+            <p className="text-[10px] text-zinc-500 italic">
+              &ldquo;{activeSqueeze.available_dates}&rdquo;
+            </p>
+          </div>
+        )}
         <NewBookingForm
           defaultDate={format(selectedDay, "yyyy-MM-dd")}
           services={services ?? []}
-          onSuccess={() => { setShowNewBooking(false); refetch(); }}
-          onCancel={() => setShowNewBooking(false)}
+          clientPrefill={squeezePrefill}
+          onSuccess={async () => {
+            if (activeSqueeze) {
+              await updateSqueezeStatus(activeSqueeze.id, "booked");
+              refetchSqueeze();
+              setActiveSqueeze(null);
+              setSqueezePrefill(null);
+            }
+            setShowNewBooking(false);
+            refetch();
+          }}
+          onCancel={() => { setShowNewBooking(false); setActiveSqueeze(null); setSqueezePrefill(null); }}
         />
       </Modal>
 

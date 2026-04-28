@@ -25,7 +25,7 @@ export default function ServiceAreaPage() {
       <div className="relative z-10">
         <SiteHeader />
 
-        <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-32 pb-20 flex flex-col items-center gap-10">
+        <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 pt-40 pb-20 flex flex-col items-center gap-10">
 
           {/* Back link */}
           <div className="w-full">

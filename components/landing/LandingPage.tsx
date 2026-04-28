@@ -140,7 +140,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPastHero, setIsPastHero] = useState(false);
-  const [authRewardPoints, setAuthRewardPoints] = useState<number | null>(null);
+  const [authLoyaltyDiscountPct, setAuthLoyaltyDiscountPct] = useState<number>(0);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
@@ -246,7 +246,6 @@ export function LandingPage({ services }: { services: Service[] }) {
                 date: bookingDate,
                 time: bookingTime || undefined,
                 serviceName: svcName,
-                pointsEarned: 0,
                 firstName,
                 serviceAddress: draft.serviceAddress || undefined,
                 phone: draft.phone,
@@ -261,7 +260,6 @@ export function LandingPage({ services }: { services: Service[] }) {
                 date: draft.selectedDate ?? "",
                 time: draft.selectedTime || undefined,
                 serviceName: service?.name ?? "Detailing Service",
-                pointsEarned: 0,
                 firstName,
                 serviceAddress: draft.serviceAddress || undefined,
                 phone: draft.phone,
@@ -275,7 +273,6 @@ export function LandingPage({ services }: { services: Service[] }) {
             date: draft.selectedDate ?? "",
             time: draft.selectedTime || undefined,
             serviceName: service?.name ?? "Detailing Service",
-            pointsEarned: 0,
             firstName,
             serviceAddress: draft.serviceAddress || undefined,
             phone: draft.phone,
@@ -302,7 +299,7 @@ export function LandingPage({ services }: { services: Service[] }) {
 
   useEffect(() => {
     getAuthProfile().then((p) => {
-      setAuthRewardPoints(p?.rewardPoints ?? null);
+      setAuthLoyaltyDiscountPct(p?.loyaltyDiscountPct ?? 0);
     });
   }, [expandedBookingId]);
 
@@ -477,7 +474,7 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 pt-28 md:pt-32"
+        className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 pt-36 md:pt-40"
         style={{ background: "#09090b" }}
       >
         {/* Moody automotive background image — barely visible texture layer (above fold, priority) */}
@@ -562,7 +559,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onSelectService={setSelectedService}
                 onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
-                initialRewardPoints={authRewardPoints}
+                initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
                 onProgress={setBookingProgress}
@@ -738,7 +735,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onSelectService={setSelectedService}
                 onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
-                initialRewardPoints={authRewardPoints}
+                initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
               />
@@ -824,7 +821,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onSelectService={setSelectedService}
                 onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
-                initialRewardPoints={authRewardPoints}
+                initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
               />
@@ -926,7 +923,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onSelectService={setSelectedService}
                     onClearService={() => setSelectedService(null)}
                     onBookingSuccess={handleBookingSuccess}
-                    initialRewardPoints={authRewardPoints}
+                    initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
                     initialCategory="boat"
                   />
                 </div>
@@ -1011,7 +1008,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onSelectService={setSelectedService}
                     onClearService={() => setSelectedService(null)}
                     onBookingSuccess={handleBookingSuccess}
-                    initialRewardPoints={authRewardPoints}
+                    initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
                     initialCategory="rv"
                   />
                 </div>
@@ -1076,31 +1073,31 @@ export function LandingPage({ services }: { services: Service[] }) {
                       <Car className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
                     </div>
                     <div className="text-center md:text-left">
-                      <p className="text-zinc-100 font-bold text-sm md:text-base">Earn Points</p>
-                      <p className="text-xs md:text-sm text-zinc-500">Get 1 point for every $1 spent on any detailing service.</p>
+                      <p className="text-zinc-100 font-bold text-sm md:text-base">Get Details, Climb Tiers</p>
+                      <p className="text-xs md:text-sm text-zinc-500">Every car detail you complete counts toward your loyalty tier — automatically.</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col items-center md:items-start gap-3 md:gap-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
                       <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
                     </div>
                     <div className="text-center md:text-left">
-                      <p className="text-zinc-100 font-bold text-sm md:text-base">Redeem & Save</p>
-                      <p className="text-xs md:text-sm text-zinc-500">Every 10 points equals $1 off. Save them up for a free detail!</p>
+                      <p className="text-zinc-100 font-bold text-sm md:text-base">Unlock Bigger Discounts</p>
+                      <p className="text-xs md:text-sm text-zinc-500">Member 5% → Silver 10% → Gold 15% → VIP 20% off forever.</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-4 md:p-6 rounded-xl md:rounded-2xl bg-zinc-950/50 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Sign Up Bonus</p>
-                    <p className="text-xl md:text-2xl font-black text-white">+100 Points</p>
+                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">First Detail</p>
+                    <p className="text-xl md:text-2xl font-black text-white">5% Off</p>
                   </div>
                   <div className="h-px w-8 bg-white/5 sm:hidden" />
                   <div className="text-center sm:text-right">
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Claim Today</p>
-                    <p className="text-[#D4AF37] font-bold text-sm md:text-base">Instant Reward</p>
+                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">VIP Tier</p>
+                    <p className="text-[#D4AF37] font-bold text-sm md:text-base">20% Off Forever</p>
                   </div>
                 </div>
               </div>
@@ -1121,7 +1118,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                   href="/auth/sign-up"
                   className="btn-primary-gold-shimmer w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl text-base md:text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
                 >
-                  <span className="relative z-[1]">Sign Up & Claim Points</span>
+                  <span className="relative z-[1]">Sign Up & Join Rewards</span>
                 </Button>
               )}
               <button
@@ -1282,25 +1279,25 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Yes — please make sure your vehicle is parked within reach of a water spigot and a standard electrical outlet. We&apos;ll handle everything else from there.
+              No — we&apos;re 100% self-contained. We bring our own water supply, generator, and all professional-grade equipment. All we need is access to your vehicle.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
-              <span className="flex-1 text-center">How long does a Full Detail take?</span>
+              <span className="flex-1 text-center">How long does a detail take?</span>
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              A Full Detail typically takes between 3 to 5 hours depending on the size and condition of your vehicle. We never rush perfection.
+              Interior Detail: 2–3 hrs. Exterior Detail: 1.5–2 hrs. Full Detail: 3–4 hrs. Ultimate packages run 4–6 hrs. Boat and RV appointments scale with footage — we&apos;ll give you an estimate when you book.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
             <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
-              <span className="flex-1 text-center">Do I need to be present for the detail?</span>
+              <span className="flex-1 text-center">Do I need to be home during the appointment?</span>
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Not at all! As long as we have the keys and access to the vehicle, you can work or relax. We will send you a text when your car is pristine.
+              Not at all. As long as your vehicle is accessible at the scheduled time, we&apos;ll handle everything independently. We&apos;ll text you when we start and again when we&apos;re done.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1309,9 +1306,21 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              If you have a garage we can work inside, we will proceed! If not, we will happily reschedule you to our next available clear day with priority placement.
+              We&apos;ll reach out to reschedule at no charge — exterior work needs dry conditions to get the best result. Interior-only appointments can often still proceed in light rain. We&apos;ll figure it out together.
             </p>
           </details>
+          <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
+            <summary className="cursor-pointer p-6 flex justify-between items-center text-zinc-100 font-medium hover:text-[#D4AF37] outline-none list-none text-base md:text-lg">
+              <span className="flex-1 text-center">How do loyalty discounts work?</span>
+              <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
+            </summary>
+            <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
+              Every car detail counts toward your tier automatically. 1 detail: 5% off (Member). 3 details: 10% off (Silver). 5 details: 15% off (Gold). 10 details: 20% off every detail, forever (VIP). No points, no tracking — just book and save.
+            </p>
+          </details>
+          <a href="/faq" className="mt-2 text-sm text-[#D4AF37]/70 hover:text-[#D4AF37] transition-colors font-medium">
+            See all FAQs →
+          </a>
         </div>
         </div>
       </section>
@@ -1850,7 +1859,7 @@ function ServiceCard({
 
         <p className="text-center text-[11px] text-zinc-600 mt-3">
           <Sparkles size={9} className="inline mr-1" />
-          Earn {service.price_small}–{service.price_large} reward points
+          Counts toward your loyalty tier
         </p>
       </div>
     </div>
@@ -1863,7 +1872,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 250, priceLarge: 250, pointsNormal: 250, pointsLarge: 250,
+    priceNormal: 250, priceLarge: 250,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Interior Detail",
@@ -1877,7 +1886,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom quality — every surface, inside and out.",
-    priceNormal: 350, priceLarge: 350, pointsNormal: 350, pointsLarge: 350,
+    priceNormal: 350, priceLarge: 350,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
@@ -1892,11 +1901,10 @@ const ULTIMATE_CARDS = [
 // ─── Ultimate Service Card ─────────────────────────────────────────────────────
 
 function UltimateServiceCard({
-  name, tagline, priceNormal, priceLarge, pointsNormal, pointsLarge,
+  name, tagline, priceNormal, priceLarge,
   badge, features, onBook, isFlagship,
 }: {
   name: string; tagline: string; priceNormal: number; priceLarge: number;
-  pointsNormal: number; pointsLarge: number;
   badge: { label: string; icon: "star" | "gem" };
   features: readonly string[];
   onBook: (name: string) => void;
@@ -2019,7 +2027,7 @@ function UltimateServiceCard({
         </button>
         <p className="text-center text-[11px] text-zinc-600 mt-3">
           <Sparkles size={9} className="inline mr-1" />
-          Earn {pointsNormal === pointsLarge ? pointsNormal : `${pointsNormal}–${pointsLarge}`} reward points
+          Counts toward your loyalty tier
         </p>
       </div>
     </div>
