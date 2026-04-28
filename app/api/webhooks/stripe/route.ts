@@ -224,7 +224,6 @@ export async function POST(req: NextRequest) {
           vehicleMake:        (adminBooking as any).vehicle_make   ?? "",
           vehicleModel:       (adminBooking as any).vehicle_model  ?? "",
           vehicleSize:        (adminBooking as any).vehicle_size   ?? "sedan",
-          rewardPointsEarned: 0,
           serviceAddress:     (adminBooking as any).service_address || undefined,
           notes:              (adminBooking as any).notes          || undefined,
           paymentMethod:      "pay_now",
@@ -351,60 +350,8 @@ export async function POST(req: NextRequest) {
 
     const bookingId = booking.id;
     const totalPrice = Number(m.totalPrice) || 0;
-    const travelFee = Number(m.travelFee) || 0;
-    const pointsToRedeem = Number(m.pointsToRedeem) || 0;
-    // Earn 1 pt per $1 of service cost, excluding travel fee (matches pay-at-arrival logic)
-    const earnedPoints = Math.floor(Math.max(0, totalPrice - travelFee + (pointsToRedeem / 10)));
 
-    // Deduct redeemed points (deferred from Pay Now flow until after payment)
-    if (pointsToRedeem > 0) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("reward_points")
-        .eq("id", m.profileId)
-        .single();
-      if (prof && typeof prof.reward_points === "number" && prof.reward_points >= pointsToRedeem) {
-        await supabase
-          .from("profiles")
-          .update({ reward_points: prof.reward_points - pointsToRedeem })
-          .eq("id", m.profileId);
-
-        // Record redemption
-        await supabase.from("point_transactions").insert({
-          user_id: m.profileId,
-          amount: -pointsToRedeem,
-          description: `Redeemed for ${m.serviceName}`,
-        });
-      }
-    }
-
-    // Add earned points to profile (1 pt per $1 on service, excluding travel)
-    if (earnedPoints > 0) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("reward_points, lifetime_points")
-        .eq("id", m.profileId)
-        .single();
-      if (prof && typeof prof.reward_points === "number") {
-        const currentLifetime = typeof prof.lifetime_points === "number" ? prof.lifetime_points : 0;
-        await supabase
-          .from("profiles")
-          .update({
-            reward_points: prof.reward_points + earnedPoints,
-            lifetime_points: currentLifetime + earnedPoints,
-          })
-          .eq("id", m.profileId);
-
-        // Record earning
-        await supabase.from("point_transactions").insert({
-          user_id: m.profileId,
-          amount: earnedPoints,
-          description: `Earned from ${m.serviceName}`,
-        });
-      }
-    }
-
-    // Referral: mark discount used + credit referrer 200 pts
+    // Mark referral discount as used (no points rewarded, just flag it)
     const appliedReferral = m.isApplyingReferralDiscount === "true";
     const webhookAuthUserId = m.authUserId;
     if (appliedReferral && webhookAuthUserId) {
@@ -420,30 +367,9 @@ export async function POST(req: NextRequest) {
             .from("profiles")
             .update({ has_used_referral: true })
             .eq("id", webhookAuthUserId);
-
-          const { data: referrerProfile } = await supabase
-            .from("profiles")
-            .select("reward_points, lifetime_points")
-            .eq("id", authProfile.referred_by)
-            .maybeSingle();
-
-          if (referrerProfile != null) {
-            const newReward   = ((referrerProfile as any).reward_points   ?? 0) + 200;
-            const newLifetime = ((referrerProfile as any).lifetime_points ?? 0) + 200;
-            await supabase
-              .from("profiles")
-              .update({ reward_points: newReward, lifetime_points: newLifetime })
-              .eq("id", authProfile.referred_by);
-
-            await supabase.from("point_transactions").insert({
-              user_id:     authProfile.referred_by,
-              amount:      200,
-              description: "Referral bonus — friend completed first detail",
-            });
-          }
         }
       } catch (refErr) {
-        console.error("[webhooks/stripe] referral reward error:", refErr);
+        console.error("[webhooks/stripe] referral flag error:", refErr);
       }
     }
 
@@ -478,7 +404,6 @@ export async function POST(req: NextRequest) {
       vehicleMake: m.vehicleMake ?? "",
       vehicleModel: m.vehicleModel ?? "",
       vehicleSize: m.vehicleSize ?? "sedan",
-      rewardPointsEarned: earnedPoints,
       serviceAddress: m.serviceAddress || undefined,
       distanceMiles: m.distanceMiles ? Number(m.distanceMiles) : undefined,
       paymentMethod: "pay_now",

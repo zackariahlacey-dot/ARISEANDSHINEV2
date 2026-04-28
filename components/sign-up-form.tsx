@@ -225,7 +225,7 @@ export function SignUpForm({
           <motion.p layout className="text-[10px] font-black text-[#D4AF37]/80 uppercase tracking-[0.3em] mt-2">
             {state === "IDLE" && "Arise & Shine VT"}
             {state === "SIGN_IN" && "Sign in to rewards"}
-            {state === "SIGN_UP_DETAILS" && "Earn 100 bonus points"}
+            {state === "SIGN_UP_DETAILS" && "Join loyalty rewards"}
             {state === "SIGN_UP_VERIFY" && `Sent to ${email}`}
             {state === "SIGN_UP_PASSWORD" && "Last step to join"}
           </motion.p>

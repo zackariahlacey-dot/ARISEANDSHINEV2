@@ -67,7 +67,7 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [authRewardPoints] = useState<number | null>(null);
+  const [authLoyaltyDiscountPct] = useState<number | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -92,7 +92,7 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
       <SiteHeader onBookNow={openBooking} />
 
       {/* ── Hero ── */}
-      <section className="relative pt-28 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
+      <section className="relative pt-36 pb-16 px-4 sm:px-6 lg:px-8 text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,55,0.14) 0%, transparent 65%)" }} />
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-6">
@@ -235,7 +235,7 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
               services={services}
               onSelectService={() => {}}
               onBookingSuccess={handleSuccess}
-              initialRewardPoints={authRewardPoints}
+              initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
               initialDraft={null}
               onDraftRestored={() => {}}
             />

@@ -539,15 +539,15 @@ export async function getAvailableDaysForMonth(month: string, planId: string): P
 
   const DEFAULT_HOURS: Record<number, { start: string; end: string } | null> = {
     0: null,
-    1: { start: "13:00", end: "18:00" },
-    2: { start: "13:00", end: "18:00" },
-    3: { start: "13:00", end: "18:00" },
-    4: { start: "13:00", end: "18:00" },
-    5: { start: "13:00", end: "18:00" },
+    1: { start: "09:30", end: "18:00" },
+    2: { start: "09:30", end: "18:00" },
+    3: { start: "09:30", end: "18:00" },
+    4: { start: "09:30", end: "18:00" },
+    5: { start: "09:30", end: "18:00" },
     6: null,
   };
 
-  const OVERTIME_GRACE = 60;
+  const OVERTIME_GRACE = 30;
   const now       = new Date();
   const todayStr  = now.toISOString().slice(0, 10);
 

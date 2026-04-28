@@ -1,8 +1,8 @@
 import { Resend } from "resend";
 import { getAdminBookingAlertHtml } from "@/emails/AdminBookingAlert";
 import { getEmailLayoutHtml } from "@/emails/Layout";
-
 import { getReviewRequestHtml } from "@/emails/ReviewRequest";
+import { getTier, detailsToNextTier } from "@/lib/loyalty";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -35,8 +35,6 @@ export type BookingEmailData = {
   vehicleMake: string;
   vehicleModel: string;
   vehicleSize: string; // UI slug: compact | sedan | suv | truck
-  // Loyalty
-  rewardPointsEarned: number;
   // Optional / Admin specific
   serviceAddress?: string;
   distanceMiles?: number;
@@ -307,32 +305,6 @@ ${data.addonsJson?.length ? `
                 </tr>
               </table>
 
-              <!-- Reward points banner -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background-color:#fffbeb;border:1px solid #fde68a;
-                            border-radius:12px;margin-bottom:32px;">
-                <tr>
-                  <td style="padding:16px 20px;">
-                    <table cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="vertical-align:middle;padding-right:14px;font-size:26px;">
-                          &#127873;
-                        </td>
-                        <td>
-                          <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 3px;">
-                            You earned ${esc(data.rewardPointsEarned)} reward points!
-                          </p>
-                          <p style="font-size:12px;color:#b45309;margin:0;line-height:1.5;">
-                            Points are added to your account and can be redeemed
-                            for discounts on future services.
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
               <!-- What's next -->
               <p style="font-size:10px;font-weight:700;color:#aaaaaa;margin:0 0 14px;
                          letter-spacing:0.12em;text-transform:uppercase;">
@@ -572,8 +544,19 @@ function adminEmailHtml(
 
 // ─── On My Way Email ──────────────────────────────────────────────────────────
 
-function onMyWayHtml(data: { customerName: string }): string {
+function onMyWayHtml(data: {
+  customerName: string;
+  serviceName?: string;
+  bookingTime?: string;
+  serviceAddress?: string;
+}): string {
   const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+  const detailLines = [
+    data.serviceName ? `<tr><td style="padding:10px 20px;border-bottom:1px solid #27272a;"><span style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Service</span><br/><span style="font-size:14px;font-weight:600;color:#fafafa;">${esc(data.serviceName)}</span></td></tr>` : "",
+    data.bookingTime ? `<tr><td style="padding:10px 20px;border-bottom:1px solid #27272a;"><span style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Time</span><br/><span style="font-size:14px;font-weight:600;color:#fafafa;">${esc(data.bookingTime)}</span></td></tr>` : "",
+    data.serviceAddress ? `<tr><td style="padding:10px 20px;"><span style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Location</span><br/><span style="font-size:14px;font-weight:600;color:#fafafa;">&#128205; ${esc(data.serviceAddress)}</span></td></tr>` : "",
+  ].filter(Boolean).join("");
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -589,14 +572,27 @@ function onMyWayHtml(data: { customerName: string }): string {
         <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#18181b;border:1px solid #d4af37;border-radius:12px;overflow:hidden;">
           <tr>
             <td style="padding:28px 32px 16px;text-align:center;">
-              <img src="${LOGO_URL}" alt="Arise And Shine VT" width="120" height="120" style="display:block;margin:0 auto;" />
+              <img src="${LOGO_URL}" alt="Arise And Shine VT" width="80" height="80" style="display:block;margin:0 auto;" />
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 32px 32px;text-align:center;">
-              <h1 style="margin:0;font-size:24px;font-weight:700;color:#d4af37;">I'm on my way! 🚗</h1>
-              <p style="margin:16px 0 0;font-size:16px;color:#fafafa;line-height:1.6;">Hi ${firstName}, just wanted to let you know I'm headed your way for your detail.</p>
-              <p style="margin:8px 0 0;font-size:14px;color:#a1a1aa;">See you shortly!</p>
+            <td style="padding:8px 32px 24px;text-align:center;">
+              <div style="font-size:40px;margin-bottom:12px;">🚗</div>
+              <h1 style="margin:0;font-size:26px;font-weight:900;color:#d4af37;letter-spacing:-0.3px;">On My Way!</h1>
+              <p style="margin:12px 0 0;font-size:15px;color:#a1a1aa;line-height:1.6;">Hi ${firstName} — I'm headed your way. Make sure your vehicle is accessible and I'll see you shortly!</p>
+            </td>
+          </tr>
+          ${detailLines ? `
+          <tr>
+            <td style="padding:0 24px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#09090b;border-radius:10px;overflow:hidden;border:1px solid #27272a;">
+                ${detailLines}
+              </table>
+            </td>
+          </tr>` : ""}
+          <tr>
+            <td style="padding:0 24px 28px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#52525b;">Questions? Reply to this email or call/text us.</p>
             </td>
           </tr>
         </table>
@@ -610,6 +606,9 @@ function onMyWayHtml(data: { customerName: string }): string {
 export async function sendOnMyWayEmailNotification(data: {
   customerName: string;
   customerEmail: string;
+  serviceName?: string;
+  bookingTime?: string;
+  serviceAddress?: string;
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
   const resend = new Resend(process.env.RESEND_API_KEY);
@@ -767,8 +766,26 @@ export type UpdatedBookingEmailData = {
   newTime: string; // e.g. "10:00 AM"
 };
 
+function getRescheduleCalendarUrl(data: UpdatedBookingEmailData): string {
+  const [year, month, day] = data.newDate.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const match = data.newTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    if (match[3].toUpperCase() === "PM" && h !== 12) h += 12;
+    if (match[3].toUpperCase() === "AM" && h === 12) h = 0;
+    date.setHours(h, m);
+  }
+  const start = date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+  const end = new Date(date.getTime() + 3 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+  const title = `Detailing: ${data.serviceName} (Rescheduled)`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}`;
+}
+
 function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string): string {
   const firstName = (data.customerName.trim().split(/\s+/)[0] ?? "there").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const calUrl = getRescheduleCalendarUrl(data);
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -790,7 +807,10 @@ function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string
           <tr>
             <td style="background-color:#111111;padding:36px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
               <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">Booking Updated</h1>
-              <p style="color:#999999;font-size:14px;margin:0;">Your appointment is now scheduled for ${esc(formattedDate)} at ${esc(data.newTime)}.</p>
+              <p style="color:#999999;font-size:14px;margin:0 0 20px;">Your appointment is now scheduled for <strong style="color:#ffffff;">${esc(formattedDate)}</strong> at <strong style="color:#ffffff;">${esc(data.newTime)}</strong>.</p>
+              <a href="${calUrl}" style="display:inline-block;background-color:#ffffff;color:#111111;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px;text-decoration:none;letter-spacing:0.2px;">
+                📅 Update Google Calendar
+              </a>
             </td>
           </tr>
           <tr>
@@ -800,6 +820,15 @@ function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string
                 Your <strong>${esc(data.serviceName)}</strong> appointment has been rescheduled to
                 <strong>${esc(formattedDate)}</strong> at <strong>${esc(data.newTime)}</strong>.
               </p>
+
+              <!-- New date/time summary card -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f7f7f7;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+                ${detailRow("Service", esc(data.serviceName))}
+                ${detailRow("New Date", esc(formattedDate))}
+                ${detailRow("New Time", esc(data.newTime), true)}
+              </table>
+
               <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">
                 If you have any questions, reply to this email or contact us.
               </p>
@@ -916,10 +945,62 @@ function jobCompletedHtml(
     customerName: string;
     serviceName: string;
     amountPaid: number;
-    pointsEarned: number;
+    completedDetailCount?: number;
+    loyaltyDiscountPct?: number;
   }
 ): string {
   const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+
+  let loyaltySection = "";
+  if (data.completedDetailCount != null && data.completedDetailCount > 0 && data.loyaltyDiscountPct != null) {
+    const tier = getTier(data.completedDetailCount);
+    const nextNeeded = detailsToNextTier(data.completedDetailCount);
+    const isVip = data.loyaltyDiscountPct >= 20;
+    const tierLabel = tier?.label ?? "Member";
+
+    loyaltySection = `
+              <!-- Loyalty tier update -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:linear-gradient(135deg,#1a1a0e 0%,#1e1e12 100%);
+                            border:1px solid #d4af3740;border-radius:14px;
+                            overflow:hidden;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px 16px;">
+                    <p style="font-size:10px;font-weight:900;color:#d4af37;
+                               letter-spacing:0.22em;text-transform:uppercase;margin:0 0 12px;">
+                      &#9733; Loyalty Tier Update
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td>
+                          <p style="font-size:16px;font-weight:900;color:#fafafa;margin:0 0 2px;">
+                            ${esc(tierLabel)} — ${data.loyaltyDiscountPct}% off every detail
+                          </p>
+                          <p style="font-size:12px;color:#a1a1aa;margin:0;">
+                            ${data.completedDetailCount} vehicle detail${data.completedDetailCount === 1 ? "" : "s"} completed
+                          </p>
+                        </td>
+                        <td align="right" style="vertical-align:top;">
+                          <p style="font-size:22px;font-weight:900;color:#d4af37;margin:0;">
+                            ${data.loyaltyDiscountPct}%
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    ${isVip
+                      ? `<p style="font-size:13px;color:#d4af37;font-weight:700;margin:12px 0 0;">
+                           &#127942; You've reached VIP status — 20% off every detail, forever.
+                         </p>`
+                      : nextNeeded != null
+                      ? `<p style="font-size:12px;color:#71717a;margin:12px 0 0;">
+                           ${nextNeeded} more detail${nextNeeded === 1 ? "" : "s"} to unlock the next tier.
+                         </p>`
+                      : ""
+                    }
+                  </td>
+                </tr>
+              </table>`;
+  }
   
   return `
 <!DOCTYPE html>
@@ -1009,31 +1090,8 @@ function jobCompletedHtml(
                 </tr>
               </table>
 
-              <!-- Loyalty Points -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background-color:#fffbeb;border:1px solid #fde68a;
-                            border-radius:12px;margin-bottom:32px;">
-                <tr>
-                  <td style="padding:16px 20px;">
-                    <table cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="vertical-align:middle;padding-right:14px;font-size:26px;">
-                          &#127873;
-                        </td>
-                        <td>
-                          <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 3px;">
-                            You earned ${esc(data.pointsEarned)} points!
-                          </p>
-                          <p style="font-size:12px;color:#b45309;margin:0;line-height:1.5;">
-                            These points have been added to your account. 
-                            Remember, you can redeem them for discounts on future details!
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+
+              ${loyaltySection}
 
               <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;text-align:center;">
                 Love your detail? We'd appreciate a quick review! It helps us more than you know.
@@ -1078,7 +1136,8 @@ export async function sendJobCompletedEmail(data: {
   customerEmail: string;
   serviceName: string;
   amountPaid: number;
-  pointsEarned: number;
+  completedDetailCount?: number;
+  loyaltyDiscountPct?: number;
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY is not set — skipping completion email.");

@@ -11,7 +11,7 @@ export type AvailableDay = {
 };
 
 // Jobs may finish up to this many minutes past closing — same constant as BookingModal.
-const OVERTIME_GRACE_MINS = 60;
+const OVERTIME_GRACE_MINS = 30;
 
 // 30-minute grid — must match SLOT_INTERVAL_MIN in BookingModal.tsx.
 const SLOT_INTERVAL = 30;
@@ -130,12 +130,12 @@ export async function getNextAvailableDays(
 
     if (row) {
       if (!row.is_open) continue;
-      dayStart = timeToMins(row.start_time ?? "13:00");
+      dayStart = timeToMins(row.start_time ?? "09:30");
       dayEnd   = timeToMins(row.end_time   ?? "18:00");
     } else if (operatingHours.length === 0) {
-      // No hours configured yet — use sensible defaults (Mon–Fri 1–6 PM).
+      // No hours configured yet — use sensible defaults (Mon–Fri 9:30 AM–6 PM).
       if (dow === 0 || dow === 6) continue;
-      dayStart = timeToMins("13:00");
+      dayStart = timeToMins("09:30");
       dayEnd   = timeToMins("18:00");
     } else {
       // Hours ARE configured for other days but not this one — treat as closed.

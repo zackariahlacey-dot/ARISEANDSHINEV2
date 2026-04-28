@@ -50,11 +50,11 @@ export async function getAvailableSlotsForReschedule(
 
   const DEFAULT_HOURS: Record<number, { start: string; end: string } | null> = {
     0: null,
-    1: { start: "13:00", end: "18:00" },
-    2: { start: "13:00", end: "18:00" },
-    3: { start: "13:00", end: "18:00" },
-    4: { start: "13:00", end: "18:00" },
-    5: { start: "13:00", end: "18:00" },
+    1: { start: "09:30", end: "18:00" },
+    2: { start: "09:30", end: "18:00" },
+    3: { start: "09:30", end: "18:00" },
+    4: { start: "09:30", end: "18:00" },
+    5: { start: "09:30", end: "18:00" },
     6: null,
   };
 
@@ -88,7 +88,7 @@ export async function getAvailableSlotsForReschedule(
     total_duration_mins: r.duration_override ?? undefined,
   }));
 
-  const OVERTIME_GRACE_MINS = 60;
+  const OVERTIME_GRACE_MINS = 30;
   const slots: string[] = [];
   const interval = 30;
 

@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getAuthProfile, type AuthProfile } from "@/app/actions/getAuthProfile";
-import { Gift, LogOut, Loader2 } from "lucide-react";
+import { getTier } from "@/lib/loyalty";
+import { Shield, LogOut, Loader2 } from "lucide-react";
 
 export function LoyaltyHeaderButton() {
-  const router = useRouter();
   const [profile, setProfile] = useState<AuthProfile | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +51,9 @@ export function LoyaltyHeaderButton() {
   }
 
   if (profile) {
+    const tier = getTier(profile.completedDetailCount);
+    const badgeLabel = tier ? `${tier.pct}% Off` : "Member";
+
     return (
       <div className="flex items-center gap-3">
         <Link
@@ -59,8 +61,8 @@ export function LoyaltyHeaderButton() {
           className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
           title="View loyalty dashboard"
         >
-          <Gift size={14} className="text-amber-400/90" />
-          <span>{profile.rewardPoints} pts</span>
+          <Shield size={14} className="text-amber-400/90" />
+          <span>{badgeLabel}</span>
         </Link>
         <button
           type="button"
@@ -80,7 +82,7 @@ export function LoyaltyHeaderButton() {
       href="/auth/login?redirect=/"
       className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
     >
-      <Gift size={14} className="text-amber-400/90" />
+      <Shield size={14} className="text-amber-400/90" />
       Loyalty Login
     </Link>
   );

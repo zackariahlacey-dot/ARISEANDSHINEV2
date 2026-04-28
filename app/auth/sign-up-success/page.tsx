@@ -79,7 +79,7 @@ function SuccessContent() {
             {isReferral ? (
               <>Referral <span className="text-[#D4AF37]">Reward</span></>
             ) : (
-              <>Welcome <span className="text-[#D4AF37]">Bonus</span></>
+              <>Welcome to <span className="text-[#D4AF37]">Rewards</span></>
             )}
           </h1>
 
@@ -89,14 +89,14 @@ function SuccessContent() {
                 <Sparkles className="w-6 h-6 text-[#D4AF37] animate-bounce" />
               </div>
               <span className="text-4xl md:text-5xl font-black text-[#D4AF37] tracking-tighter">
-                {isReferral ? "10% OFF" : "+100 PTS"}
+                {isReferral ? "10% OFF" : "5% OFF"}
               </span>
             </div>
-            
+
             <p className="text-zinc-400 text-sm md:text-lg font-medium leading-relaxed max-w-xs mx-auto">
-              {isReferral 
+              {isReferral
                 ? "Your referral discount has been applied to your account! Ready for your first shine?"
-                : "We've added 100 loyalty points to your new account as a welcome gift. Enjoy the rewards!"}
+                : "Book your first vehicle detail and your 5% loyalty discount unlocks automatically. It only goes up from there!"}
             </p>
           </div>
         </motion.div>

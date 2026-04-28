@@ -30,7 +30,7 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 const EMAIL_TESTS = [
   { id: "confirmation",   label: "Booking Confirmation (Customer)",  icon: "📩", desc: "Full confirmation with prep tips" },
   { id: "on-my-way",      label: "On My Way",                        icon: "🚗", desc: "Heads-up before arrival" },
-  { id: "completed",      label: "Job Completed",                    icon: "✅", desc: "Completion with points earned" },
+  { id: "completed",      label: "Job Completed",                    icon: "✅", desc: "Completion with loyalty tier update" },
   { id: "review",         label: "Review + Maintenance Upsell",      icon: "⭐", desc: "24h follow-up" },
   { id: "reschedule",     label: "Reschedule Notice",                icon: "📅", desc: "Date/time changed" },
   { id: "cancel",         label: "Cancellation",                     icon: "❌", desc: "Booking cancelled" },

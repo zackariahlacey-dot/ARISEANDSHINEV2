@@ -91,32 +91,5 @@ export async function cancelBooking(bookingId: string): Promise<{
     }
   }
 
-  // ── Reverse earned points ──────────────────────────────────────────────────
-  const profileId = (booking.user_id as string | null);
-  if (profileId) {
-    const totalPrice = Number((booking as any).total_price) || 0;
-    const pointsToReverse = Math.floor(Math.max(0, totalPrice));
-    if (pointsToReverse > 0) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("reward_points, lifetime_points")
-        .eq("id", profileId)
-        .maybeSingle();
-      if (prof) {
-        const newReward = Math.max(0, (prof.reward_points ?? 0) - pointsToReverse);
-        const newLifetime = Math.max(0, (prof.lifetime_points ?? 0) - pointsToReverse);
-        await supabase
-          .from("profiles")
-          .update({ reward_points: newReward, lifetime_points: newLifetime })
-          .eq("id", profileId);
-        await supabase.from("point_transactions").insert({
-          user_id: profileId,
-          amount: -pointsToReverse,
-          description: `Cancelled booking — ${(booking as any).service_name ?? serviceName}`,
-        });
-      }
-    }
-  }
-
   return { success: true, refunded };
 }

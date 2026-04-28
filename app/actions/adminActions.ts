@@ -201,7 +201,7 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     total_duration_mins: b.duration_override ?? undefined,
   }));
 
-  if (_checkConflict(slotsWithDur, requestedSlot, newDur)) {
+  if (_checkConflict(slotsWithDur, requestedSlot, newDur) && !payload.allowOverlap) {
     return { success: false, error: "That time is already booked. Please pick a different time slot." };
   }
 
@@ -316,7 +316,6 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     vehicleMake: snapshotMake,
     vehicleModel: snapshotModel,
     vehicleSize: payload.vehicleSize,
-    rewardPointsEarned: 0,
     serviceAddress: payload.address,
     notes: payload.notes,
   }, { skipCustomerEmail: true }).catch(e => console.error("Admin Email Fail:", e));
@@ -342,7 +341,7 @@ export async function getAllBookings() {
     .from("bookings")
     .select(`
       *,
-      profiles:user_id(id, first_name, last_name, phone, reward_points),
+      profiles:user_id(id, first_name, last_name, phone, completed_detail_count, loyalty_discount_pct),
       vehicles:vehicle_id(id, make, model, year, size),
       services:service_id(name, description)
     `)
@@ -416,7 +415,8 @@ export async function getAllClients() {
         last_name: nameParts.slice(1).join(" ") || "",
         phone: b.customer_phone,
         email: b.customer_email,
-        reward_points: 0,
+        completed_detail_count: 0,
+        loyalty_discount_pct: 0,
         vehicles: [],
         bookings: [],
         _is_orphan: true,
@@ -569,11 +569,21 @@ export async function rescheduleBookingAction(id: string, date: string, time: st
 
 export async function sendOnMyWayEmail(bookingId: string) {
   const supabase = createAdminClient();
-  const { data: booking } = await supabase.from("bookings").select("*, customer_name, customer_email, profiles:user_id(id, first_name, last_name)").eq("id", bookingId).single();
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("*, customer_name, customer_email, service_name, booking_time, service_address, profiles:user_id(id, first_name, last_name)")
+    .eq("id", bookingId)
+    .single();
   if (!booking) return { success: false, error: "Booking not found" };
   const { name, email } = await getBookingContact(booking);
   if (email) {
-    await sendOnMyWayEmailNotification({ customerName: name, customerEmail: email });
+    await sendOnMyWayEmailNotification({
+      customerName: name,
+      customerEmail: email,
+      serviceName: (booking.service_name as string | null) ?? undefined,
+      bookingTime: (booking.booking_time as string | null) ?? undefined,
+      serviceAddress: (booking.service_address as string | null) ?? undefined,
+    });
     return { success: true };
   }
   return { success: false, error: "No email found" };
@@ -634,7 +644,7 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const supabase = createAdminClient();
   const { data: booking } = await supabase
     .from("bookings")
-    .select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name, reward_points, lifetime_points), services:service_id(name)")
+    .select("*, customer_name, customer_email, service_name, profiles:user_id(id, first_name, last_name, completed_detail_count, loyalty_discount_pct), services:service_id(name)")
     .eq("id", id)
     .single();
 
@@ -646,47 +656,32 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const serviceName = booking.service_name || booking.services?.name || "Detailing Service";
 
   if (status === "completed") {
-    // Only award points for admin-created bookings (customer bookings already
-    // earn points at the time of booking / Stripe payment). Admin-created
-    // booking notes contain the "(admin-created)" marker.
-    const isAdminCreated = typeof booking.notes === "string" &&
-      booking.notes.includes("admin-created");
+    // ── Update loyalty tier if this is a qualifying car detail ──────────────
+    const { CAR_DETAIL_SERVICES, getDiscountPct } = await import("@/lib/loyalty");
+    const isCarDetail = CAR_DETAIL_SERVICES.has(serviceName);
 
-    const pointsAwarded = isAdminCreated
-      ? Math.floor(Math.max(0, Number(booking.total_price)))
-      : 0;
+    let loyaltyEmailData: { completedDetailCount?: number; loyaltyDiscountPct?: number } = {};
 
-    if (isAdminCreated && pointsAwarded > 0 && booking.user_id && booking.profiles) {
-      const currentReward   = (booking.profiles.reward_points as number)   || 0;
-      const currentLifetime = (booking.profiles as any).lifetime_points     || 0;
+    if (isCarDetail && booking.user_id) {
+      const profileRow = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
+      const currentCount = (profileRow as any)?.completed_detail_count ?? 0;
+      const newCount = currentCount + 1;
+      const newPct = getDiscountPct(newCount);
       await supabase.from("profiles").update({
-        reward_points:   currentReward   + pointsAwarded,
-        lifetime_points: currentLifetime + pointsAwarded,
+        completed_detail_count: newCount,
+        loyalty_discount_pct: newPct,
       }).eq("id", booking.user_id);
-
-      await supabase.from("point_transactions").insert({
-        user_id:     booking.user_id,
-        amount:      pointsAwarded,
-        description: `Earned from ${serviceName}`,
-      });
+      loyaltyEmailData = { completedDetailCount: newCount, loyaltyDiscountPct: newPct };
     }
 
     if (email) {
-      // For customer-initiated bookings, points were already awarded at payment
-      // time. Use total_price as the earned amount so the receipt is accurate.
-      const emailPoints = isAdminCreated
-        ? pointsAwarded
-        : Math.floor(Math.max(0, Number(booking.total_price)));
       await sendJobCompletedEmail({
         customerName: name,
         customerEmail: email,
         serviceName,
         amountPaid: Number(booking.total_price),
-        pointsEarned: emailPoints,
+        ...loyaltyEmailData,
       }).catch(e => console.error("Completion email fail:", e));
-      // 24-hour review + upsell is handled by the /api/cron/review-emails cron job,
-      // which runs daily and checks review_email_sent_at. No setTimeout here because
-      // serverless functions don't keep timers alive between requests.
     }
   } else if (status === "cancelled") {
     if (email) {
@@ -829,7 +824,6 @@ export async function triggerTestEmail(type: string, targetEmail: string) {
     vehicleMake: "Tesla",
     vehicleModel: "Model Y",
     vehicleSize: "suv",
-    rewardPointsEarned: 250,
     serviceAddress: "123 Maple St, Burlington, VT",
     bookingId: "test-uuid-12345",
   };
@@ -848,7 +842,6 @@ export async function triggerTestEmail(type: string, targetEmail: string) {
           customerEmail: email,
           serviceName: sampleData.serviceName,
           amountPaid: sampleData.servicePrice,
-          pointsEarned: sampleData.rewardPointsEarned,
         });
         break;
       case 'review':
@@ -981,44 +974,13 @@ export async function updateCustomerProfile(id: string, payload: any) {
   return { success: true };
 }
 
+/** @deprecated Points system removed — loyalty is now tier-based */
 export async function awardPointsAction(
-  profileId: string,
-  points: number,
-  reason: string
+  _profileId: string,
+  _points: number,
+  _reason: string
 ): Promise<{ success: boolean; newBalance?: number; error?: string }> {
-  if (!profileId) return { success: false, error: "Missing profile ID." };
-  const pts = Math.round(points);
-  if (!pts || pts === 0) return { success: false, error: "Points must be a non-zero number." };
-  if (Math.abs(pts) > 10000) return { success: false, error: "Points adjustment exceeds limit." };
-
-  const supabase = createAdminClient();
-  const { data: profile, error: fetchErr } = await supabase
-    .from("profiles")
-    .select("reward_points, lifetime_points")
-    .eq("id", profileId)
-    .single();
-
-  if (fetchErr || !profile) return { success: false, error: "Profile not found." };
-
-  const newReward   = Math.max(0, (profile.reward_points   ?? 0) + pts);
-  const newLifetime = pts > 0
-    ? (profile.lifetime_points ?? 0) + pts
-    : (profile.lifetime_points ?? 0); // deductions don't reduce lifetime
-
-  const { error: updateErr } = await supabase
-    .from("profiles")
-    .update({ reward_points: newReward, lifetime_points: newLifetime })
-    .eq("id", profileId);
-
-  if (updateErr) return { success: false, error: updateErr.message };
-
-  await supabase.from("point_transactions").insert({
-    user_id:     profileId,
-    amount:      pts,
-    description: reason.trim() || (pts > 0 ? "Admin points award" : "Admin points adjustment"),
-  });
-
-  return { success: true, newBalance: newReward };
+  return { success: false, error: "Points system has been replaced with loyalty tiers." };
 }
 
 // ── COUPONS ──
@@ -1388,7 +1350,7 @@ export async function adminQuickBookV2(payload: any): Promise<{ success: boolean
     total_duration_mins: b.duration_override ?? undefined,
   }));
   const hasConflict = checkSlotConflict(existingWithDur, newStartMins, newDuration);
-  if (hasConflict) return { success: false, error: "That time slot conflicts with an existing booking." };
+  if (hasConflict && !payload.allowOverlap) return { success: false, error: "That time slot conflicts with an existing booking." };
 
   // Delegate the rest to the existing action (profile/vehicle/booking/emails)
   return adminQuickBookAction({ ...payload, bookingTime: to24h(payload.bookingTime).slice(0,5) });
@@ -1410,7 +1372,6 @@ export async function runTestBookingAction(adminEmail: string): Promise<{ succes
     vehicleMake: "Toyota",
     vehicleModel: "Camry",
     vehicleSize: "sedan",
-    rewardPointsEarned: 250,
     serviceAddress: "123 Test St, Burlington, VT",
     bookingId: "test-" + Date.now(),
   };
@@ -1431,7 +1392,6 @@ export async function runTestBookingAction(adminEmail: string): Promise<{ succes
       customerEmail: adminEmail,
       serviceName: sampleData.serviceName,
       amountPaid: sampleData.servicePrice,
-      pointsEarned: sampleData.rewardPointsEarned,
     });
     log.push("✅ Job Completed email sent");
   } catch (e: any) { log.push("❌ Job Completed: " + e.message); }

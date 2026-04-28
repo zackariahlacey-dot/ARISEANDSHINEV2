@@ -39,18 +39,14 @@ export async function createProfileWithReferral(
     matchedReferrerId = referrer?.id ?? null;
   }
 
-  const WELCOME_BONUS_POINTS = 100;
-
   // 2. Reconciliation: Find guest data before creating the final profile
-  // We look for profiles with matching email but NO corresponding auth user (guest profiles)
   const { data: guestProfiles } = await supabase
     .from("profiles")
-    .select("id, reward_points, lifetime_points, phone")
+    .select("id, phone, completed_detail_count")
     .eq("email", email.trim().toLowerCase());
 
-  let guestPoints = 0;
-  let guestLifetimePoints = 0;
   let guestPhone: string | null = null;
+  let guestDetailCount = 0;
   const guestIds: string[] = [];
 
   if (guestProfiles && guestProfiles.length > 0) {
@@ -60,12 +56,15 @@ export async function createProfileWithReferral(
       const { data: authRow } = await supabase.auth.admin.getUserById(gp.id);
       if (authRow?.user) continue;
 
-      guestPoints += gp.reward_points || 0;
-      guestLifetimePoints += gp.lifetime_points || 0;
       if (!guestPhone && gp.phone) guestPhone = gp.phone;
+      guestDetailCount += gp.completed_detail_count || 0;
       guestIds.push(gp.id);
     }
   }
+
+  // Compute loyalty discount from inherited detail count
+  const { getDiscountPct } = await import("@/lib/loyalty");
+  const loyaltyPct = getDiscountPct(guestDetailCount);
 
   // 3. Create/Upsert the real profile
   const { error } = await supabase.from("profiles").upsert(
@@ -73,8 +72,8 @@ export async function createProfileWithReferral(
       id: userId,
       email: email.trim().toLowerCase(),
       referral_code: referralCodeToSave,
-      reward_points: WELCOME_BONUS_POINTS + guestPoints,
-      lifetime_points: WELCOME_BONUS_POINTS + guestLifetimePoints,
+      completed_detail_count: guestDetailCount,
+      loyalty_discount_pct: loyaltyPct,
       phone: guestPhone || null,
       ...(firstName ? { first_name: firstName } : {}),
       ...(lastName ? { last_name: lastName } : {}),
@@ -89,32 +88,12 @@ export async function createProfileWithReferral(
     return { ok: false, referralCode: referralCodeToSave };
   }
 
-  // 3b. Record welcome bonus in ledger (only if this is a genuinely new profile)
-  const { count: existingTxCount } = await supabase
-    .from("point_transactions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-  if ((existingTxCount ?? 0) === 0) {
-    await supabase.from("point_transactions").insert({
-      user_id:     userId,
-      amount:      WELCOME_BONUS_POINTS,
-      description: "Welcome bonus",
-    });
-  }
-
-  // 4. Move Bookings, Vehicles, and Transactions if guests were found
+  // 4. Move Bookings and Vehicles if guests were found
   if (guestIds.length > 0) {
     try {
-      // Update bookings
       await supabase.from("bookings").update({ user_id: userId }).in("user_id", guestIds);
-      // Update vehicles
       await supabase.from("vehicles").update({ user_id: userId }).in("user_id", guestIds);
-      // Update transactions
-      await supabase.from("point_transactions").update({ user_id: userId }).in("user_id", guestIds);
-      
-      // Delete obsolete guest profiles
       await supabase.from("profiles").delete().in("id", guestIds);
-      
       console.log(`[Reconciliation] Merged ${guestIds.length} guest profiles into User ${userId}`);
     } catch (mergeErr) {
       console.error("[createProfileWithReferral] Merge Error:", mergeErr);

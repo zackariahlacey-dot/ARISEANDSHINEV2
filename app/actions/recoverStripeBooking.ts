@@ -206,7 +206,6 @@ export async function recoverStripeBooking(sessionId: string): Promise<RecoveryR
     vehicleMake:   m.vehicleMake ?? "",
     vehicleModel:  m.vehicleModel ?? "",
     vehicleSize:   m.vehicleSize ?? "sedan",
-    rewardPointsEarned: earnedPoints,
     serviceAddress: m.serviceAddress || undefined,
     distanceMiles:  m.distanceMiles ? Number(m.distanceMiles) : undefined,
     paymentMethod:  "pay_now",

@@ -53,7 +53,7 @@ const TEMPLATES = [
     color: "text-pink-500",
     bg: "bg-pink-500/10",
     subject: "Thank you for your business!",
-    body: "Hi {name},\n\nJust wanted to send a quick note to say thank you for your business today. It was a pleasure working on your {vehicle}.\n\nYou've earned loyalty points for today's service which you can use for discounts in the future.\n\nIf you need anything else, just reply to this email!\nZack"
+    body: "Hi {name},\n\nJust wanted to send a quick note to say thank you for your business today. It was a pleasure working on your {vehicle}.\n\nThis detail counts toward your loyalty tier — the more you book, the bigger your discount gets.\n\nIf you need anything else, just reply to this email!\nZack"
   },
   {
     id: "omw",

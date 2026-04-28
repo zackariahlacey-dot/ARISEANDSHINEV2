@@ -13,7 +13,8 @@ export const AdminProfileSchema = z.object({
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   phone: z.string().nullable(),
-  reward_points: z.number().default(0),
+  completed_detail_count: z.number().default(0),
+  loyalty_discount_pct: z.number().default(0),
 });
 
 export const AdminBookingSchema = z.object({
@@ -63,7 +64,7 @@ export const AdminBookingSchema = z.object({
     .nullable()
     .optional(),
 
-  // ── Relationship joins (used for account linking badge + points display) ─
+  // ── Relationship joins (used for account linking badge + loyalty display) ─
   profiles: AdminProfileSchema.nullable(),
   vehicles: AdminVehicleSchema.nullable(),
   services: z.object({ name: z.string() }).nullable(),
@@ -71,6 +72,7 @@ export const AdminBookingSchema = z.object({
 
 export type AdminBooking = z.infer<typeof AdminBookingSchema>;
 export type AdminCustomer = z.infer<typeof AdminProfileSchema> & {
-  reward_points: number;
+  completed_detail_count: number;
+  loyalty_discount_pct: number;
   _booking_count?: number;
 };

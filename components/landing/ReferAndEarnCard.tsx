@@ -65,11 +65,8 @@ export function ReferAndEarnCard({ referralCode }: ReferAndEarnCardProps) {
         <p className="text-sm text-zinc-300 leading-relaxed">
           Give your friend{" "}
           <span className="text-white font-semibold">10% off</span> their first
-          detail — you earn{" "}
-          <span className="text-[#D4AF37] font-semibold">
-            200 points ($20 value)
-          </span>{" "}
-          when they book.
+          detail — and both of you build toward your loyalty tier
+          faster when they book.
         </p>
       </div>
 

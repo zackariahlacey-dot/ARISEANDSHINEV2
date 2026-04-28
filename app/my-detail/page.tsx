@@ -167,7 +167,7 @@ export default function MyDetailPage() {
             href="/auth/login?redirect=/protected"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#D4AF37] hover:underline"
           >
-            Sign in for loyalty points &amp; full history <ChevronRight size={13} />
+            Sign in for loyalty discounts &amp; full history <ChevronRight size={13} />
           </Link>
         </div>
       </div>

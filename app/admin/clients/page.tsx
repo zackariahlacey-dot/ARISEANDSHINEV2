@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAllClients, updateCustomerProfile, sendCustomEmailAction, massEmailAction,
-  awardPointsAction,
 } from "@/app/actions/adminActions";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
@@ -15,7 +14,6 @@ import {
   Car, Star, Crown, AlertTriangle,
   Save, CheckCircle2, ChevronRight,
   Loader2, Send, X, ArrowLeft, UserCheck, UserX, CalendarPlus, Repeat,
-  Gift, Plus, Minus,
 } from "lucide-react";
 import { sendMonthlyPlanInvite } from "@/app/actions/monthlySubscriptions";
 import { format, differenceInMonths, differenceInDays, parseISO } from "date-fns";
@@ -101,12 +99,6 @@ export default function ClientsPage() {
   const [savingNotes, setSavingNotes]     = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
   const [view, setView]           = useState<"list" | "email">("list");
-
-  // Points award state
-  const [showPointsPanel, setShowPointsPanel] = useState(false);
-  const [pointsAmount, setPointsAmount]       = useState("");
-  const [pointsReason, setPointsReason]       = useState("");
-  const [awardingPoints, setAwardingPoints]   = useState(false);
 
   // Email state
   const [emailMode, setEmailMode]   = useState<"individual" | "mass">("individual");
@@ -465,9 +457,6 @@ export default function ClientsPage() {
                   setClientTab("overview");
                   setNotesValue(c.notes ?? "");
                   setEditingNotes(false);
-                  setShowPointsPanel(false);
-                  setPointsAmount("");
-                  setPointsReason("");
                 }}
                 className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
               >
@@ -712,92 +701,26 @@ export default function ClientsPage() {
                   )}
                 </div>
 
-                {/* Loyalty points */}
-                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-3">
+                {/* Loyalty tier */}
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Star size={13} className="text-amber-500" />
-                      <span className="text-sm font-bold">Loyalty Points</span>
+                      <span className="text-sm font-bold">Loyalty Tier</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-amber-500 font-black text-base">{activeClient.reward_points ?? 0}</span>
-                      {activeClient._is_signed_up ? (
-                        <button
-                          type="button"
-                          onClick={() => { setShowPointsPanel(p => !p); setPointsAmount(""); setPointsReason(""); }}
-                          className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition-colors active:scale-90"
-                          title="Award / adjust points"
-                        >
-                          <Gift size={13} />
-                        </button>
-                      ) : null}
+                      <span className="text-amber-500 font-black text-base">
+                        {(activeClient.loyalty_discount_pct ?? 0) > 0
+                          ? `${activeClient.loyalty_discount_pct}% off`
+                          : "No tier yet"}
+                      </span>
                     </div>
                   </div>
-
-                  {/* No-account notice */}
-                  {!activeClient._is_signed_up && (
-                    <p className="text-[11px] text-zinc-600 italic">
-                      Guest booking — points can only be awarded to clients with an account.
-                    </p>
-                  )}
-
-                  {/* Award panel */}
-                  {activeClient._is_signed_up && showPointsPanel && (
-                    <div className="space-y-2 pt-1 border-t border-white/[0.06]">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Award / Deduct Points</p>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            value={pointsAmount}
-                            onChange={e => setPointsAmount(e.target.value)}
-                            placeholder="e.g. 50 or -25"
-                            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
-                          />
-                        </div>
-                      </div>
-                      <input
-                        type="text"
-                        value={pointsReason}
-                        onChange={e => setPointsReason(e.target.value)}
-                        placeholder="Reason (optional)"
-                        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
-                      />
-                      <button
-                        type="button"
-                        disabled={awardingPoints || !pointsAmount || pointsAmount === "0"}
-                        onClick={async () => {
-                          const pts = parseInt(pointsAmount, 10);
-                          if (isNaN(pts) || pts === 0) { toast("Enter a valid number of points", "error"); return; }
-                          setAwardingPoints(true);
-                          try {
-                            const res = await awardPointsAction(
-                              activeClient.id,
-                              pts,
-                              pointsReason || (pts > 0 ? "Admin award" : "Admin adjustment"),
-                            );
-                            if (res.success) {
-                              toast(`${pts > 0 ? "+" : ""}${pts} points applied. New balance: ${res.newBalance}`);
-                              setShowPointsPanel(false);
-                              setPointsAmount("");
-                              setPointsReason("");
-                              queryClient.invalidateQueries({ queryKey: ["admin", "clients"] });
-                              setActiveClient((prev: any) => prev ? { ...prev, reward_points: res.newBalance } : prev);
-                            } else {
-                              toast(res.error ?? "Failed", "error");
-                            }
-                          } catch { toast("Failed to award points", "error"); }
-                          setAwardingPoints(false);
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-black text-sm font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        {awardingPoints
-                          ? <Loader2 className="animate-spin" size={14} />
-                          : <><Gift size={14} /> {parseInt(pointsAmount || "0", 10) < 0 ? "Deduct" : "Award"} Points</>
-                        }
-                      </button>
-                    </div>
-                  )}
+                  <p className="text-[11px] text-zinc-600 mt-1.5">
+                    {activeClient._is_signed_up
+                      ? `${activeClient.completed_detail_count ?? 0} qualifying vehicle detail${(activeClient.completed_detail_count ?? 0) !== 1 ? "s" : ""} completed`
+                      : "Guest booking — loyalty tracks on signed-up accounts only."}
+                  </p>
                 </div>
 
                 {/* Vehicles */}

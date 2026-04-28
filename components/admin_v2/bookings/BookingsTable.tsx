@@ -388,7 +388,7 @@ function BookingDetail({
             <div className="flex items-center gap-2 mt-1">
               <ShieldCheck size={12} className="text-[#D4AF37]" />
               <span className="text-[10px] text-[#D4AF37] font-bold">
-                Linked Account · {booking.profiles?.reward_points ?? 0} pts
+                Linked Account · {booking.profiles?.loyalty_discount_pct ?? 0}% loyalty
               </span>
             </div>
           ) : (

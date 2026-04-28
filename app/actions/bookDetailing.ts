@@ -785,7 +785,6 @@ export async function bookDetailing(
       vehicleMake: payload.vehicleMake,
       vehicleModel: payload.vehicleModel,
       vehicleSize: payload.vehicleSize,
-      rewardPointsEarned: earnedPoints,
       serviceAddress: payload.serviceAddress || undefined,
       distanceMiles: payload.distanceMiles || undefined,
       paymentMethod: payload.paymentMethod,

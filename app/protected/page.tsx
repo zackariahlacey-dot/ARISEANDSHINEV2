@@ -1,43 +1,17 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { Gift, Crown, ChevronRight, Sparkles, CalendarDays, Clock, TrendingUp, Star } from "lucide-react";
+import { ChevronRight, Sparkles, CalendarDays, Clock, Crown, Trophy, Zap, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
-import { getRecentPointTransactions } from "@/app/actions/getRecentPointTransactions";
 import { ensureReferralCode } from "@/app/actions/createProfileWithReferral";
 import { ReferAndEarnCard } from "@/components/landing/ReferAndEarnCard";
-import { XpHistoryCard } from "@/components/dashboard/XpHistoryCard";
 import { getClientBookings } from "@/app/actions/getClientBookings";
 import { BookingCard } from "@/components/dashboard/BookingCard";
 import { getMyActiveSubscription } from "@/app/actions/monthlySubscriptions";
 import { MonthlyPlanCard } from "@/components/dashboard/MonthlyPlanCard";
 import { SiteHeader } from "@/components/landing/SiteHeader";
-
-// ── Tier system ────────────────────────────────────────────────────────────────
-
-const TIERS = [
-  { name: "Member",   min: 0,    max: 499,      color: "#71717a", ring: "ring-zinc-600/40",    bg: "from-zinc-800/60 to-zinc-800/30",      icon: "⭐" },
-  { name: "Silver",   min: 500,  max: 1499,     color: "#94a3b8", ring: "ring-slate-500/40",   bg: "from-slate-700/40 to-slate-800/20",    icon: "🥈" },
-  { name: "Gold",     min: 1500, max: 2999,     color: "#D4AF37", ring: "ring-[#D4AF37]/40",   bg: "from-amber-900/30 to-amber-900/10",    icon: "🥇" },
-  { name: "Platinum", min: 3000, max: Infinity, color: "#e2e8f0", ring: "ring-slate-300/40",   bg: "from-slate-600/30 to-slate-700/10",    icon: "💎" },
-] as const;
-
-function getTier(lifetimePts: number) {
-  return TIERS.find((t) => lifetimePts >= t.min && lifetimePts <= t.max) ?? TIERS[0];
-}
-
-function getNextTierProgress(lifetimePts: number) {
-  const idx = TIERS.findIndex((t) => lifetimePts >= t.min && lifetimePts <= t.max);
-  if (idx === -1 || idx === TIERS.length - 1) return null;
-  const current = TIERS[idx];
-  const next = TIERS[idx + 1];
-  const range = next.min - current.min;
-  const earned = lifetimePts - current.min;
-  const progress = Math.min(100, Math.round((earned / range) * 100));
-  const remaining = next.min - lifetimePts;
-  return { nextTier: next.name, nextColor: next.color, progress, remaining };
-}
+import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
@@ -50,8 +24,8 @@ async function Dashboard() {
   if (!user) redirect("/auth/login?redirect=/protected");
 
   const profile = await getAuthProfile();
-  const currentPoints = profile?.current_points ?? 0;
-  const lifetimePoints = profile?.lifetime_points ?? 0;
+  const completedCount = profile?.completedDetailCount ?? 0;
+  const discountPct    = profile?.loyaltyDiscountPct ?? 0;
 
   const firstName =
     (user.user_metadata?.first_name as string | undefined)?.trim() ||
@@ -59,14 +33,21 @@ async function Dashboard() {
     "there";
 
   const referralCode = profile?.referralCode ?? (await ensureReferralCode(user.id));
-  const transactions = await getRecentPointTransactions(user.id);
-  const dollarValue = (currentPoints / 10).toFixed(2);
   const { upcoming, past } = await getClientBookings(user.id);
   const activeSub = await getMyActiveSubscription(user.id);
 
-  const tier = getTier(lifetimePoints);
-  const nextTierInfo = getNextTierProgress(lifetimePoints);
+  const currentTier = getTier(completedCount);
+  const toNext = detailsToNextTier(completedCount);
   const totalBookings = upcoming.length + past.length;
+
+  // For the progress bar: find current tier threshold and next threshold
+  const thresholds = [0, 1, 3, 5, 10];
+  const currentThreshIdx = thresholds.findLastIndex(t => completedCount >= t);
+  const prevThresh = thresholds[currentThreshIdx] ?? 0;
+  const nextThresh = thresholds[currentThreshIdx + 1] ?? null;
+  const progressPct = nextThresh
+    ? Math.min(100, Math.round(((completedCount - prevThresh) / (nextThresh - prevThresh)) * 100))
+    : 100;
 
   return (
     <div className="relative min-h-screen bg-zinc-950">
@@ -98,19 +79,19 @@ async function Dashboard() {
               <p className="text-xl font-black text-zinc-100">{totalBookings}</p>
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3">
-              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Points</p>
-              <p className="text-xl font-black text-[#D4AF37]">{currentPoints.toLocaleString()}</p>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Details</p>
+              <p className="text-xl font-black text-[#D4AF37]">{completedCount}</p>
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/60 px-4 py-3">
-              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Value</p>
-              <p className="text-xl font-black text-emerald-400">${dollarValue}</p>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">Discount</p>
+              <p className="text-xl font-black text-emerald-400">{discountPct > 0 ? `${discountPct}%` : "—"}</p>
             </div>
           </div>
 
-          {/* ── Loyalty Points Card ──────────────────────────────────── */}
+          {/* ── Loyalty Tier Card ────────────────────────────────────── */}
           <div
             className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/15 p-6 mb-4"
-            style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.06) 0%, rgba(24,24,27,0.9) 60%)" }}
+            style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.07) 0%, rgba(24,24,27,0.95) 60%)" }}
           >
             {/* Gold glow */}
             <div
@@ -119,69 +100,106 @@ async function Dashboard() {
               style={{ background: "radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 70%)" }}
             />
 
-            {/* Tier badge + points row */}
-            <div className="flex items-start justify-between gap-4 mb-4">
+            {/* Header row */}
+            <div className="flex items-start justify-between gap-4 mb-5">
               <div>
                 <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-2">
-                  Loyalty Rewards
+                  Loyalty Discount
                 </p>
-                <div className="flex flex-wrap items-baseline gap-2 mb-1">
-                  <span
-                    className="text-5xl font-black bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-                    style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.3))" }}
-                  >
-                    {currentPoints.toLocaleString()}
-                  </span>
-                  <span className="text-base font-semibold text-zinc-500">pts</span>
-                </div>
+                {currentTier ? (
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span
+                      className="text-5xl font-black bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
+                      style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.3))" }}
+                    >
+                      {discountPct}%
+                    </span>
+                    <span className="text-base font-semibold text-zinc-500">off</span>
+                  </div>
+                ) : (
+                  <p className="text-lg font-black text-zinc-400 mb-1">No discount yet</p>
+                )}
                 <p className="text-sm text-zinc-500">
-                  Worth <span className="text-[#D4AF37] font-semibold">${dollarValue}</span> off your next booking
+                  {currentTier
+                    ? `Auto-applied at checkout on vehicle details`
+                    : `Book your first vehicle detail to start earning`}
                 </p>
               </div>
 
               {/* Tier badge */}
-              <div className={`shrink-0 flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl bg-gradient-to-b ${tier.bg} ring-1 ${tier.ring}`}>
-                <span className="text-2xl">{tier.icon}</span>
-                <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: tier.color }}>{tier.name}</span>
+              <div className="shrink-0 flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl bg-zinc-900/80 border border-[#D4AF37]/20">
+                {currentTier ? (
+                  <>
+                    {currentTier.label === "VIP" ? (
+                      <Trophy size={22} className="text-[#D4AF37]" />
+                    ) : currentTier.label === "Gold" ? (
+                      <Zap size={22} className="text-[#D4AF37]" />
+                    ) : currentTier.label === "Silver" ? (
+                      <ShieldCheck size={22} className="text-zinc-300" />
+                    ) : (
+                      <Sparkles size={22} className="text-zinc-400" />
+                    )}
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-[#D4AF37]">
+                      {currentTier.label}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={22} className="text-zinc-600" />
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-zinc-600">New</span>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Progress to next tier */}
-            {nextTierInfo && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] text-zinc-600 uppercase tracking-wider">Progress to {nextTierInfo.nextTier}</span>
-                  <span className="text-[10px] font-semibold" style={{ color: nextTierInfo.nextColor }}>
-                    {nextTierInfo.remaining.toLocaleString()} pts to go
-                  </span>
-                </div>
-                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${nextTierInfo.progress}%`,
-                      background: `linear-gradient(90deg, ${tier.color}, ${nextTierInfo.nextColor})`,
-                    }}
-                  />
-                </div>
+            {/* Progress bar */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] text-zinc-600 uppercase tracking-wider">
+                  {toNext
+                    ? `${toNext} more detail${toNext === 1 ? "" : "s"} to next tier`
+                    : "Max tier reached — VIP 20% forever 🎉"}
+                </span>
+                <span className="text-[10px] font-semibold text-[#D4AF37]">
+                  {completedCount} detail{completedCount !== 1 ? "s" : ""}
+                </span>
               </div>
-            )}
+              <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${progressPct}%`,
+                    background: "linear-gradient(90deg, #92700a, #D4AF37, #F3E5AB)",
+                  }}
+                />
+              </div>
+            </div>
 
-            {/* Rules */}
-            <div className="pt-3 border-t border-white/[0.05]">
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-1.5 gap-x-4 text-[11px] text-zinc-600">
-                {[
-                  "Earn 1 pt per $1 spent",
-                  "10 pts = $1 off at checkout",
-                  "Redeem up to 1,000 pts per booking",
-                  "Points never expire",
-                ].map((rule) => (
-                  <li key={rule} className="flex items-start gap-1.5">
-                    <Star size={9} className="text-[#D4AF37]/60 shrink-0 mt-0.5" />
-                    <span>{rule}</span>
-                  </li>
-                ))}
-              </ul>
+            {/* Tier ladder */}
+            <div className="grid grid-cols-4 gap-1.5 pt-4 border-t border-white/[0.05]">
+              {LOYALTY_TIERS.slice().reverse().map((tier) => {
+                const unlocked = completedCount >= tier.minDetails;
+                return (
+                  <div
+                    key={tier.label}
+                    className={`flex flex-col items-center gap-0.5 p-2 rounded-xl border transition-all ${
+                      unlocked
+                        ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.06]"
+                        : "border-white/[0.04] bg-white/[0.02] opacity-40"
+                    }`}
+                  >
+                    <span className={`text-sm font-black ${unlocked ? "text-[#D4AF37]" : "text-zinc-600"}`}>
+                      {tier.pct}%
+                    </span>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${unlocked ? "text-zinc-400" : "text-zinc-700"}`}>
+                      {tier.label}
+                    </span>
+                    <span className={`text-[9px] ${unlocked ? "text-zinc-600" : "text-zinc-800"}`}>
+                      {tier.minDetails} car{tier.minDetails !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -196,7 +214,11 @@ async function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-bold text-zinc-200">Book a detail</p>
-                <p className="text-[11px] text-zinc-500">Earn points on every service</p>
+                <p className="text-[11px] text-zinc-500">
+                  {toNext
+                    ? `${toNext} more to unlock ${toNext <= (completedCount < 1 ? 5 : completedCount < 3 ? 10 : completedCount < 5 ? 15 : 20)}% off`
+                    : "Enjoy your 20% VIP discount forever"}
+                </p>
               </div>
             </div>
             <ChevronRight size={15} className="text-zinc-600 group-hover:text-[#D4AF37] transition-colors" />
@@ -247,7 +269,7 @@ async function Dashboard() {
                 <CalendarDays size={24} className="text-zinc-700" />
               </div>
               <p className="text-sm font-semibold text-zinc-500 mb-1">No appointments yet</p>
-              <p className="text-xs text-zinc-700 mb-4">Book your first detail and start earning points.</p>
+              <p className="text-xs text-zinc-700 mb-4">Book your first vehicle detail to start climbing the loyalty ladder.</p>
               <Link
                 href="/#services"
                 className="inline-flex items-center gap-1.5 text-sm font-bold text-[#D4AF37] hover:text-amber-300 transition-colors"
@@ -257,9 +279,6 @@ async function Dashboard() {
               </Link>
             </div>
           )}
-
-          {/* ── Point History ──────────────────────────────────────────── */}
-          <XpHistoryCard transactions={transactions} />
 
           {/* ── Refer & Earn ──────────────────────────────────────────── */}
           <div className="mb-4">

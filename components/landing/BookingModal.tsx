@@ -48,7 +48,6 @@ import {
   sizeTierToSlug,
 } from "@/lib/vehicleDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
-import { getProfilePointsByPhone } from "@/app/actions/getProfilePointsByPhone";
 import { getProfileByPhone } from "@/app/actions/getProfileByPhone";
 import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
@@ -56,9 +55,6 @@ import { AddressAutocomplete } from "./AddressAutocomplete";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 import { MONTHLY_PLAN_DURATIONS } from "@/lib/monthlyPlans";
 
-/** 10 reward points = $1 discount. Max total points redeemable is 1000 ($100). */
-const POINTS_PER_DOLLAR = 10;
-const MAX_REDEEMABLE_POINTS = 1000;
 /** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $120 */
 function getMaintenanceSetupFee(serviceName: string): number {
   return serviceName.toLowerCase().includes("full") ? 100 : 75;
@@ -280,19 +276,20 @@ const WORKDAY_START = "1:00 PM";
 const WORKDAY_END = "6:30 PM";
 const SLOT_INTERVAL_MIN = 30;
 
-// Fallback slots when no operating_hours (1:00 PM–6:00 PM, 30-min increments)
+// Fallback slots when no operating_hours (9:30 AM–6:00 PM, 30-min increments)
 function buildFallbackSlots(): { time: string; period: string }[] {
   const slots: { time: string; period: string }[] = [];
-  for (let h = 13; h <= 18; h++) {
-    for (const m of [0, 30]) {
-      if (h === 18 && m === 30) break;
-      const displayH = h > 12 ? h - 12 : h;
-      const period = h < 15 ? "Afternoon" : "Late Afternoon";
-      slots.push({
-        time: `${displayH}:${m === 0 ? "00" : "30"} PM`,
-        period,
-      });
-    }
+  // 9:30 AM start
+  for (let totalMins = 9 * 60 + 30; totalMins < 18 * 60; totalMins += 30) {
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    const displayH = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    const ampm = h < 12 ? "AM" : "PM";
+    const period = h < 12 ? "Morning" : h < 15 ? "Afternoon" : "Late Afternoon";
+    slots.push({
+      time: `${displayH}:${m === 0 ? "00" : "30"} ${ampm}`,
+      period,
+    });
   }
   return slots;
 }
@@ -388,7 +385,7 @@ function getDurationForService(serviceName: string, vehicleSize: VehicleSizeSlug
  * How many minutes a booking is allowed to run past the scheduled closing time.
  * This lets the last slot of the day be accepted even if the job finishes slightly late.
  */
-const OVERTIME_GRACE_MINS = 60;
+const OVERTIME_GRACE_MINS = 30;
 
 /** Slots that fit before closing (+ overtime grace) and do not overlap existing bookings */
 async function getAvailableSlots(
@@ -658,11 +655,9 @@ export interface BookingSuccessData {
   date: string;
   time?: string;
   serviceName: string;
-  pointsEarned: number;
   firstName: string;
   serviceAddress?: string;
   isGuest?: boolean;
-  /** Phone for success modal to fetch latest points from Supabase (guests) */
   phone?: string;
   /** Email to pre-fill sign-up form when guest creates account after booking */
   email?: string;
@@ -736,8 +731,8 @@ export interface BookingSectionProps {
   onClearService?: () => void;
   /** Called when booking succeeds; parent should close dropdown and show success modal */
   onBookingSuccess?: (data: BookingSuccessData) => void;
-  /** Initial reward points (e.g. from auth) for display until phone-based balance is fetched */
-  initialRewardPoints?: number | null;
+  /** Initial loyalty discount % from auth profile — auto-applies at checkout for qualifying services */
+  initialLoyaltyDiscountPct?: number | null;
   /** Restore form from this draft (e.g. after Stripe cancel); applied once when visible */
   initialDraft?: DraftBooking | null;
   /** Called after draft has been applied so parent can clear initialDraft */
@@ -756,7 +751,7 @@ export function BookingSection({
   onSelectService,
   onClearService,
   onBookingSuccess,
-  initialRewardPoints = null,
+  initialLoyaltyDiscountPct = null,
   initialDraft = null,
   onDraftRestored,
   initialCategory,
@@ -873,9 +868,8 @@ export function BookingSection({
   // Auto-detect: true when the current vehicleSize was set by the detector
   const [autoDetected, setAutoDetected] = useState(false);
 
-  // Loyalty: reward points (from initial prop or fetched by phone on step 3)
-  const [rewardPoints, setRewardPoints] = useState<number | null>(null);
-  const [pointsToRedeemInput, setPointsToRedeemInput] = useState(0);
+  // Loyalty: discount % from profile (from auth prop or fetched by phone on step 3)
+  const [loyaltyDiscountPct, setLoyaltyDiscountPct] = useState<number>(0);
 
   // Referral welcome discount — fetched once when modal opens for auth users
   const [referralEligible, setReferralEligible] = useState(false);
@@ -998,13 +992,16 @@ export function BookingSection({
     : 0;
   const totalWithTravel =
     servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
-  const availablePoints = rewardPoints ?? 0;
 
-  // 10 points = $1. Max redeemable is 1000 pts ($100).
-  const redeemablePoints = Math.min(MAX_REDEEMABLE_POINTS, availablePoints);
-  const pointsToRedeem = Math.min(Math.max(0, pointsToRedeemInput), redeemablePoints);
-  const pointsDiscountAmount = pointsToRedeem / POINTS_PER_DOLLAR;
-  const totalAfterDiscount = Math.max(0, totalWithTravel - pointsDiscountAmount);
+  // Loyalty discount: auto-applies for qualifying vehicle detail services
+  const isLoyaltyEligible = loyaltyDiscountPct > 0 && !referralDiscountAmount && !couponDiscount && (
+    ["Interior Detail","Exterior Detail","Full Detail","Ultimate Interior Reset","Ultimate Interior + Exterior Reset"]
+      .includes(selectedService?.name ?? "")
+  );
+  const loyaltyDiscountAmount = isLoyaltyEligible
+    ? Math.round(servicePrice * loyaltyDiscountPct / 100 * 100) / 100
+    : 0;
+  const totalAfterDiscount = Math.max(0, totalWithTravel - loyaltyDiscountAmount);
 
   // Initialise today string client-side (avoids Next.js Cache Components error)
   useEffect(() => {
@@ -1020,18 +1017,18 @@ export function BookingSection({
     });
   }, [isVisible]);
 
-  // Use initial reward points when modal opens; fetch by phone when on step 3 and phone entered
+  // Set loyalty discount from auth prop when modal opens
   useEffect(() => {
     if (!isVisible) return;
-    setRewardPoints(initialRewardPoints ?? null);
-  }, [isVisible, initialRewardPoints]);
+    setLoyaltyDiscountPct(initialLoyaltyDiscountPct ?? 0);
+  }, [isVisible, initialLoyaltyDiscountPct]);
 
+  // Fetch profile by phone on step 3 for pre-fill + loyalty discount for guests
   useEffect(() => {
     if (!isVisible || step !== 3 || !phone || phone.replace(/\D/g, "").length < 10) return;
     const t = setTimeout(() => {
       getProfileByPhone(phone).then((data) => {
-        setRewardPoints(data.reward_points);
-        // Pre-fill name/email only if the fields are still blank (don't overwrite user input)
+        if (data.loyaltyDiscountPct > loyaltyDiscountPct) setLoyaltyDiscountPct(data.loyaltyDiscountPct);
         if (data.name && !name.trim()) setName(data.name);
         if (data.email && !email.trim()) setEmail(data.email);
       });
@@ -1039,12 +1036,6 @@ export function BookingSection({
     return () => clearTimeout(t);
   }, [isVisible, step, phone]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clamp points-to-redeem input when redeemable limit drops (e.g. service/travel change)
-  useEffect(() => {
-    if (pointsToRedeemInput > redeemablePoints) {
-      setPointsToRedeemInput(redeemablePoints);
-    }
-  }, [redeemablePoints]);
 
   // Fetch referral eligibility once when the modal opens
   useEffect(() => {
@@ -1131,8 +1122,7 @@ export function BookingSection({
       setTravelFee(0);
       setDistanceMiles(null);
       setTravelFeeLoading(false);
-      setRewardPoints(null);
-      setPointsToRedeemInput(0);
+      setLoyaltyDiscountPct(0);
       setReferralEligible(false);
       setAuthUserId(null);
       setCouponCode("");
@@ -1177,7 +1167,6 @@ export function BookingSection({
     setDistanceMiles(initialDraft.distanceMiles);
     setCouponCode(initialDraft.couponCode);
     setAppliedCoupon(initialDraft.appliedCoupon);
-    setPointsToRedeemInput(initialDraft.pointsToRedeemInput);
     // Restore boat/RV footage
     if (initialDraft.boatLength !== undefined) {
       setBoatLength(initialDraft.boatLength);
@@ -1224,7 +1213,7 @@ export function BookingSection({
         serviceAddress, name, phone, email, notes,
         travelFee, distanceMiles,
         couponCode, appliedCoupon,
-        pointsToRedeemInput,
+        pointsToRedeemInput: 0,
         ...(boatLength !== "" ? { boatLength } : {}),
         selectedAddonIds: selectedAddons.map((a) => a.id),
         step,
@@ -1246,7 +1235,7 @@ export function BookingSection({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, step, selectedService, vehicleSize, vehicleYear, vehicleMake, vehicleModel,
       selectedDate, selectedTime, serviceAddress, name, phone, email, notes,
-      travelFee, distanceMiles, couponCode, appliedCoupon, pointsToRedeemInput,
+      travelFee, distanceMiles, couponCode, appliedCoupon,
       boatLength, selectedAddons, additionalVehicles, bookingCategory]);
 
   // Step 3 — collapsible booking details summary
@@ -1289,7 +1278,6 @@ export function BookingSection({
     setDistanceMiles(saved.distanceMiles ?? null);
     setCouponCode(saved.couponCode || "");
     setAppliedCoupon(saved.appliedCoupon ?? null);
-    setPointsToRedeemInput(saved.pointsToRedeemInput || 0);
     if (saved.boatLength !== undefined) setBoatLength(saved.boatLength);
     if (saved.selectedAddonIds?.length && service) {
       const available = getAddonsForService(service.name);
@@ -1662,7 +1650,6 @@ export function BookingSection({
       ...(addlVehicles.length > 0 && { additionalVehicles: addlVehicles }),
       ...(travelFee > 0 && { travelFee }),
       ...(setupFee > 0 && { setupFee }),
-...(pointsToRedeem > 0 && { pointsToRedeem }),
       ...(referralEligible && { isApplyingReferralDiscount: true }),
       ...(authUserId && { authUserId }),
       ...(appliedCoupon && {
@@ -1693,7 +1680,6 @@ export function BookingSection({
     }
     setBookingResult(result);
     if (result.success && onBookingSuccess && selectedService) {
-      const earned = Math.floor(totalAfterDiscount);
       try { localStorage.removeItem(PERSISTENT_DRAFT_KEY); } catch {}
       onClose();
       router.refresh();
@@ -1702,7 +1688,6 @@ export function BookingSection({
         date: selectedDate,
         time: selectedTime || undefined,
         serviceName: selectedService.name,
-        pointsEarned: earned,
         firstName: name.trim().split(/\s+/)[0] ?? "there",
         serviceAddress: serviceAddress.trim() || undefined,
         isGuest: !authUserId,
@@ -1732,7 +1717,7 @@ export function BookingSection({
       distanceMiles,
       couponCode,
       appliedCoupon,
-      pointsToRedeemInput,
+      pointsToRedeemInput: 0,
       boatLength: isFootageService(selectedService.name) ? boatLength : undefined,
       selectedAddonIds: selectedAddons.map((a) => a.id),
     };
@@ -1780,7 +1765,7 @@ export function BookingSection({
         distanceMiles,
         couponCode,
         appliedCoupon,
-        pointsToRedeemInput,
+        pointsToRedeemInput: 0,
         boatLength: isFootageService(selectedService.name) ? boatLength : undefined,
         selectedAddonIds: selectedAddons.map((a) => a.id),
       };
@@ -1810,7 +1795,6 @@ export function BookingSection({
       setIsStripeLoading(false);
       setBookingResult(result);
       if (result.success && onBookingSuccess && selectedService) {
-        const earned = Math.floor(totalAfterDiscount);
         onClose();
         router.refresh();
         onBookingSuccess?.({
@@ -1818,7 +1802,6 @@ export function BookingSection({
           date: selectedDate,
           time: selectedTime || undefined,
           serviceName: selectedService.name,
-          pointsEarned: earned,
           firstName: name.trim().split(/\s+/)[0] ?? "there",
           serviceAddress: serviceAddress.trim() || undefined,
           isGuest: !authUserId,
@@ -3389,37 +3372,17 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                       )}
                     </div>
 
-                    {/* Use Points at Checkout — standalone card for logged-in users */}
-                    {authUserId && rewardPoints != null && availablePoints > 0 && redeemablePoints > 0 && (
-                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
-                        <div className="flex items-center justify-between mb-3">
+                    {/* Loyalty discount auto-applied banner */}
+                    {isLoyaltyEligible && (
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <HandCoins size={14} className="text-amber-400 shrink-0" />
-                            <span className="text-sm font-bold text-amber-300">Use Points at Checkout</span>
+                            <span className="text-emerald-400 text-base">✓</span>
+                            <span className="text-sm font-bold text-emerald-300">Loyalty Discount Applied</span>
                           </div>
-                          <span className="text-xs text-zinc-500">{availablePoints} pts available</span>
+                          <span className="text-sm font-bold text-emerald-400">{loyaltyDiscountPct}% off</span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="range"
-                            min={0}
-                            max={redeemablePoints}
-                            step={10}
-                            value={pointsToRedeemInput}
-                            onChange={(e) => setPointsToRedeemInput(Number(e.target.value))}
-                            className="flex-1 h-2 rounded-full appearance-none bg-zinc-800 accent-[#D4AF37]"
-                          />
-                          <span className="text-sm font-bold text-[#D4AF37] tabular-nums w-16 text-right">
-                            {pointsToRedeemInput} pts
-                          </span>
-                        </div>
-                        {pointsToRedeemInput > 0 && (
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-amber-500/10">
-                            <span className="text-xs text-zinc-400">Discount applied</span>
-                            <span className="text-xs font-bold text-emerald-400">−${pointsDiscountAmount.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <p className="text-[10px] text-zinc-600 mt-2">10 pts = $1 off · Max ${(redeemablePoints / POINTS_PER_DOLLAR).toFixed(0)} off this booking</p>
+                        <p className="text-[10px] text-zinc-500 mt-1.5">Your loyalty discount auto-applies to qualifying vehicle details.</p>
                       </div>
                     )}
 
@@ -3492,22 +3455,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             )}
 {renderCouponUI()}
                             {renderGiftCardUI()}
-                            {pointsToRedeem > 0 && (
-                              <>
-                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
-                                  <span className="text-zinc-400">Base price</span>
-                                  <span className="font-semibold text-white">${totalWithTravel.toFixed(2)}</span>
-                                </div>
-                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                  <span>Points applied</span>
-                                  <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
-                                </div>
-                              </>
+                            {loyaltyDiscountAmount > 0 && (
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400/90 min-w-0">
+                                <span>Loyalty discount ({loyaltyDiscountPct}% off)</span>
+                                <span className="font-semibold">−${loyaltyDiscountAmount.toFixed(2)}</span>
+                              </div>
                             )}
                           </div>
                           <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                             <span className="font-bold text-zinc-300">
-                              {pointsToRedeem > 0 ? "Final total" : "Total Due Today"}
+                              Total Due Today
                             </span>
                             <span className="text-xl font-black text-white tabular-nums">
                               {computedPrice !== null ? `$${totalAfterDiscount.toFixed(2)}` : "—"}
@@ -3515,7 +3472,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           </div>
                           {computedPrice !== null && totalAfterDiscount > 0 && (
                             <p className="text-[11px] text-[#D4AF37]/70 mt-2 text-right">
-                              +{Math.floor(totalAfterDiscount)} loyalty points earned
+                              Counts toward your loyalty tier
                             </p>
                           )}
                         </div>
@@ -3610,22 +3567,16 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             </div>
                           )}
                           {renderCouponUI()}
-                          {pointsToRedeem > 0 && (
-                            <>
-                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-2 min-w-0">
-                                <span className="text-zinc-400">Base price</span>
-                                <span className="font-semibold text-white">${totalWithTravel.toFixed(2)}</span>
-                              </div>
-                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-amber-400/90 min-w-0">
-                                <span>Points applied</span>
-                                <span className="font-semibold">−${pointsDiscountAmount.toFixed(2)}</span>
-                              </div>
-                            </>
+                          {loyaltyDiscountAmount > 0 && (
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400/90 min-w-0">
+                              <span>Loyalty discount ({loyaltyDiscountPct}% off)</span>
+                              <span className="font-semibold">−${loyaltyDiscountAmount.toFixed(2)}</span>
+                            </div>
                           )}
                         </div>
                         <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
                           <span className="font-bold text-zinc-300">
-                            {pointsToRedeem > 0 ? "Final total" : "Total"}
+                            Total
                           </span>
                           <span className="text-xl font-black text-white tabular-nums">
                             {computedPrice !== null
@@ -3635,7 +3586,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         </div>
                         {computedPrice !== null && totalAfterDiscount > 0 && (
                           <p className="text-[11px] text-[#D4AF37]/70 mt-2 text-right">
-                            +{Math.floor(totalAfterDiscount)} loyalty points earned
+                            Counts toward your loyalty tier
                           </p>
                         )}
                       </div>
@@ -3648,17 +3599,17 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" aria-hidden />
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-bold bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-300 bg-clip-text text-transparent mb-1">
-                              Earn Points on This Booking
+                              Unlock Loyalty Discounts
                             </h4>
                             <p className="text-xs text-zinc-400 leading-relaxed mb-3">
-                              Create an account to earn {Math.floor(totalAfterDiscount)} points on today&apos;s detail + 100 bonus welcome points.
+                              Create a free account so this booking counts toward your tier. 1 detail = 5% off, 3 = 10%, 5 = 15%, 10 = 20% forever.
                             </p>
                             <button
                               type="button"
                               onClick={handleCreateAccountClick}
                               className="w-full py-2.5 rounded-xl text-sm font-bold bg-[#D4AF37] text-zinc-950 hover:bg-amber-400 shadow-[0_0_16px_rgba(212,175,55,0.3)] transition-all duration-200"
                             >
-                              Create Account & Claim Points
+                              Create Account & Join Rewards
                             </button>
                           </div>
                         </div>
