@@ -89,7 +89,7 @@ export default function RootLayout({
               description: "Vermont's premier mobile auto, boat, and RV detailing service. Fully self-contained — we come to you anywhere in Vermont.",
               url: "https://www.ariseandshinevt.com",
               telephone: "+18025855563",
-              email: "ariseandshinevt@gmail.com",
+              email: "contact@ariseandshinevt.com",
               image: "https://www.ariseandshinevt.com/aasbanner.png",
               logo: "https://www.ariseandshinevt.com/aasbanner.png",
               priceRange: "$$",
