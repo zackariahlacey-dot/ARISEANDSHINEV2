@@ -1539,7 +1539,14 @@ export function LandingPage({ services }: { services: Service[] }) {
       </div>
 
       {/* ─── Recent Activity Toast (social proof) ─────────────────── */}
-      <RecentActivityToast />
+      <RecentActivityToast
+        paused={
+          expandedBookingId !== null ||
+          showSuccessModal ||
+          stripeVerifying ||
+          legalModal !== null
+        }
+      />
 
       {/* ─── Privacy Policy Modal ──────────────────────────────────── */}
       <LegalModal
