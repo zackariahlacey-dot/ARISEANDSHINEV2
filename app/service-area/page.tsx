@@ -4,8 +4,13 @@ import { MapPin, Car, Anchor, Truck, Phone, ArrowLeft, DollarSign } from "lucide
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
-  title: "Service Area | Arise & Shine VT",
-  description: "Arise & Shine VT is a fully mobile detailing service based in Williston, VT — we come to you anywhere in Vermont within about 1.5 hours of Williston.",
+  title: "Mobile Detailing Service Area | Burlington, Williston & Chittenden County, VT",
+  description: "Arise & Shine VT serves Burlington, Williston, South Burlington, Shelburne, Essex, Colchester, Winooski, Milton, Hinesburg, and all of Vermont within 1.5 hours of Williston. We come to you.",
+  openGraph: {
+    title: "Mobile Detailing Service Area | Burlington, Williston & Chittenden County, VT",
+    description: "We serve all of Chittenden County and beyond — Burlington, Williston, South Burlington, Shelburne, Essex, Colchester, and more.",
+    url: "https://www.ariseandshinevt.com/service-area",
+  },
 };
 
 const SERVICE_TYPES = [

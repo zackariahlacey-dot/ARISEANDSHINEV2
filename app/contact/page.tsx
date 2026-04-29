@@ -4,8 +4,13 @@ import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Cal
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
-  title: "Contact | Arise & Shine VT",
-  description: "Get in touch with Arise & Shine VT — Vermont's mobile auto, boat, and RV detailing service. Call, email, or book online.",
+  title: "Contact Arise & Shine VT | Mobile Detailing in Burlington & Williston, VT",
+  description: "Call or text Arise & Shine VT at 802-585-5563 — Vermont's mobile auto, boat, and RV detailing service. Book online or reach us by phone or email.",
+  openGraph: {
+    title: "Contact Arise & Shine VT | Mobile Detailing in Burlington & Williston, VT",
+    description: "Call or text 802-585-5563 — we serve Burlington, Williston, South Burlington, and all of Chittenden County.",
+    url: "https://www.ariseandshinevt.com/contact",
+  },
 };
 
 const HOURS = [

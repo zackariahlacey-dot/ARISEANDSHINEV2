@@ -4,8 +4,13 @@ import { Shield, Star, Leaf, Sparkles, Phone, Mail, MapPin, Heart, Award } from 
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
-  title: "About | Arise & Shine VT",
-  description: "Vermont's premier mobile auto, boat, and RV detailing service. Owner-operated, fully self-contained, and proudly serving the Green Mountain State.",
+  title: "About Arise & Shine VT | Owner-Operated Mobile Detailing in Vermont",
+  description: "Arise & Shine VT is Vermont's owner-operated mobile detailing service. Fully insured, eco-conscious products, 5-star rated — serving Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County.",
+  openGraph: {
+    title: "About Arise & Shine VT | Owner-Operated Mobile Detailing in Vermont",
+    description: "Vermont's owner-operated mobile detailing service. Fully insured, eco-conscious products, 5-star rated.",
+    url: "https://www.ariseandshinevt.com/about",
+  },
 };
 
 const VALUES = [
