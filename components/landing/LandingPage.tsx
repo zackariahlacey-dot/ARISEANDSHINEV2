@@ -817,75 +817,73 @@ export function LandingPage({ services }: { services: Service[] }) {
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-10 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="py-8 md:py-12 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
         <div className="w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-6">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">More Services</p>
-            <div className="flex-1 h-px bg-white/[0.05]" />
+          <div className="flex items-center gap-3 mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">More Services</p>
+            <div className="flex-1 h-px bg-white/[0.04]" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* ── Boat / Marine Card ── */}
             <div
-              className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:-translate-y-1.5 border border-[#D4AF37]/30 hover:border-[#D4AF37]/55 hover:shadow-[0_24px_60px_rgba(212,175,55,0.2)]"
+              className="relative rounded-2xl overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-[#D4AF37]/25 hover:border-[#D4AF37]/50 hover:shadow-[0_16px_40px_rgba(212,175,55,0.15)]"
               style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
             >
-              {/* Gold top glow */}
-              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 110% 40% at 50% 0%, rgba(212,175,55,0.11) 0%, transparent 65%)" }} />
-              {/* Top stripe */}
-              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent shrink-0" />
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 110% 40% at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 65%)" }} />
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent shrink-0" />
 
-              <div className="relative p-7 sm:p-8">
+              <div className="relative p-5">
                 {/* Header */}
-                <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex items-center justify-between gap-3 mb-4">
                   <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-3">
-                      <Anchor size={9} className="text-[#D4AF37]" strokeWidth={2} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Dockside Specialist</span>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 mb-2">
+                      <Anchor size={8} className="text-[#D4AF37]" strokeWidth={2} />
+                      <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Dockside Specialist</span>
                     </div>
-                    <h3 className="text-2xl font-black text-white tracking-tight leading-tight">Boat & Marine Detailing</h3>
-                    <p className="text-sm text-zinc-500 mt-1.5 leading-relaxed">
-                      We come to the dock — no haul-out required. 15 ft minimum. Lake Champlain specialists using biodegradable marine products.
+                    <h3 className="text-lg font-black text-white tracking-tight leading-tight">Boat & Marine Detailing</h3>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      We come to the dock — no haul-out required. Lake Champlain specialists.
                     </p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center shrink-0 mt-0.5">
-                    <Anchor size={22} className="text-[#D4AF37]" strokeWidth={1.5} />
+                  <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                    <Anchor size={18} className="text-[#D4AF37]" strokeWidth={1.5} />
                   </div>
                 </div>
 
-                <div className="h-px bg-white/[0.06] mb-5" />
+                <div className="h-px bg-white/[0.05] mb-3" />
 
                 {/* Pricing rows */}
-                <div className="space-y-2 mb-6">
+                <div className="space-y-1.5 mb-4">
                   {[
                     { label: "Marine Interior Reset",  price: "$18/ft" },
                     { label: "Marine Exterior Shine",  price: "$22/ft" },
                     { label: "Captain's Full Detail",  price: "$35/ft" },
                     { label: "Showroom Restoration",   price: "from $65/ft" },
                   ].map(({ label, price }) => (
-                    <div key={label} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-zinc-950/60 border border-white/[0.05]">
-                      <span className="text-sm text-zinc-300 font-medium">{label}</span>
-                      <span className="text-sm font-black text-[#D4AF37] tabular-nums">{price}</span>
+                    <div key={label} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-zinc-950/60 border border-white/[0.04]">
+                      <span className="text-xs text-zinc-300 font-medium">{label}</span>
+                      <span className="text-xs font-black text-[#D4AF37] tabular-nums">{price}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* CTAs */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedService(null);
                       setExpandedBookingId(expandedBookingId === "boat" ? null : "boat");
                     }}
-                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-sm font-black hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_16px_rgba(212,175,55,0.3)]"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-xs font-black hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_12px_rgba(212,175,55,0.25)]"
                   >
                     Book Now
                   </button>
                   <Link
                     href="/boat-detailing"
-                    className="flex-1 py-3 rounded-xl border border-[#D4AF37]/35 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.08] transition-all duration-200"
+                    className="flex-1 py-2.5 rounded-xl border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-semibold text-center hover:bg-[#D4AF37]/[0.07] transition-all duration-200"
                   >
                     View Packages
                   </Link>
@@ -912,65 +910,63 @@ export function LandingPage({ services }: { services: Service[] }) {
 
             {/* ── RV Card ── */}
             <div
-              className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:-translate-y-1.5 border border-[#D4AF37]/30 hover:border-[#D4AF37]/55 hover:shadow-[0_24px_60px_rgba(212,175,55,0.2)]"
+              className="relative rounded-2xl overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-[#D4AF37]/25 hover:border-[#D4AF37]/50 hover:shadow-[0_16px_40px_rgba(212,175,55,0.15)]"
               style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
             >
-              {/* Gold top glow */}
-              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 110% 40% at 50% 0%, rgba(212,175,55,0.11) 0%, transparent 65%)" }} />
-              {/* Top stripe */}
-              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent shrink-0" />
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 110% 40% at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 65%)" }} />
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent shrink-0" />
 
-              <div className="relative p-7 sm:p-8">
+              <div className="relative p-5">
                 {/* Header */}
-                <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex items-center justify-between gap-3 mb-4">
                   <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-3">
-                      <Truck size={9} className="text-[#D4AF37]" strokeWidth={2} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Mobile Service</span>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 mb-2">
+                      <Truck size={8} className="text-[#D4AF37]" strokeWidth={2} />
+                      <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Mobile Service</span>
                     </div>
-                    <h3 className="text-2xl font-black text-white tracking-tight leading-tight">RV & Camper Detailing</h3>
-                    <p className="text-sm text-zinc-500 mt-1.5 leading-relaxed">
-                      Full-service detailing for motorhomes &amp; campers at your site or home. 20 ft minimum, priced per foot.
+                    <h3 className="text-lg font-black text-white tracking-tight leading-tight">RV & Camper Detailing</h3>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      At your site or home. 20 ft minimum, priced per foot.
                     </p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center shrink-0 mt-0.5">
-                    <Truck size={22} className="text-[#D4AF37]" strokeWidth={1.5} />
+                  <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                    <Truck size={18} className="text-[#D4AF37]" strokeWidth={1.5} />
                   </div>
                 </div>
 
-                <div className="h-px bg-white/[0.06] mb-5" />
+                <div className="h-px bg-white/[0.05] mb-3" />
 
                 {/* Pricing rows */}
-                <div className="space-y-2 mb-3">
+                <div className="space-y-1.5 mb-3">
                   {[
-                    { label: "Exterior Refresh",              price: "$18/ft" },
-                    { label: "Living Space Reset",            price: "$28/ft" },
-                    { label: "Ultimate Transformation",       price: "$50/ft" },
-                    { label: "+ Oxidation Restoration",       price: "$35–45/ft", muted: true },
+                    { label: "Exterior Refresh",        price: "$18/ft" },
+                    { label: "Living Space Reset",       price: "$28/ft" },
+                    { label: "Ultimate Transformation",  price: "$50/ft" },
+                    { label: "+ Oxidation Restoration",  price: "$35–45/ft", muted: true },
                   ].map(({ label, price, muted }) => (
-                    <div key={label} className={`flex items-center justify-between py-2.5 px-4 rounded-xl border ${muted ? "bg-transparent border-dashed border-white/[0.04]" : "bg-zinc-950/60 border-white/[0.05]"}`}>
-                      <span className={`text-sm font-medium ${muted ? "text-zinc-600" : "text-zinc-300"}`}>{label}</span>
-                      <span className={`text-sm font-black tabular-nums ${muted ? "text-zinc-600" : "text-[#D4AF37]"}`}>{price}</span>
+                    <div key={label} className={`flex items-center justify-between py-1.5 px-3 rounded-lg border ${muted ? "bg-transparent border-dashed border-white/[0.04]" : "bg-zinc-950/60 border-white/[0.04]"}`}>
+                      <span className={`text-xs font-medium ${muted ? "text-zinc-600" : "text-zinc-300"}`}>{label}</span>
+                      <span className={`text-xs font-black tabular-nums ${muted ? "text-zinc-600" : "text-[#D4AF37]"}`}>{price}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-zinc-700 mb-5 px-1">Add-ons: $50/slide · Roof seal $200+ · Pet hair / mold $75–$150</p>
+                <p className="text-[10px] text-zinc-700 mb-4 px-1">Add-ons: $50/slide · Roof seal $200+ · Pet hair/mold $75–$150</p>
 
                 {/* CTAs */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedService(null);
                       setExpandedBookingId(expandedBookingId === "rv" ? null : "rv");
                     }}
-                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-sm font-black hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_16px_rgba(212,175,55,0.3)]"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-xs font-black hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_12px_rgba(212,175,55,0.25)]"
                   >
                     Book Now
                   </button>
                   <Link
                     href="/rv-detailing"
-                    className="flex-1 py-3 rounded-xl border border-[#D4AF37]/35 text-[#D4AF37] text-sm font-semibold text-center hover:bg-[#D4AF37]/[0.08] transition-all duration-200"
+                    className="flex-1 py-2.5 rounded-xl border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-semibold text-center hover:bg-[#D4AF37]/[0.07] transition-all duration-200"
                   >
                     View Packages
                   </Link>
