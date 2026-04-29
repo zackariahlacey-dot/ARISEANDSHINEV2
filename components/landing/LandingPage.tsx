@@ -1122,7 +1122,7 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
             {/* Google badge */}
             <a
-              href="https://g.co/kgs/hLQhG7r"
+              href="https://g.page/r/Cd76zEF6l465EAI/review"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-white/[0.08] bg-zinc-900/60 hover:border-white/20 transition-all shrink-0"
@@ -1179,7 +1179,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* See all reviews link */}
           <div className="mt-5 text-center">
             <a
-              href="https://g.co/kgs/hLQhG7r"
+              href="https://g.page/r/Cd76zEF6l465EAI/review"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
