@@ -12,6 +12,7 @@ import { getMyActiveSubscription } from "@/app/actions/monthlySubscriptions";
 import { MonthlyPlanCard } from "@/components/dashboard/MonthlyPlanCard";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
+import { LevelUpConfetti } from "@/components/dashboard/LevelUpConfetti";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,9 @@ async function Dashboard() {
 
   return (
     <div className="relative min-h-screen bg-zinc-950">
+      {/* One-time tier-up celebration — only fires when tier increases */}
+      <LevelUpConfetti completedDetailCount={completedCount} />
+
       {/* Background gold radial */}
       <div
         aria-hidden="true"

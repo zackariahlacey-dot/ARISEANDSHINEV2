@@ -74,7 +74,17 @@ export type BookingPayload = {
 };
 
 export type BookingResult =
-  | { success: true; bookingId: string; checkoutUrl?: string }
+  | {
+      success: true;
+      bookingId: string;
+      checkoutUrl?: string;
+      /** New loyalty count after this booking (only set for logged-in qualifying services) */
+      loyaltyNewCount?: number;
+      /** New discount % after this booking */
+      loyaltyNewDiscountPct?: number;
+      /** Tier name if just unlocked ("Member" | "Silver" | "Gold" | "VIP") */
+      loyaltyTierJustUnlocked?: string;
+    }
   | { success: false; error: string };
 
 /** Converts "9:00 AM" → "09:00:00" for PostgreSQL time columns */
@@ -804,5 +814,40 @@ export async function bookDetailing(
     { skipCustomerEmail: true }
   ).catch((err) => console.error("[bookDetailing] admin email error:", err));
 
-  return { success: true, bookingId: booking.id };
+  // ── Loyalty: increment count for logged-in users booking a qualifying service ──
+  let loyaltyNewCount: number | undefined;
+  let loyaltyNewDiscountPct: number | undefined;
+  let loyaltyTierJustUnlocked: string | undefined;
+
+  if (user && profileId) {
+    const { CAR_DETAIL_SERVICES, getDiscountPct, getTier } = await import("@/lib/loyalty");
+    if (CAR_DETAIL_SERVICES.has(payload.serviceName)) {
+      const { data: profileRow } = await adminSupabase
+        .from("profiles")
+        .select("completed_detail_count, loyalty_discount_pct")
+        .eq("id", profileId)
+        .single();
+      const prevCount = (profileRow as any)?.completed_detail_count ?? 0;
+      const prevPct   = (profileRow as any)?.loyalty_discount_pct   ?? 0;
+      const newCount  = prevCount + 1;
+      const newPct    = getDiscountPct(newCount);
+      await adminSupabase.from("profiles").update({
+        completed_detail_count: newCount,
+        loyalty_discount_pct:   newPct,
+      }).eq("id", profileId);
+      loyaltyNewCount      = newCount;
+      loyaltyNewDiscountPct = newPct;
+      if (newPct > prevPct) {
+        loyaltyTierJustUnlocked = getTier(newCount)?.label;
+      }
+    }
+  }
+
+  return {
+    success: true,
+    bookingId: booking.id,
+    loyaltyNewCount,
+    loyaltyNewDiscountPct,
+    loyaltyTierJustUnlocked,
+  };
 }

@@ -320,6 +320,19 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     notes: payload.notes,
   }, { skipCustomerEmail: true }).catch(e => console.error("Admin Email Fail:", e));
 
+  // ── Loyalty: increment for qualifying services ──
+  if (targetUserId) {
+    const { CAR_DETAIL_SERVICES, getDiscountPct } = await import("@/lib/loyalty");
+    if (CAR_DETAIL_SERVICES.has(payload.serviceName)) {
+      const { data: pr } = await supabase.from("profiles").select("completed_detail_count, loyalty_discount_pct").eq("id", targetUserId).single();
+      const newCount = ((pr as any)?.completed_detail_count ?? 0) + 1;
+      await supabase.from("profiles").update({
+        completed_detail_count: newCount,
+        loyalty_discount_pct:   getDiscountPct(newCount),
+      }).eq("id", targetUserId);
+    }
+  }
+
   return { success: true, bookingId: booking.id };
 }
 
@@ -656,24 +669,13 @@ export async function updateBookingStatusAction(id: string, status: string) {
   const serviceName = booking.service_name || booking.services?.name || "Detailing Service";
 
   if (status === "completed") {
-    // ── Update loyalty tier if this is a qualifying car detail ──────────────
-    const { CAR_DETAIL_SERVICES, getDiscountPct } = await import("@/lib/loyalty");
-    const isCarDetail = CAR_DETAIL_SERVICES.has(serviceName);
-
-    let loyaltyEmailData: { completedDetailCount?: number; loyaltyDiscountPct?: number } = {};
-
-    if (isCarDetail && booking.user_id) {
-      const profileRow = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
-      const currentCount = (profileRow as any)?.completed_detail_count ?? 0;
-      const newCount = currentCount + 1;
-      const newPct = getDiscountPct(newCount);
-      await supabase.from("profiles").update({
-        completed_detail_count: newCount,
-        loyalty_discount_pct: newPct,
-      }).eq("id", booking.user_id);
-      loyaltyEmailData = { completedDetailCount: newCount, loyaltyDiscountPct: newPct };
-    }
-
+    // Loyalty count is now tracked at booking-creation time (not completion).
+    // Just send the completion email with the profile's current loyalty data.
+    const profileRow = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
+    const loyaltyEmailData = {
+      completedDetailCount: (profileRow as any)?.completed_detail_count ?? 0,
+      loyaltyDiscountPct:   (profileRow as any)?.loyalty_discount_pct   ?? 0,
+    };
     if (email) {
       await sendJobCompletedEmail({
         customerName: name,
@@ -684,6 +686,17 @@ export async function updateBookingStatusAction(id: string, status: string) {
       }).catch(e => console.error("Completion email fail:", e));
     }
   } else if (status === "cancelled") {
+    // ── Loyalty: decrement if this was a qualifying service ──────────────────
+    const { CAR_DETAIL_SERVICES, getDiscountPct } = await import("@/lib/loyalty");
+    if (CAR_DETAIL_SERVICES.has(serviceName) && booking.user_id) {
+      const profileRow = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
+      const currentCount = (profileRow as any)?.completed_detail_count ?? 0;
+      const newCount = Math.max(0, currentCount - 1);
+      await supabase.from("profiles").update({
+        completed_detail_count: newCount,
+        loyalty_discount_pct:   getDiscountPct(newCount),
+      }).eq("id", booking.user_id);
+    }
     if (email) {
       await sendBookingCancellationEmails({
         customerName: name,

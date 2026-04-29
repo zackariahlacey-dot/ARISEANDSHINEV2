@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Check, Calendar, Clock, MapPin, Smartphone, ChevronDown, ExternalLink, UserPlus, Sparkles } from "lucide-react";
+import { X, Check, Calendar, Clock, MapPin, Smartphone, ChevronDown, ExternalLink, UserPlus, Sparkles, Trophy, Zap, ShieldCheck, Star } from "lucide-react";
+import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 
@@ -15,6 +16,12 @@ export interface SuccessModalData {
   isGuest?: boolean;
   email?: string;
   phone?: string;
+  /** New completed detail count after this booking */
+  loyaltyNewCount?: number;
+  /** New discount % after this booking */
+  loyaltyNewDiscountPct?: number;
+  /** Tier name just unlocked, if any ("Member" | "Silver" | "Gold" | "VIP") */
+  loyaltyTierJustUnlocked?: string;
 }
 
 interface SuccessModalProps {
@@ -361,6 +368,71 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                         )}
                       </AnimatePresence>
                     </div>
+                  </motion.div>
+                )}
+
+                {/* Loyalty tier progress */}
+                {data && !data.isGuest && data.loyaltyNewCount !== undefined && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35, duration: 0.3 }}
+                  >
+                    {data.loyaltyTierJustUnlocked ? (
+                      // Tier just unlocked — celebrate
+                      <div className="rounded-2xl border border-[#d4af37]/30 bg-gradient-to-br from-[#d4af37]/10 to-[#d4af37]/[0.03] p-4 text-center">
+                        <div className="text-2xl mb-1">🎉</div>
+                        <p className="text-sm font-black text-[#d4af37] mb-0.5">
+                          {data.loyaltyTierJustUnlocked} Tier Unlocked!
+                        </p>
+                        <p className="text-xs text-zinc-400">
+                          You now get <span className="text-white font-bold">{data.loyaltyNewDiscountPct}% off</span> every vehicle detail — automatically applied at checkout.
+                        </p>
+                        <div className="mt-3 flex items-center justify-center gap-1">
+                          {LOYALTY_TIERS.slice().reverse().map((t) => {
+                            const unlocked = (data.loyaltyNewCount ?? 0) >= t.minDetails;
+                            return (
+                              <div key={t.label} className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${unlocked ? "bg-[#d4af37]/15 border-[#d4af37]/40 text-[#d4af37]" : "bg-white/[0.03] border-white/[0.06] text-zinc-700"}`}>
+                                {t.label}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      // Show progress toward next tier
+                      (() => {
+                        const count  = data.loyaltyNewCount ?? 0;
+                        const toNext = detailsToNextTier(count);
+                        const tier   = getTier(count);
+                        return (
+                          <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/60 px-4 py-3 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0">
+                              {tier?.label === "VIP"    ? <Trophy size={15} className="text-[#d4af37]" /> :
+                               tier?.label === "Gold"   ? <Zap    size={15} className="text-[#d4af37]" /> :
+                               tier?.label === "Silver" ? <ShieldCheck size={15} className="text-zinc-300" /> :
+                               tier                     ? <Star   size={15} className="text-zinc-400" /> :
+                               <Sparkles size={15} className="text-zinc-600" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {tier ? (
+                                <>
+                                  <p className="text-xs font-bold text-white">{tier.label} member — {data.loyaltyNewDiscountPct}% off vehicle details</p>
+                                  <p className="text-[10px] text-zinc-600 mt-0.5">
+                                    {toNext ? `${toNext} more detail${toNext === 1 ? "" : "s"} to unlock the next tier` : "Max tier — 20% off forever 🎉"}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-bold text-white">Loyalty progress: {count} detail{count !== 1 ? "s" : ""}</p>
+                                  <p className="text-[10px] text-zinc-600 mt-0.5">{toNext} more to unlock 5% off (Member tier)</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    )}
                   </motion.div>
                 )}
 

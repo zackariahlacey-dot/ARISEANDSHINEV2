@@ -31,6 +31,8 @@ import {
   Gem,
   AlertTriangle,
   X,
+  Zap,
+  Trophy,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -1018,135 +1020,175 @@ export function LandingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ─── Loyalty Rewards — Simple & Elegant ─────────────────────────────────────────── */}
+      {/* ─── Loyalty Rewards ──────────────────────────────────────────── */}
       <motion.section
         id="loyalty-rewards"
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-12 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+        className="py-16 md:py-28 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
       >
-        {/* Ambient background glow */}
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-96 opacity-20 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 70%)",
-            filter: "blur(60px)"
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(212,175,55,0.06) 0%, transparent 70%)" }} />
 
-        <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col items-center text-center">
-            <p className="text-[11px] md:text-sm font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-4">
-              Rewarding Your Trust
-            </p>
-            <h2 className="text-3xl md:text-6xl font-black tracking-tight text-white mb-6 md:mb-8 leading-[1.1]">
-              Details that <br />
-              <span className="text-zinc-500">Pay You Back.</span>
+        <div className="w-full max-w-5xl mx-auto relative z-10">
+          {/* Header */}
+          <div className="text-center mb-10 md:mb-14">
+            <p className="text-[11px] font-bold tracking-[0.22em] uppercase text-[#D4AF37] mb-3">Loyalty Program</p>
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white mb-4 leading-[1.1]">
+              Every detail <span className="text-zinc-500">pays you back.</span>
             </h2>
-            <p className="text-base md:text-lg text-zinc-400 mb-10 md:mb-12 leading-relaxed max-w-2xl mx-auto px-4">
-              We believe in long-term relationships. That&apos;s why every dollar you spend with Arise & Shine helps you earn towards your next showroom-quality finish.
+            <p className="text-zinc-400 text-base max-w-xl mx-auto leading-relaxed">
+              Book a car detail, climb a tier, save more — automatically. No points, no apps, no tracking. Just book and your discount is always there at checkout.
             </p>
+          </div>
 
-            {/* Loyalty Visual Card — Centered */}
-            <div className="relative group w-full max-w-2xl mb-10 md:mb-12">
-              <div className="absolute -inset-2 md:-inset-4 bg-gradient-to-r from-[#D4AF37]/20 to-amber-500/20 rounded-[1.5rem] md:rounded-[2rem] blur-2xl opacity-50 transition-opacity duration-700" />
-              <div className="relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-12 shadow-2xl overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 md:p-8 opacity-10 md:opacity-20">
-                  <Sparkles size={48} className="md:size-[64px] text-[#D4AF37]" />
-                </div>
-                
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-6 md:mb-8">
-                  <Star size={10} fill="currentColor" />
-                  Exclusive Program
-                </div>
-                
-                <h3 className="text-2xl md:text-4xl font-black text-white mb-8 md:mb-10 leading-tight">
-                  Arise & Shine <br />
-                  <span className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] bg-clip-text text-transparent">Loyalty Club</span>
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
-                  <div className="flex flex-col items-center md:items-start gap-3 md:gap-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
-                      <Car className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
-                    </div>
-                    <div className="text-center md:text-left">
-                      <p className="text-zinc-100 font-bold text-sm md:text-base">Get Details, Climb Tiers</p>
-                      <p className="text-xs md:text-sm text-zinc-500">Every car detail you complete counts toward your loyalty tier — automatically.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center md:items-start gap-3 md:gap-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
-                      <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-[#D4AF37]" />
-                    </div>
-                    <div className="text-center md:text-left">
-                      <p className="text-zinc-100 font-bold text-sm md:text-base">Unlock Bigger Discounts</p>
-                      <p className="text-xs md:text-sm text-zinc-500">Member 5% → Silver 10% → Gold 15% → VIP 20% off forever.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 md:p-6 rounded-xl md:rounded-2xl bg-zinc-950/50 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="text-center sm:text-left">
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">First Detail</p>
-                    <p className="text-xl md:text-2xl font-black text-white">5% Off</p>
-                  </div>
-                  <div className="h-px w-8 bg-white/5 sm:hidden" />
-                  <div className="text-center sm:text-right">
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">VIP Tier</p>
-                    <p className="text-[#D4AF37] font-bold text-sm md:text-base">20% Off Forever</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full max-w-sm sm:max-w-none justify-center px-4">
-              {authUserId ? (
-                <Button
-                  variant="primary"
-                  href="/protected"
-                  className="btn-primary-gold-shimmer w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl text-base md:text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
-                >
-                  <span className="relative z-[1]">View My Dashboard</span>
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  href="/auth/sign-up"
-                  className="btn-primary-gold-shimmer w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl text-base md:text-lg font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all duration-500 overflow-hidden"
-                >
-                  <span className="relative z-[1]">Sign Up & Join Rewards</span>
-                </Button>
-              )}
-              <button
-                onClick={() => openBooking()}
-                className="w-full sm:w-auto px-8 md:px-10 py-5 md:py-6 rounded-xl md:rounded-2xl border border-white/10 text-white hover:bg-white/5 transition-all text-base md:text-lg font-bold active:scale-[0.98]"
+          {/* Tier cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            {[
+              { label: "Member", pct: 5,  min: 1,  icon: Star,        color: "text-zinc-300",   glow: "rgba(161,161,170,0.15)", border: "border-zinc-700/50",    bg: "bg-zinc-800/40"       },
+              { label: "Silver", pct: 10, min: 3,  icon: ShieldCheck, color: "text-zinc-200",   glow: "rgba(212,212,216,0.2)",  border: "border-zinc-500/40",    bg: "bg-zinc-700/30"       },
+              { label: "Gold",   pct: 15, min: 5,  icon: Zap,         color: "text-[#D4AF37]",  glow: "rgba(212,175,55,0.25)", border: "border-[#D4AF37]/40",   bg: "bg-[#D4AF37]/[0.07]"  },
+              { label: "VIP",    pct: 20, min: 10, icon: Trophy,      color: "text-[#F3E5AB]",  glow: "rgba(212,175,55,0.4)",  border: "border-[#D4AF37]/60",   bg: "bg-[#D4AF37]/[0.12]"  },
+            ].map(({ label, pct, min, icon: Icon, color, glow, border, bg }) => (
+              <div
+                key={label}
+                className={`relative flex flex-col items-center text-center gap-2 p-4 md:p-5 rounded-2xl border ${border} ${bg} overflow-hidden`}
               >
-                Book & Earn
-              </button>
-            </div>
+                <div className="pointer-events-none absolute inset-0 rounded-2xl"
+                  style={{ background: `radial-gradient(ellipse at 50% 100%, ${glow} 0%, transparent 70%)` }} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${border} mb-0.5`}
+                  style={{ background: `${glow.replace("0.15","0.1").replace("0.25","0.1").replace("0.4","0.1").replace("0.2","0.1")}` }}>
+                  <Icon size={18} className={color} />
+                </div>
+                <p className={`text-2xl font-black ${color}`}>{pct}%</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{label}</p>
+                <p className="text-[10px] text-zinc-600">{min} detail{min !== 1 ? "s" : ""}</p>
+              </div>
+            ))}
+          </div>
 
-            <div className="mt-12 md:mt-16 flex flex-col items-center gap-4 md:gap-6">
-              <div className="flex -space-x-2 md:-space-x-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-zinc-950 bg-zinc-800 overflow-hidden relative shadow-xl">
-                    <Image 
-                      src={`https://i.pravatar.cc/100?img=${i+15}`} 
-                      alt="User"
-                      fill
-                      sizes="(max-width: 768px) 40px, 48px"
-                      className="object-cover grayscale"
-                    />
-                  </div>
+          {/* How it works strip */}
+          <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 px-5 py-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-0 sm:divide-x divide-white/[0.06] mb-8 text-center sm:text-left">
+            {[
+              { n: "01", title: "Book any car detail", sub: "Interior, Exterior, Full Detail, or Ultimate" },
+              { n: "02", title: "Your count goes up",   sub: "We track it automatically — no apps needed"   },
+              { n: "03", title: "Discount auto-applies", sub: "Saved to your account, applied at checkout"  },
+            ].map(({ n, title, sub }) => (
+              <div key={n} className="flex-1 px-4 py-1 flex flex-col items-center sm:items-start gap-0.5">
+                <p className="text-[9px] font-black tracking-[0.2em] text-[#D4AF37]/50 uppercase mb-1">{n}</p>
+                <p className="text-sm font-bold text-white">{title}</p>
+                <p className="text-[11px] text-zinc-500 leading-snug">{sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            {authUserId ? (
+              <Button variant="primary" href="/protected"
+                className="btn-primary-gold-shimmer w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black transition-all duration-500 overflow-hidden">
+                <span className="relative z-[1]">View My Dashboard</span>
+              </Button>
+            ) : (
+              <Button variant="primary" href="/auth/sign-up"
+                className="btn-primary-gold-shimmer w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-black bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black transition-all duration-500 overflow-hidden">
+                <span className="relative z-[1]">Join Free — Start Earning</span>
+              </Button>
+            )}
+            <button onClick={() => openBooking()}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl border border-white/10 text-white hover:bg-white/5 transition-all text-sm font-bold active:scale-[0.98]">
+              Book & Earn
+            </button>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ─── Google Reviews ───────────────────────────────────────────── */}
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        variants={sectionVariants}
+        className="py-14 md:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+      >
+        <div className="w-full max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+            <div>
+              <p className="text-[11px] font-bold tracking-[0.22em] uppercase text-[#D4AF37] mb-1.5">Customer Reviews</p>
+              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">What Vermont is saying</h2>
+            </div>
+            {/* Google badge */}
+            <a
+              href="https://g.co/kgs/hLQhG7r"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-white/[0.08] bg-zinc-900/60 hover:border-white/20 transition-all shrink-0"
+            >
+              <div className="flex items-center gap-0.5">
+                {[1,2,3,4,5].map(i => (
+                  <svg key={i} viewBox="0 0 20 20" className="w-4 h-4 fill-[#FBBC04]">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
                 ))}
               </div>
-              <p className="text-xs md:text-sm text-zinc-500">
-                <span className="text-zinc-200 font-bold">500+ members</span> already earning rewards.
-              </p>
-            </div>
+              <div>
+                <p className="text-sm font-black text-white leading-none">5.0</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">on Google</p>
+              </div>
+              <div className="w-px h-7 bg-white/[0.07]" />
+              <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+            </a>
+          </div>
+
+          {/* Review cards — 3-up grid */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {REVIEWS.slice(0, 3).map((r) => (
+              <div key={r.name} className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-5 flex flex-col gap-3">
+                {/* Stars */}
+                <div className="flex items-center gap-0.5">
+                  {[1,2,3,4,5].map(i => (
+                    <svg key={i} viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-[#FBBC04]">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                {/* Review text */}
+                <p className="text-sm text-zinc-300 leading-relaxed flex-1 line-clamp-4">&ldquo;{r.review}&rdquo;</p>
+                {/* Name + service */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
+                  <div>
+                    <p className="text-xs font-bold text-white">{r.name}</p>
+                    <p className="text-[10px] text-zinc-600">{r.location}</p>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-lg">
+                    {r.service}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* See all reviews link */}
+          <div className="mt-5 text-center">
+            <a
+              href="https://g.co/kgs/hLQhG7r"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              See all reviews on Google
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
           </div>
         </div>
       </motion.section>

@@ -22,7 +22,7 @@ export async function cancelBooking(bookingId: string): Promise<{
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_date, booking_time, status, total_price, user_id, stripe_checkout_session_id, customer_name, customer_email, service_name, profiles(first_name, last_name, email), services(name)"
+      "id, booking_date, booking_time, status, total_price, user_id, stripe_checkout_session_id, customer_name, customer_email, service_name, profiles(first_name, last_name, email, completed_detail_count, loyalty_discount_pct), services(name)"
     )
     .eq("id", bookingId)
     .single();
@@ -44,6 +44,22 @@ export async function cancelBooking(bookingId: string): Promise<{
   if (updateError) {
     console.error("[cancelBooking] update:", updateError);
     return { success: false, error: updateError.message };
+  }
+
+  // ── Loyalty: decrement count if this was a qualifying service ───────────
+  if (booking.user_id) {
+    const { CAR_DETAIL_SERVICES, getDiscountPct } = await import("@/lib/loyalty");
+    const serviceName = (booking.service_name as string | null) ?? "";
+    if (CAR_DETAIL_SERVICES.has(serviceName)) {
+      const profile = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
+      const currentCount = (profile as any)?.completed_detail_count ?? 0;
+      const newCount = Math.max(0, currentCount - 1);
+      const newPct   = getDiscountPct(newCount);
+      await supabase.from("profiles").update({
+        completed_detail_count: newCount,
+        loyalty_discount_pct:   newPct,
+      }).eq("id", booking.user_id);
+    }
   }
 
   const profile = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;

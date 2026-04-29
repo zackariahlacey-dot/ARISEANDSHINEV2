@@ -659,8 +659,10 @@ export interface BookingSuccessData {
   serviceAddress?: string;
   isGuest?: boolean;
   phone?: string;
-  /** Email to pre-fill sign-up form when guest creates account after booking */
   email?: string;
+  loyaltyNewCount?: number;
+  loyaltyNewDiscountPct?: number;
+  loyaltyTierJustUnlocked?: string;
 }
 
 /** Persisted draft for restoring after Stripe checkout cancel */
@@ -1693,6 +1695,9 @@ export function BookingSection({
         isGuest: !authUserId,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
+        loyaltyNewCount:         result.loyaltyNewCount,
+        loyaltyNewDiscountPct:   result.loyaltyNewDiscountPct,
+        loyaltyTierJustUnlocked: result.loyaltyTierJustUnlocked,
       });
     }
   };
@@ -1807,6 +1812,9 @@ export function BookingSection({
           isGuest: !authUserId,
           phone: phone.trim() || undefined,
           email: email.trim() || undefined,
+          loyaltyNewCount:         result.loyaltyNewCount,
+          loyaltyNewDiscountPct:   result.loyaltyNewDiscountPct,
+          loyaltyTierJustUnlocked: result.loyaltyTierJustUnlocked,
         });
       }
     } catch (err) {
