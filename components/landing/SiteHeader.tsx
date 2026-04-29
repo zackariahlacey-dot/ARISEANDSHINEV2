@@ -40,17 +40,24 @@ const MORE_LINKS = [
   { href: "/service-area", label: "Service Area", icon: MapPin      },
 ];
 
-type SiteHeaderProps = { onBookNow?: () => void };
+type SiteHeaderProps = {
+  onBookNow?: () => void;
+  trackOpen?: boolean;
+  onTrackOpenChange?: (open: boolean) => void;
+};
 
-export function SiteHeader({ onBookNow }: SiteHeaderProps) {
+export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenChange }: SiteHeaderProps) {
   const pathname = usePathname();
   const router   = useRouter();
 
   const [isScrolled,       setIsScrolled]      = useState(false);
   const [mobileOpen,       setMobileOpen]       = useState(false);
   const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
-  const [trackOpen,        setTrackOpen]        = useState(false);
+  const [trackOpenLocal,   setTrackOpenLocal]   = useState(false);
   const [squeezeOpen,      setSqueezeOpen]      = useState(false);
+
+  const trackOpen    = trackOpenProp    ?? trackOpenLocal;
+  const setTrackOpen = onTrackOpenChange ?? setTrackOpenLocal;
   const [profile,          setProfile]          = useState<AuthProfile | undefined>(undefined);
   const [authLoading,      setAuthLoading]      = useState(true);
 

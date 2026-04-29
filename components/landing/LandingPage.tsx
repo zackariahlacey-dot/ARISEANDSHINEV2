@@ -144,6 +144,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [isPastHero, setIsPastHero] = useState(false);
   const [authLoyaltyDiscountPct, setAuthLoyaltyDiscountPct] = useState<number>(0);
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
+  const [trackModalOpen, setTrackModalOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState<SuccessModalData | null>(null);
   const [stripeVerifying, setStripeVerifying] = useState(false);
@@ -445,7 +446,11 @@ export function LandingPage({ services }: { services: Service[] }) {
         }}
       />
       {/* ─── Shared Site Header (with mobile drawer) ───────────── */}
-      <SiteHeader onBookNow={() => { window.scrollTo({ top: 0, behavior: "smooth" }); openBooking(); }} />
+      <SiteHeader
+        onBookNow={() => { window.scrollTo({ top: 0, behavior: "smooth" }); openBooking(); }}
+        trackOpen={trackModalOpen}
+        onTrackOpenChange={setTrackModalOpen}
+      />
 
       {/* ─── Hero ───────────────────────────────────────────────── */}
       <motion.section
@@ -1471,7 +1476,8 @@ export function LandingPage({ services }: { services: Service[] }) {
           expandedBookingId !== null ||
           showSuccessModal ||
           stripeVerifying ||
-          legalModal !== null
+          legalModal !== null ||
+          trackModalOpen
         }
       />
 
