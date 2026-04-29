@@ -168,10 +168,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   }, []);
 
   const isAdmin = authEmail?.toLowerCase() === "zackariahlacey@gmail.com";
-  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
-  const reviewIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const bottomCtaRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
@@ -375,24 +371,6 @@ export function LandingPage({ services }: { services: Service[] }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
-  // Review carousel: native scroll auto-advance every 5s, clear on unmount
-  useEffect(() => {
-    const CARD_GAP = 24;
-    reviewIntervalRef.current = setInterval(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const cardWidth = (cardRefs.current[0]?.offsetWidth ?? el.offsetWidth) + CARD_GAP;
-      const isEnd = el.scrollLeft + el.offsetWidth >= el.scrollWidth - 10;
-      if (isEnd) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      } else {
-        el.scrollBy({ left: cardWidth, behavior: "smooth" });
-      }
-    }, 5000);
-    return () => {
-      if (reviewIntervalRef.current) clearInterval(reviewIntervalRef.current);
-    };
-  }, []);
 
   const mainGridServices = services.filter((s) => !s.is_subscription);
 
@@ -1218,95 +1196,6 @@ export function LandingPage({ services }: { services: Service[] }) {
           ))}
         </div>
       </section>
-
-      {/* ─── Testimonials Carousel ───────────────────────────────── */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={sectionViewport}
-        variants={sectionVariants}
-        className="relative py-20 md:py-32 lg:py-40 px-4 sm:px-6 lg:px-8 border-t border-white/[0.03] overflow-hidden"
-      >
-        {/* Cinematic background spotlight */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full bg-[radial-gradient(50%_50%_at_50%_50%,rgba(212,175,55,0.03)_0%,transparent_100%)] pointer-events-none" />
-
-        <div className="w-full max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-16 md:mb-24">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/50 border border-white/5 text-[#D4AF37] text-[10px] font-bold tracking-[0.2em] uppercase mb-6">
-              <Star size={12} className="shrink-0" fill="currentColor" />
-              Customer Stories
-            </div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6">
-              What Vermonters <br />
-              <span className="text-zinc-500">Are Saying.</span>
-            </h2>
-          </div>
-
-          <div className="relative overflow-hidden marquee-fade-edges -mx-4 sm:-mx-6 lg:-mx-8">
-            <div className="flex animate-testimonials-marquee gap-8 py-4">
-              {[...Array(3)].map((_, groupIdx) => (
-                <div key={groupIdx} className="flex gap-8">
-                  {REVIEWS.map((r, i) => (
-                    <div
-                      key={`${groupIdx}-${r.name}-${i}`}
-                      className="flex-shrink-0 w-[85vw] md:w-[600px] group/card relative"
-                    >
-                      {/* Card Glow Effect */}
-                      <div className="absolute -inset-0.5 bg-gradient-to-b from-white/10 to-transparent rounded-[2rem] blur opacity-20 group-hover/card:opacity-40 transition-opacity duration-500" />
-                      
-                      <div className="relative h-full bg-zinc-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-10 flex flex-col shadow-2xl">
-                        {/* Rating & Verified Tag */}
-                        <div className="flex items-center justify-between mb-8">
-                          <div className="flex items-center gap-1.5">
-                            {Array.from({ length: 5 }).map((_, j) => (
-                              <div key={j} className="relative">
-                                <Star
-                                  size={16}
-                                  className="text-[#D4AF37] fill-[#D4AF37]"
-                                  strokeWidth={0}
-                                />
-                                <div className="absolute inset-0 blur-sm bg-[#D4AF37]/40 scale-125 -z-1" />
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                            <CheckCircle size={10} className="text-[#D4AF37]" />
-                            Verified Service
-                          </div>
-                        </div>
-
-                        {/* Quote */}
-                        <div className="relative mb-10">
-                          <span className="absolute -top-6 -left-4 text-7xl font-serif text-white/5 pointer-events-none select-none">“</span>
-                          <p className="text-zinc-200 text-lg md:text-xl leading-relaxed font-medium italic">
-                            {r.review}
-                          </p>
-                        </div>
-
-                        {/* Author Info */}
-                        <div className="mt-auto pt-8 border-t border-white/5 flex items-center justify-between">
-                          <div>
-                            <p className="text-white font-bold text-base tracking-tight">
-                              {r.name}
-                            </p>
-                            <p className="text-[#D4AF37] text-xs font-bold uppercase tracking-widest mt-1">
-                              {r.location}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-widest mb-1">Service Provided</p>
-                            <p className="text-zinc-400 text-xs font-bold">{r.service}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </motion.section>
 
       {/* ─── Frequently Asked Questions ───────────────────────── */}
       <section className="py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
