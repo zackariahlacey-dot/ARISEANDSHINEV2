@@ -720,7 +720,7 @@ export async function bookDetailing(
       console.error("[bookDetailing] confirmation email error:", err)
     );
 
-    // Guest bookers: separate email to create an Auth account (merge by email on signup — createProfileWithReferral)
+    // Guest bookers: separate email to create an Auth account (bookings merge by email on signup)
     profileHasAuthUser(profileId).then((hasAuth) => {
       if (!hasAuth) {
         return sendBookerAccountInviteEmail({

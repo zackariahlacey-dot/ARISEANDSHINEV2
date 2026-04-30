@@ -159,6 +159,6 @@ export async function completeSignupAction(payload: {
     return { success: true };
   } catch (err: any) {
     console.error("[completeSignupAction] Error:", err);
-    return { success: false, error: err.message || "Signup failed.", isReferral: false };
+    return { success: false, error: err.message || "Signup failed." };
   }
 }

@@ -72,7 +72,7 @@ function siteOrigin(): string {
 
 /**
  * Second email after booking: prompts guest bookers (no Auth user yet) to sign up.
- * Bookings/vehicles/points merge by email when they complete signup (see createProfileWithReferral).
+ * Bookings/vehicles/points merge by email when they complete signup.
  */
 export async function sendBookerAccountInviteEmail(params: {
   customerEmail: string;

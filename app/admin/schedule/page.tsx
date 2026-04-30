@@ -83,20 +83,33 @@ const DAY_END_HOUR   = 20;
 
 // ── Shared add-on data (mirrors BookingModal) ──────────────────────────────
 const ADMIN_ADDONS = [
-  { id: "engine_bay",        label: "Engine Bay Detail",              price: 50  },
-  { id: "floor_1",           label: "Floorboard Shampoo – 1 Section", price: 30  },
-  { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",price: 45  },
-  { id: "floor_all",         label: "Floorboard Shampoo – All",       price: 60  },
-  { id: "clay_bar",          label: "Clay Bar Treatment",             price: 40  },
-  { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows",      price: 100 },
-  { id: "marine_engine_bay", label: "Marine Engine Bay",              price: 150 },
-  { id: "rv_awning",         label: "Awning Deep Clean",              price: 60  },
-  { id: "rv_slide_seal",     label: "Slide-Out Seal Conditioning",    price: 50  },
-  { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",       price: 80  },
-  { id: "rv_generator",      label: "Generator Bay Detail",           price: 75  },
-  { id: "rv_step",           label: "Entry Step & Threshold",         price: 30  },
+  // Vehicle — standard
+  { id: "engine_bay",        label: "Engine Bay Detail",                     price: 50  },
+  { id: "headlight_restore", label: "Headlight Restoration",                 price: 40  },
+  { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 60  },
+  { id: "upholstery_shampoo",label: "Upholstery & Floorboard Shampoo",       price: 60  },
+  { id: "uv_interior",       label: "UV Protection & Interior Restoration",  price: 35  },
+  { id: "leather_condition", label: "Leather Conditioning",                  price: 45  },
+  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 30  },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 30  },
+  { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35  },
+  { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30  },
+  { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45  },
+  { id: "floor_all",         label: "Floorboard Shampoo – All",             price: 60  },
+  // Vehicle — ultimate upgrades
+  { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic",       price: 350 },
+  { id: "ozone_treatment",   label: "Ozone Odor Elimination",               price: 75  },
+  // Marine
+  { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows",            price: 100 },
+  { id: "marine_engine_bay", label: "Marine Engine Bay",                    price: 150 },
+  // RV
+  { id: "rv_awning",         label: "Awning Deep Clean",                    price: 60  },
+  { id: "rv_slide_seal",     label: "Slide-Out Seal Conditioning",          price: 50  },
+  { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",             price: 80  },
+  { id: "rv_generator",      label: "Generator Bay Detail",                 price: 75  },
+  { id: "rv_step",           label: "Entry Step & Threshold",               price: 30  },
 ];
-const VEHICLE_ADDON_IDS  = ["engine_bay","floor_1","floor_2","floor_all","clay_bar"];
+const VEHICLE_ADDON_IDS  = ["engine_bay","headlight_restore","odor_bomb","upholstery_shampoo","uv_interior","leather_condition","clay_bar","pet_hair","tar_bug","floor_1","floor_2","floor_all"];
 const BOAT_ADDON_IDS     = ["marine_isinglass","marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning","rv_slide_seal","rv_roof_coat","rv_generator","rv_step"];
 
@@ -255,8 +268,9 @@ export function NewBookingForm({
     // vehicle: filter by service name
     const n = (selectedService?.name ?? "").toLowerCase();
     if (n.includes("paint") || n.includes("correction")) return ADMIN_ADDONS.filter(a => a.id === "engine_bay");
-    if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => a.id === "engine_bay" || a.id === "clay_bar");
-    if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id) && a.id !== "clay_bar");
+    if (n.includes("ultimate")) return ADMIN_ADDONS.filter(a => ["engine_bay","polish_ceramic","headlight_restore","ozone_treatment"].includes(a.id));
+    if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
+    if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
     return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
   }, [pathway, selectedService]);
 
