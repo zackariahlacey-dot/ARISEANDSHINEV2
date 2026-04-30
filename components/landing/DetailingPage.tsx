@@ -181,10 +181,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
         className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-5xl mx-auto">
-          <div className="mb-8">
+          <div className="mb-8 text-center">
             <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">Standard Cleaning</p>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Core Packages</h2>
-            <p className="text-zinc-500 mt-1.5 text-sm max-w-lg">
+            <p className="text-zinc-500 mt-1.5 text-sm max-w-lg mx-auto">
               A thorough professional clean — vacuum, wipe-down, wash, and protect. Perfect for regular maintenance and keeping your vehicle looking its best day-to-day.
             </p>
           </div>
@@ -209,24 +209,22 @@ export function DetailingPage({ services }: { services: Service[] }) {
                     }`}>
                     {isPopular && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent shrink-0" />}
 
-                    <div className="p-5 flex flex-col flex-1">
+                    <div className="p-5 flex flex-col flex-1 text-center">
                       {/* Header */}
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <div>
-                          {isPopular && (
-                            <div className="flex items-center gap-1 mb-1.5">
-                              <Crown size={10} className="text-[#D4AF37]" />
-                              <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">Most Popular</span>
-                            </div>
-                          )}
-                          <h3 className="text-lg font-black text-white tracking-tight">{service.name}</h3>
-                          {service.description && (
-                            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{service.description}</p>
-                          )}
+                      <div className="flex flex-col items-center mb-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isPopular ? "bg-[#D4AF37]/10 border border-[#D4AF37]/20" : "bg-white/[0.04] border border-white/[0.06]"}`}>
+                          <Icon size={17} className={isPopular ? "text-[#D4AF37]" : "text-zinc-400"} strokeWidth={1.5} />
                         </div>
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isPopular ? "bg-[#D4AF37]/10 border border-[#D4AF37]/20" : "bg-white/[0.04] border border-white/[0.06]"}`}>
-                          <Icon size={16} className={isPopular ? "text-[#D4AF37]" : "text-zinc-400"} strokeWidth={1.5} />
-                        </div>
+                        {isPopular && (
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <Crown size={10} className="text-[#D4AF37]" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">Most Popular</span>
+                          </div>
+                        )}
+                        <h3 className="text-lg font-black text-white tracking-tight">{service.name}</h3>
+                        {service.description && (
+                          <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{service.description}</p>
+                        )}
                       </div>
 
                       {/* Price */}
@@ -246,18 +244,18 @@ export function DetailingPage({ services }: { services: Service[] }) {
                       <div className="mb-5 flex-1">
                         {service.name === "Full Detail" ? (
                           <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15">
+                            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15">
                               <Sofa size={12} className="text-[#D4AF37] shrink-0" />
                               <span className="text-xs text-zinc-300 font-medium">Full Interior Detail</span>
                             </div>
-                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15">
+                            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15">
                               <Droplets size={12} className="text-[#D4AF37] shrink-0" />
                               <span className="text-xs text-zinc-300 font-medium">Full Exterior Detail</span>
                             </div>
-                            <p className="text-[10px] text-zinc-600 px-1">Both services in one visit — best value.</p>
+                            <p className="text-[10px] text-zinc-600">Both services in one visit — best value.</p>
                           </div>
                         ) : (
-                          <ul className="space-y-1.5">
+                          <ul className="space-y-1.5 inline-block text-left">
                             {(meta?.items ?? []).map((item) => (
                               <li key={item} className="flex items-start gap-2 text-xs text-zinc-400 leading-snug">
                                 <CheckCircle size={11} className={`shrink-0 mt-0.5 ${isPopular ? "text-[#D4AF37]" : "text-zinc-500"}`} />
@@ -290,22 +288,21 @@ export function DetailingPage({ services }: { services: Service[] }) {
         className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
         <div className="max-w-5xl mx-auto">
-          <div className="mb-8">
+          <div className="mb-8 text-center">
             <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">A Level Above</p>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Ultimate Series</h2>
-            <p className="text-zinc-400 mt-2 text-sm max-w-xl leading-relaxed">
+            <p className="text-zinc-400 mt-2 text-sm max-w-xl mx-auto leading-relaxed">
               Beyond clean — <span className="text-white font-semibold">restored</span>. Where a core package removes surface dirt, the Ultimate Series goes deep: hot water extraction, steam sanitation, decontamination, and a long-term ceramic seal that protects your paint for months.
               If your vehicle has road salt buildup, stained seats, or just hasn&apos;t had a proper deep clean in years — this is what it needs.
             </p>
-            {/* Who it's for */}
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="flex flex-wrap justify-center gap-2 mt-4">
               {["Post-winter refresh", "Pre-sale prep", "Years of buildup", "Stained seats or carpets", "High-traffic vehicles"].map(tag => (
                 <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/[0.06] text-[#D4AF37]">{tag}</span>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
             {ULTIMATE_CARDS.map((card) => {
               const BadgeIcon = card.badgeIcon;
               return (
@@ -317,10 +314,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
                   }`}>
                   <div className={`h-[2px] w-full shrink-0 ${card.isFlagship ? "bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40" : "bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent"}`} />
 
-                  <div className="p-5 flex flex-col flex-1">
+                  <div className="p-5 flex flex-col flex-1 text-center">
                     {/* Header */}
                     <div className="mb-4">
-                      <div className="flex items-center gap-1.5 mb-1.5">
+                      <div className="flex items-center justify-center gap-1.5 mb-1.5">
                         <BadgeIcon size={10} className="text-[#D4AF37]" fill={card.isFlagship ? "currentColor" : "none"} />
                         <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">{card.badge}</span>
                       </div>
@@ -335,7 +332,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
                     </div>
 
                     {/* Features */}
-                    <ul className="space-y-2 mb-5 flex-1">
+                    <ul className="space-y-2 mb-5 flex-1 inline-block text-left w-full">
                       {card.features.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-xs text-zinc-300 leading-snug">
                           <span className={`mt-[3px] w-3 h-3 rounded-full flex items-center justify-center shrink-0 ${card.isFlagship ? "bg-[#D4AF37]/15 border border-[#D4AF37]/30" : "bg-white/[0.06] border border-white/[0.1]"}`}>
@@ -360,8 +357,8 @@ export function DetailingPage({ services }: { services: Service[] }) {
             })}
           </div>
 
-          <div className="mt-5 flex items-start gap-2 max-w-lg">
-            <AlertTriangle size={12} className="text-amber-500/60 shrink-0 mt-0.5" />
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <AlertTriangle size={12} className="text-amber-500/60 shrink-0" />
             <p className="text-[10px] text-zinc-600 leading-relaxed">
               Vehicles with extreme mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.
             </p>
@@ -373,18 +370,18 @@ export function DetailingPage({ services }: { services: Service[] }) {
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
         className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-xl md:text-2xl font-black text-white mb-5">Why Vermont drivers choose us</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { icon: MapPin,      title: "We Come to You",       desc: "Home, office, or anywhere in Vermont. No drop-off, no wait." },
-              { icon: Leaf,        title: "Eco-Friendly Products", desc: "pH-neutral soaps and ceramic-grade protectants safe for all surfaces." },
-              { icon: ShieldCheck, title: "Vermont Salt Ready",    desc: "Our process neutralizes road salt and calcium buildup every season." },
-              { icon: BadgeCheck,  title: "Fully Insured",         desc: "Full liability insurance on every visit, every vehicle." },
-              { icon: CheckCircle, title: "Satisfaction Guaranteed", desc: "Not happy? We'll come back and make it right, no questions asked." },
-              { icon: Star,        title: "Loyalty Rewards",       desc: "Every detail counts toward your tier — unlock up to 20% off forever." },
+              { icon: MapPin,      title: "We Come to You",          desc: "Home, office, or anywhere in Vermont. No drop-off, no wait." },
+              { icon: Leaf,        title: "Eco-Friendly Products",    desc: "pH-neutral soaps and ceramic-grade protectants safe for all surfaces." },
+              { icon: ShieldCheck, title: "Vermont Salt Ready",       desc: "Our process neutralizes road salt and calcium buildup every season." },
+              { icon: BadgeCheck,  title: "Fully Insured",            desc: "Full liability insurance on every visit, every vehicle." },
+              { icon: CheckCircle, title: "Satisfaction Guaranteed",  desc: "Not happy? We'll come back and make it right, no questions asked." },
+              { icon: Star,        title: "Loyalty Rewards",          desc: "Every detail counts toward your tier — unlock up to 20% off forever." },
             ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-2xl border border-white/[0.05] bg-zinc-900/30 p-4">
+              <div key={title} className="rounded-2xl border border-white/[0.05] bg-zinc-900/30 p-4 flex flex-col items-center text-center">
                 <Icon size={15} className="text-[#D4AF37] mb-2.5" />
                 <h3 className="font-bold text-xs text-white mb-1">{title}</h3>
                 <p className="text-[11px] text-zinc-500 leading-relaxed">{desc}</p>
