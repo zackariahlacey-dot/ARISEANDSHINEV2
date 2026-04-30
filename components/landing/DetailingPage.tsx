@@ -421,8 +421,8 @@ export function DetailingPage({ services }: { services: Service[] }) {
             <Link href="/paint-correction" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/35 hover:text-white transition-all text-sm font-semibold">
               Paint Correction <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
-            <Link href="/maintenance-club" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/35 hover:text-white transition-all text-sm font-semibold">
-              Monthly Club <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+            <Link href="/protected" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/35 hover:text-white transition-all text-sm font-semibold">
+              Monthly Plans <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>

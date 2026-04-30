@@ -9,7 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/boat-detailing`,      lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/rv-detailing`,        lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/paint-correction`,    lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE}/maintenance-club`,    lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/protected`,            lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/service-area`,        lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/faq`,                 lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/about`,               lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },

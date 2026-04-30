@@ -29,7 +29,7 @@ const SERVICES_OFFERED = [
   { label: "Boat & Marine Detailing",   href: "/boat-detailing" },
   { label: "RV & Motorhome Detailing",  href: "/rv-detailing" },
   { label: "Paint Correction",          href: "/paint-correction" },
-  { label: "Monthly Maintenance Club",  href: "/maintenance-club" },
+  { label: "Monthly Plans",             href: "/protected" },
 ];
 
 export default function AboutPage() {

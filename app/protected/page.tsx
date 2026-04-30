@@ -8,8 +8,8 @@ import { ensureReferralCode } from "@/app/actions/createProfileWithReferral";
 import { ReferAndEarnCard } from "@/components/landing/ReferAndEarnCard";
 import { getClientBookings } from "@/app/actions/getClientBookings";
 import { BookingCard } from "@/components/dashboard/BookingCard";
-import { getMyActiveSubscription } from "@/app/actions/monthlySubscriptions";
-import { MonthlyPlanCard } from "@/components/dashboard/MonthlyPlanCard";
+import { getUserPlanRequest } from "@/app/actions/planRequestActions";
+import { PlanRequestSection } from "@/components/dashboard/PlanRequestSection";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
 import { LevelUpConfetti } from "@/components/dashboard/LevelUpConfetti";
@@ -35,7 +35,7 @@ async function Dashboard() {
 
   const referralCode = profile?.referralCode ?? (await ensureReferralCode(user.id));
   const { upcoming, past } = await getClientBookings(user.id);
-  const activeSub = await getMyActiveSubscription(user.id);
+  const planRequest = await getUserPlanRequest();
 
   const currentTier = getTier(completedCount);
   const toNext = detailsToNextTier(completedCount);
@@ -290,28 +290,7 @@ async function Dashboard() {
           </div>
 
           {/* ── Monthly Plan ──────────────────────────────────────────── */}
-          {activeSub ? (
-            <MonthlyPlanCard sub={activeSub} userId={user.id} />
-          ) : (
-            <Link
-              href="/maintenance-club"
-              className="group relative flex items-center gap-4 rounded-2xl border border-[#D4AF37]/15 bg-zinc-900/60 p-5 transition-all duration-200 hover:border-[#D4AF37]/30 hover:bg-zinc-900/80"
-            >
-              <div className="shrink-0 w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-                <Crown size={20} className="text-[#D4AF37]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#D4AF37] mb-0.5">
-                  Member Exclusive
-                </p>
-                <p className="text-sm font-bold text-zinc-100">Maintenance Club</p>
-                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
-                  Monthly plans from $75/mo — keep your vehicle in showroom condition year-round.
-                </p>
-              </div>
-              <ChevronRight size={16} className="text-zinc-600 shrink-0 group-hover:text-[#D4AF37] transition-colors" />
-            </Link>
-          )}
+          <PlanRequestSection existingRequest={planRequest} />
 
         </div>
       </div>

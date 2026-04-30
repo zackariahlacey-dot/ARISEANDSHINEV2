@@ -251,8 +251,8 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
             <a href="/detailing" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold">
               Auto Detailing <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </a>
-            <a href="/maintenance-club" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold">
-              Monthly Club <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            <a href="/protected" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold">
+              Monthly Plans <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </a>
           </div>
         </div>

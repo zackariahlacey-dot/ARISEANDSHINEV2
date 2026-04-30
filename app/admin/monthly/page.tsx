@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getMonthlySubscribers,
@@ -12,13 +12,19 @@ import {
   adminGetScheduleAvailability,
   getSubscriberHistory,
 } from "@/app/actions/adminMonthlyActions";
+import {
+  adminGetPlanRequests,
+  adminRespondToPlanRequest,
+  adminUpdatePlanRequestNotes,
+} from "@/app/actions/planRequestActions";
+import type { PlanRequest } from "@/app/actions/planRequestActions";
 import { useToast } from "@/components/admin/Toast";
 import { Modal } from "@/components/admin/Modal";
 import {
   Crown, Search, ChevronRight, Loader2, X, Check, CheckCircle2,
   PauseCircle, PlayCircle, Trash2, Mail, Send, AlertTriangle,
   Car, Calendar, Phone, Pencil, Save, UserPlus, Copy, ExternalLink,
-  Clock, FileText, ChevronDown, History,
+  Clock, FileText, ChevronDown, History, Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MONTHLY_PLANS } from "@/lib/monthlyPlans";
@@ -80,10 +86,19 @@ export default function MonthlySubscribersPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [mainTab, setMainTab] = useState<"requests" | "subscribers">("requests");
+
   const { data: subs = [], isLoading } = useQuery({
     queryKey: ["admin", "monthly-subs"],
     queryFn: async () => await getMonthlySubscribers(),
   });
+
+  const { data: planRequests = [], isLoading: reqLoading } = useQuery({
+    queryKey: ["admin", "plan-requests"],
+    queryFn: async () => await adminGetPlanRequests(),
+  });
+
+  const pendingCount = (planRequests as PlanRequest[]).filter(r => r.status === "pending").length;
 
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused" | "cancelled">("active");
@@ -241,7 +256,7 @@ export default function MonthlySubscribersPage() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Crown size={18} className="text-[#D4AF37]" />
-          <h1 className="text-xl font-black">Monthly Subscribers</h1>
+          <h1 className="text-xl font-black">Monthly Plans</h1>
         </div>
         <button
           onClick={() => setShowNewSub(true)}
@@ -251,6 +266,48 @@ export default function MonthlySubscribersPage() {
           Add Subscriber
         </button>
       </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1.5 p-1 bg-white/[0.03] border border-white/[0.06] rounded-xl">
+        <button
+          onClick={() => setMainTab("requests")}
+          className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
+            mainTab === "requests" ? "bg-amber-500 text-black shadow-sm" : "text-zinc-500 hover:text-zinc-300"
+          )}
+        >
+          <Inbox size={11} />
+          Requests
+          {pendingCount > 0 && (
+            <span className={cn("ml-0.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-black px-1",
+              mainTab === "requests" ? "bg-black/30 text-white" : "bg-red-500 text-white"
+            )}>
+              {pendingCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setMainTab("subscribers")}
+          className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
+            mainTab === "subscribers" ? "bg-amber-500 text-black shadow-sm" : "text-zinc-500 hover:text-zinc-300"
+          )}
+        >
+          <Crown size={11} />
+          Subscribers
+        </button>
+      </div>
+
+      {/* ── Plan Requests Tab ───────────────────────────────────────────── */}
+      {mainTab === "requests" && (
+        <PlanRequestsTab
+          requests={planRequests as PlanRequest[]}
+          isLoading={reqLoading}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ["admin", "plan-requests"] })}
+          toast={toast}
+        />
+      )}
+
+      {/* ── Subscribers Tab ────────────────────────────────────────────── */}
+      {mainTab === "subscribers" && (<>
 
       {/* Stats strip */}
       <div className="grid grid-cols-4 gap-2">
@@ -346,6 +403,8 @@ export default function MonthlySubscribersPage() {
           })}
         </div>
       )}
+
+      </>)} {/* end subscribers tab */}
 
       {/* ── Subscriber Detail Modal ─────────────────────────────────────────── */}
       <Modal open={!!activeSub} onClose={() => { setActiveSub(null); setEditMode(false); }} fullScreen>
@@ -568,6 +627,230 @@ export default function MonthlySubscribersPage() {
         }}
       />
     </div>
+  );
+}
+
+// ── Plan Requests Tab ─────────────────────────────────────────────────────────
+
+const PLAN_LABELS: Record<string, string> = {
+  interior_only: "Interior Only",
+  exterior_only: "Exterior Only",
+  full_detail:   "Full Detail",
+};
+
+const FREQ_LABELS: Record<string, string> = {
+  weekly:   "Weekly",
+  biweekly: "Every 2 Weeks",
+  monthly:  "Monthly",
+};
+
+function PlanRequestsTab({
+  requests, isLoading, onRefresh, toast,
+}: {
+  requests: PlanRequest[];
+  isLoading: boolean;
+  onRefresh: () => void;
+  toast: (msg: string, type?: "error") => void;
+}) {
+  const [filter, setFilter]         = useState<"all" | "pending" | "approved" | "declined">("pending");
+  const [activeReq, setActiveReq]   = useState<PlanRequest | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const filtered = requests.filter(r => filter === "all" || r.status === filter);
+
+  function openReq(r: PlanRequest) {
+    setActiveReq(r);
+    setAdminNotes(r.admin_notes ?? "");
+  }
+
+  function handleRespond(decision: "approved" | "declined") {
+    if (!activeReq) return;
+    startTransition(async () => {
+      const { ok, error } = await adminRespondToPlanRequest(activeReq.id, decision, adminNotes);
+      if (ok) {
+        toast(decision === "approved" ? "Approved! Email sent ✅" : "Declined — customer notified");
+        setActiveReq(null);
+        onRefresh();
+      } else {
+        toast(error ?? "Failed", "error");
+      }
+    });
+  }
+
+  async function handleSaveNotes() {
+    if (!activeReq) return;
+    setSavingNotes(true);
+    const { ok, error } = await adminUpdatePlanRequestNotes(activeReq.id, adminNotes);
+    setSavingNotes(false);
+    if (ok) {
+      toast("Notes saved ✅");
+      setActiveReq({ ...activeReq, admin_notes: adminNotes });
+      onRefresh();
+    } else {
+      toast(error ?? "Failed", "error");
+    }
+  }
+
+  const STATUS_STYLE: Record<string, string> = {
+    pending:  "text-amber-400 bg-amber-500/10 border-amber-500/25",
+    approved: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
+    declined: "text-zinc-500 bg-zinc-800 border-zinc-700",
+  };
+
+  return (
+    <>
+      {/* Filter row */}
+      <div className="flex gap-1.5">
+        {(["pending", "approved", "declined", "all"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={cn("flex-1 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all",
+              filter === f ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-600"
+            )}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="animate-spin text-amber-500" size={24} /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-10">
+          <Inbox size={28} className="text-zinc-800 mx-auto mb-3" />
+          <p className="text-sm text-zinc-600">No {filter === "all" ? "" : filter + " "}requests.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(r => {
+            const planLabel = PLAN_LABELS[r.plan_type] + (r.ultimate_upgrade ? " — Ultimate" : "");
+            return (
+              <button
+                key={r.id}
+                onClick={() => openReq(r)}
+                className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center text-sm font-black text-[#D4AF37] shrink-0">
+                  {(r.customer_name?.[0] ?? "?").toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-bold truncate">{r.customer_name}</span>
+                    <span className={cn("text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border", STATUS_STYLE[r.status])}>
+                      {r.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">{planLabel} · {FREQ_LABELS[r.preferred_frequency]}</p>
+                  {(r.vehicle_make || r.vehicle_model) && (
+                    <p className="text-[10px] text-zinc-700 mt-0.5">{[r.vehicle_year, r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ")}</p>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[9px] text-zinc-600">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                </div>
+                <ChevronRight size={14} className="text-zinc-700 shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Request Detail Modal */}
+      <Modal open={!!activeReq} onClose={() => setActiveReq(null)} fullScreen>
+        {activeReq && (() => {
+          const planLabel = PLAN_LABELS[activeReq.plan_type] + (activeReq.ultimate_upgrade ? " — Ultimate" : "");
+          return (
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-black">{activeReq.customer_name}</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">{planLabel} · {FREQ_LABELS[activeReq.preferred_frequency]}</p>
+                </div>
+                <span className={cn("text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border", STATUS_STYLE[activeReq.status])}>
+                  {activeReq.status}
+                </span>
+              </div>
+
+              {/* Contact */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-1.5">
+                {activeReq.customer_phone && (
+                  <a href={`tel:${activeReq.customer_phone}`} className="flex items-center gap-2 text-sm text-zinc-300 hover:text-white">
+                    <Phone size={13} className="text-zinc-600" />
+                    {activeReq.customer_phone}
+                  </a>
+                )}
+                <a href={`mailto:${activeReq.customer_email}`} className="flex items-center gap-2 text-sm text-sky-400/90 hover:text-sky-300">
+                  <Mail size={13} className="text-zinc-600" />
+                  {activeReq.customer_email}
+                </a>
+              </div>
+
+              {/* Vehicle */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Vehicle</p>
+                <p className="flex items-center gap-2 text-sm text-zinc-300">
+                  <Car size={12} className="text-zinc-600" />
+                  {[activeReq.vehicle_year, activeReq.vehicle_make, activeReq.vehicle_model].filter(Boolean).join(" ") || "Not specified"}
+                  {" "}<span className="text-zinc-600 text-xs capitalize">{activeReq.vehicle_size?.replace(/_/g, " ")}</span>
+                </p>
+                {activeReq.service_address && (
+                  <p className="text-xs text-zinc-500 pl-5">{activeReq.service_address}</p>
+                )}
+              </div>
+
+              {/* Notes from customer */}
+              {activeReq.notes && (
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Customer Note</p>
+                  <p className="text-xs text-zinc-400">{activeReq.notes}</p>
+                </div>
+              )}
+
+              {/* Admin notes */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Note to Customer (optional)</p>
+                <textarea
+                  value={adminNotes}
+                  onChange={e => setAdminNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Context for approval/decline email…"
+                  className="w-full bg-zinc-900 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-700 resize-none focus:outline-none focus:border-amber-500/50"
+                />
+                <button onClick={handleSaveNotes} disabled={savingNotes}
+                  className="mt-2 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-amber-500 disabled:opacity-50">
+                  {savingNotes ? <Loader2 size={9} className="animate-spin" /> : <Save size={9} />}
+                  Save Note
+                </button>
+              </div>
+
+              {/* Actions */}
+              {activeReq.status === "pending" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleRespond("declined")}
+                    disabled={isPending}
+                    className="flex items-center justify-center gap-1.5 py-3 rounded-xl border border-red-500/25 bg-red-500/10 text-red-400 text-xs font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    <X size={14} /> Decline
+                  </button>
+                  <button
+                    onClick={() => handleRespond("approved")}
+                    disabled={isPending}
+                    className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-emerald-500 text-white text-xs font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isPending ? <Loader2 size={13} className="animate-spin" /> : <><Check size={14} /> Approve</>}
+                  </button>
+                </div>
+              )}
+
+              <p className="text-[9px] text-zinc-700 text-center">
+                Submitted {new Date(activeReq.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
+          );
+        })()}
+      </Modal>
+    </>
   );
 }
 
