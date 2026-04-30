@@ -267,6 +267,7 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       service_name:    payload.serviceName,
       addons_json:     null,
       additional_vehicles_json: additionalVehiclesForDb,
+      payment_method:  "pay_at_arrival",
     })
     .select("id")
     .single();

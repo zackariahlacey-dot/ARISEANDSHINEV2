@@ -13,9 +13,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { 
-  Ticket, Eye, EyeOff, Mail, Lock, ShieldCheck, 
-  ArrowRight, Loader2, User, ChevronLeft 
+import {
+  Eye, EyeOff, Mail, Lock, ShieldCheck,
+  ArrowRight, Loader2, User, ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,12 +29,10 @@ type AuthState = "IDLE" | "SIGN_IN" | "SIGN_UP_DETAILS" | "SIGN_UP_VERIFY" | "SI
 
 export function SignUpForm({
   className,
-  refCode,
   initialEmail,
   redirectAfter,
 }: {
   className?: string;
-  refCode?: string | null;
   /** Prefill from booking invite link: /auth/sign-up?email=... */
   initialEmail?: string | null;
   /** After successful signup, redirect here instead of /protected (e.g. /?restore_booking=1) */
@@ -42,7 +40,6 @@ export function SignUpForm({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const referredByCode = searchParams.get("ref") ?? refCode ?? null;
 
   const [state, setState] = useState<AuthState>("IDLE");
   const [email, setEmail] = useState(() => initialEmail?.trim() || "");
@@ -158,15 +155,13 @@ export function SignUpForm({
     setIsLoading(true);
     setError(null);
     try {
-      const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const res = await completeSignupAction({
-        email, code: otp, password, firstName, lastName, referredByCode, newReferralCode
+        email, code: otp, password, firstName, lastName,
       });
       if (res.success) {
         const supabase = createClient();
         await supabase.auth.signInWithPassword({ email, password });
         const qs = new URLSearchParams();
-        if (res.isReferral) qs.set("ref", "true");
         if (redirectAfter) qs.set("redirect", redirectAfter);
         router.push(`/auth/sign-up-success${qs.size ? `?${qs}` : ""}`);
       } else {
@@ -293,12 +288,6 @@ export function SignUpForm({
                   exit={{ opacity: 0, height: 0 }}
                   className="space-y-4 overflow-hidden"
                 >
-                  {referredByCode && (
-                    <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-2">
-                      <Ticket size={14} className="text-emerald-500" />
-                      <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Referral Bonus: 10% Off</span>
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-black uppercase tracking-widest text-zinc-600 ml-1">First Name</label>

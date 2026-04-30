@@ -3,7 +3,6 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOtpEmailHtml } from "@/emails/OtpEmail";
-import { createProfileWithReferral } from "./createProfileWithReferral";
 import { sendAdminNewUserAlert } from "./sendAdminNewUserAlert";
 
 const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
@@ -116,15 +115,13 @@ export async function completeSignupAction(payload: {
   password: string;
   firstName: string;
   lastName: string;
-  referredByCode: string | null;
-  newReferralCode: string;
 }) {
   const supabase = createAdminClient();
-  const { email, code, password, firstName, lastName, referredByCode, newReferralCode } = payload;
+  const { email, code, password, firstName, lastName } = payload;
 
   // 1. Final verification of OTP
   const verifyRes = await verifyOtpAction(email, code);
-  if (!verifyRes.success) return { ...verifyRes, isReferral: false };
+  if (!verifyRes.success) return { ...verifyRes };
 
   try {
     // 2. Create Auth User
@@ -147,17 +144,10 @@ export async function completeSignupAction(payload: {
 
     if (!userData.user) throw new Error("User creation failed.");
 
-    // 3. Create Profile (handles referral and welcome bonus via existing action + DB trigger)
-    // Note: The handle_new_user() trigger in schema.sql already adds 100 points.
-    // createProfileWithReferral will upsert and ensure the name/referral code is correct.
-    await createProfileWithReferral(
-      userData.user.id,
-      email,
-      referredByCode,
-      firstName,
-      lastName,
-      newReferralCode
-    );
+    // 3. Ensure profile has first/last name (DB trigger handle_new_user creates the row)
+    await supabase
+      .from("profiles")
+      .upsert({ id: userData.user.id, first_name: firstName.trim(), last_name: lastName.trim() }, { onConflict: "id" });
 
     // 4. Cleanup OTP
     await supabase.from("settings").delete().eq("key", `otp_${email.toLowerCase().trim()}`);
@@ -166,7 +156,7 @@ export async function completeSignupAction(payload: {
     const fullName = `${firstName} ${lastName}`.trim();
     await sendAdminNewUserAlert(fullName, email);
 
-    return { success: true, isReferral: !!referredByCode };
+    return { success: true };
   } catch (err: any) {
     console.error("[completeSignupAction] Error:", err);
     return { success: false, error: err.message || "Signup failed.", isReferral: false };

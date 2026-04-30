@@ -1588,13 +1588,14 @@ export async function sendPriceUpdatedEmail(data: {
 
 // ─── Win-back email (30 / 60 / 90 day lapsed customers) ─────────────────────
 
-const WINBACK_COPY: Record<30 | 60 | 90, { subject: string; headline: string; sub: string; cta: string; offer: string }> = {
+const WINBACK_COPY: Record<30 | 60 | 90, { subject: string; headline: string; sub: string; cta: string; offer: string; planNote: string }> = {
   30: {
     subject:  "Still thinking about that next detail?",
     headline: "Your car could use some love ✨",
     sub:      "It's been about a month since your last detail with us. Ready to book again?",
     cta:      "Book Now",
     offer:    "Use code <strong>RETURN10</strong> for $10 off your next service.",
+    planNote: "Want to keep your car looking great all year? Check out our <strong>Monthly Plans</strong> — interior, exterior, or full detail on a recurring schedule.",
   },
   60: {
     subject:  "Two months already? Let's get you back on the schedule",
@@ -1602,6 +1603,7 @@ const WINBACK_COPY: Record<30 | 60 | 90, { subject: string; headline: string; su
     sub:      "Your car deserves to look its best. Book a detail this week and we'll make it worth your while.",
     cta:      "Schedule My Detail",
     offer:    "Use code <strong>RETURN15</strong> for $15 off any detail service.",
+    planNote: "Tired of remembering to book? Our <strong>Monthly Plans</strong> keep your car on a regular detailing schedule — starting at $65/month.",
   },
   90: {
     subject:  "3 months since your last detail — come back for $20 off",
@@ -1609,6 +1611,7 @@ const WINBACK_COPY: Record<30 | 60 | 90, { subject: string; headline: string; su
     sub:      "We'd love to earn your business back. Book any detail service and save $20 — just our way of saying we appreciate you.",
     cta:      "Claim My $20 Off",
     offer:    "Use code <strong>RETURN20</strong> for $20 off — expires in 7 days.",
+    planNote: "Never let 3 months slip by again — our <strong>Monthly Plans</strong> keep you on an automatic schedule. Request one from your dashboard.",
   },
 };
 
@@ -1644,9 +1647,13 @@ function winbackEmailHtml(name: string, days: 30 | 60 | 90): string {
         </tr>
         <tr>
           <td style="background-color:#18181b;padding:32px 40px;text-align:center;">
-            <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px 24px;margin-bottom:28px;text-align:left;">
+            <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px 24px;margin-bottom:20px;text-align:left;">
               <p style="color:#f59e0b;font-size:13px;font-weight:700;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.08em;">Special Offer</p>
               <p style="color:#e4e4e7;font-size:14px;margin:0;line-height:1.6;">${copy.offer}</p>
+            </div>
+            <div style="background:#111827;border:1px solid #1d2a3a;border-radius:12px;padding:16px 20px;margin-bottom:28px;text-align:left;">
+              <p style="color:#60a5fa;font-size:11px;font-weight:700;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.08em;">Monthly Plans</p>
+              <p style="color:#94a3b8;font-size:13px;margin:0;line-height:1.6;">${copy.planNote}</p>
             </div>
             <a href="${bookingUrl}" style="display:inline-block;background:#f59e0b;color:#000000;text-decoration:none;font-size:15px;font-weight:900;padding:14px 36px;border-radius:10px;letter-spacing:0.02em;">
               ${esc(copy.cta)}

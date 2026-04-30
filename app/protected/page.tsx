@@ -4,10 +4,9 @@ import Link from "next/link";
 import { ChevronRight, Sparkles, CalendarDays, Clock, Crown, Trophy, Zap, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
-import { ensureReferralCode } from "@/app/actions/createProfileWithReferral";
-import { ReferAndEarnCard } from "@/components/landing/ReferAndEarnCard";
 import { getClientBookings } from "@/app/actions/getClientBookings";
 import { BookingCard } from "@/components/dashboard/BookingCard";
+import { SignOutButton } from "@/components/dashboard/SignOutButton";
 import { getUserPlanRequest } from "@/app/actions/planRequestActions";
 import { PlanRequestSection } from "@/components/dashboard/PlanRequestSection";
 import { SiteHeader } from "@/components/landing/SiteHeader";
@@ -33,7 +32,6 @@ async function Dashboard() {
     user.email?.split("@")[0] ||
     "there";
 
-  const referralCode = profile?.referralCode ?? (await ensureReferralCode(user.id));
   const { upcoming, past } = await getClientBookings(user.id);
   const planRequest = await getUserPlanRequest();
 
@@ -250,19 +248,25 @@ async function Dashboard() {
           {/* ── Past Appointments ─────────────────────────────────────── */}
           {past.length > 0 && (
             <section className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-lg bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
-                  <Clock size={12} className="text-zinc-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+                    <Clock size={12} className="text-zinc-500" />
+                  </div>
+                  <p className="text-xs font-bold tracking-[0.18em] uppercase text-zinc-500">
+                    Service History
+                  </p>
                 </div>
-                <p className="text-xs font-bold tracking-[0.18em] uppercase text-zinc-500">
-                  Past Appointments
-                </p>
+                <p className="text-[10px] text-zinc-700">{past.length} appointment{past.length !== 1 ? "s" : ""}</p>
               </div>
               <div className="space-y-2.5">
-                {past.slice(0, 5).map((b) => (
-                  <BookingCard key={b.id} b={b} showRebook />
+                {past.slice(0, 10).map((b) => (
+                  <BookingCard key={b.id} b={b} showRebook variant="history" />
                 ))}
               </div>
+              {past.length > 10 && (
+                <p className="text-[10px] text-zinc-700 text-center mt-3">Showing most recent 10</p>
+              )}
             </section>
           )}
 
@@ -284,13 +288,14 @@ async function Dashboard() {
             </div>
           )}
 
-          {/* ── Refer & Earn ──────────────────────────────────────────── */}
-          <div className="mb-4">
-            <ReferAndEarnCard referralCode={referralCode} />
-          </div>
-
           {/* ── Monthly Plan ──────────────────────────────────────────── */}
           <PlanRequestSection existingRequest={planRequest} />
+
+          {/* ── Sign Out ──────────────────────────────────────────────── */}
+          <div className="mt-8 pt-6 border-t border-white/[0.04] flex flex-col items-center gap-2">
+            <p className="text-[10px] text-zinc-700">{user.email}</p>
+            <SignOutButton />
+          </div>
 
         </div>
       </div>

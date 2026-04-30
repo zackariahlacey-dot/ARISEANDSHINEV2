@@ -2,7 +2,7 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Trophy, ArrowRight, Star, Sparkles, Gift } from "lucide-react";
+import { Trophy, ArrowRight, Star, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import Image from "next/image";
@@ -10,7 +10,6 @@ import Image from "next/image";
 function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isReferral = searchParams.get("ref") === "true";
   const redirectAfter = searchParams.get("redirect");
 
   useEffect(() => {
@@ -66,7 +65,7 @@ function SuccessContent() {
         >
           <div className="absolute inset-0 bg-[#D4AF37] rounded-full blur-2xl opacity-20 animate-pulse" />
           <div className="w-24 h-24 bg-gradient-to-br from-[#D4AF37] to-[#AA771C] rounded-full flex items-center justify-center relative shadow-[0_0_30px_rgba(212,175,55,0.4)]">
-            {isReferral ? <Gift className="w-12 h-12 text-black" strokeWidth={2.5} /> : <Trophy className="w-12 h-12 text-black" strokeWidth={2.5} />}
+            <Trophy className="w-12 h-12 text-black" strokeWidth={2.5} />
           </div>
         </motion.div>
 
@@ -76,11 +75,7 @@ function SuccessContent() {
           transition={{ delay: 0.5 }}
         >
           <h1 className="text-3xl md:text-5xl font-black text-white mb-6 uppercase italic tracking-tight leading-none">
-            {isReferral ? (
-              <>Referral <span className="text-[#D4AF37]">Reward</span></>
-            ) : (
-              <>Welcome to <span className="text-[#D4AF37]">Rewards</span></>
-            )}
+            Welcome to <span className="text-[#D4AF37]">Rewards</span>
           </h1>
 
           <div className="flex flex-col items-center gap-6 mb-12">
@@ -89,14 +84,12 @@ function SuccessContent() {
                 <Sparkles className="w-6 h-6 text-[#D4AF37] animate-bounce" />
               </div>
               <span className="text-4xl md:text-5xl font-black text-[#D4AF37] tracking-tighter">
-                {isReferral ? "10% OFF" : "5% OFF"}
+                5% OFF
               </span>
             </div>
 
             <p className="text-zinc-400 text-sm md:text-lg font-medium leading-relaxed max-w-xs mx-auto">
-              {isReferral
-                ? "Your referral discount has been applied to your account! Ready for your first shine?"
-                : "Book your first vehicle detail and your 5% loyalty discount unlocks automatically. It only goes up from there!"}
+              Book your first vehicle detail and your 5% loyalty discount unlocks automatically. It only goes up from there!
             </p>
           </div>
         </motion.div>

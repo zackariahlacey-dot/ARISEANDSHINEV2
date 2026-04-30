@@ -351,28 +351,6 @@ export async function POST(req: NextRequest) {
     const bookingId = booking.id;
     const totalPrice = Number(m.totalPrice) || 0;
 
-    // Mark referral discount as used (no points rewarded, just flag it)
-    const appliedReferral = m.isApplyingReferralDiscount === "true";
-    const webhookAuthUserId = m.authUserId;
-    if (appliedReferral && webhookAuthUserId) {
-      try {
-        const { data: authProfile } = await supabase
-          .from("profiles")
-          .select("referred_by, has_used_referral")
-          .eq("id", webhookAuthUserId)
-          .maybeSingle();
-
-        if (authProfile?.referred_by && !authProfile.has_used_referral) {
-          await supabase
-            .from("profiles")
-            .update({ has_used_referral: true })
-            .eq("id", webhookAuthUserId);
-        }
-      } catch (refErr) {
-        console.error("[webhooks/stripe] referral flag error:", refErr);
-      }
-    }
-
     // Deduct gift card balance (Pay Now — deferred until payment confirmed)
     if (m.giftCardId && m.giftCardDiscount) {
       const gcDiscount = Number(m.giftCardDiscount) || 0;

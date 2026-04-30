@@ -17,7 +17,6 @@ export type AuthProfile = {
   saved_vehicle: SavedVehicle;
   saved_address: string | null;
   userId: string;
-  referralCode: string | null;
   email: string | null;
 } | null;
 
@@ -38,7 +37,7 @@ export async function getAuthProfile(): Promise<AuthProfile> {
 
   const { data: profile } = await adminSupabase
     .from("profiles")
-    .select("referral_code, saved_vehicle, saved_address, completed_detail_count, loyalty_discount_pct")
+    .select("saved_vehicle, saved_address, completed_detail_count, loyalty_discount_pct")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -47,7 +46,6 @@ export async function getAuthProfile(): Promise<AuthProfile> {
     saved_address?: string;
     completed_detail_count?: number;
     loyalty_discount_pct?: number;
-    referral_code?: string | null;
   } | null;
 
   const rawVehicle = row?.saved_vehicle as Record<string, unknown> | null | undefined;
@@ -72,10 +70,6 @@ export async function getAuthProfile(): Promise<AuthProfile> {
     saved_vehicle: savedVehicle,
     saved_address: typeof row?.saved_address === "string" ? row.saved_address : null,
     userId: user.id,
-    referralCode:
-      row?.referral_code && String(row.referral_code).trim() !== ""
-        ? String(row.referral_code).trim()
-        : null,
     email: user.email ?? null,
   };
 }

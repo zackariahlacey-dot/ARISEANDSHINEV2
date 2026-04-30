@@ -12,7 +12,7 @@ const FAQ_SECTIONS = [
       { q: "How do I book an appointment?", a: "Book online anytime at ariseandshinevt.com — pick your service, choose a date and time, and pay online or at arrival. You'll get a confirmation email right away with all your appointment details." },
       { q: "How much notice do I need?", a: "We typically have openings within the same week. The online calendar shows real-time availability, so you can book as soon as tonight for an upcoming slot — or plan ahead weeks in advance." },
       { q: "Can I cancel or reschedule?", a: "Yes. You can reschedule directly from your account dashboard, or reach out to us by phone or email. We just ask for as much notice as possible so we can fill the slot." },
-      { q: "Do I need an account to book?", a: "Nope — you can book as a guest using just your phone number and email. Creating a free account lets you track your loyalty tier, view all your bookings, and use your referral link." },
+      { q: "Do I need an account to book?", a: "Nope — you can book as a guest using just your phone number and email. Creating a free account lets you track your loyalty tier, view all your bookings, and request a monthly plan." },
     ],
   },
   {
@@ -35,11 +35,10 @@ const FAQ_SECTIONS = [
     ],
   },
   {
-    category: "Loyalty, Referrals & Membership",
+    category: "Loyalty & Monthly Plans",
     items: [
       { q: "How do loyalty discounts work?", a: "Every car detail you complete counts toward your tier — no points to track. Member (1 detail): 5% off. Silver (3): 10% off. Gold (5): 15% off. VIP (10): 20% off every detail, forever. Discounts apply automatically at checkout." },
-      { q: "How does the referral program work?", a: "Every account gets a unique referral link. When a friend books using your link, they get 10% off their first detail. There's no limit to how many friends you can refer." },
-      { q: "What is the Maintenance Club?", a: "The Maintenance Club is a monthly detail subscription — pick interior or full detail maintenance, and each month you'll get an email to choose your preferred date. Members enjoy priority scheduling and consistent pricing." },
+      { q: "What are Monthly Plans?", a: "Monthly Plans let you lock in recurring detailing on a set schedule — interior, exterior, or full detail. Choose a fixed day each month (like the 2nd Tuesday) or opt to receive a monthly email to pick your day. Request a plan from your account dashboard." },
     ],
   },
   {

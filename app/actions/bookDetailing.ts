@@ -60,9 +60,6 @@ export type BookingPayload = {
   cancelUrl?: string;
   /** Points to redeem (10 pts = $1 off). totalPrice is already discounted. */
   pointsToRedeem?: number;
-  isApplyingReferralDiscount?: boolean;
-  /** The auth user's UUID — needed to look up referred_by and mark discount as used. */
-  authUserId?: string;
   couponId?: string;
   couponDiscount?: number;
   /** Gift card code applied at checkout */
@@ -569,11 +566,6 @@ export async function bookDetailing(
             payload.travelFee > 0 && { travelFee: String(payload.travelFee) }),
           ...(payload.setupFee != null &&
             payload.setupFee > 0 && { setupFee: String(payload.setupFee) }),
-          ...(payload.isApplyingReferralDiscount &&
-            user && {
-              isApplyingReferralDiscount: "true",
-              authUserId: user,
-            }),
           ...(payload.giftCardId && payload.giftCardDiscount != null && payload.giftCardDiscount > 0 && {
             giftCardId: payload.giftCardId,
             giftCardCode: payload.giftCardCode ?? "",
@@ -690,47 +682,6 @@ export async function bookDetailing(
         amount: earnedPoints,
         description: `Earned from ${payload.serviceName}`,
       });
-    }
-  }
-
-  // ── 3c. Referral: mark discount used + award referrer 200 pts ───────────
-  if (payload.isApplyingReferralDiscount && user) {
-    try {
-      const { data: authProfile } = await supabase
-        .from("profiles")
-        .select("referred_by, has_used_referral")
-        .eq("id", user)
-        .maybeSingle();
-
-      if (authProfile?.referred_by && !authProfile.has_used_referral) {
-        await adminSupabase
-          .from("profiles")
-          .update({ has_used_referral: true })
-          .eq("id", user);
-
-        const { data: referrerProfile } = await adminSupabase
-          .from("profiles")
-          .select("reward_points, lifetime_points")
-          .eq("id", authProfile.referred_by)
-          .maybeSingle();
-
-        if (referrerProfile != null) {
-          const newReward   = ((referrerProfile as any).reward_points   ?? 0) + 200;
-          const newLifetime = ((referrerProfile as any).lifetime_points ?? 0) + 200;
-          await adminSupabase
-            .from("profiles")
-            .update({ reward_points: newReward, lifetime_points: newLifetime })
-            .eq("id", authProfile.referred_by);
-
-          await adminSupabase.from("point_transactions").insert({
-            user_id:     authProfile.referred_by,
-            amount:      200,
-            description: "Referral bonus — friend completed first detail",
-          });
-        }
-      }
-    } catch (refErr) {
-      console.error("[bookDetailing] referral reward error:", refErr);
     }
   }
 

@@ -419,18 +419,32 @@ export function LandingPage({ services }: { services: Service[] }) {
   return (
     <div className="min-h-screen bg-zinc-950 text-white overflow-x-hidden">
       {/* Toast: checkout cancelled, draft restored */}
-      {showRestoreToast && (
-        <div
-          className="fixed top-4 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-yellow-500/30 bg-black/80 px-4 py-3 shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
-          role="status"
-          aria-live="polite"
-        >
-          <CheckCircle className="h-5 w-5 shrink-0 text-amber-400" aria-hidden />
-          <p className="text-sm text-gray-300">
-            Checkout cancelled. Your booking details have been saved—you can still choose to Pay at Arrival!
-          </p>
-        </div>
-      )}
+      <AnimatePresence>
+        {showRestoreToast && (
+          <motion.div
+            key="restore-toast"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed top-4 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="rounded-2xl border border-[#D4AF37]/25 bg-zinc-900/95 backdrop-blur-md shadow-[0_8px_40px_rgba(0,0,0,0.5)] px-4 py-3.5 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white leading-tight">Draft saved</p>
+                <p className="text-[11px] text-zinc-500 leading-tight mt-0.5">
+                  No Stripe? No problem — your details are ready. Pay at arrival instead.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── Noise / grain texture overlay ─────────────────────── */}
       <div

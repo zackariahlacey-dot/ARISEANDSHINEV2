@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Phone, Menu, X, Sparkles, Anchor, Truck,
   LogIn, LogOut, LayoutDashboard, Gift, User,
-  HelpCircle, MapPin, CalendarSearch, ChevronRight,
+  HelpCircle, MapPin, CalendarSearch, ChevronRight, Home,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -187,15 +187,22 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
                     Admin
                   </Link>
                 )}
-                <Link href="/protected" title="Loyalty dashboard"
-                  className="flex items-center gap-1.5 text-[12px] text-zinc-300 hover:text-white transition-colors">
-                  <Gift size={13} className="text-amber-400/80" />
-                  <span>{profile!.loyaltyDiscountPct}% off</span>
-                </Link>
-                <button type="button" onClick={handleSignOut} title="Sign out"
-                  className="flex items-center justify-center w-7 h-7 rounded-full text-zinc-500 hover:text-zinc-200 transition-colors">
-                  <LogOut size={13} />
-                </button>
+                {pathname === "/protected" ? (
+                  <Link href="/"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07] hover:border-white/[0.12] text-[12px] text-zinc-300 hover:text-white transition-all">
+                    <Home size={13} className="text-zinc-400" />
+                    <span>Home</span>
+                  </Link>
+                ) : (
+                  <Link href="/protected"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07] hover:border-white/[0.12] text-[12px] text-zinc-300 hover:text-white transition-all">
+                    <Gift size={13} className="text-amber-400/80" />
+                    <span>Dashboard</span>
+                    {profile!.loyaltyDiscountPct > 0 && (
+                      <span className="text-[10px] text-amber-400/70 font-bold">· {profile!.loyaltyDiscountPct}% off</span>
+                    )}
+                  </Link>
+                )}
               </div>
             ) : (
               <Link href="/auth/login?redirect=/"
@@ -215,11 +222,19 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
           <div className="flex md:hidden items-center gap-2 shrink-0">
             {/* Auth button — always visible; shows Sign In while loading */}
             {!authLoading && isLoggedIn ? (
-              <button type="button" onClick={handleSignOut} aria-label="Sign out"
-                className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-zinc-900/80 border border-white/10 text-zinc-300 hover:text-red-400 hover:border-red-400/30 transition-all duration-200">
-                <LogOut className="w-3.5 h-3.5 shrink-0" />
-                <span className="text-[11px] font-semibold">Log Out</span>
-              </button>
+              pathname === "/protected" ? (
+                <Link href="/" aria-label="Home"
+                  className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-zinc-900/80 border border-white/10 text-zinc-300 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all duration-200">
+                  <Home className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-semibold">Home</span>
+                </Link>
+              ) : (
+                <Link href="/protected" aria-label="Dashboard"
+                  className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-zinc-900/80 border border-white/10 text-zinc-300 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all duration-200">
+                  <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-semibold">Dashboard</span>
+                </Link>
+              )
             ) : (
               <Link href="/auth/login?redirect=/" aria-label="Sign in"
                 className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-zinc-900/80 border border-white/10 text-zinc-300 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all duration-200">
@@ -289,10 +304,17 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-2">
-                  <Link href="/protected" onClick={closeMobile}
-                    className="text-[12px] font-semibold text-amber-400 hover:text-amber-300 transition-colors">
-                    Dashboard
-                  </Link>
+                  {pathname === "/protected" ? (
+                    <Link href="/" onClick={closeMobile}
+                      className="text-[12px] font-semibold text-zinc-300 hover:text-white transition-colors">
+                      Home
+                    </Link>
+                  ) : (
+                    <Link href="/protected" onClick={closeMobile}
+                      className="text-[12px] font-semibold text-amber-400 hover:text-amber-300 transition-colors">
+                      Dashboard
+                    </Link>
+                  )}
                   <button type="button" onClick={() => { closeMobile(); handleSignOut(); }} title="Sign out"
                     className="text-zinc-500 hover:text-zinc-300 transition-colors">
                     <LogOut size={15} />

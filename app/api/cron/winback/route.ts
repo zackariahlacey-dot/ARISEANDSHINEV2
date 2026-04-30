@@ -29,14 +29,15 @@ export async function GET(req: NextRequest) {
   const today = new Date();
   today.setHours(12, 0, 0, 0); // Use noon to avoid DST edge cases
 
-  // ── 1. Fetch all active monthly subscriber emails so we can skip them ──────
-  const { data: activeSubs } = await supabase
-    .from("monthly_subscriptions")
-    .select("customer_email")
-    .eq("status", "active");
-  const subEmails = new Set(
-    (activeSubs ?? []).map((s: any) => (s.customer_email as string).toLowerCase())
-  );
+  // ── 1. Fetch active subscribers + approved monthly plan requests to skip ──
+  const [{ data: activeSubs }, { data: approvedPlans }] = await Promise.all([
+    supabase.from("monthly_subscriptions").select("customer_email").eq("status", "active"),
+    supabase.from("plan_requests").select("customer_email").eq("status", "approved"),
+  ]);
+  const subEmails = new Set([
+    ...(activeSubs ?? []).map((s: any) => (s.customer_email as string).toLowerCase()),
+    ...(approvedPlans ?? []).map((p: any) => (p.customer_email as string).toLowerCase()),
+  ]);
 
   // ── 2. Fetch all non-cancelled bookings with customer snapshot ──────────────
   const { data: bookings, error } = await supabase

@@ -67,6 +67,16 @@ function formatTime(t: string): string {
   return to12h(t.slice(0, 5));
 }
 
+// ── Payment type helper ─────────────────────────────────────────────────────
+function payType(b: any): "paid" | "cash" | "unknown" {
+  if (b.payment_method === "pay_now") return "paid";
+  if (b.payment_method === "pay_at_arrival") return "cash";
+  const n = (b.notes ?? "").toLowerCase();
+  if (n.includes("stripe") || n.includes("paid online")) return "paid";
+  if (n.includes("pay at arrival") || n.includes("admin quick book") || n.includes("admin-created")) return "cash";
+  return "unknown";
+}
+
 // ── Day-view default hours (used for quick-book slot range) ─────────────────
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR   = 20;
@@ -1348,13 +1358,19 @@ export default function SchedulePage() {
                       )}>full</span>
                     ) : (
                       <div className="flex gap-0.5">
-                        {dayBks.slice(0, 3).map((_, i) => (
-                          <span key={i} className={cn(
-                            "w-1 h-1 rounded-full",
-                            isSel  ? "bg-black/40" :
-                            isPast ? "bg-zinc-600" : "bg-amber-500"
-                          )} />
-                        ))}
+                        {dayBks.slice(0, 3).map((bk, i) => {
+                          const pt = payType(bk);
+                          return (
+                            <span key={i} className={cn(
+                              "w-1 h-1 rounded-full",
+                              isSel  ? "bg-black/40" :
+                              isPast ? "bg-zinc-600" :
+                              pt === "paid" ? "bg-sky-400" :
+                              pt === "cash" ? "bg-emerald-400" :
+                                             "bg-amber-400"
+                            )} />
+                          );
+                        })}
                         {hasBlk && <span className={cn("w-1 h-1 rounded-full", isSel ? "bg-black/40" : isPast ? "bg-zinc-700" : "bg-zinc-500")} />}
                       </div>
                     )}
@@ -1366,9 +1382,12 @@ export default function SchedulePage() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-4 pt-1 border-t border-white/[0.04]">
+        <div className="flex items-center justify-center gap-3 pt-1 border-t border-white/[0.04] flex-wrap">
           <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />Booked
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Cash
+          </div>
+          <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />Paid
           </div>
           <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500/40" />Full
@@ -1495,14 +1514,6 @@ export default function SchedulePage() {
       return `${minsToDisplay(startMins)} – ${minsToDisplay(endMins)}`;
     }
 
-    const statusLeft: Record<string, string> = {
-      confirmed: "bg-amber-500",
-      completed: "bg-emerald-500",
-      "no-show": "bg-red-500",
-      blocked:   "bg-zinc-600",
-      cancelled: "bg-zinc-700",
-    };
-
     return (
       <div className="space-y-3">
         {/* Day navigation */}
@@ -1624,6 +1635,12 @@ export default function SchedulePage() {
             {dayBookings.map((b: any) => {
               const isBlk = b.service_name === "Personal Block";
               const Tag = isBlk ? "div" : "button";
+              const pt = payType(b);
+              const payStripe = pt === "cash" ? "bg-emerald-500" : pt === "paid" ? "bg-sky-500" : "bg-amber-500";
+              const payBorder = pt === "cash" ? "border-emerald-500/20" : pt === "paid" ? "border-sky-500/20" : "border-white/[0.06]";
+              const payBg    = pt === "cash" ? "bg-emerald-500/[0.04]" : pt === "paid" ? "bg-sky-500/[0.04]" : "bg-white/[0.02]";
+              const payHover = pt === "cash" ? "hover:bg-emerald-500/[0.07]" : pt === "paid" ? "hover:bg-sky-500/[0.07]" : "hover:bg-white/[0.04]";
+              const payTime  = pt === "cash" ? "text-emerald-400" : pt === "paid" ? "text-sky-400" : "text-amber-500";
               return (
                 <Tag
                   key={b.id}
@@ -1631,12 +1648,12 @@ export default function SchedulePage() {
                     onClick: () => { setActiveBooking(b); setEditPriceMode(false); setEditPriceVal(String(b.total_price ?? "")); setEditNotesMode(false); setEditNotesVal(b.notes ?? ""); setEditDurMode(false); setEditDurVal(b.duration_override ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan")); },
                   })}
                   className={cn(
-                    "w-full text-left bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden flex items-stretch transition-all",
-                    isBlk ? "opacity-70" : "hover:bg-white/[0.04] active:scale-[0.98]"
+                    "w-full text-left rounded-xl overflow-hidden flex items-stretch transition-all border",
+                    isBlk ? `opacity-70 bg-white/[0.02] border-white/[0.06]` : `${payBg} ${payBorder} ${payHover} active:scale-[0.98]`
                   )}
                 >
-                  {/* Status stripe */}
-                  <div className={cn("w-1 shrink-0", statusLeft[b.status] ?? "bg-zinc-600")} />
+                  {/* Payment stripe */}
+                  <div className={cn("w-1 shrink-0", isBlk ? "bg-zinc-600" : payStripe)} />
 
                   <div className="flex-1 min-w-0 px-3 py-3">
                     {isBlk ? (
@@ -1653,7 +1670,7 @@ export default function SchedulePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           {/* Time range */}
-                          <p className="text-xs font-black text-amber-500 mb-0.5">{timeRange(b)}</p>
+                          <p className={cn("text-xs font-black mb-0.5", payTime)}>{timeRange(b)}</p>
                           {/* Client name */}
                           <p className="text-sm font-bold text-white truncate">{bName(b)}</p>
                           {/* Service */}
@@ -1663,8 +1680,13 @@ export default function SchedulePage() {
                             <p className="text-xs text-zinc-600 truncate mt-0.5">{bVehicle(b)}</p>
                           )}
                         </div>
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 space-y-1">
                           <p className="text-base font-black text-white">${Number(b.total_price).toFixed(0)}</p>
+                          {payType(b) === "cash" ? (
+                            <span className="inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Cash</span>
+                          ) : payType(b) === "paid" ? (
+                            <span className="inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20">Paid</span>
+                          ) : null}
                           <StatusBadge status={b.status} />
                         </div>
                       </div>
@@ -1811,13 +1833,22 @@ export default function SchedulePage() {
           let formattedDate = activeBooking.booking_date ?? "";
           try { formattedDate = format(parseISO(activeBooking.booking_date + "T12:00:00"), "EEEE, MMMM d, yyyy"); } catch {}
 
+          const pt = payType(activeBooking);
+          const barColor   = pt === "cash" ? "bg-emerald-500"      : pt === "paid" ? "bg-sky-500"      : "bg-amber-500";
+          const timeColor  = pt === "cash" ? "text-emerald-400"    : pt === "paid" ? "text-sky-400"    : "text-amber-400";
+          const priceColor = pt === "cash" ? "text-emerald-400"    : pt === "paid" ? "text-sky-400"    : "text-amber-400";
+          const inputBorder= pt === "cash" ? "border-emerald-500/50": pt === "paid" ? "border-sky-500/50": "border-amber-500/50";
+          const inputText  = pt === "cash" ? "text-emerald-400"    : pt === "paid" ? "text-sky-400"    : "text-amber-400";
+          const saveBg     = pt === "cash" ? "bg-emerald-500"      : pt === "paid" ? "bg-sky-500"      : "bg-amber-500";
+          const hoverEdit  = pt === "cash" ? "hover:text-emerald-400": pt === "paid" ? "hover:text-sky-400": "hover:text-amber-400";
+
           return (
             <div className="space-y-5">
 
               {/* ── Hero card ────────────────────────────────────────────── */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
-                {/* Amber accent top bar */}
-                <div className="h-1 bg-amber-500 w-full" />
+                {/* Payment accent top bar */}
+                <div className={`h-1 ${barColor} w-full`} />
                 <div className="p-4">
                   {/* Time + date + duration edit */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -1840,9 +1871,9 @@ export default function SchedulePage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-amber-400">{timeRangeStr}</span>
+                        <span className={`text-sm font-black ${timeColor}`}>{timeRangeStr}</span>
                         <button onClick={() => setEditDurMode(true)}
-                          className="w-5 h-5 flex items-center justify-center rounded-md bg-white/[0.04] text-zinc-600 hover:text-amber-400 transition-all"
+                          className={`w-5 h-5 flex items-center justify-center rounded-md bg-white/[0.04] text-zinc-600 ${hoverEdit} transition-all`}
                           title="Edit duration">
                           <Pencil size={10} />
                         </button>
@@ -1870,7 +1901,7 @@ export default function SchedulePage() {
                               type="number"
                               value={editPriceVal}
                               onChange={e => setEditPriceVal(e.target.value)}
-                              className="w-24 bg-white/[0.06] border border-amber-500/50 rounded-xl px-2 py-1.5 text-xl font-black text-amber-400 text-right focus:outline-none"
+                              className={`w-24 bg-white/[0.06] border ${inputBorder} rounded-xl px-2 py-1.5 text-xl font-black ${inputText} text-right focus:outline-none`}
                               autoFocus
                             />
                           </div>
@@ -1878,19 +1909,19 @@ export default function SchedulePage() {
                             <button onClick={() => setEditPriceMode(false)}
                               className="flex-1 py-2 rounded-xl border border-white/[0.08] text-zinc-500 text-xs font-black">✕</button>
                             <button onClick={handleSavePrice} disabled={savingDetails}
-                              className="flex-1 py-2 rounded-xl bg-amber-500 text-black text-xs font-black flex items-center justify-center gap-1">
+                              className={`flex-1 py-2 rounded-xl ${saveBg} text-black text-xs font-black flex items-center justify-center gap-1`}>
                               {savingDetails ? <Loader2 size={11} className="animate-spin" /> : "Save"}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <>
-                          <p className="text-3xl font-black text-amber-400">${Number(activeBooking.total_price).toFixed(0)}</p>
+                          <p className={`text-3xl font-black ${priceColor}`}>${Number(activeBooking.total_price).toFixed(0)}</p>
                           <div className="flex items-center justify-end gap-1.5 mt-1">
                             <StatusBadge status={activeBooking.status} />
                             <button
                               onClick={() => { setEditPriceMode(true); setEditPriceVal(String(activeBooking.total_price ?? "")); }}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/[0.05] text-zinc-500 hover:text-amber-400 active:scale-90 transition-all"
+                              className={`w-7 h-7 flex items-center justify-center rounded-lg bg-white/[0.05] text-zinc-500 ${hoverEdit} active:scale-90 transition-all`}
                               title="Edit price"
                             >
                               <Pencil size={12} />

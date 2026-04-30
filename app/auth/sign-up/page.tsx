@@ -5,10 +5,9 @@ import { SignUpForm } from "@/components/sign-up-form";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string; email?: string; redirect?: string }>;
+  searchParams: Promise<{ email?: string; redirect?: string }>;
 }) {
   const params = await searchParams;
-  const refCode = params?.ref ?? null;
   const initialEmail = params?.email?.trim() || null;
   const redirectAfter = params?.redirect ?? null;
 
@@ -26,7 +25,7 @@ export default async function Page({
             </div>
           }
         >
-          <SignUpForm refCode={refCode} initialEmail={initialEmail} redirectAfter={redirectAfter} />
+          <SignUpForm initialEmail={initialEmail} redirectAfter={redirectAfter} />
         </Suspense>
       </div>
     </div>

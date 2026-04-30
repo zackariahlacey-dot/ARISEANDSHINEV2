@@ -42,6 +42,7 @@ export const AdminBookingSchema = z.object({
     .nullable()
     .optional(),
 
+  payment_method: z.enum(["pay_now", "pay_at_arrival"]).nullable().optional(),
   water_power: z.string().nullable().optional(),
   duration_override: z.number().nullable().optional(),
 

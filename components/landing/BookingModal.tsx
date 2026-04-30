@@ -49,7 +49,6 @@ import {
 } from "@/lib/vehicleDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getProfileByPhone } from "@/app/actions/getProfileByPhone";
-import { getAuthReferralStatus } from "@/app/actions/getAuthReferralStatus";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
@@ -65,15 +64,17 @@ const ALL_ADD_ONS = [
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
   { id: "headlight_restore",   label: "Headlight Restoration",               price: 40,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
   { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 60,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",  label: "Upholstery & Floorboard Shampoo",    price: 50,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $65." },
+  { id: "upholstery_shampoo",  label: "Upholstery & Floorboard Shampoo",    price: 60,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $75." },
+  { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
+  { id: "leather_condition",   label: "Leather Conditioning",                 price: 45, desc: "Deep-clean and condition all leather surfaces with premium conditioner — restores softness, prevents cracking, and leaves a clean matte finish." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
   { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
-  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 40,  desc: "Remove embedded contaminants for a glass-smooth finish before wax or sealant." },
+  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 30,  desc: "Remove embedded contaminants for a glass-smooth finish before wax or sealant." },
   { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 30,  desc: "Deep extraction of embedded pet hair from seats, carpet & cargo area. Applied upon inspection — only charged if heavy accumulation is present." },
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
-  { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 425, desc: "Complete paint correction & protection: machine polish removes swirls & oxidation, then a professional 2-year ceramic coat is applied. Requires a full-day appointment." },
+  { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
   // ── Marine ───────────────────────────────────────────────────────────────
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Window Clarity",      price: 100, desc: "Haze/scratch removal + UV sealant on all enclosure windows" },
@@ -91,17 +92,24 @@ type AddonItem = typeof ALL_ADD_ONS[number];
 const FLOOR_ADDON_IDS    = ["floor_1", "floor_2", "floor_all"];
 const MARINE_ADDON_IDS   = ["marine_isinglass", "marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
-/** High-ticket upgrades for Ultimate packages — no shampoo or clay (already included) */
+/** High-ticket upgrades for Ultimate packages — engine bay & headlight restore remain paid add-ons */
 const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore", "ozone_treatment"];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
-const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo"];
+const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
+/** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
+const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
 
-/** Upholstery shampoo is $15 more for XL vehicles (3rd row). All other addons use their base price. */
+const CERAMIC_PRICES: Record<string, number> = {
+  compact: 350, sedan: 350, suv: 500, xl: 650,
+  small: 350, medium: 350, large: 500, extra_large: 650,
+};
+
 function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
   if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 15;
+  if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   return addon.price;
 }
 
@@ -873,10 +881,6 @@ export function BookingSection({
   // Loyalty: discount % from profile (from auth prop or fetched by phone on step 3)
   const [loyaltyDiscountPct, setLoyaltyDiscountPct] = useState<number>(0);
 
-  // Referral welcome discount — fetched once when modal opens for auth users
-  const [referralEligible, setReferralEligible] = useState(false);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
-
   // VIP success — redeem button loading state (logged-in users only)
   const [isRedeeming, setIsRedeeming] = useState(false);
 
@@ -935,9 +939,6 @@ export function BookingSection({
   const setupFee = isMonthlyPlan ? getMaintenanceSetupFee(selectedService?.name ?? "") : 0;
   const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
   const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-  const referralDiscountAmount = referralEligible
-    ? Math.round(servicePrice * 0.1 * 100) / 100
-    : 0;
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discountPercentage != null
       ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
@@ -993,10 +994,10 @@ export function BookingSection({
     ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
     : 0;
   const totalWithTravel =
-    servicePrice - referralDiscountAmount - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
+    servicePrice - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
 
   // Loyalty discount: auto-applies for qualifying vehicle detail services
-  const isLoyaltyEligible = loyaltyDiscountPct > 0 && !referralDiscountAmount && !couponDiscount && (
+  const isLoyaltyEligible = loyaltyDiscountPct > 0 && !couponDiscount && (
     ["Interior Detail","Exterior Detail","Full Detail","Ultimate Interior Reset","Ultimate Interior + Exterior Reset"]
       .includes(selectedService?.name ?? "")
   );
@@ -1039,14 +1040,6 @@ export function BookingSection({
   }, [isVisible, step, phone]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  // Fetch referral eligibility once when the modal opens
-  useEffect(() => {
-    if (!isVisible) return;
-    getAuthReferralStatus().then(({ eligible, authUserId: uid }) => {
-      setReferralEligible(eligible);
-      setAuthUserId(uid);
-    });
-  }, [isVisible]);
 
   // Advance step-by-step loader every ~800ms while submitting
   const isSubmittingAny = isSubmitting || isStripeLoading;
@@ -1069,6 +1062,33 @@ export function BookingSection({
     setSelectedAddons(prev => prev.filter(a => availableIds.includes(a.id)));
   }, [selectedService?.id]);
 
+  // ── Ultimate upsell nudge ──────────────────────────────────────────────────
+  const [ultimateNudgeDismissed, setUltimateNudgeDismissed] = useState(false);
+  useEffect(() => { setUltimateNudgeDismissed(false); }, [selectedService?.id]);
+
+  const ultimateNudge = useMemo(() => {
+    if (ultimateNudgeDismissed) return null;
+    if (!selectedService) return null;
+    const n = selectedService.name.toLowerCase();
+    if (n.includes("ultimate") || n.includes("boat") || n.includes("rv") || n.includes("motorhome") || n.includes("maintenance") || n.includes("paint") || n.includes("correction")) return null;
+    const hasIncludedAddon = selectedAddons.some(a => INCLUDED_IN_ULTIMATE_IDS.includes(a.id));
+    if (!hasIncludedAddon) return null;
+    const targetName = (n.includes("interior") && !n.includes("full"))
+      ? "Ultimate Interior Reset"
+      : "Ultimate Interior + Exterior Reset";
+    const targetService = services.find(s => s.name === targetName);
+    if (!targetService) return null;
+    const targetPrice = targetService.price_small ?? 0;
+    const delta = targetPrice - (servicePrice + addonsTotal);
+    return { targetService, targetName, targetPrice, delta };
+  }, [ultimateNudgeDismissed, selectedService, selectedAddons, services, servicePrice, addonsTotal]);
+
+  const handleSwitchToUltimate = () => {
+    if (!ultimateNudge) return;
+    onSelectService(ultimateNudge.targetService);
+    setUltimateNudgeDismissed(true);
+  };
+
   // Ultimate packages are flat-rate — auto-set a neutral size so validation passes
   // without ever showing the size picker to the customer
   const isUltimateService = !!(selectedService?.name.toLowerCase().includes("ultimate"));
@@ -1077,6 +1097,12 @@ export function BookingSection({
   const supportsMultiVehicle = !!(
     selectedService && MULTI_VEHICLE_SERVICE_NAMES.includes(selectedService.name)
   );
+
+  // True when the current service can be upgraded to an Ultimate package
+  const isUltimateUpgradeable = !!(selectedService && (() => {
+    const n = selectedService.name.toLowerCase();
+    return !n.includes("ultimate") && !n.includes("boat") && !n.includes("rv") && !n.includes("motorhome") && !n.includes("maintenance") && !n.includes("paint") && !n.includes("correction");
+  })());
 
   // Total booking duration: each additional vehicle gets -30 min efficiency discount (min 30)
   const primaryDurationMins = selectedService
@@ -1125,8 +1151,6 @@ export function BookingSection({
       setDistanceMiles(null);
       setTravelFeeLoading(false);
       setLoyaltyDiscountPct(0);
-      setReferralEligible(false);
-      setAuthUserId(null);
       setCouponCode("");
       setIsCouponLoading(false);
       setCouponError(null);
@@ -1652,8 +1676,6 @@ export function BookingSection({
       ...(addlVehicles.length > 0 && { additionalVehicles: addlVehicles }),
       ...(travelFee > 0 && { travelFee }),
       ...(setupFee > 0 && { setupFee }),
-      ...(referralEligible && { isApplyingReferralDiscount: true }),
-      ...(authUserId && { authUserId }),
       ...(appliedCoupon && {
         couponId: appliedCoupon.couponId,
         couponDiscount,
@@ -1692,7 +1714,7 @@ export function BookingSection({
         serviceName: selectedService.name,
         firstName: name.trim().split(/\s+/)[0] ?? "there",
         serviceAddress: serviceAddress.trim() || undefined,
-        isGuest: !authUserId,
+        isGuest: initialLoyaltyDiscountPct === null,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         loyaltyNewCount:         result.loyaltyNewCount,
@@ -1809,7 +1831,7 @@ export function BookingSection({
           serviceName: selectedService.name,
           firstName: name.trim().split(/\s+/)[0] ?? "there",
           serviceAddress: serviceAddress.trim() || undefined,
-          isGuest: !authUserId,
+          isGuest: initialLoyaltyDiscountPct === null,
           phone: phone.trim() || undefined,
           email: email.trim() || undefined,
           loyaltyNewCount:         result.loyaltyNewCount,
@@ -2026,14 +2048,29 @@ export function BookingSection({
               rounded-b-xl shadow-lg"
           >
             {/* Resume toast — shown briefly when saved progress is restored */}
-            {showResumeToast && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-800/90 border border-white/10 backdrop-blur-sm shadow-lg text-xs text-zinc-300 whitespace-nowrap">
-                  <span>↩</span>
-                  <span>Picking up where you left off</span>
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {showResumeToast && (
+                <motion.div
+                  key="resume-toast"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-[calc(100%-2rem)] max-w-xs"
+                >
+                  <div className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl bg-zinc-900/95 border border-[#D4AF37]/25 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-center">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={12} className="text-[#D4AF37]" />
+                      <p className="text-xs font-bold text-white leading-tight">Draft restored</p>
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+                    <p className="text-[11px] text-zinc-500 leading-tight truncate w-full">
+                      {selectedService ? selectedService.name : "Picking up where you left off"}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Success is shown in SuccessModal; brief placeholder if dropdown still visible */}
           {isSuccess ? (
@@ -2096,13 +2133,11 @@ export function BookingSection({
               const cat = getServiceCategory(selectedService);
               const includedNote = getIncludedNote(selectedService.name);
               return (
-                <div className="px-6 py-8 flex flex-col gap-6">
+                <div className="px-6 py-8 flex flex-col items-center gap-6 text-center">
                   {/* Category badge */}
-                  <div>
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${cat.color}`}>
-                      {cat.label}
-                    </span>
-                  </div>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${cat.color}`}>
+                    {cat.label}
+                  </span>
 
                   {/* Service name + price */}
                   <div>
@@ -2143,19 +2178,17 @@ export function BookingSection({
 
                   {/* Included note */}
                   {includedNote && (
-                    <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-                      <Check size={14} className="text-emerald-400 mt-0.5 shrink-0" strokeWidth={2.5} />
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 w-full justify-center">
+                      <Check size={14} className="text-emerald-400 shrink-0" strokeWidth={2.5} />
                       <p className="text-xs text-emerald-300/80 leading-relaxed">{includedNote}</p>
                     </div>
                   )}
 
                   {/* Actions */}
-                  <div className="flex flex-col gap-3 pt-2">
+                  <div className="flex flex-col gap-3 pt-2 w-full">
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowServiceConfirm(false);
-                      }}
+                      onClick={() => setShowServiceConfirm(false)}
                       className="w-full py-4 rounded-xl bg-[#D4AF37] text-black font-black text-sm tracking-wide hover:bg-amber-400 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
                     >
                       Continue to Booking
@@ -2804,31 +2837,49 @@ export function BookingSection({
                               </div>
                             )}
 
-                            <div className="space-y-2.5">
+                            <div className="space-y-2">
                               {/* Standalone add-ons (non-floor) */}
                               {standAlone.map((addon) => {
                                 const isSelected = selectedAddons.some(a => a.id === addon.id);
+                                const isIncluded = isUltimateUpgradeable && INCLUDED_IN_ULTIMATE_IDS.includes(addon.id);
                                 return (
                                   <button
                                     key={addon.id}
                                     type="button"
                                     onClick={() => toggleAddon(addon)}
-                                    className={`w-full p-4 rounded-2xl border text-center transition-all duration-200 group flex flex-col items-center gap-1 ${
+                                    className={`w-full px-3.5 py-2.5 rounded-xl border transition-all duration-200 group flex items-center gap-3 text-left ${
                                       isSelected
-                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
-                                        : "bg-zinc-950/40 border-white/5 hover:border-white/20"
+                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/50 shadow-[0_0_12px_rgba(212,175,55,0.08)]"
+                                        : "bg-zinc-950/40 border-white/5 hover:border-white/15"
                                     }`}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
-                                      <span className={`text-sm font-bold ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
-                                        {addon.label}
-                                      </span>
-                                      {isSelected && <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />}
+                                    {/* Check circle */}
+                                    <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                      isSelected ? "bg-[#D4AF37] border-[#D4AF37]" : "border-zinc-700 group-hover:border-zinc-500"
+                                    }`}>
+                                      {isSelected && <Check size={10} className="text-black" strokeWidth={3} />}
                                     </div>
-                                    <p className="text-[11px] text-zinc-500 leading-relaxed">
-                                      {addon.desc}
-                                    </p>
-                                    <div className={`font-black text-sm tabular-nums mt-0.5 ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+
+                                    {/* Label + desc */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`text-sm font-bold leading-tight ${isSelected ? "text-[#D4AF37]" : "text-zinc-200 group-hover:text-white"}`}>
+                                          {addon.label}
+                                        </span>
+                                        {isIncluded && (
+                                          <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-[#D4AF37]/80 bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-1.5 py-0.5 rounded-full">
+                                            <Crown size={7} />
+                                            Included in Ultimate
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] text-zinc-500 leading-snug mt-0.5 line-clamp-2">
+                                        {addon.desc}
+                                      </p>
+                                    </div>
+
+                                    {/* Price */}
+                                    <div className={`shrink-0 text-sm font-black tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
                                       +${getEffectiveAddonPrice(addon, vehicleSize as string)}
                                     </div>
                                   </button>
@@ -2879,6 +2930,96 @@ export function BookingSection({
                           </div>
                         );
                       })()}
+
+                      {/* ── Ultimate Upsell Nudge ── */}
+                      <AnimatePresence>
+                        {ultimateNudge && (
+                          <motion.div
+                            key="ultimate-nudge"
+                            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.08] to-[#D4AF37]/[0.03]"
+                          >
+                            {/* Subtle top glow line */}
+                            <div className="h-px w-full bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
+                            <div className="px-4 pt-4 pb-4">
+                              {/* Header row */}
+                              <div className="flex items-start justify-between gap-3 mb-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center shrink-0">
+                                    <Crown size={15} className="text-[#D4AF37]" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-black text-white leading-tight">
+                                      Upgrade to {ultimateNudge.targetName}
+                                    </p>
+                                    <p className="text-[11px] text-[#D4AF37]/70 font-medium mt-0.5">
+                                      {ultimateNudge.delta < 0
+                                        ? `Switch and save $${Math.abs(ultimateNudge.delta)} — get more for less`
+                                        : ultimateNudge.delta === 0
+                                        ? "You're already covering the cost — go all-in"
+                                        : `Only $${ultimateNudge.delta} more for the full treatment`}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setUltimateNudgeDismissed(true)}
+                                  className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.06] transition-all mt-0.5"
+                                  aria-label="Dismiss"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+
+                              {/* What's included */}
+                              <p className="text-[11px] text-zinc-500 leading-relaxed mb-3">
+                                {ultimateNudge.targetName === "Ultimate Interior Reset"
+                                  ? "Full interior reset · deep shampoo · clay bar · upholstery treatment · everything included — no add-ons needed."
+                                  : "Complete interior + exterior reset · clay bar · full shampoo · wax & sealant — the full package in one visit."}
+                              </p>
+
+                              {/* Price row + CTA */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-zinc-600 line-through">
+                                    ${servicePrice + addonsTotal}
+                                  </span>
+                                  <span className="text-base font-black text-[#D4AF37]">
+                                    ${ultimateNudge.targetPrice}
+                                  </span>
+                                  {ultimateNudge.delta > 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                                      +${ultimateNudge.delta} more
+                                    </span>
+                                  )}
+                                  {ultimateNudge.delta === 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                                      same price
+                                    </span>
+                                  )}
+                                  {ultimateNudge.delta < 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                                      save ${Math.abs(ultimateNudge.delta)}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleSwitchToUltimate}
+                                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#D4AF37] hover:bg-amber-400 text-black text-xs font-black transition-all active:scale-95 shrink-0"
+                                >
+                                  <Crown size={11} />
+                                  Switch to Ultimate
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
                       {/* ── Multi-Vehicle Add-on Section ── */}
                       {supportsMultiVehicle && (
                         <div className="pt-2">
@@ -3416,15 +3557,6 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 <span className="font-semibold text-white">${a.price.toFixed(2)}</span>
                               </div>
                             ))}
-                            {referralDiscountAmount > 0 && (
-                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
-                                <span className="flex items-center gap-1.5">
-                                  🎉 Referral Welcome Discount
-                                  <span className="text-[10px] text-emerald-500/80 font-normal">(10% off)</span>
-                                </span>
-                                <span className="font-semibold">−${referralDiscountAmount.toFixed(2)}</span>
-                              </div>
-                            )}
                             {couponDiscount > 0 && (
                               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                                 <span className="flex items-center gap-1.5">
@@ -3530,15 +3662,6 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               </div>
                             );
                           })}
-                          {referralDiscountAmount > 0 && (
-                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
-                              <span className="flex items-center gap-1.5">
-                                🎉 Referral Welcome Discount
-                                <span className="text-[10px] text-emerald-500/80 font-normal">(10% off)</span>
-                              </span>
-                              <span className="font-semibold">−${referralDiscountAmount.toFixed(2)}</span>
-                            </div>
-                          )}
                           {couponDiscount > 0 && (
                             <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                               <span className="flex items-center gap-1.5">
@@ -3601,7 +3724,7 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                     )}
 
                     {/* Guest loyalty sign-up prompt */}
-                    {!authUserId && selectedService && vehicleSize && (
+                    {initialLoyaltyDiscountPct === null && selectedService && vehicleSize && (
                       <div className="rounded-xl p-4 bg-black/60 backdrop-blur-md border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.08)]">
                         <div className="flex items-start gap-3">
                           <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" aria-hidden />

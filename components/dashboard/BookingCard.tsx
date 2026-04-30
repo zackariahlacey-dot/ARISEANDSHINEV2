@@ -74,6 +74,13 @@ function isCancellable(b: ClientBooking): boolean {
   }
 }
 
+const VEHICLE_SIZE_LABELS: Record<string, string> = {
+  compact: "Compact / Hatchback",
+  sedan: "Sedan / Coupe",
+  suv: "SUV / Crossover",
+  truck: "Truck / Van",
+};
+
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   confirmed:       { label: "Confirmed",     className: "bg-sky-500/10 text-sky-400 border border-sky-500/20" },
   completed:       { label: "Completed",     className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
@@ -87,9 +94,10 @@ interface BookingCardProps {
   showRebook?: boolean;
   showActions?: boolean;
   onCancelled?: (id: string) => void;
+  variant?: "default" | "history";
 }
 
-export function BookingCard({ b, showRebook, showActions, onCancelled }: BookingCardProps) {
+export function BookingCard({ b, showRebook, showActions, onCancelled, variant = "default" }: BookingCardProps) {
   const today = new Date().toISOString().split("T")[0];
   const isUpcoming = b.booking_date >= today;
   const vehicleLabel = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
@@ -120,6 +128,69 @@ export function BookingCard({ b, showRebook, showActions, onCancelled }: Booking
       }
     });
   };
+
+  if (variant === "history") {
+    const sizeLabel = b.vehicle_size ? (VEHICLE_SIZE_LABELS[b.vehicle_size] ?? b.vehicle_size) : null;
+    const isCompleted = b.status === "completed";
+    return (
+      <div className="rounded-2xl border border-white/[0.04] bg-zinc-900/40 overflow-hidden">
+        {/* Date / status strip */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04] bg-zinc-900/30">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? "bg-emerald-400" : "bg-zinc-600"}`} />
+            <span className="text-[10px] font-medium text-zinc-500 truncate">{formatDate(b.booking_date)}</span>
+            {formattedTime && <span className="text-[10px] text-zinc-700 shrink-0">· {formattedTime}</span>}
+          </div>
+          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ml-2 ${statusStyle.className}`}>
+            {statusStyle.label}
+          </span>
+        </div>
+
+        {/* Body */}
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="font-bold text-zinc-100 text-sm leading-tight">{b.service_name ?? "Detailing Service"}</p>
+            <p className="text-base font-black text-[#D4AF37] shrink-0">${b.total_price.toFixed(0)}</p>
+          </div>
+
+          {vehicleLabel && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <Car size={10} className="text-zinc-600 shrink-0" />
+              <p className="text-xs text-zinc-500 truncate">
+                {vehicleLabel}
+                {sizeLabel && <span className="text-zinc-700"> · {sizeLabel}</span>}
+              </p>
+            </div>
+          )}
+
+          {b.service_address && (
+            <div className="flex items-center gap-1.5 mb-2">
+              <MapPin size={10} className="text-zinc-600 shrink-0" />
+              <p className="text-xs text-zinc-600 truncate">{b.service_address}</p>
+            </div>
+          )}
+
+          {isCompleted && (
+            <p className="text-[10px] text-emerald-500/60 mb-2">✓ Counted toward your loyalty progress</p>
+          )}
+
+          {showRebook && (
+            <button
+              type="button"
+              onClick={() => {
+                const draft = buildRebookDraft(b);
+                try { sessionStorage.setItem("draftBooking", JSON.stringify(draft)); } catch {}
+                window.location.href = "/?restore_booking=1";
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-[#D4AF37] transition-colors mt-1"
+            >
+              <RotateCcw size={10} /> Book this service again
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (cancelState === "done") {
     return (
