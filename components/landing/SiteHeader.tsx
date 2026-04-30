@@ -324,6 +324,24 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 mb-2 px-1">Services</p>
             <div className="space-y-1">
+              {/* Home link */}
+              <Link href="/" onClick={closeMobile}
+                className={`group flex items-center gap-3 px-3 py-3 rounded-xl border transition-all duration-200 ${
+                  pathname === "/"
+                    ? "bg-[#D4AF37]/[0.09] border-[#D4AF37]/20"
+                    : "border-transparent hover:bg-white/[0.04] hover:border-white/[0.05]"
+                }`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                  pathname === "/" ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/[0.05] text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.08]"
+                }`}>
+                  <Sparkles size={15} strokeWidth={1.75} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[13px] font-semibold leading-tight ${pathname === "/" ? "text-[#D4AF37]" : "text-white/90"}`}>Home</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5 leading-tight">Back to the main page</p>
+                </div>
+                <ChevronRight size={13} className={`shrink-0 ${pathname === "/" ? "text-[#D4AF37]/50" : "text-zinc-700 group-hover:text-zinc-500"}`} />
+              </Link>
               {SERVICE_LINKS.map(({ href, label, icon: Icon, desc }) => {
                 const active = pathname === href;
                 return (
