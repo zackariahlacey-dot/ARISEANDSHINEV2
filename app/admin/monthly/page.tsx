@@ -16,6 +16,7 @@ import {
   adminGetPlanRequests,
   adminRespondToPlanRequest,
   adminUpdatePlanRequestNotes,
+  adminSendMonthlyReminder,
 } from "@/app/actions/planRequestActions";
 import type { PlanRequest } from "@/app/actions/planRequestActions";
 import { useToast } from "@/components/admin/Toast";
@@ -758,7 +759,13 @@ function PlanRequestsTab({
       {/* Request Detail Modal */}
       <Modal open={!!activeReq} onClose={() => setActiveReq(null)} fullScreen>
         {activeReq && (() => {
-          const planLabel = PLAN_LABELS[activeReq.plan_type] + (activeReq.ultimate_upgrade ? " — Ultimate" : "");
+          const planLabel   = PLAN_LABELS[activeReq.plan_type] + (activeReq.ultimate_upgrade ? " — Ultimate" : "");
+          const schedLabel  = activeReq.schedule_preference === "monthly_pick"
+            ? "Monthly email reminder"
+            : activeReq.schedule_preference === "fixed_day" && activeReq.fixed_day_of_week !== null && activeReq.fixed_week_of_month !== null
+              ? `Every ${["1st","2nd","3rd","4th"][activeReq.fixed_week_of_month - 1]} ${["Monday","Tuesday","Wednesday","Thursday","Friday"][activeReq.fixed_day_of_week]}`
+              : null;
+
           return (
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-3">
@@ -770,6 +777,36 @@ function PlanRequestsTab({
                   {activeReq.status}
                 </span>
               </div>
+
+              {/* Schedule */}
+              {activeReq.status === "approved" && (
+                <div className={cn("rounded-xl border p-3", schedLabel ? "bg-emerald-500/[0.04] border-emerald-500/20" : "bg-amber-500/[0.04] border-amber-500/20")}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1">Recurring Schedule</p>
+                  {schedLabel ? (
+                    <p className="text-sm font-bold text-emerald-400">{schedLabel}</p>
+                  ) : (
+                    <p className="text-xs text-amber-400">Customer hasn't set their schedule yet</p>
+                  )}
+                </div>
+              )}
+
+              {/* Monthly reminder button */}
+              {activeReq.status === "approved" && activeReq.schedule_preference === "monthly_pick" && (
+                <button
+                  onClick={() => {
+                    startTransition(async () => {
+                      const { ok, error } = await adminSendMonthlyReminder(activeReq.id);
+                      if (ok) toast("Reminder sent ✅");
+                      else toast(error ?? "Failed", "error");
+                    });
+                  }}
+                  disabled={isPending}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-sky-500/10 border border-sky-500/25 text-sky-400 text-xs font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  Send Monthly Pick Reminder
+                </button>
+              )}
 
               {/* Contact */}
               <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-1.5">
@@ -823,7 +860,7 @@ function PlanRequestsTab({
                 </button>
               </div>
 
-              {/* Actions */}
+              {/* Pending: approve / decline */}
               {activeReq.status === "pending" && (
                 <div className="grid grid-cols-2 gap-2">
                   <button
