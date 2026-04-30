@@ -667,9 +667,14 @@ export function LandingPage({ services }: { services: Service[] }) {
             >
               Our Services
             </h2>
-            <p className="text-sm text-zinc-500 mt-3 max-w-xl mx-auto leading-relaxed">
-              From everyday detailing to full paint restoration — every service is performed on location at your schedule.
+            <p className="text-sm text-zinc-500 mt-3 max-w-lg mx-auto leading-relaxed">
+              A thorough professional clean — vacuum, wipe-down, wash, and protect. Perfect for regular upkeep and keeping your vehicle looking sharp week to week.
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+              {["Regular maintenance", "Everyday drivers", "Quick refresh", "Between seasons"].map(tag => (
+                <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-zinc-500">{tag}</span>
+              ))}
+            </div>
           </div>
 
           {/* ── Mobile/tablet: single carousel ──────────────────────── */}
@@ -740,8 +745,15 @@ export function LandingPage({ services }: { services: Service[] }) {
                 <div className="flex-1 h-px bg-white/[0.05]" />
               </div>
               <div className="text-center">
-                <h3 className="text-2xl md:text-3xl font-black text-white mb-2">The Premium Tier.</h3>
-                <p className="text-sm text-zinc-500 max-w-xl mx-auto leading-relaxed">For those who want it done completely right — hot water extraction, ceramic protection, full decontamination. This is the service your vehicle deserves once a year.</p>
+                <h3 className="text-2xl md:text-3xl font-black text-white mb-2">Beyond clean — <span className="text-[#D4AF37]">restored.</span></h3>
+                <p className="text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
+                  Where a core package removes surface dirt, the Ultimate Series goes deep: hot water extraction, steam sanitation, paint decontamination, and a long-term ceramic seal. If your vehicle has road salt buildup, stained seats, dull paint, or just hasn&apos;t had a proper deep clean in years — this is what it needs.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                  {["Post-winter refresh", "Pre-sale prep", "Years of buildup", "Stained seats or carpets", "Dull or oxidized paint"].map(tag => (
+                    <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/[0.06] text-[#D4AF37]">{tag}</span>
+                  ))}
+                </div>
               </div>
             </div>
 
