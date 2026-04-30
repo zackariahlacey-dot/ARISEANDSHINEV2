@@ -182,9 +182,11 @@ export function DetailingPage({ services }: { services: Service[] }) {
       >
         <div className="max-w-5xl mx-auto">
           <div className="mb-8">
-            <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">Our Services</p>
+            <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">Standard Cleaning</p>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Core Packages</h2>
-            <p className="text-zinc-500 mt-1.5 text-sm">All prices per visit. Choose the service that fits your needs.</p>
+            <p className="text-zinc-500 mt-1.5 text-sm max-w-lg">
+              A thorough professional clean — vacuum, wipe-down, wash, and protect. Perfect for regular maintenance and keeping your vehicle looking its best day-to-day.
+            </p>
           </div>
 
           {orderedServices.length === 0 ? (
@@ -194,7 +196,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {orderedServices.map((service) => {
+              {orderedServices.filter(s => DETAIL_ORDER.includes(s.name)).map((service) => {
                 const isPopular = service.name === "Full Detail";
                 const meta = CORE_FEATURES[service.name];
                 const Icon = meta?.icon ?? Sparkles;
@@ -289,9 +291,18 @@ export function DetailingPage({ services }: { services: Service[] }) {
       >
         <div className="max-w-5xl mx-auto">
           <div className="mb-8">
-            <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">Premium</p>
+            <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">A Level Above</p>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Ultimate Series</h2>
-            <p className="text-zinc-500 mt-1.5 text-sm">Deep-clean packages for vehicles that deserve nothing less than perfection.</p>
+            <p className="text-zinc-400 mt-2 text-sm max-w-xl leading-relaxed">
+              Beyond clean — <span className="text-white font-semibold">restored</span>. Where a core package removes surface dirt, the Ultimate Series goes deep: hot water extraction, steam sanitation, decontamination, and a long-term ceramic seal that protects your paint for months.
+              If your vehicle has road salt buildup, stained seats, dull paint, or just hasn&apos;t had a proper deep clean in years — this is what it needs.
+            </p>
+            {/* Who it's for */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {["Post-winter refresh", "Pre-sale prep", "Years of buildup", "Stained seats or carpets", "Dull or oxidized paint"].map(tag => (
+                <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/[0.06] text-[#D4AF37]">{tag}</span>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
