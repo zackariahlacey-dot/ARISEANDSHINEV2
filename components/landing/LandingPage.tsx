@@ -747,10 +747,10 @@ export function LandingPage({ services }: { services: Service[] }) {
               <div className="text-center">
                 <h3 className="text-2xl md:text-3xl font-black text-white mb-2">Beyond clean — <span className="text-[#D4AF37]">restored.</span></h3>
                 <p className="text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
-                  Where a core package removes surface dirt, the Ultimate Series goes deep: hot water extraction, steam sanitation, paint decontamination, and a long-term ceramic seal. If your vehicle has road salt buildup, stained seats, dull paint, or just hasn&apos;t had a proper deep clean in years — this is what it needs.
+                  Where a core package removes surface dirt, the Ultimate Series goes deep: hot water extraction, steam sanitation, paint decontamination, and a long-term ceramic seal. If your vehicle has road salt buildup, stained seats, or just hasn&apos;t had a proper deep clean in years — this is what it needs.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                  {["Post-winter refresh", "Pre-sale prep", "Years of buildup", "Stained seats or carpets", "Dull or oxidized paint"].map(tag => (
+                  {["Post-winter refresh", "Pre-sale prep", "Years of buildup", "Stained seats or carpets", "High-traffic vehicles"].map(tag => (
                     <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/[0.06] text-[#D4AF37]">{tag}</span>
                   ))}
                 </div>
