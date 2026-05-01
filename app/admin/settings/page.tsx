@@ -14,13 +14,14 @@ import {
 import {
   getDiagnostics, sendTestEmailAction, triggerTestEmail,
   runTestBookingAction, getCouponStats, toggleCouponAction, deleteCouponAction,
+  getTestPayUrl,
 } from "@/app/actions/adminActions";
 import { createCoupon } from "@/app/actions/createCoupon";
 import { useToast } from "@/components/admin/Toast";
 import {
   Clock, CalendarOff, Mail, Server, Activity, Check,
   AlertTriangle, CheckCircle2, Loader2, ChevronDown, ChevronUp,
-  Send, Target, Zap, RefreshCw, FlaskConical, X, Ticket, Power, Trash2, Plus,
+  Send, Target, Zap, RefreshCw, FlaskConical, X, Ticket, Power, Trash2, Plus, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,9 @@ export default function SettingsPage() {
   // Test booking
   const [runningTestBooking, setRunningTestBooking] = useState(false);
   const [testBookingLog, setTestBookingLog]         = useState<string[]>([]);
+
+  // Pay page preview
+  const [loadingPayPreview, setLoadingPayPreview] = useState(false);
 
   // Goal
   const [goalInput, setGoalInput] = useState("");
@@ -135,6 +139,19 @@ export default function SettingsPage() {
       toast("Test booking run complete!");
     } catch (e: any) { toast(e.message ?? "Error", "error"); }
     setRunningTestBooking(false);
+  }
+
+  async function handlePreviewPayPage() {
+    setLoadingPayPreview(true);
+    try {
+      const r = await getTestPayUrl();
+      if ("bookingId" in r) {
+        window.open(`/pay/${r.bookingId}`, "_blank");
+      } else {
+        toast(r.error ?? "No bookings found", "error");
+      }
+    } catch { toast("Error fetching booking", "error"); }
+    setLoadingPayPreview(false);
   }
 
   const Section = ({ id, title, icon, children }: { id: string; title: string; icon: React.ReactNode; children: React.ReactNode }) => {
@@ -256,6 +273,22 @@ export default function SettingsPage() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Pay page preview */}
+          <div className="border border-dashed border-sky-500/20 rounded-xl p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <ExternalLink size={14} className="text-sky-400" />
+              <p className="text-xs font-black uppercase tracking-widest text-sky-400">Preview Pay Page</p>
+            </div>
+            <p className="text-[11px] text-zinc-500">Opens the customer-facing payment page using your most recent real booking — tip selector, live total, and Stripe checkout. No charge is made until a customer actually clicks Pay.</p>
+            <button
+              onClick={handlePreviewPayPage}
+              disabled={loadingPayPreview}
+              className="w-full flex items-center justify-center gap-2 bg-sky-500/10 border border-sky-500/30 text-sky-400 text-xs font-black uppercase tracking-wider py-3 rounded-xl hover:bg-sky-500/20 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {loadingPayPreview ? <Loader2 className="animate-spin" size={14} /> : <><ExternalLink size={13} /> Preview Pay Page</>}
+            </button>
           </div>
         </div>
       </Section>

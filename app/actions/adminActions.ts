@@ -1547,3 +1547,21 @@ export async function updateBookingDurationAction(bookingId: string, durationMin
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+// ── Test pay page URL ─────────────────────────────────────────────────────────
+
+/** Returns the ID of a recent bookable booking to preview the /pay page. */
+export async function getTestPayUrl(): Promise<{ bookingId: string } | { error: string }> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id")
+    .neq("status", "cancelled")
+    .not("total_price", "is", null)
+    .gt("total_price", 0)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (error || !data) return { error: "No bookings found to preview." };
+  return { bookingId: data.id };
+}
