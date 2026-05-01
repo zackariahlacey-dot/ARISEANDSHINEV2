@@ -40,6 +40,7 @@ import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking, BookingProgressData } from "./BookingModal";
 import { SiteHeader } from "./SiteHeader";
+import { SqueezeMeInModal } from "./SqueezeMeInModal";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
 const BookingSection = dynamic(
@@ -152,6 +153,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [bookingProgress, setBookingProgress] = useState<BookingProgressData | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [squeezeOpen, setSqueezeOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -530,7 +532,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           </p>
 
           {/* CTAs — content-fit width, centered, side-by-side on desktop */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-4">
             <button
               onClick={() => openBooking()}
               className="btn-primary-gold-shimmer h-12 px-8 rounded-xl font-semibold tracking-wide w-fit min-w-[180px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
@@ -545,6 +547,23 @@ export function LandingPage({ services }: { services: Service[] }) {
               View Services
               <ChevronDown size={16} />
             </Button>
+          </div>
+
+          {/* Squeeze Me In CTA */}
+          <div className="flex justify-center mb-6">
+            <button
+              onClick={() => setSqueezeOpen(true)}
+              className="group flex items-center gap-3 bg-zinc-900/60 hover:bg-zinc-800/80 border border-white/[0.08] hover:border-amber-500/30 rounded-2xl px-5 py-3 transition-all duration-300 active:scale-[0.98]"
+            >
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 group-hover:bg-amber-500/20 transition-colors">
+                <Zap size={15} className="text-amber-500" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-black text-white leading-tight">Need it Today or Tomorrow?</p>
+                <p className="text-[11px] text-zinc-500 group-hover:text-zinc-400 transition-colors">Request a last-minute spot — we&apos;ll reach out fast</p>
+              </div>
+              <ChevronDown size={14} className="text-zinc-600 group-hover:text-amber-500 transition-colors -rotate-90 shrink-0" />
+            </button>
           </div>
 
           {/* Inline booking dropdown (Hero) — client-only to avoid hydration mismatch */}
@@ -1638,6 +1657,8 @@ export function LandingPage({ services }: { services: Service[] }) {
         onClose={handleCloseSuccessModal}
         data={successModalData}
       />
+
+      <SqueezeMeInModal isOpen={squeezeOpen} onClose={() => setSqueezeOpen(false)} />
 
       {/* ─── Stripe payment verification overlay ──────────────────────────────── */}
       {stripeVerifying && (
