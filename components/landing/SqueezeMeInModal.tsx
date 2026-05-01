@@ -185,11 +185,15 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
 
   // ── Body scroll lock ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => { document.body.style.overflow = prev; };
-    }
+    if (!isOpen) return;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
   }, [isOpen]);
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -290,7 +294,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[73] max-w-md mx-auto max-h-[90dvh] overflow-y-auto modal-scroll"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[73] w-[calc(100vw-2rem)] max-w-md max-h-[90dvh] overflow-y-auto modal-scroll"
           >
             <div className="bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative">
 
