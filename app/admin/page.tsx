@@ -592,7 +592,7 @@ export default function TodayPage() {
                 <ActionBtn icon={<MessageSquare size={15} />} label="Text" onClick={() => window.open(`sms:${bPhone(activeBooking)}`, "_self")} />
               )}
               <ActionBtn icon={<Send size={15} />} label="On My Way" onClick={() => handleSendOmw(activeBooking)} />
-              <ActionBtn icon={<DollarSign size={15} />} label={sendingPaymentLink ? "Sending…" : "Stripe Link"} onClick={() => handleStripeLink(activeBooking)} disabled={sendingPaymentLink} />
+              <ActionBtn icon={<DollarSign size={15} />} label={sendingPaymentLink ? "Sending…" : "Send Payment Link"} onClick={() => handleStripeLink(activeBooking)} disabled={sendingPaymentLink} />
               <ActionBtn icon={<RotateCcw size={15} />} label="Reschedule" onClick={() => { setRescheduleDate(activeBooking.booking_date); setShowReschedule(true); }} />
             </div>
 

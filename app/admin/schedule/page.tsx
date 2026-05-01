@@ -2036,7 +2036,7 @@ export default function SchedulePage() {
                 />
                 <BigActionBtn
                   icon={sendingLink ? <Loader2 size={18} className="animate-spin" /> : <DollarSign size={18} />}
-                  label="Stripe Link"
+                  label={sendingLink ? "Sending…" : "Send Payment Link"}
                   onClick={() => handleStripeLink(activeBooking)}
                   disabled={sendingLink}
                 />
