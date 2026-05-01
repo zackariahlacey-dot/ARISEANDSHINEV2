@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Heart } from "lucide-react";
+import { Loader2, Sparkles, ShieldCheck } from "lucide-react";
 import { createPayCheckout } from "@/app/actions/createPayCheckout";
 
 interface PayClientProps {
@@ -88,52 +88,62 @@ export default function PayClient({ booking }: PayClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-start justify-center py-12 px-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-sm space-y-5">
 
-        {/* Logo / brand */}
-        <div className="text-center">
-          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-500">Arise &amp; Shine VT</p>
-          <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-600 mt-1">Premium Mobile Detailing</p>
+        {/* Brand */}
+        <div className="text-center space-y-1 pb-1">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-3">
+            <Sparkles size={18} className="text-amber-500" />
+          </div>
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-white">Arise &amp; Shine VT</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-600">Premium Mobile Detailing</p>
         </div>
 
-        {/* Hero card */}
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] px-6 py-6 text-center space-y-1">
-          <Heart size={20} className="text-amber-500 mx-auto mb-3" />
-          <h1 className="text-lg font-black text-white leading-snug">
-            Hi {firstName}, we hope you love your
-          </h1>
-          <p className="text-amber-400 font-black text-base">{service}</p>
-          <p className="text-xs text-zinc-500 mt-2">
-            It was a pleasure working on your vehicle — thank you for choosing us.
-          </p>
-        </div>
-
-        {/* Booking summary */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-          <div className="px-5 py-4 space-y-3">
-            {vehicleStr && (
-              <Row label="Vehicle" value={vehicleStr} />
-            )}
-            {booking.booking_date && (
-              <Row label="Service Date" value={fmtDate(booking.booking_date)} />
-            )}
-            {booking.booking_time && (
-              <Row label="Time" value={fmtTime(booking.booking_time)} />
-            )}
-            <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
-              <span className="text-xs font-black uppercase tracking-wider text-zinc-500">Amount Due</span>
-              <span className="text-2xl font-black text-amber-500">${fmt(base)}</span>
-            </div>
+        {/* Hero — greeting + amount */}
+        <div className="rounded-2xl border border-amber-500/15 bg-gradient-to-b from-amber-500/[0.07] to-amber-500/[0.02] px-6 py-7 text-center space-y-3">
+          <div className="space-y-1">
+            <p className="text-zinc-400 text-sm">Hi {firstName} 👋</p>
+            <h1 className="text-xl font-black text-white leading-tight">
+              Thanks for choosing us<br />for your {service}
+            </h1>
+          </div>
+          <div className="pt-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-1">Amount Due</p>
+            <p className="text-5xl font-black text-amber-500 tracking-tight">${fmt(base)}</p>
           </div>
         </div>
 
+        {/* Booking details */}
+        {(vehicleStr || booking.booking_date) && (
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] divide-y divide-white/[0.05]">
+            {vehicleStr && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-600">Vehicle</span>
+                <span className="text-sm text-zinc-200 font-medium">{vehicleStr}</span>
+              </div>
+            )}
+            {booking.booking_date && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-600">Date</span>
+                <span className="text-sm text-zinc-200 font-medium">{fmtDate(booking.booking_date)}</span>
+              </div>
+            )}
+            {booking.booking_time && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-600">Time</span>
+                <span className="text-sm text-zinc-200 font-medium">{fmtTime(booking.booking_time)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tip section */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-5 space-y-4">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Leave a Tip</p>
-            <p className="text-[10px] text-zinc-600 mt-1">
-              Tips are 100% optional — never expected, always appreciated. 🙏
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-5 space-y-4">
+          <div className="text-center space-y-1">
+            <p className="text-sm font-black text-white">Leave a Tip</p>
+            <p className="text-[11px] text-zinc-600">
+              Completely optional — never expected, always deeply appreciated 🙏
             </p>
           </div>
 
@@ -146,14 +156,14 @@ export default function PayClient({ booking }: PayClientProps) {
                 <button
                   key={pct}
                   onClick={() => handleTipPct(pct)}
-                  className={`rounded-xl py-3 text-center transition-all active:scale-95 border ${
+                  className={`rounded-xl py-3.5 text-center transition-all active:scale-95 border ${
                     active
-                      ? "bg-amber-500 border-amber-500 text-black"
-                      : "bg-white/[0.04] border-white/[0.08] text-zinc-300 hover:border-white/[0.15]"
+                      ? "bg-amber-500 border-amber-500"
+                      : "bg-white/[0.03] border-white/[0.08] hover:border-white/[0.18] hover:bg-white/[0.05]"
                   }`}
                 >
                   <p className={`text-base font-black ${active ? "text-black" : "text-white"}`}>{pct}%</p>
-                  <p className={`text-[10px] font-bold mt-0.5 ${active ? "text-black/70" : "text-zinc-500"}`}>${fmt(amt)}</p>
+                  <p className={`text-[10px] font-semibold mt-0.5 ${active ? "text-black/60" : "text-zinc-600"}`}>${fmt(amt)}</p>
                 </button>
               );
             })}
@@ -161,32 +171,32 @@ export default function PayClient({ booking }: PayClientProps) {
 
           {/* Custom tip */}
           <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-bold">$</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-bold select-none">$</span>
             <input
               type="number"
               min="0"
               step="1"
               value={customStr}
               onChange={e => handleCustomChange(e.target.value)}
-              placeholder="Custom amount"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500/40"
+              placeholder="Custom tip amount"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl pl-8 pr-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-amber-500/40 transition-colors"
             />
           </div>
 
-          {/* Live total */}
+          {/* Live total breakdown */}
           {tipAmount > 0 && (
-            <div className="flex items-center justify-between bg-white/[0.03] rounded-xl px-4 py-3 border border-white/[0.06]">
-              <div className="text-xs text-zinc-500 space-y-0.5">
-                <div className="flex justify-between gap-8">
-                  <span>Service</span><span className="text-zinc-400">${fmt(base)}</span>
-                </div>
-                <div className="flex justify-between gap-8">
-                  <span>Tip</span><span className="text-zinc-400">+${fmt(tipAmount)}</span>
-                </div>
+            <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/15 px-4 py-3.5 space-y-1.5">
+              <div className="flex justify-between text-xs text-zinc-500">
+                <span>Service</span>
+                <span>${fmt(base)}</span>
               </div>
-              <div className="text-right">
-                <p className="text-[9px] text-zinc-600 uppercase tracking-wider">Total</p>
-                <p className="text-xl font-black text-amber-500">${fmt(total)}</p>
+              <div className="flex justify-between text-xs text-zinc-500">
+                <span>Tip</span>
+                <span>+${fmt(tipAmount)}</span>
+              </div>
+              <div className="flex justify-between items-baseline pt-1.5 border-t border-amber-500/15">
+                <span className="text-xs font-black uppercase tracking-wider text-zinc-400">Total</span>
+                <span className="text-2xl font-black text-amber-400">${fmt(total)}</span>
               </div>
             </div>
           )}
@@ -203,28 +213,24 @@ export default function PayClient({ booking }: PayClientProps) {
         <button
           onClick={handlePay}
           disabled={loading}
-          className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-black text-sm uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
         >
           {loading ? (
-            <><Loader2 size={16} className="animate-spin" /> Redirecting to Stripe…</>
+            <><Loader2 size={16} className="animate-spin" /> Redirecting…</>
           ) : (
             `Pay $${fmt(total)}`
           )}
         </button>
 
-        <p className="text-center text-[10px] text-zinc-700 leading-relaxed">
-          Payments are processed securely by Stripe. Your card info never touches our servers.
-        </p>
-      </div>
-    </div>
-  );
-}
+        {/* Trust footer */}
+        <div className="flex items-center justify-center gap-1.5 pb-2">
+          <ShieldCheck size={12} className="text-zinc-700" />
+          <p className="text-[10px] text-zinc-700">
+            Secured by Stripe — your card info never touches our servers
+          </p>
+        </div>
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-600 shrink-0 pt-0.5">{label}</span>
-      <span className="text-sm text-zinc-200 text-right">{value}</span>
+      </div>
     </div>
   );
 }
