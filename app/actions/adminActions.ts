@@ -267,7 +267,6 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       service_name:    payload.serviceName,
       addons_json:     null,
       additional_vehicles_json: additionalVehiclesForDb,
-      payment_method:  "pay_at_arrival",
     })
     .select("id")
     .single();
@@ -391,7 +390,7 @@ export async function getAllClients() {
         id, total_price, booking_date, booking_time, status, notes,
         customer_name, customer_email, customer_phone, service_address, service_name,
         vehicle_make, vehicle_model, vehicle_year, vehicle_size,
-        addons_json, payment_method, stripe_checkout_session_id,
+        addons_json, stripe_checkout_session_id,
         services:service_id(name)
       )
     `)
@@ -407,7 +406,7 @@ export async function getAllClients() {
   // These are rare but can happen if a booking's user_id UUID was never persisted to profiles
   const { data: orphanBookings } = await supabase
     .from("bookings")
-    .select("id, user_id, customer_name, customer_email, customer_phone, service_address, service_name, total_price, booking_date, booking_time, status, notes, vehicle_make, vehicle_model, vehicle_year, vehicle_size, addons_json, payment_method, stripe_checkout_session_id")
+    .select("id, user_id, customer_name, customer_email, customer_phone, service_address, service_name, total_price, booking_date, booking_time, status, notes, vehicle_make, vehicle_model, vehicle_year, vehicle_size, addons_json, stripe_checkout_session_id")
     .neq("status", "cancelled")
     .not("customer_name", "is", null);
 
@@ -1145,7 +1144,7 @@ export async function getRevenueBreakdown(monthOffset = 0) {
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      "id, total_price, status, notes, service_name, booking_date, booking_time, customer_name, customer_email, payment_method"
+      "id, total_price, status, notes, service_name, booking_date, booking_time, customer_name, customer_email"
     )
     .gte("booking_date", "2020-01-01")
     .lte("booking_date", `${calendarYear + 5}-12-31`);
@@ -1282,7 +1281,7 @@ export async function getAllTimeStats() {
   const todayStr = todayYmdEastern();
   const { data } = await supabase
     .from("bookings")
-    .select("total_price, status, notes, service_name, payment_method, booking_date");
+    .select("total_price, status, notes, service_name, booking_date");
   const rows = (data ?? []).filter((b: any) => isPaidBySchedule(b, todayStr));
   const total = rows.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
   return { totalRevenue: total, jobCount: rows.length };

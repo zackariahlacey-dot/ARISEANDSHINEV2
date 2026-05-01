@@ -196,9 +196,9 @@ export async function POST(req: NextRequest) {
       const updatePayload: Record<string, unknown> = {
         status: "confirmed",
         stripe_checkout_session_id: session.id,
-        payment_method: "pay_now",
       };
-      if (tipAmount > 0) updatePayload.tip_amount = tipAmount;
+      // payment_method and tip_amount columns are added via migration — omit if not yet present
+      // if (tipAmount > 0) updatePayload.tip_amount = tipAmount;
 
       const { error: updateErr } = await supabase
         .from("bookings")
