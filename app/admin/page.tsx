@@ -317,7 +317,10 @@ export default function TodayPage() {
                 )}
               </div>
               <p className="text-xl font-black truncate">{bName(nextJob)}</p>
-              <p className="text-sm text-zinc-400 font-medium truncate">{bService(nextJob)}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm text-zinc-400 font-medium truncate">{bService(nextJob)}</p>
+                {(() => { try { const av = Array.isArray(nextJob.additional_vehicles_json) ? nextJob.additional_vehicles_json : []; return av.length > 0 ? <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">{av.length + 1} vehicles</span> : null; } catch { return null; } })()}
+              </div>
             </div>
             <div className="text-right shrink-0">
               <p className="text-2xl font-black text-amber-500">{formatTime(nextJob.booking_time)}</p>
@@ -537,6 +540,39 @@ export default function TodayPage() {
               {bEmail(activeBooking) && (
                 <DetailRow icon={<MessageSquare size={14} />} value={bEmail(activeBooking)!} />
               )}
+              {(() => {
+                try {
+                  const addons: any[] = Array.isArray(activeBooking.addons_json) ? activeBooking.addons_json : [];
+                  const extra: any[] = Array.isArray(activeBooking.additional_vehicles_json) ? activeBooking.additional_vehicles_json : [];
+                  if (addons.length === 0 && extra.length === 0) return null;
+                  return (
+                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
+                      {addons.length > 0 && (
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-1.5">Add-ons</p>
+                          {addons.map((a: any) => (
+                            <div key={a.id} className="flex justify-between text-xs text-zinc-400">
+                              <span>+ {a.label}</span>
+                              <span className="font-mono text-zinc-500">${a.price}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {extra.length > 0 && (
+                        <div className={addons.length > 0 ? "pt-2 border-t border-white/[0.05]" : ""}>
+                          <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-1.5">Additional Vehicles</p>
+                          {extra.map((v: any, i: number) => (
+                            <div key={i} className="flex justify-between text-xs text-zinc-400">
+                              <span>{[v.vehicleYear, v.vehicleMake, v.vehicleModel].filter(Boolean).join(" ") || `Vehicle ${i + 2}`}</span>
+                              <span className="font-mono text-zinc-500">${v.servicePrice ?? 0}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch { return null; }
+              })()}
               {activeBooking.notes && (
                 <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-xs text-zinc-400 whitespace-pre-wrap">
                   {activeBooking.notes}
@@ -681,6 +717,9 @@ function PayBadge({ b }: { b: any }) {
 
 function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
   const stripe = isStripePaid(b);
+  const extraVehicles: any[] = (() => {
+    try { return Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json : []; } catch { return []; }
+  })();
   const statusColor: Record<string, string> = {
     confirmed: stripe ? "border-l-sky-500" : "border-l-emerald-500",
     completed: stripe ? "border-l-sky-400" : "border-l-emerald-400",
@@ -699,6 +738,11 @@ function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
         <div className="flex items-baseline gap-2">
           <span className="text-xs font-black text-amber-500">{to12h((b.booking_time ?? "00:00").slice(0, 5))}</span>
           <span className="text-sm font-bold truncate">{b.customer_name ?? "Unknown"}</span>
+          {extraVehicles.length > 0 && (
+            <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              {extraVehicles.length + 1} vehicles
+            </span>
+          )}
         </div>
         <p className="text-xs text-zinc-500 truncate">{b.service_name ?? "Detail"}</p>
       </div>

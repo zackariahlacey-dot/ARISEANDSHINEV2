@@ -1,17 +1,6 @@
 "use server";
 
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-02-25.clover",
-});
-
-const SIZE_LABELS: Record<string, string> = {
-  compact: "Compact",
-  sedan: "Sedan / Coupe",
-  suv: "SUV / Crossover",
-  truck: "Truck / Van",
-};
+import { Resend } from "resend";
 
 export async function sendStripePaymentLink(bookingId: string, booking: {
   serviceName: string;
@@ -32,7 +21,6 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
       vehicleYear = "",
       vehicleMake = "",
       vehicleModel = "",
-      vehicleSize = "",
       bookingDate,
       bookingTime,
       customerEmail,
@@ -43,73 +31,19 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
       return { error: "Invalid price for this booking." };
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
+    const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+    const payUrl = `${origin}/pay/${bookingId}`;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            unit_amount: Math.round(totalPrice * 100),
-            product_data: {
-              name: serviceName,
-              description: [
-                vehicleYear && vehicleMake && vehicleModel
-                  ? `${vehicleYear} ${vehicleMake} ${vehicleModel}`
-                  : null,
-                vehicleSize ? (SIZE_LABELS[vehicleSize] ?? vehicleSize) : null,
-                `${bookingDate} at ${bookingTime}`,
-              ]
-                .filter(Boolean)
-                .join(" · "),
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      customer_email: customerEmail || undefined,
-      metadata: {
-        bookingId,
-        source: "admin_payment_link",
-      },
-      success_url: `${origin}/admin/schedule?payment=success`,
-      cancel_url: `${origin}/admin/schedule?payment=cancelled`,
-      expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24 hours
-    });
-
-    const paymentUrl = session.url!;
-
-    // ── Send email if we have a customer email ──────────────────────────────
     let emailSent = false;
     if (customerEmail) {
-      try {
-        const { sendCustomEmailAction } = await import("@/app/actions/adminActions");
-        const firstName = customerName?.split(" ")[0] || "there";
-        const vehicleStr = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(" ");
-        const emailBody = `Hi ${firstName},
-
-Your Arise & Shine VT payment link is ready!
-
-Service: ${serviceName}${vehicleStr ? `\nVehicle: ${vehicleStr}` : ""}
-Date: ${bookingDate} at ${bookingTime}
-Amount Due: $${totalPrice}
-
-Click the button below to pay securely via Stripe (link expires in 24 hours):
-
-${paymentUrl}
-
-If you have any questions, just reply to this email or call us at 802-585-5563.
-
-Thanks,
-Zack — Arise & Shine VT`;
-
-        // Use a version that renders the link as a proper button
-        const { Resend } = await import("resend");
-        const key = process.env.RESEND_API_KEY;
-        if (key) {
+      const key = process.env.RESEND_API_KEY;
+      if (key) {
+        try {
           const resend = new Resend(key);
           const fromAddr = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+          const firstName = customerName?.split(" ")[0] || "there";
+          const vehicleStr = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(" ");
+
           const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -127,7 +61,7 @@ Zack — Arise & Shine VT`;
           <tr>
             <td style="padding:28px 32px;">
               <p style="font-size:20px;font-weight:900;color:#ffffff;margin:0 0 8px;">Your Payment Link is Ready</p>
-              <p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;line-height:1.6;">Hi ${firstName}, your Arise &amp; Shine VT invoice is ready to pay securely online.</p>
+              <p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;line-height:1.6;">Hi ${firstName}, your Arise &amp; Shine VT invoice is ready. Click below to pay securely — you can also leave a tip if you&apos;d like (never expected!).</p>
               <table cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td style="padding:12px 0;border-bottom:1px solid #27272a;">
@@ -150,9 +84,9 @@ Zack — Arise & Shine VT`;
                 </tr>
               </table>
               <div style="margin-top:24px;text-align:center;">
-                <a href="${paymentUrl}" style="display:inline-block;padding:14px 32px;background-color:#d4af37;color:#000000;font-size:13px;font-weight:900;text-decoration:none;border-radius:8px;letter-spacing:0.08em;text-transform:uppercase;">Pay Now — $${totalPrice}</a>
+                <a href="${payUrl}" style="display:inline-block;padding:14px 32px;background-color:#d4af37;color:#000000;font-size:13px;font-weight:900;text-decoration:none;border-radius:8px;letter-spacing:0.08em;text-transform:uppercase;">Pay Now — $${totalPrice}</a>
               </div>
-              <p style="font-size:11px;color:#52525b;margin:16px 0 0;text-align:center;">Link expires in 24 hours · Powered by Stripe</p>
+              <p style="font-size:11px;color:#52525b;margin:16px 0 0;text-align:center;">You can also leave a tip on the payment page — it&apos;s always optional.</p>
             </td>
           </tr>
           <tr>
@@ -176,17 +110,15 @@ Zack — Arise & Shine VT`;
             html,
           });
           emailSent = true;
+        } catch (emailErr) {
+          console.error("[sendStripePaymentLink] Email failed:", emailErr);
         }
-      } catch (emailErr) {
-        console.error("[sendStripePaymentLink] Email failed:", emailErr);
-        // Don't fail the whole call — URL is still valid
       }
     }
 
-    return { url: paymentUrl, emailSent };
+    return { url: payUrl, emailSent };
   } catch (err) {
     console.error("[sendStripePaymentLink]", err);
-    return { error: err instanceof Error ? err.message : "Failed to create payment link." };
+    return { error: err instanceof Error ? err.message : "Failed to send payment link." };
   }
 }
-

@@ -766,20 +766,40 @@ export default function ClientsPage() {
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {!activeClient.bookings?.length ? (
                   <p className="text-sm text-zinc-600 text-center py-4">No bookings yet.</p>
-                ) : activeClient.bookings.map((b: any) => (
-                  <div key={b.id} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-amber-500">{b.display_date ?? b.booking_date}</p>
-                        <p className="text-sm font-bold truncate">{b._service_name ?? b.services?.name ?? b.service_name ?? "Detail"}</p>
+                ) : [...activeClient.bookings].sort((a: any, b: any) => (b.booking_date ?? "").localeCompare(a.booking_date ?? "")).map((b: any) => {
+                  const addons: any[] = (() => { try { return Array.isArray(b.addons_json) ? b.addons_json : []; } catch { return []; } })();
+                  const vehicleStr = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
+                  const isPaid = !!b.stripe_checkout_session_id || b.payment_method === "pay_now" || (b.notes ?? "").includes("Pay Now (Stripe)");
+                  return (
+                    <div key={b.id} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-amber-500">{b.display_date ?? b.booking_date}</p>
+                          <p className="text-sm font-bold truncate">{b._service_name ?? b.services?.name ?? b.service_name ?? "Detail"}</p>
+                          {vehicleStr && <p className="text-xs text-zinc-600 truncate">{vehicleStr}</p>}
+                        </div>
+                        <div className="text-right shrink-0 space-y-1">
+                          <p className="text-sm font-black">${Number(b.total_price ?? 0).toFixed(0)}</p>
+                          <div className="flex items-center justify-end gap-1">
+                            <span className={`inline-flex items-center text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${isPaid ? "bg-sky-500/10 text-sky-400 border-sky-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>
+                              {isPaid ? "Stripe" : "Cash"}
+                            </span>
+                            <StatusBadge status={b.status} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black">${Number(b.total_price ?? 0).toFixed(0)}</p>
-                        <StatusBadge status={b.status} />
-                      </div>
+                      {addons.length > 0 && (
+                        <div className="pt-1.5 border-t border-white/[0.05]">
+                          {addons.map((a: any) => (
+                            <span key={a.id} className="inline-block text-[9px] text-zinc-600 bg-white/[0.03] border border-white/[0.05] rounded px-1.5 py-0.5 mr-1 mb-1">
+                              + {a.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

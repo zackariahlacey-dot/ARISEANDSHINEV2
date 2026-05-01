@@ -180,9 +180,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // ── Admin-created booking path ─────────────────────────────────────────
-    // Checked FIRST — admin payment links may only carry booking_id and won't
-    // pass the full-metadata guard below.
+    // ── Admin payment link / customer pay page path ───────────────────────
+    // Checked FIRST — these sessions only carry booking_id and won't pass
+    // the full-metadata guard below.
     if (m?.booking_id) {
       // Idempotency: skip if already confirmed via this session
       const { data: alreadyDone } = await supabase
@@ -192,11 +192,19 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
       if (alreadyDone) return NextResponse.json({ received: true });
 
+      const tipAmount = m.tip_amount ? parseFloat(m.tip_amount) || 0 : 0;
+      const updatePayload: Record<string, unknown> = {
+        status: "confirmed",
+        stripe_checkout_session_id: session.id,
+        payment_method: "pay_now",
+      };
+      if (tipAmount > 0) updatePayload.tip_amount = tipAmount;
+
       const { error: updateErr } = await supabase
         .from("bookings")
-        .update({ status: "confirmed", stripe_checkout_session_id: session.id })
+        .update(updatePayload)
         .eq("id", m.booking_id)
-        .eq("status", "pending_payment"); // safety: only transition from pending
+        .in("status", ["pending_payment", "confirmed"]); // allow both — pay page can be sent to confirmed bookings too
 
       if (updateErr) {
         console.error("[webhooks/stripe] Admin booking update failed:", updateErr);

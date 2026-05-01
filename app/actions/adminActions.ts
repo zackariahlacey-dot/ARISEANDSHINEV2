@@ -391,6 +391,7 @@ export async function getAllClients() {
         id, total_price, booking_date, booking_time, status, notes,
         customer_name, customer_email, customer_phone, service_address, service_name,
         vehicle_make, vehicle_model, vehicle_year, vehicle_size,
+        addons_json, payment_method, stripe_checkout_session_id,
         services:service_id(name)
       )
     `)
@@ -406,7 +407,7 @@ export async function getAllClients() {
   // These are rare but can happen if a booking's user_id UUID was never persisted to profiles
   const { data: orphanBookings } = await supabase
     .from("bookings")
-    .select("id, user_id, customer_name, customer_email, customer_phone, service_address, service_name, total_price, booking_date, booking_time, status, notes, vehicle_make, vehicle_model, vehicle_year, vehicle_size")
+    .select("id, user_id, customer_name, customer_email, customer_phone, service_address, service_name, total_price, booking_date, booking_time, status, notes, vehicle_make, vehicle_model, vehicle_year, vehicle_size, addons_json, payment_method, stripe_checkout_session_id")
     .neq("status", "cancelled")
     .not("customer_name", "is", null);
 

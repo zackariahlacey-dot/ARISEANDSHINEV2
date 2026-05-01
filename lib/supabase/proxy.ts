@@ -70,7 +70,12 @@ export async function updateSession(request: NextRequest) {
     !pathname.startsWith("/paint-correction") &&
     !pathname.startsWith("/maintenance-club") && // redirect → /protected
     !pathname.startsWith("/boat-detailing") &&
-    !pathname.startsWith("/rv-detailing")
+    !pathname.startsWith("/rv-detailing") &&
+    !pathname.startsWith("/pay") &&
+    !pathname.startsWith("/about") &&
+    !pathname.startsWith("/contact") &&
+    !pathname.startsWith("/faq") &&
+    !pathname.startsWith("/service-area")
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();

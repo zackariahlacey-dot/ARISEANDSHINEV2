@@ -925,6 +925,12 @@ export function NewBookingForm({
               <SummaryRow label="Add-ons" value={`${selectedAddons.length} selected`} />}
             <SummaryRow label="Date"     value={bookingDate} />
             <SummaryRow label="Time"     value={bookingTime ? to12h(bookingTime) : "—"} />
+            {!email && (
+              <div className="flex items-start gap-2 bg-amber-500/[0.06] border border-amber-500/20 rounded-xl px-3 py-2.5 mt-1">
+                <span className="text-amber-500 text-[10px] mt-0.5">⚠</span>
+                <p className="text-[10px] text-amber-400 leading-relaxed">No email — you won&apos;t be able to send a payment link or confirmation. Consider adding one on Step 1.</p>
+              </div>
+            )}
             <div className="border-t border-white/[0.06] pt-1 mt-1 flex justify-between font-black">
               <span className="text-zinc-500">Total</span>
               <span className="text-amber-400">${totalPrice}</span>
