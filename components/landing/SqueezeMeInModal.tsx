@@ -329,7 +329,8 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const step2Valid = specificService.length > 0 && serviceAddress.trim().length >= 5;
-  const step3Valid = days.length > 0 || times.length > 0;
+  const step3Valid = true; // urgency always has a default; days/times are optional context
+  const urgencyIsSpecific = urgency === "today" || urgency === "tomorrow";
 
   // ── Close handling ────────────────────────────────────────────────────────────
   function tryClose() {
@@ -717,12 +718,13 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                           {step === 3 && (
                             <>
                               <div>
-                                <p className="text-base font-black text-white">When are you free?</p>
-                                <p className="text-[11px] text-zinc-600 mt-0.5">Pick as many as fit — we&apos;ll work around you.</p>
+                                <p className="text-base font-black text-white">When do you need it?</p>
+                                <p className="text-[11px] text-zinc-600 mt-0.5">We&apos;ll reach out the moment a spot opens.</p>
                               </div>
 
+                              {/* Urgency — required, always has a default */}
                               <div>
-                                <Label>How soon do you need it?</Label>
+                                <Label>How soon?</Label>
                                 <div className="grid grid-cols-2 gap-2">
                                   {URGENCY_OPTIONS.map(({ id, label, color, activeBg, activeBorder }) => (
                                     <button key={id} type="button" onClick={() => setUrgency(id)}
@@ -732,10 +734,20 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                                     >{label}</button>
                                   ))}
                                 </div>
+                                {urgencyIsSpecific && (
+                                  <p className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
+                                    Got it — we&apos;ll be in touch as soon as possible{urgency === "today" ? " today" : " tomorrow"}.
+                                    Days &amp; times below are optional.
+                                  </p>
+                                )}
                               </div>
 
+                              {/* Days / times — optional when urgency is today/tomorrow */}
                               <div>
-                                <Label>Which days work for you?</Label>
+                                <Label>
+                                  Days that work
+                                  {urgencyIsSpecific && <span className="ml-1 normal-case font-normal text-zinc-700">(optional)</span>}
+                                </Label>
                                 <div className="flex flex-wrap gap-1.5">
                                   {DAYS_OF_WEEK.map(({ id, label }) => (
                                     <button key={id} type="button" onClick={() => toggleDay(id)}
@@ -753,7 +765,10 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                               </div>
 
                               <div>
-                                <Label>Time of day?</Label>
+                                <Label>
+                                  Time of day
+                                  {urgencyIsSpecific && <span className="ml-1 normal-case font-normal text-zinc-700">(optional)</span>}
+                                </Label>
                                 <div className="grid grid-cols-2 gap-2">
                                   {TIME_OF_DAY.map(({ id, label, sub }) => (
                                     <button key={id} type="button" onClick={() => toggleTime(id)}
@@ -766,7 +781,6 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                                     </button>
                                   ))}
                                 </div>
-                                {times.length === 0 && <p className="text-[10px] text-zinc-700 mt-1">Select at least one, or pick All Day.</p>}
                               </div>
 
                               <div>
@@ -777,6 +791,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                                 />
                               </div>
 
+                              {/* Availability summary */}
                               {(days.length > 0 || times.length > 0) && (
                                 <div className="rounded-xl bg-[#D4AF37]/[0.04] border border-[#D4AF37]/10 px-3 py-3">
                                   <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold mb-1">Sending availability</p>
@@ -790,7 +805,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
 
                               <div className="flex gap-2">
                                 <button type="button" onClick={() => setStep(2)} className={backBtn}><ChevronLeft size={13} />Back</button>
-                                <button type="button" onClick={handleSubmit} disabled={!step3Valid || submitting} className={`${goldBtn} flex-1 w-auto`}>
+                                <button type="button" onClick={handleSubmit} disabled={submitting} className={`${goldBtn} flex-1 w-auto`}>
                                   {submitting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
                                   {submitting ? "Sending…" : "Request a Spot"}
                                 </button>
