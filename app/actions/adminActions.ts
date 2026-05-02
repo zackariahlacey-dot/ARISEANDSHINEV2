@@ -77,7 +77,8 @@ export async function getBookedSlotsAction(date: string): Promise<BookedSlot[]> 
 export async function adminQuickBookAction(payload: any): Promise<{ success: boolean; bookingId?: string; error?: string }> {
   const supabase = createAdminClient();
   const email = payload.email?.toLowerCase().trim();
-  const phoneDigits = payload.phone.replace(/\D/g, "").slice(0, 10);
+  const _rawPhone = payload.phone.replace(/\D/g, "");
+  const phoneDigits = (_rawPhone.length === 11 && _rawPhone.startsWith("1") ? _rawPhone.slice(1) : _rawPhone).slice(0, 10);
   
   const parts = payload.name.trim().split(/\s+/);
   const firstName = parts[0] ?? "";

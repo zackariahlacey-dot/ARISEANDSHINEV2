@@ -29,6 +29,13 @@ import { to12h, timeToMins } from "@/lib/availability";
 function bName(b: any): string {
   return b.customer_name ?? ([b.profiles?.first_name, b.profiles?.last_name].filter(Boolean).join(" ") || "Unknown");
 }
+function fmtPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  let d = p.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return p;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
 function bPhone(b: any): string | null { return b.customer_phone ?? b.profiles?.phone ?? null; }
 function bEmail(b: any): string | null { return b.customer_email ?? b.profiles?.email ?? null; }
 function bService(b: any): string { return b.service_name ?? b.services?.name ?? "Detail"; }
@@ -535,7 +542,7 @@ export default function TodayPage() {
                 <DetailRow icon={<MapPin size={14} />} value={bAddress(activeBooking)!} />
               )}
               {bPhone(activeBooking) && (
-                <DetailRow icon={<Phone size={14} />} value={bPhone(activeBooking)!} />
+                <DetailRow icon={<Phone size={14} />} value={fmtPhone(bPhone(activeBooking))} />
               )}
               {bEmail(activeBooking) && (
                 <DetailRow icon={<MessageSquare size={14} />} value={bEmail(activeBooking)!} />

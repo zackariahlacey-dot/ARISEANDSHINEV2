@@ -49,6 +49,13 @@ function displayInitials(b: AdminBooking) {
     : (parts[0]?.[0] ?? "?").toUpperCase();
 }
 
+function fmtPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  let d = p.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return p;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
 function displayPhone(b: AdminBooking) {
   return b.customer_phone ?? b.profiles?.phone ?? null;
 }
@@ -166,7 +173,7 @@ export default function BookingsTable() {
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {displayPhone(booking) && (
                             <span className="text-[10px] text-zinc-500 font-mono">
-                              {displayPhone(booking)}
+                              {fmtPhone(displayPhone(booking))}
                             </span>
                           )}
                           {displayEmail(booking) && (
@@ -278,7 +285,7 @@ function BookingDetail({
   const statuses: AdminBooking["status"][] = ["confirmed", "completed", "cancelled", "no-show"];
   const sendOnMyWay = useSendOnMyWay();
   const [onMyWayMsg, setOnMyWayMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const phone = displayPhone(booking);
+  const phone = fmtPhone(displayPhone(booking));
   const address = displayAddress(booking);
   const mapsUrl = address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`

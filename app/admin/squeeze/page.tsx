@@ -20,6 +20,14 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   rv:   Truck,
 };
 
+function fmtPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  let d = p.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return p;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
+
 const SERVICE_LABELS: Record<string, string> = {
   auto: "Auto",
   boat: "Boat",
@@ -128,7 +136,7 @@ function SqueezeCard({ request }: { request: SqueezeRequest }) {
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] font-bold text-zinc-300 hover:text-white hover:bg-white/[0.07] transition-all"
         >
           <Phone size={11} />
-          {request.phone}
+          {fmtPhone(request.phone)}
         </a>
         {request.email && (
           <a

@@ -16,7 +16,8 @@ const VEHICLE_SIZE_MAP = {
 } as const;
 
 function toPhoneDigits(phone: string): string {
-  return phone.replace(/\D/g, "").slice(0, 10);
+  const d = phone.replace(/\D/g, "");
+  return (d.length === 11 && d.startsWith("1") ? d.slice(1) : d).slice(0, 10);
 }
 
 export type CreateAdminBookingPayload = {

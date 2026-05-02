@@ -50,6 +50,13 @@ import {
 function bName(b: any): string {
   return b.customer_name ?? ([b.profiles?.first_name, b.profiles?.last_name].filter(Boolean).join(" ") || "Unknown");
 }
+function fmtPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  let d = p.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return p;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
 function bPhone(b: any): string | null { return b.customer_phone ?? b.profiles?.phone ?? null; }
 function bEmail(b: any): string | null { return b.customer_email ?? b.profiles?.email ?? null; }
 function bService(b: any): string { return b.service_name ?? b.services?.name ?? "Detail"; }
@@ -1454,7 +1461,7 @@ export default function SchedulePage() {
                     <div className="min-w-0">
                       <p className="text-sm font-black text-white leading-tight truncate">{sq.name}</p>
                       <a href={`tel:${sq.phone}`} className="text-[10px] text-zinc-500 font-mono hover:text-[#D4AF37] transition-colors">
-                        {sq.phone}
+                        {fmtPhone(sq.phone)}
                       </a>
                     </div>
                     <span className={cn("text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border shrink-0", urg.cls)}>

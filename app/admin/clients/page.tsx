@@ -67,6 +67,14 @@ function formatTime(t: string): string {
   return to12h(t.slice(0, 5));
 }
 
+function fmtPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  let d = p.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return p;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
+
 /** Normalize stored phone for tel: / sms: (works on iOS & Android) */
 function phoneToTelHref(phone: string): string {
   const d = phone.replace(/\D/g, "");
@@ -618,10 +626,10 @@ export default function ClientsPage() {
                               href={`tel:${tel}`}
                               className="truncate font-medium text-white underline-offset-2 hover:underline active:opacity-80"
                             >
-                              {activeClient.phone}
+                              {fmtPhone(activeClient.phone)}
                             </a>
                           ) : (
-                            <span>{activeClient.phone}</span>
+                            <span>{fmtPhone(activeClient.phone)}</span>
                           )}
                         </div>
                         {tel ? (
