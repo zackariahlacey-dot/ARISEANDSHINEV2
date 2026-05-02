@@ -284,62 +284,18 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* ── Backdrop ── */}
+          {/* ── Backdrop — blocked when exit confirm is showing so it can't re-trigger ── */}
           <motion.div
             key="squeeze-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            onClick={tryClose}
+            onClick={showExitConfirm ? undefined : tryClose}
             className="fixed inset-0 z-[72] bg-black/75 backdrop-blur-sm"
           />
 
-          {/* ── Exit confirm — fixed so it's always on screen regardless of scroll ── */}
-          <AnimatePresence>
-            {showExitConfirm && (
-              <motion.div
-                key="exit-confirm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="fixed inset-0 z-[76] flex items-center justify-center px-6"
-              >
-                <div className="w-full max-w-xs bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl space-y-5">
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                      <AlertTriangle size={20} className="text-amber-500" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-base font-black text-white">Exit the form?</p>
-                      <p className="text-sm text-zinc-500 leading-relaxed">
-                        Your info won&apos;t be saved. You can always come back and submit again.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowExitConfirm(false)}
-                      className="flex-1 py-3 rounded-xl bg-[#D4AF37] text-zinc-950 text-sm font-black uppercase tracking-wider active:scale-95 transition-all"
-                    >
-                      Keep Going
-                    </button>
-                    <button
-                      type="button"
-                      onClick={doClose}
-                      className="flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-zinc-400 text-sm font-black uppercase tracking-wider hover:text-white active:scale-95 transition-all"
-                    >
-                      Exit
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* ── Modal — flex-centered wrapper so framer-motion transforms don't fight positioning ── */}
+          {/* ── Modal — flex-centered wrapper ── */}
           <div className="fixed inset-0 z-[73] flex items-center justify-center px-4 py-6 pointer-events-none">
             <motion.div
               key="squeeze-modal"
@@ -361,12 +317,12 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                     <div>
                       <h2 className="text-base font-black text-white">Squeeze Me In</h2>
                       <p className="text-[11px] text-zinc-500 mt-0.5">
-                        {submitted ? "Request received" : `Step ${step} of 3`}
+                        {submitted ? "Request received" : showExitConfirm ? "Just checking…" : `Step ${step} of 3`}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-2">
-                    {!submitted && <Steps current={step - 1} total={3} />}
+                    {!submitted && !showExitConfirm && <Steps current={step - 1} total={3} />}
                     <button
                       type="button"
                       onClick={tryClose}
@@ -377,8 +333,8 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                   </div>
                 </div>
 
-                {/* ── How it works banner ── */}
-                {!submitted && (
+                {/* ── How it works banner — hidden during exit confirm ── */}
+                {!submitted && !showExitConfirm && (
                   <div className="mx-5 mt-4 rounded-xl bg-amber-500/[0.05] border border-amber-500/15 px-4 py-3 space-y-1">
                     <p className="text-[11px] font-black uppercase tracking-wider text-amber-500">How it works</p>
                     <p className="text-[11px] text-zinc-500 leading-relaxed">
@@ -388,8 +344,48 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                   </div>
                 )}
 
-                {/* ── Success screen ── */}
-                {submitted ? (
+                {/* ── Body — exit confirm / success / step form ── */}
+                <AnimatePresence mode="wait" initial={false}>
+
+                {/* ── Exit confirm ── */}
+                {showExitConfirm ? (
+                  <motion.div
+                    key="exit-confirm"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.18 }}
+                    className="px-6 py-10 flex flex-col items-center text-center gap-6"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                      <AlertTriangle size={26} className="text-amber-400" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xl font-black text-white">Leave the form?</p>
+                      <p className="text-sm text-zinc-500 leading-relaxed max-w-[260px]">
+                        Your progress won&apos;t be saved. You can always come back and request a spot anytime.
+                      </p>
+                    </div>
+                    <div className="w-full space-y-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowExitConfirm(false)}
+                        className="w-full py-4 rounded-xl bg-[#D4AF37] text-zinc-950 font-black text-sm uppercase tracking-widest hover:bg-[#e6c84a] active:scale-[0.99] transition-all shadow-lg shadow-[#D4AF37]/20"
+                      >
+                        Keep Going
+                      </button>
+                      <button
+                        type="button"
+                        onClick={doClose}
+                        className="w-full py-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-500 font-semibold text-sm hover:text-zinc-200 hover:border-white/20 active:scale-[0.99] transition-all"
+                      >
+                        Exit without saving
+                      </button>
+                    </div>
+                  </motion.div>
+
+                /* ── Success screen ── */
+                ) : submitted ? (
                   <div className="p-8 text-center space-y-5">
                     <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
                       <Check size={24} className="text-emerald-400" />
@@ -751,6 +747,8 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                     </motion.div>
                   </AnimatePresence>
                 )}
+
+                </AnimatePresence>
 
                 {/* Safe area spacing for iPhone home indicator */}
                 <div className="h-safe-bottom" />
