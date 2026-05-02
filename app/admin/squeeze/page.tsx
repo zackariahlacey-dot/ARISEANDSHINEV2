@@ -2,16 +2,22 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSqueezeRequests, updateSqueezeStatus, type SqueezeRequest, type SqueezeStatus } from "@/app/actions/squeezeActions";
+import {
+  getSqueezeRequests, updateSqueezeStatus, scheduleSqueezeRequest,
+  type SqueezeRequest, type SqueezeStatus,
+} from "@/app/actions/squeezeActions";
 import { useToast } from "@/components/admin/Toast";
-import { Zap, Phone, Mail, Car, Anchor, Truck, Clock, Check, X, MessageSquare, Loader2, ChevronDown } from "lucide-react";
+import {
+  Zap, Phone, Mail, Car, Anchor, Truck, Clock, Check, X,
+  MessageSquare, Loader2, ChevronDown, CalendarDays, DollarSign, MessageCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pending:   { label: "Pending",   color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20"  },
-  contacted: { label: "Contacted", color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/20"   },
+  pending:   { label: "Pending",   color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20"  },
+  contacted: { label: "Contacted", color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20"   },
   booked:    { label: "Booked",    color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  dismissed: { label: "Dismissed", color: "text-zinc-500",   bg: "bg-zinc-800/60",   border: "border-zinc-700/30"   },
+  dismissed: { label: "Dismissed", color: "text-zinc-500",    bg: "bg-zinc-800/60",    border: "border-zinc-700/30"   },
 };
 
 const SERVICE_ICONS: Record<string, React.ElementType> = {
@@ -19,14 +25,6 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   boat: Anchor,
   rv:   Truck,
 };
-
-function fmtPhone(p: string | null | undefined): string {
-  if (!p) return "";
-  let d = p.replace(/\D/g, "");
-  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
-  if (d.length !== 10) return p;
-  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
-}
 
 const SERVICE_LABELS: Record<string, string> = {
   auto: "Auto",
@@ -41,22 +39,50 @@ const URGENCY_LABELS: Record<string, string> = {
   soon:      "⚪ Flexible",
 };
 
+// 7:00 AM – 6:30 PM in 30-min steps
+const TIME_SLOTS: string[] = [];
+for (let h = 7; h <= 18; h++) {
+  for (const m of [0, 30]) {
+    if (h === 18 && m === 30) break;
+    const ampm = h < 12 ? "AM" : "PM";
+    const h12  = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    TIME_SLOTS.push(`${h12}:${m === 0 ? "00" : "30"} ${ampm}`);
+  }
+}
+
+const TODAY = new Date().toISOString().slice(0, 10);
+
+function fmtPhone(p: string | null | undefined): string {
+  if (!p) return "";
+  let d = p.replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
+  if (d.length !== 10) return p;
+  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+}
+
 function timeAgo(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime();
+  const diff  = Date.now() - new Date(ts).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
-  if (mins  < 60)  return `${mins}m ago`;
-  if (hours < 24)  return `${hours}h ago`;
+  if (mins  < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
 }
+
+const inputCls =
+  "w-full bg-[#111] border border-[#2e2e2e] rounded-xl px-3 py-2.5 text-[12px] text-white focus:outline-none focus:border-[#D4AF37]/50 transition-colors";
 
 function SqueezeCard({ request }: { request: SqueezeRequest }) {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [notesOpen,  setNotesOpen]  = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [schedDate,  setSchedDate]  = useState(TODAY);
+  const [schedTime,  setSchedTime]  = useState("9:00 AM");
+  const [schedPrice, setSchedPrice] = useState("");
 
-  const mutation = useMutation({
+  const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: SqueezeStatus }) =>
       updateSqueezeStatus(id, status),
     onSuccess: (_, { status }) => {
@@ -66,8 +92,28 @@ function SqueezeCard({ request }: { request: SqueezeRequest }) {
     onError: () => toast("Failed to update status", "error"),
   });
 
-  const StatusIcon = STATUS_CONFIG[request.status];
+  const schedMutation = useMutation({
+    mutationFn: () =>
+      scheduleSqueezeRequest({
+        squeezeId: request.id,
+        date:  schedDate,
+        time:  schedTime,
+        price: parseFloat(schedPrice) || 0,
+      }),
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast(res.error ?? "Failed to schedule", "error");
+        return;
+      }
+      qc.invalidateQueries({ queryKey: ["squeeze"] });
+      setScheduling(false);
+      toast("Scheduled & confirmation email sent!");
+    },
+    onError: () => toast("Failed to schedule", "error"),
+  });
+
   const ServiceIcon = SERVICE_ICONS[request.service_type] ?? Car;
+  const canSchedule = request.status !== "dismissed" && request.status !== "booked";
 
   return (
     <div className={cn(
@@ -118,64 +164,150 @@ function SqueezeCard({ request }: { request: SqueezeRequest }) {
       {request.notes && (
         <button
           type="button"
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setNotesOpen(o => !o)}
           className="w-full flex items-center justify-between text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
         >
           <span className="font-bold uppercase tracking-wider">Notes</span>
-          <ChevronDown size={12} className={cn("transition-transform", open && "rotate-180")} />
+          <ChevronDown size={12} className={cn("transition-transform", notesOpen && "rotate-180")} />
         </button>
       )}
-      {open && request.notes && (
+      {notesOpen && request.notes && (
         <p className="text-[11px] text-zinc-400 leading-relaxed -mt-1">{request.notes}</p>
       )}
 
-      {/* Contact row */}
-      <div className="flex items-center gap-2 pt-1">
+      {/* Contact row — Call · Text · Email */}
+      <div className="flex items-center gap-2 pt-1 flex-wrap">
         <a
           href={`tel:${request.phone}`}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] font-bold text-zinc-300 hover:text-white hover:bg-white/[0.07] transition-all"
         >
           <Phone size={11} />
-          {fmtPhone(request.phone)}
+          Call
         </a>
+        <a
+          href={`sms:${request.phone}`}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] font-bold text-zinc-300 hover:text-white hover:bg-white/[0.07] transition-all"
+        >
+          <MessageCircle size={11} />
+          Text
+        </a>
+        <span className="text-[10px] text-zinc-600 font-medium">{fmtPhone(request.phone)}</span>
         {request.email && (
           <a
             href={`mailto:${request.email}`}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] font-bold text-zinc-300 hover:text-white hover:bg-white/[0.07] transition-all min-w-0 truncate"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] font-bold text-zinc-300 hover:text-white hover:bg-white/[0.07] transition-all min-w-0"
           >
             <Mail size={11} className="shrink-0" />
-            <span className="truncate">{request.email}</span>
+            Email
           </a>
         )}
       </div>
 
-      {/* Action buttons */}
-      {request.status !== "dismissed" && request.status !== "booked" && (
+      {/* ── Scheduling panel ─────────────────────────────── */}
+      {canSchedule && scheduling && (
+        <div className="rounded-2xl bg-white/[0.03] border border-[#D4AF37]/20 p-3.5 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Schedule Appointment</p>
+
+          {/* Date */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">Date</label>
+            <div className="relative">
+              <CalendarDays size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
+              <input
+                type="date"
+                min={TODAY}
+                value={schedDate}
+                onChange={e => setSchedDate(e.target.value)}
+                className={cn(inputCls, "pl-8")}
+              />
+            </div>
+          </div>
+
+          {/* Time */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">Time</label>
+            <div className="relative">
+              <Clock size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
+              <select
+                value={schedTime}
+                onChange={e => setSchedTime(e.target.value)}
+                className={cn(inputCls, "pl-8 appearance-none")}
+              >
+                {TIME_SLOTS.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Price */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">Price</label>
+            <div className="relative">
+              <DollarSign size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
+              <input
+                type="number"
+                min={0}
+                step={5}
+                placeholder="0"
+                value={schedPrice}
+                onChange={e => setSchedPrice(e.target.value)}
+                className={cn(inputCls, "pl-8")}
+              />
+            </div>
+          </div>
+
+          {/* Submit + Cancel */}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => schedMutation.mutate()}
+              disabled={schedMutation.isPending || !schedDate || !schedTime}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#D4AF37] text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#c9a22e] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {schedMutation.isPending
+                ? <Loader2 size={11} className="animate-spin" />
+                : <Check size={11} />}
+              {schedMutation.isPending ? "Scheduling…" : "Send Confirmation"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setScheduling(false)}
+              disabled={schedMutation.isPending}
+              className="flex items-center justify-center px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-all active:scale-95"
+            >
+              <X size={11} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Action buttons (not shown while scheduling) ─── */}
+      {canSchedule && !scheduling && (
         <div className="flex gap-2 pt-1">
           {request.status === "pending" && (
             <button
               type="button"
-              onClick={() => mutation.mutate({ id: request.id, status: "contacted" })}
-              disabled={mutation.isPending}
+              onClick={() => statusMutation.mutate({ id: request.id, status: "contacted" })}
+              disabled={statusMutation.isPending}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:bg-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
             >
-              {mutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <MessageSquare size={11} />}
-              Mark Contacted
+              {statusMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <MessageSquare size={11} />}
+              Contacted
             </button>
           )}
           <button
             type="button"
-            onClick={() => mutation.mutate({ id: request.id, status: "booked" })}
-            disabled={mutation.isPending}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
+            onClick={() => setScheduling(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:bg-[#D4AF37]/20 transition-all active:scale-95"
           >
-            {mutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
-            Mark Booked
+            <CalendarDays size={11} />
+            Schedule
           </button>
           <button
             type="button"
-            onClick={() => mutation.mutate({ id: request.id, status: "dismissed" })}
-            disabled={mutation.isPending}
+            onClick={() => statusMutation.mutate({ id: request.id, status: "dismissed" })}
+            disabled={statusMutation.isPending}
             className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[10px] font-black text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.06] transition-all active:scale-95 disabled:opacity-50"
           >
             <X size={11} />
@@ -187,7 +319,6 @@ function SqueezeCard({ request }: { request: SqueezeRequest }) {
 }
 
 export default function SqueezePage() {
-  const { toast } = useToast();
   const [filter, setFilter] = useState<string>("active");
 
   const { data: requests = [], isLoading } = useQuery({

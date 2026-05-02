@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 
 const ADMIN_EMAIL  = "zackariahlacey@gmail.com";
 const FROM_ADDR    = "Arise & Shine VT <bookings@ariseandshinevt.com>";
@@ -207,4 +208,156 @@ export async function updateSqueezeStatus(
     .update({ status })
     .eq("id", id);
   return { success: !error };
+}
+
+// ── Convert "9:30 AM" → "09:30:00" ───────────────────────────────────────────
+function to24h(time12: string): string {
+  const m = time12.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return time12;
+  let h = parseInt(m[1], 10);
+  const min = m[2];
+  const ampm = m[3].toUpperCase();
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2, "0")}:${min}:00`;
+}
+
+/** Split "2019 Honda Civic" → { year, make, model }. Safe fallback for empty/null. */
+function parseVehicle(v: string | null): { year: string; make: string; model: string } {
+  if (!v) return { year: "", make: "", model: "" };
+  const parts = v.trim().split(/\s+/);
+  const year  = /^(19|20)\d{2}$/.test(parts[0] ?? "") ? parts[0] : "";
+  const rest  = year ? parts.slice(1) : parts;
+  return { year, make: rest[0] ?? "", model: rest.slice(1).join(" ") };
+}
+
+export type ScheduleSqueezeInput = {
+  squeezeId: string;
+  date: string;     // "YYYY-MM-DD"
+  time: string;     // "9:00 AM"
+  price: number;
+};
+
+export async function scheduleSqueezeRequest(
+  input: ScheduleSqueezeInput,
+): Promise<{ success: boolean; bookingId?: string; error?: string }> {
+  const supabase = createAdminClient();
+
+  // 1. Fetch the squeeze request
+  const { data: sq, error: sqErr } = await supabase
+    .from("squeeze_requests")
+    .select("*")
+    .eq("id", input.squeezeId)
+    .single();
+
+  if (sqErr || !sq) return { success: false, error: "Squeeze request not found." };
+
+  // 2. Look up service_id by name (best-effort; null is fine)
+  let serviceId: string | null = null;
+  if (sq.specific_service) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("id")
+      .ilike("name", sq.specific_service.trim())
+      .limit(1)
+      .maybeSingle();
+    serviceId = svc?.id ?? null;
+  }
+
+  // 3. Parse vehicle info
+  const vehicle = parseVehicle(sq.vehicle_info ?? null);
+
+  // 4. Build notes
+  const notesParts = [
+    `📋 Scheduled from Squeeze Me In request`,
+    sq.urgency ? `⚡ Original urgency: ${sq.urgency}` : null,
+    sq.available_dates ? `📅 Customer availability: ${sq.available_dates}` : null,
+    sq.contact_preference ? `📞 Contact preference: ${sq.contact_preference}` : null,
+    sq.notes ? `💬 Notes: ${sq.notes}` : null,
+  ].filter(Boolean).join("\n");
+
+  // 5. Insert booking (snapshot columns only — no profile/vehicle FK required)
+  const { data: booking, error: bookingErr } = await supabase
+    .from("bookings")
+    .insert({
+      booking_date:    input.date,
+      booking_time:    to24h(input.time),
+      status:          "confirmed",
+      total_price:     input.price,
+      service_id:      serviceId,
+      notes:           notesParts,
+      customer_name:   sq.name,
+      customer_email:  sq.email  || null,
+      customer_phone:  sq.phone.replace(/\D/g, "").slice(0, 10),
+      service_name:    sq.specific_service ?? (sq.service_type === "boat" ? "Boat Detail" : sq.service_type === "rv" ? "RV Detail" : "Auto Detail"),
+      service_address: sq.service_address ?? null,
+      vehicle_make:    vehicle.make || null,
+      vehicle_model:   vehicle.model || null,
+      vehicle_year:    vehicle.year || null,
+    })
+    .select("id")
+    .single();
+
+  if (bookingErr || !booking) {
+    console.error("[scheduleSqueezeRequest] booking insert:", bookingErr);
+    return { success: false, error: "Could not create booking." };
+  }
+
+  // 6. Mark squeeze request as booked + store booking_id
+  await supabase
+    .from("squeeze_requests")
+    .update({ status: "booked", booking_id: booking.id })
+    .eq("id", input.squeezeId);
+
+  // 7. Send confirmation email to customer
+  if (sq.email?.trim()) {
+    await sendBookingEmail({
+      customerEmail: sq.email.trim(),
+      bookingDetails: {
+        customerName:   sq.name,
+        customerPhone:  sq.phone,
+        customerEmail:  sq.email,
+        serviceAddress: sq.service_address ?? undefined,
+        serviceName:    sq.specific_service ?? "Detailing",
+        vehicleYear:    vehicle.year,
+        vehicleMake:    vehicle.make,
+        vehicleModel:   vehicle.model,
+        bookingDate:    input.date,
+        bookingTime:    input.time,
+        travelFee:      0,
+        totalPrice:     input.price,
+      },
+      totalPrice: input.price,
+    }).catch(err => console.error("[scheduleSqueezeRequest] email:", err));
+  }
+
+  // 8. Send admin alert
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const formattedDate = new Date(input.date + "T12:00:00").toLocaleDateString("en-US", {
+      weekday: "long", month: "long", day: "numeric",
+    });
+    await resend.emails.send({
+      from:    FROM_ADDR,
+      to:      ADMIN_EMAIL,
+      subject: `✅ Squeezed In — ${sq.name} · ${formattedDate} at ${input.time}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;color:#111;background:#fff;padding:24px;border-radius:8px">
+          <h2 style="color:#D4AF37;margin:0 0 16px">Squeeze Me In — Scheduled</h2>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <tr><td style="padding:8px 0;color:#888;width:110px">Customer</td><td style="font-weight:700">${sq.name}</td></tr>
+            <tr><td style="padding:8px 0;color:#888">Phone</td><td><a href="tel:${sq.phone}" style="color:#D4AF37">${sq.phone}</a></td></tr>
+            <tr><td style="padding:8px 0;color:#888">Date</td><td>${formattedDate}</td></tr>
+            <tr><td style="padding:8px 0;color:#888">Time</td><td>${input.time}</td></tr>
+            <tr><td style="padding:8px 0;color:#888">Service</td><td>${sq.specific_service ?? "—"}</td></tr>
+            <tr><td style="padding:8px 0;color:#888">Price</td><td style="font-weight:700;color:#D4AF37">$${input.price}</td></tr>
+            ${sq.service_address ? `<tr><td style="padding:8px 0;color:#888">Location</td><td>${sq.service_address}</td></tr>` : ""}
+          </table>
+          <p style="margin-top:20px;font-size:12px;color:#aaa">Confirmation email sent to ${sq.email || "no email on file"}.</p>
+        </div>
+      `,
+    });
+  } catch { /* non-fatal */ }
+
+  return { success: true, bookingId: booking.id };
 }
