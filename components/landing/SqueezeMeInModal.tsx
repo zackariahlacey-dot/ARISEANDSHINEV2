@@ -142,18 +142,18 @@ function parseVehicleString(v: string): { year: string; make: string; model: str
 }
 
 const inputCls =
-  "w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3.5 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-1 ring-[#D4AF37]/40 transition-all";
+  "w-full bg-zinc-900 border border-white/[0.1] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 ring-[#D4AF37]/25 transition-all";
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2">{children}</p>;
+  return <p className="text-[11px] font-bold uppercase tracking-[0.07em] text-zinc-500 mb-2.5">{children}</p>;
 }
 
 function Steps({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className={`h-1 rounded-full transition-all duration-300 ${
-          i < current ? "w-5 bg-[#D4AF37]" : i === current ? "w-5 bg-[#D4AF37]/50" : "w-2 bg-white/10"
+        <div key={i} className={`h-[3px] rounded-full transition-all duration-300 ${
+          i < current ? "w-6 bg-[#D4AF37]" : i === current ? "w-6 bg-[#D4AF37]/40" : "w-3 bg-white/[0.08]"
         }`} />
       ))}
     </div>
@@ -415,22 +415,24 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
               <div className="bg-zinc-950 border border-white/[0.09] rounded-2xl shadow-2xl shadow-black/60">
 
                 {/* Header */}
-                <div className="px-5 pt-5 pb-4 flex items-center justify-between sticky top-0 bg-zinc-950/95 backdrop-blur-sm z-10 rounded-t-2xl border-b border-white/[0.05]">
+                <div className="px-5 pt-5 pb-4 flex items-center justify-between sticky top-0 bg-zinc-950/95 backdrop-blur-sm z-10 rounded-t-2xl border-b border-white/[0.06]">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/25 flex items-center justify-center shrink-0">
                       <Zap size={15} className="text-[#D4AF37]" />
                     </div>
                     <div>
                       <h2 className="text-sm font-black text-white tracking-tight">Squeeze Me In</h2>
-                      <p className="text-[10px] text-zinc-600 mt-0.5 font-medium">
-                        {submitted ? "Request received ✓" : showExitConfirm ? "Just checking…" : `Step ${step} of 3`}
+                      <p className="text-[10px] text-zinc-500 mt-0.5 font-medium">
+                        {submitted ? "Request received ✓" : showExitConfirm ? "Just checking…" : (
+                          <span>{["Your Info", "Service Details", "Availability"][step - 1]}</span>
+                        )}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="flex items-center gap-3 shrink-0">
                     {!submitted && !showExitConfirm && <Steps current={step - 1} total={3} />}
                     <button type="button" onClick={tryClose}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-600 hover:text-white hover:bg-white/10 transition-colors"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-600 hover:text-white hover:bg-white/[0.08] transition-colors"
                     ><X size={14} /></button>
                   </div>
                 </div>
@@ -499,327 +501,334 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
 
                   /* ── Step form ── */
                   ) : (
-                    <>
-                      {step === 1 && (
-                        <div className="mx-5 mt-4 rounded-xl bg-amber-500/[0.05] border border-amber-500/15 px-4 py-3 space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-amber-500/80">How it works</p>
-                          <p className="text-[11px] text-zinc-600 leading-relaxed">
-                            This is a <span className="text-zinc-400">spot request</span>, not a guaranteed booking.
-                            We&apos;ll reach out ASAP — you&apos;re first in line if anyone cancels or we finish early.
-                          </p>
-                        </div>
-                      )}
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div key={step}
+                        initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -18 }} transition={{ duration: 0.18 }}
+                        className="p-5 space-y-6"
+                      >
 
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.div key={step}
-                          initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -18 }} transition={{ duration: 0.18 }}
-                          className="p-5 space-y-5"
-                        >
+                        {/* ══════════ STEP 1 — Contact ══════════ */}
+                        {step === 1 && (
+                          <>
+                            <div>
+                              <p className="text-lg font-black text-white tracking-tight">Let&apos;s get you in line.</p>
+                              <p className="text-[12px] text-zinc-500 mt-1 leading-relaxed">
+                                This is a spot request — we&apos;ll reach out the moment one opens up.
+                              </p>
+                            </div>
 
-                          {/* ══════════ STEP 1 — Contact ══════════ */}
-                          {step === 1 && (
-                            <>
+                            <div className="space-y-4">
                               <div>
-                                <p className="text-base font-black text-white">Who are you?</p>
-                                <p className="text-[11px] text-zinc-600 mt-0.5">We&apos;ll use this to confirm your spot.</p>
+                                <Label>Full Name</Label>
+                                <input value={name} onChange={e => setName(e.target.value)}
+                                  placeholder="Your full name" autoComplete="name" className={inputCls} />
                               </div>
-                              <div className="space-y-3">
-                                <div>
-                                  <Label><User size={9} className="inline mr-1" />Full Name *</Label>
-                                  <input value={name} onChange={e => setName(e.target.value)}
-                                    placeholder="Your full name" autoComplete="name" className={inputCls} />
-                                </div>
-                                <div>
-                                  <Label><Phone size={9} className="inline mr-1" />Phone *</Label>
-                                  <input type="tel" inputMode="tel" value={phone}
-                                    onChange={e => setPhone(formatPhone(e.target.value))}
-                                    placeholder="(802) 555-0100" autoComplete="tel" className={inputCls} />
-                                </div>
-                                <div>
-                                  <Label><Mail size={9} className="inline mr-1" />Email *</Label>
-                                  <input type="email" inputMode="email" value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    placeholder="you@example.com" autoComplete="email" className={inputCls} />
-                                  <p className="text-[10px] text-zinc-700 mt-1">Confirmation sent here.</p>
-                                </div>
-                                <div>
-                                  <Label><MessageSquare size={9} className="inline mr-1" />Preferred contact</Label>
-                                  <div className="flex gap-2">
-                                    {CONTACT_PREFS.map(({ id, label }) => (
-                                      <button key={id} type="button" onClick={() => setContactPref(id)}
-                                        className={`flex-1 py-2.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                                          contactPref === id
-                                            ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
-                                            : "bg-white/[0.02] border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/10"
-                                        }`}
-                                      >{label}</button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                              <button type="button" disabled={!step1Valid} onClick={() => setStep(2)} className={goldBtn}>
-                                Next — Service Details
-                              </button>
-                            </>
-                          )}
-
-                          {/* ══════════ STEP 2 — Service ══════════ */}
-                          {step === 2 && (
-                            <>
                               <div>
-                                <p className="text-base font-black text-white">What do you need?</p>
-                                <p className="text-[11px] text-zinc-600 mt-0.5">Service, vehicle, and where we&apos;re coming.</p>
+                                <Label>Phone</Label>
+                                <input type="tel" inputMode="tel" value={phone}
+                                  onChange={e => setPhone(formatPhone(e.target.value))}
+                                  placeholder="(802) 555-0100" autoComplete="tel" className={inputCls} />
                               </div>
-
-                              {/* Service type */}
                               <div>
-                                <Label>Service type</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {SERVICE_TYPES.map(({ id, label, icon: Icon, color, bg, border }) => (
-                                    <button key={id} type="button"
-                                      onClick={() => { setServiceType(id); setSpecificService(""); }}
-                                      className={`flex flex-col items-center gap-2 py-4 rounded-xl border transition-all active:scale-95 ${
-                                        serviceType === id ? `${bg} ${border} ${color}` : "bg-white/[0.02] border-white/[0.06] text-zinc-600 hover:text-zinc-400"
+                                <Label>Email</Label>
+                                <input type="email" inputMode="email" value={email}
+                                  onChange={e => setEmail(e.target.value)}
+                                  placeholder="you@example.com" autoComplete="email" className={inputCls} />
+                                <p className="text-[11px] text-zinc-600 mt-1.5">Confirmation sent here.</p>
+                              </div>
+                              <div>
+                                <Label>How should we reach you?</Label>
+                                <div className="flex gap-2">
+                                  {CONTACT_PREFS.map(({ id, label }) => (
+                                    <button key={id} type="button" onClick={() => setContactPref(id)}
+                                      className={`flex-1 py-3 rounded-xl border text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                                        contactPref === id
+                                          ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
+                                          : "bg-zinc-900 border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.14]"
                                       }`}
-                                    >
-                                      <Icon size={18} />
-                                      <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
-                                    </button>
+                                    >{label}</button>
                                   ))}
                                 </div>
                               </div>
+                            </div>
 
-                              {/* Service chips with pricing */}
-                              <div>
-                                <Label>Which service?</Label>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {serviceList.map(({ label, price, desc }) => {
-                                    const active = specificService === label;
-                                    return (
-                                      <button key={label} type="button" onClick={() => setSpecificService(label)}
-                                        className={`flex flex-col items-start px-3 py-3 rounded-xl border text-left transition-all active:scale-95 ${
-                                          active ? "bg-[#D4AF37]/10 border-[#D4AF37]/40" : "bg-white/[0.02] border-white/[0.06] hover:border-white/10 hover:bg-white/[0.04]"
-                                        }`}
-                                      >
-                                        <span className={`text-[11px] font-bold leading-snug ${active ? "text-[#D4AF37]" : "text-zinc-300"}`}>{label}</span>
-                                        {price && <span className={`text-[10px] mt-0.5 font-black tabular-nums ${active ? "text-[#D4AF37]" : "text-[#D4AF37]/60"}`}>{price}</span>}
-                                        {desc && <span className={`text-[9.5px] mt-1 leading-snug ${active ? "text-zinc-400" : "text-zinc-600"}`}>{desc}</span>}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
+                            <button type="button" disabled={!step1Valid} onClick={() => setStep(2)} className={goldBtn}>
+                              Continue
+                            </button>
+                          </>
+                        )}
+
+                        {/* ══════════ STEP 2 — Service ══════════ */}
+                        {step === 2 && (
+                          <>
+                            <div>
+                              <p className="text-lg font-black text-white tracking-tight">What do you need?</p>
+                              <p className="text-[12px] text-zinc-500 mt-1">Service, vehicle, and where we&apos;re coming.</p>
+                            </div>
+
+                            {/* Service type */}
+                            <div>
+                              <Label>Type of service</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {SERVICE_TYPES.map(({ id, label, icon: Icon, color, bg, border }) => (
+                                  <button key={id} type="button"
+                                    onClick={() => { setServiceType(id); setSpecificService(""); }}
+                                    className={`relative flex flex-col items-center gap-2 py-4 rounded-xl border transition-all active:scale-95 ${
+                                      serviceType === id ? `${bg} ${border} ${color}` : "bg-zinc-900 border-white/[0.08] text-zinc-600 hover:text-zinc-400 hover:border-white/[0.14]"
+                                    }`}
+                                  >
+                                    {serviceType === id && (
+                                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center">
+                                        <Check size={8} className="text-[#D4AF37]" />
+                                      </span>
+                                    )}
+                                    <Icon size={20} />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+                                  </button>
+                                ))}
                               </div>
+                            </div>
 
-                              {/* Vehicle — year / make / model with autocomplete */}
-                              {serviceType === "auto" && (
-                                <div>
-                                  <Label><Car size={9} className="inline mr-1" />Your vehicle</Label>
+                            {/* Service chips */}
+                            <div>
+                              <Label>Which package?</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {serviceList.map(({ label, price, desc }) => {
+                                  const active = specificService === label;
+                                  return (
+                                    <button key={label} type="button" onClick={() => setSpecificService(label)}
+                                      className={`relative flex flex-col items-start px-3.5 py-3.5 rounded-xl border text-left transition-all active:scale-95 ${
+                                        active
+                                          ? "bg-[#D4AF37]/[0.08] border-[#D4AF37]/40 shadow-[0_0_16px_rgba(212,175,55,0.06)]"
+                                          : "bg-zinc-900 border-white/[0.08] hover:border-white/[0.16] hover:bg-zinc-800/60"
+                                      }`}
+                                    >
+                                      {active && (
+                                        <span className="absolute top-2 right-2 w-3.5 h-3.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center">
+                                          <Check size={8} className="text-[#D4AF37]" />
+                                        </span>
+                                      )}
+                                      <span className={`text-[12px] font-bold leading-snug pr-4 ${active ? "text-[#D4AF37]" : "text-zinc-200"}`}>{label}</span>
+                                      {price && <span className={`text-[11px] mt-1 font-black tabular-nums ${active ? "text-[#D4AF37]/80" : "text-[#D4AF37]/50"}`}>{price}</span>}
+                                      {desc && <span className={`text-[10px] mt-1 leading-snug ${active ? "text-zinc-400" : "text-zinc-600"}`}>{desc}</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
 
-                                  {/* Past-vehicle chips */}
-                                  {!suggestionsDismissed && vehicleSuggestions.length > 0 && !vehicleMake && !vehicleModel && (
-                                    <div className="mb-2.5 rounded-xl bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15 px-3 py-2.5">
-                                      <p className="text-[10px] font-black uppercase tracking-wider text-[#D4AF37]/60 mb-1.5">From your past bookings</p>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {vehicleSuggestions.map(v => (
-                                          <button key={v} type="button"
-                                            onClick={() => {
-                                              const parsed = parseVehicleString(v);
-                                              setVehicleYear(parsed.year);
-                                              setVehicleMake(parsed.make);
-                                              setVehicleModel(parsed.model);
-                                            }}
-                                            className="px-2.5 py-1.5 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[11px] text-[#D4AF37] font-semibold hover:bg-[#D4AF37]/20 active:scale-95 transition-all"
-                                          >{v}</button>
-                                        ))}
-                                        <button type="button" onClick={() => setSuggestionsDismissed(true)}
-                                          className="px-2 py-1.5 text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors"
-                                        >dismiss</button>
-                                      </div>
-                                    </div>
-                                  )}
+                            {/* Vehicle — year / make / model */}
+                            {serviceType === "auto" && (
+                              <div>
+                                <Label>Your vehicle <span className="normal-case font-normal text-zinc-700">(optional)</span></Label>
 
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {/* Year */}
-                                    <div>
-                                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-700 mb-1">Year</p>
-                                      <input value={vehicleYear} onChange={e => setVehicleYear(e.target.value.replace(/\D/g,"").slice(0,4))}
-                                        placeholder="2020" inputMode="numeric" maxLength={4} className={inputCls} />
-                                    </div>
-
-                                    {/* Make with autocomplete */}
-                                    <div className="relative">
-                                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-700 mb-1">Make</p>
-                                      <input value={vehicleMake}
-                                        onChange={e => onMakeChange(e.target.value)}
-                                        onFocus={() => vehicleMake.length >= 1 && setShowMakeDrop(true)}
-                                        onBlur={() => setTimeout(() => setShowMakeDrop(false), 150)}
-                                        placeholder="Honda"
-                                        autoComplete="off"
-                                        className={inputCls}
-                                      />
-                                      {showMakeDrop && <SuggestDropdown items={makeSuggestions} onSelect={v => { setVehicleMake(v); setMakeSuggestions([]); setShowMakeDrop(false); }} />}
-                                    </div>
-
-                                    {/* Model with autocomplete */}
-                                    <div className="relative">
-                                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-700 mb-1">
-                                        Model {modelsLoading && <Loader2 size={9} className="inline animate-spin ml-1" />}
-                                      </p>
-                                      <input value={vehicleModel}
-                                        onChange={e => { setVehicleModel(e.target.value); setShowModelDrop(true); }}
-                                        onFocus={() => filteredModels.length > 0 && setShowModelDrop(true)}
-                                        onBlur={() => setTimeout(() => setShowModelDrop(false), 150)}
-                                        placeholder="Civic"
-                                        autoComplete="off"
-                                        className={inputCls}
-                                      />
-                                      {showModelDrop && <SuggestDropdown items={filteredModels} onSelect={v => { setVehicleModel(v); setShowModelDrop(false); }} />}
+                                {!suggestionsDismissed && vehicleSuggestions.length > 0 && !vehicleMake && !vehicleModel && (
+                                  <div className="mb-3 rounded-xl bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15 px-3.5 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]/60 mb-2">From your past bookings</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {vehicleSuggestions.map(v => (
+                                        <button key={v} type="button"
+                                          onClick={() => {
+                                            const parsed = parseVehicleString(v);
+                                            setVehicleYear(parsed.year);
+                                            setVehicleMake(parsed.make);
+                                            setVehicleModel(parsed.model);
+                                          }}
+                                          className="px-2.5 py-1.5 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[11px] text-[#D4AF37] font-semibold hover:bg-[#D4AF37]/20 active:scale-95 transition-all"
+                                        >{v}</button>
+                                      ))}
+                                      <button type="button" onClick={() => setSuggestionsDismissed(true)}
+                                        className="px-2 py-1.5 text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors"
+                                      >dismiss</button>
                                     </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
 
-                              {/* Boat / RV length */}
-                              {(serviceType === "boat" || serviceType === "rv") && (
-                                <div>
-                                  <Label>{serviceType === "boat" ? "Boat" : "RV"} length (feet)</Label>
-                                  <input type="number" inputMode="numeric" value={footage}
-                                    onChange={e => setFootage(e.target.value)} min={1}
-                                    placeholder={serviceType === "boat" ? "e.g. 22" : "e.g. 30"}
-                                    className={inputCls}
-                                  />
-                                  <p className="text-[10px] text-zinc-700 mt-1">
-                                    {serviceType === "boat" ? "Pricing is per foot of boat length." : "Min 20 ft. Pricing is per foot."}
-                                  </p>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 mb-1.5">Year</p>
+                                    <input value={vehicleYear} onChange={e => setVehicleYear(e.target.value.replace(/\D/g,"").slice(0,4))}
+                                      placeholder="2020" inputMode="numeric" maxLength={4} className={inputCls} />
+                                  </div>
+                                  <div className="relative">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 mb-1.5">Make</p>
+                                    <input value={vehicleMake}
+                                      onChange={e => onMakeChange(e.target.value)}
+                                      onFocus={() => vehicleMake.length >= 1 && setShowMakeDrop(true)}
+                                      onBlur={() => setTimeout(() => setShowMakeDrop(false), 150)}
+                                      placeholder="Honda" autoComplete="off" className={inputCls}
+                                    />
+                                    {showMakeDrop && <SuggestDropdown items={makeSuggestions} onSelect={v => { setVehicleMake(v); setMakeSuggestions([]); setShowMakeDrop(false); }} />}
+                                  </div>
+                                  <div className="relative">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
+                                      Model {modelsLoading && <Loader2 size={9} className="inline animate-spin ml-0.5" />}
+                                    </p>
+                                    <input value={vehicleModel}
+                                      onChange={e => { setVehicleModel(e.target.value); setShowModelDrop(true); }}
+                                      onFocus={() => filteredModels.length > 0 && setShowModelDrop(true)}
+                                      onBlur={() => setTimeout(() => setShowModelDrop(false), 150)}
+                                      placeholder="Civic" autoComplete="off" className={inputCls}
+                                    />
+                                    {showModelDrop && <SuggestDropdown items={filteredModels} onSelect={v => { setVehicleModel(v); setShowModelDrop(false); }} />}
+                                  </div>
                                 </div>
-                              )}
+                              </div>
+                            )}
 
-                              {/* Address — Google Places */}
+                            {/* Boat / RV length */}
+                            {(serviceType === "boat" || serviceType === "rv") && (
                               <div>
-                                <Label><MapPin size={9} className="inline mr-1" />Where should we come? *</Label>
-                                <PlacesInput
-                                  value={serviceAddress}
-                                  onChange={setServiceAddress}
-                                  placeholder="Start typing your address…"
+                                <Label>{serviceType === "boat" ? "Boat" : "RV"} length (feet)</Label>
+                                <input type="number" inputMode="numeric" value={footage}
+                                  onChange={e => setFootage(e.target.value)} min={1}
+                                  placeholder={serviceType === "boat" ? "e.g. 22" : "e.g. 30"}
                                   className={inputCls}
                                 />
-                                <p className="text-[10px] text-zinc-700 mt-1">Home, office, marina, storage lot, etc.</p>
+                                <p className="text-[11px] text-zinc-600 mt-1.5">
+                                  {serviceType === "boat" ? "Pricing is per foot of boat length." : "Min 20 ft · pricing is per foot."}
+                                </p>
                               </div>
+                            )}
 
-                              <div className="flex gap-2">
-                                <button type="button" onClick={() => setStep(1)} className={backBtn}><ChevronLeft size={13} />Back</button>
-                                <button type="button" disabled={!step2Valid} onClick={() => setStep(3)} className={`${goldBtn} flex-1 w-auto`}>Next — Availability</button>
-                              </div>
-                            </>
-                          )}
+                            {/* Address */}
+                            <div>
+                              <Label>Where should we come?</Label>
+                              <PlacesInput
+                                value={serviceAddress}
+                                onChange={setServiceAddress}
+                                placeholder="Start typing your address…"
+                                className={inputCls}
+                              />
+                              <p className="text-[11px] text-zinc-600 mt-1.5">Home, office, marina, storage lot, etc.</p>
+                            </div>
 
-                          {/* ══════════ STEP 3 — Availability ══════════ */}
-                          {step === 3 && (
-                            <>
-                              <div>
-                                <p className="text-base font-black text-white">When do you need it?</p>
-                                <p className="text-[11px] text-zinc-600 mt-0.5">We&apos;ll reach out the moment a spot opens.</p>
-                              </div>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setStep(1)} className={backBtn}><ChevronLeft size={13} />Back</button>
+                              <button type="button" disabled={!step2Valid} onClick={() => setStep(3)} className={`${goldBtn} flex-1 w-auto`}>Continue</button>
+                            </div>
+                          </>
+                        )}
 
-                              {/* Urgency — required, always has a default */}
-                              <div>
-                                <Label>How soon?</Label>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {URGENCY_OPTIONS.map(({ id, label, color, activeBg, activeBorder }) => (
+                        {/* ══════════ STEP 3 — Availability ══════════ */}
+                        {step === 3 && (
+                          <>
+                            <div>
+                              <p className="text-lg font-black text-white tracking-tight">When do you need it?</p>
+                              <p className="text-[12px] text-zinc-500 mt-1">We&apos;ll reach out the moment a spot opens.</p>
+                            </div>
+
+                            {/* Urgency */}
+                            <div>
+                              <Label>How soon?</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {URGENCY_OPTIONS.map(({ id, label, color, activeBg, activeBorder }) => {
+                                  const emoji = { today: "🔴", tomorrow: "🟠", this_week: "🟡", soon: "⚪" }[id] ?? "";
+                                  return (
                                     <button key={id} type="button" onClick={() => setUrgency(id)}
-                                      className={`py-3 px-3 rounded-xl border text-[12px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                                        urgency === id ? `${activeBg} ${activeBorder} ${color}` : "bg-white/[0.02] border-white/[0.06] text-zinc-600 hover:text-zinc-400"
-                                      }`}
-                                    >{label}</button>
-                                  ))}
-                                </div>
-                                {urgencyIsSpecific && (
-                                  <p className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
-                                    Got it — we&apos;ll be in touch as soon as possible{urgency === "today" ? " today" : " tomorrow"}.
-                                    Days &amp; times below are optional.
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Days / times — optional when urgency is today/tomorrow */}
-                              <div>
-                                <Label>
-                                  Days that work
-                                  {urgencyIsSpecific && <span className="ml-1 normal-case font-normal text-zinc-700">(optional)</span>}
-                                </Label>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {DAYS_OF_WEEK.map(({ id, label }) => (
-                                    <button key={id} type="button" onClick={() => toggleDay(id)}
-                                      className={`px-3 py-2.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                                        days.includes(id) ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]" : "bg-white/[0.02] border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/10"
-                                      }`}
-                                    >{label}</button>
-                                  ))}
-                                  <button type="button" onClick={() => setDays([])}
-                                    className={`px-3 py-2.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                                      days.length === 0 ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]" : "bg-white/[0.02] border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/10"
-                                    }`}
-                                  >Any</button>
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label>
-                                  Time of day
-                                  {urgencyIsSpecific && <span className="ml-1 normal-case font-normal text-zinc-700">(optional)</span>}
-                                </Label>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {TIME_OF_DAY.map(({ id, label, sub }) => (
-                                    <button key={id} type="button" onClick={() => toggleTime(id)}
-                                      className={`flex flex-col items-start px-3 py-3 rounded-xl border transition-all active:scale-95 ${
-                                        times.includes(id) ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]" : "bg-white/[0.02] border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/10"
+                                      className={`py-3 px-3 rounded-xl border text-[12px] font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                                        urgency === id ? `${activeBg} ${activeBorder} ${color}` : "bg-zinc-900 border-white/[0.08] text-zinc-600 hover:text-zinc-400 hover:border-white/[0.14]"
                                       }`}
                                     >
-                                      <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
-                                      <span className="text-[9px] mt-0.5 opacity-60">{sub}</span>
+                                      <span>{emoji}</span>
+                                      <span className="uppercase tracking-wider text-[11px]">{label}</span>
                                     </button>
-                                  ))}
-                                </div>
+                                  );
+                                })}
                               </div>
-
-                              <div>
-                                <Label><MessageSquare size={9} className="inline mr-1" />Anything else? <span className="normal-case font-normal text-zinc-700">(optional)</span></Label>
-                                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-                                  placeholder="Special requests, gate codes, vehicle condition, etc."
-                                  className={`${inputCls} resize-none leading-relaxed`}
-                                />
-                              </div>
-
-                              {/* Availability summary */}
-                              {(days.length > 0 || times.length > 0) && (
-                                <div className="rounded-xl bg-[#D4AF37]/[0.04] border border-[#D4AF37]/10 px-3 py-3">
-                                  <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-bold mb-1">Sending availability</p>
-                                  <p className="text-[11px] text-zinc-400 leading-relaxed italic">&ldquo;{buildAvailableDatesString(days, times)}&rdquo;</p>
-                                </div>
+                              {urgencyIsSpecific && (
+                                <p className="text-[11px] text-zinc-600 mt-2 leading-relaxed">
+                                  Got it — days &amp; times below are optional.
+                                </p>
                               )}
+                            </div>
 
-                              {submitError && (
-                                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">{submitError}</p>
-                              )}
-
-                              <div className="flex gap-2">
-                                <button type="button" onClick={() => setStep(2)} className={backBtn}><ChevronLeft size={13} />Back</button>
-                                <button type="button" onClick={handleSubmit} disabled={submitting} className={`${goldBtn} flex-1 w-auto`}>
-                                  {submitting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                                  {submitting ? "Sending…" : "Request a Spot"}
-                                </button>
+                            {/* Days */}
+                            <div>
+                              <Label>
+                                Days that work
+                                {urgencyIsSpecific && <span className="ml-1 normal-case font-normal text-zinc-700">· optional</span>}
+                              </Label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {DAYS_OF_WEEK.map(({ id, label }) => (
+                                  <button key={id} type="button" onClick={() => toggleDay(id)}
+                                    className={`px-3.5 py-2.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                                      days.includes(id)
+                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
+                                        : "bg-zinc-900 border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.14]"
+                                    }`}
+                                  >{label}</button>
+                                ))}
+                                <button type="button" onClick={() => setDays([])}
+                                  className={`px-3.5 py-2.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                                    days.length === 0
+                                      ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
+                                      : "bg-zinc-900 border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.14]"
+                                  }`}
+                                >Any</button>
                               </div>
+                            </div>
 
-                              <p className="text-center text-[10px] text-zinc-700">
-                                Or call/text: <a href="tel:8025855563" className="text-zinc-500 hover:text-white transition-colors">802-585-5563</a>
-                              </p>
-                            </>
-                          )}
+                            {/* Time of day */}
+                            <div>
+                              <Label>
+                                Time of day
+                                {urgencyIsSpecific && <span className="ml-1 normal-case font-normal text-zinc-700">· optional</span>}
+                              </Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {TIME_OF_DAY.map(({ id, label, sub }) => (
+                                  <button key={id} type="button" onClick={() => toggleTime(id)}
+                                    className={`flex flex-col items-start px-3.5 py-3 rounded-xl border transition-all active:scale-95 ${
+                                      times.includes(id)
+                                        ? "bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37]"
+                                        : "bg-zinc-900 border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.14]"
+                                    }`}
+                                  >
+                                    <span className="text-[12px] font-bold">{label}</span>
+                                    <span className={`text-[10px] mt-0.5 ${times.includes(id) ? "text-[#D4AF37]/60" : "text-zinc-600"}`}>{sub}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
 
-                        </motion.div>
-                      </AnimatePresence>
-                    </>
+                            {/* Notes */}
+                            <div>
+                              <Label>Anything else? <span className="normal-case font-normal text-zinc-700">· optional</span></Label>
+                              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+                                placeholder="Special requests, gate codes, vehicle condition…"
+                                className={`${inputCls} resize-none leading-relaxed`}
+                              />
+                            </div>
+
+                            {/* Availability summary */}
+                            {(days.length > 0 || times.length > 0) && (
+                              <div className="rounded-xl bg-[#D4AF37]/[0.04] border border-[#D4AF37]/15 px-4 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 mb-1">Your availability</p>
+                                <p className="text-[12px] text-zinc-300 leading-relaxed">{buildAvailableDatesString(days, times)}</p>
+                              </div>
+                            )}
+
+                            {submitError && (
+                              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5">{submitError}</p>
+                            )}
+
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setStep(2)} className={backBtn}><ChevronLeft size={13} />Back</button>
+                              <button type="button" onClick={handleSubmit} disabled={submitting} className={`${goldBtn} flex-1 w-auto`}>
+                                {submitting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                                {submitting ? "Sending…" : "Request a Spot"}
+                              </button>
+                            </div>
+
+                            <p className="text-center text-[11px] text-zinc-700">
+                              Or call/text <a href="tel:8025855563" className="text-zinc-500 hover:text-[#D4AF37] transition-colors font-medium">802-585-5563</a>
+                            </p>
+                          </>
+                        )}
+
+                      </motion.div>
+                    </AnimatePresence>
                   )}
 
                 </AnimatePresence>
