@@ -327,6 +327,53 @@ html {
   transition: none !important;
 }
 
+/* ── Google Places autocomplete dropdown ────────────────────────────────── */
+.pac-container {
+  background: #09090b !important;           /* zinc-950 */
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.7) !important;
+  margin-top: 4px !important;
+  overflow: hidden !important;
+  font-family: inherit !important;
+  z-index: 9999 !important;
+}
+.pac-item {
+  background: transparent !important;
+  border-top: 1px solid rgba(255,255,255,0.04) !important;
+  color: #a1a1aa !important;               /* zinc-400 */
+  padding: 10px 14px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: background 0.12s, color 0.12s !important;
+  line-height: 1.4 !important;
+}
+.pac-item:first-child {
+  border-top: none !important;
+}
+.pac-item:hover,
+.pac-item-selected {
+  background: rgba(255,255,255,0.06) !important;
+  color: #ffffff !important;
+}
+.pac-item-query {
+  color: #e4e4e7 !important;               /* zinc-200 */
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+.pac-matched {
+  color: #D4AF37 !important;               /* gold */
+  font-weight: 700 !important;
+}
+.pac-icon {
+  filter: invert(1) brightness(0.4) !important;
+  margin-top: 2px !important;
+}
+.pac-logo::after,
+.pac-container::after {
+  display: none !important;                /* hide "powered by Google" footer */
+}
+
 /* ── Announcement ticker (fixed top bar, infinite horizontal scroll) ───── */
 @keyframes announcement-ticker {
   0%   { transform: translateX(0); }
