@@ -210,7 +210,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
   // ── Close handling ───────────────────────────────────────────────────────────
   function tryClose() {
     if (submitted) { doClose(); return; }
-    if (hasData) { setShowExitConfirm(true); } else { doClose(); }
+    setShowExitConfirm(true);
   }
 
   function doClose() {
