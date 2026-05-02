@@ -56,30 +56,28 @@ const SERVICE_TYPES = [
 ] as const;
 
 const AUTO_SERVICES = [
-  { label: "Exterior Detail",                    price: "from $125" },
-  { label: "Interior Detail",                    price: "from $150" },
-  { label: "Full Detail",                        price: "from $240" },
-  { label: "Ultimate Interior Reset",            price: "from $340" },
-  { label: "Ultimate Interior + Exterior Reset", price: "$350 flat" },
-  { label: "Paint Correction",                   price: "from $350" },
-  { label: "Ceramic Coating",                    price: "quote"     },
-  { label: "Not sure yet",                       price: ""          },
+  { label: "Exterior Detail",                    price: "$125–$150",  desc: "Hand wash, wheels, tires & 3-mo ceramic sealant"           },
+  { label: "Interior Detail",                    price: "$150–$175",  desc: "Full vacuum, wipe-down, mats & interior glass"             },
+  { label: "Full Detail",                        price: "$240–$260",  desc: "Interior + exterior combined"                              },
+  { label: "Ultimate Interior Reset",            price: "$250 flat",  desc: "Hot water extraction, steam sanitation & salt removal"     },
+  { label: "Ultimate Interior + Exterior Reset", price: "$350 flat",  desc: "Full decontamination, clay bar & 12-mo ceramic sealant"   },
+  { label: "Not sure yet",                       price: "",           desc: "We'll figure it out together"                              },
 ];
 
 const BOAT_SERVICES = [
-  { label: "Boat Interior",          price: "$15/ft" },
-  { label: "Boat Exterior",          price: "$20/ft" },
-  { label: "Boat Full Detail",       price: "$32/ft" },
-  { label: "Marine Showroom Polish", price: "quote"  },
-  { label: "Not sure yet",           price: ""       },
+  { label: "Boat Interior",          price: "$15/ft", desc: "Vinyl, carpet, upholstery & odor treatment"       },
+  { label: "Boat Exterior",          price: "$20/ft", desc: "Hull wash, oxidation removal & wax/sealant"       },
+  { label: "Boat Full Detail",       price: "$32/ft", desc: "Interior + exterior combined"                     },
+  { label: "Showroom Package",       price: "$55/ft", desc: "Machine polish + ceramic coating topcoat"         },
+  { label: "Not sure yet",           price: "",       desc: "We'll figure it out together"                     },
 ];
 
 const RV_SERVICES = [
-  { label: "RV Exterior Refresh",        price: "$22/ft" },
-  { label: "RV Living Space Reset",      price: "$20/ft" },
-  { label: "RV Ultimate Transformation", price: "$38/ft" },
-  { label: "RV Oxidation Restoration",   price: "quote"  },
-  { label: "Not sure yet",               price: ""       },
+  { label: "Exterior Refresh",        price: "$18/ft",     desc: "Full wash, clay bar & wax"                         },
+  { label: "Living Space Reset",      price: "$28/ft",     desc: "Interior deep clean — surfaces, upholstery & fixtures" },
+  { label: "Ultimate Transformation", price: "$50/ft",     desc: "Interior + exterior full detail"                    },
+  { label: "Oxidation Restoration",   price: "$35–45/ft",  desc: "Machine polish to restore faded paint"             },
+  { label: "Not sure yet",            price: "",           desc: "We'll figure it out together"                      },
 ];
 
 const URGENCY_OPTIONS = [
@@ -595,7 +593,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                               <div>
                                 <Label>Which service?</Label>
                                 <div className="grid grid-cols-2 gap-2">
-                                  {serviceList.map(({ label, price }) => {
+                                  {serviceList.map(({ label, price, desc }) => {
                                     const active = specificService === label;
                                     return (
                                       <button key={label} type="button" onClick={() => setSpecificService(label)}
@@ -604,7 +602,8 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                                         }`}
                                       >
                                         <span className={`text-[11px] font-bold leading-snug ${active ? "text-[#D4AF37]" : "text-zinc-300"}`}>{label}</span>
-                                        {price && <span className={`text-[10px] mt-0.5 font-semibold ${active ? "text-[#D4AF37]/60" : "text-zinc-600"}`}>{price}</span>}
+                                        {price && <span className={`text-[10px] mt-0.5 font-black tabular-nums ${active ? "text-[#D4AF37]" : "text-[#D4AF37]/60"}`}>{price}</span>}
+                                        {desc && <span className={`text-[9.5px] mt-1 leading-snug ${active ? "text-zinc-400" : "text-zinc-600"}`}>{desc}</span>}
                                       </button>
                                     );
                                   })}
