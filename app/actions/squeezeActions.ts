@@ -149,6 +149,45 @@ export async function createSqueezeRequest(input: {
   return { success: true };
 }
 
+/** Returns up to 3 unique vehicle strings from past bookings for this contact. */
+export async function getRecentVehiclesByContact(phone: string, email: string): Promise<string[]> {
+  const supabase = createAdminClient();
+  const digits   = phone.replace(/\D/g, "");
+  const seen     = new Set<string>();
+  const results: string[] = [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function collect(query: any) {
+    const { data } = await query;
+    for (const b of (data ?? [])) {
+      const v = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ").trim();
+      if (v && !seen.has(v.toLowerCase())) { seen.add(v.toLowerCase()); results.push(v); }
+      if (results.length >= 3) break;
+    }
+  }
+
+  const sel = "vehicle_year, vehicle_make, vehicle_model";
+  if (digits.length >= 10) {
+    await collect(
+      supabase.from("bookings").select(sel)
+        .eq("customer_phone", digits.slice(0, 10))
+        .not("vehicle_make", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(5)
+    );
+  }
+  if (email.trim() && results.length < 3) {
+    await collect(
+      supabase.from("bookings").select(sel)
+        .ilike("customer_email", email.trim())
+        .not("vehicle_make", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(5)
+    );
+  }
+  return results;
+}
+
 export async function getSqueezeRequests(): Promise<SqueezeRequest[]> {
   const supabase = createAdminClient();
   const { data } = await supabase
