@@ -31,8 +31,8 @@ const MAKE_ALIASES: Record<string, string> = {
 // mappings:
 // compact = Small (Compacts + 2-Row SUVs)
 // sedan = Medium
-// suv = Large (3-Row SUVs + Trucks)
-// xl = Extra Large (Vans / XL)
+// suv = Large (3-Row SUVs + Trucks + Passenger Minivans)
+// xl = Work Van (Sprinter, Transit, Promaster, Express, Savana, NV cargo, E-Series)
 
 type Entry = [string, VehicleSizeSlug];
 const DB: Record<string, Entry[]> = {
@@ -44,7 +44,7 @@ const DB: Record<string, Entry[]> = {
     ["gr86", "compact"], ["celica", "compact"], ["solara", "compact"],
     ["bz4x", "compact"], ["venza", "compact"], ["rav4", "compact"], // 2-Row SUVs -> Small
     ["4runner", "suv"], ["fjcruiser", "compact"], ["highlander", "suv"],
-    ["sequoia", "suv"], ["landcruiser", "suv"], ["sienna", "xl"], ["grandhighlander", "suv"],
+    ["sequoia", "suv"], ["landcruiser", "suv"], ["sienna", "suv"], ["grandhighlander", "suv"],
     ["tacoma", "suv"], ["tundra", "suv"],
   ],
 
@@ -52,7 +52,7 @@ const DB: Record<string, Entry[]> = {
     ["fit", "compact"], ["hrv", "compact"], ["honda", "compact"], ["insight", "compact"],
     ["civic", "compact"], ["accord", "sedan"], ["clarity", "sedan"], ["crz", "compact"],
     ["crv", "compact"], // 2-Row SUV -> Small
-    ["passport", "suv"], ["pilot", "suv"], ["odyssey", "xl"], ["element", "compact"],
+    ["passport", "suv"], ["pilot", "suv"], ["odyssey", "suv"], ["element", "compact"],
     ["ridgeline", "suv"],
   ],
 
@@ -62,7 +62,7 @@ const DB: Record<string, Entry[]> = {
     ["escape", "compact"], ["broncosport", "compact"], ["edge", "compact"], // 2-Row SUVs -> Small
     ["bronco", "suv"], ["explorer", "suv"], ["expedition", "suv"],
     ["maverick", "suv"], ["ranger", "suv"], ["f150", "suv"], ["f250", "suv"], ["f350", "suv"],
-    ["transit", "xl"], ["eseries", "xl"],
+    ["transit", "xl"], ["eseries", "xl"], ["econoline", "xl"],
   ],
 
   chevrolet: [
@@ -81,7 +81,7 @@ const DB: Record<string, Entry[]> = {
 
   dodge: [
     ["neon", "compact"], ["dart", "compact"], ["charger", "sedan"], ["challenger", "sedan"],
-    ["journey", "suv"], ["durango", "suv"], ["caravan", "xl"],
+    ["journey", "suv"], ["durango", "suv"], ["caravan", "suv"], ["grandcaravan", "suv"], ["promaster", "xl"], ["promastercitycargo", "compact"], ["promastercity", "compact"],
   ],
 
   jeep: [
@@ -94,8 +94,9 @@ const DB: Record<string, Entry[]> = {
     ["micra", "compact"], ["versa", "compact"], ["sentra", "compact"], ["altima", "sedan"],
     ["maxima", "sedan"], ["leaf", "compact"],
     ["juke", "compact"], ["kicks", "compact"], ["rogue", "compact"], ["murano", "compact"], // 2-Row SUVs -> Small
-    ["pathfinder", "suv"], ["armada", "suv"], ["xterra", "compact"], ["quest", "xl"],
-    ["frontier", "suv"], ["titan", "suv"], ["nv", "xl"],
+    ["pathfinder", "suv"], ["armada", "suv"], ["xterra", "compact"], ["quest", "suv"],
+    ["frontier", "suv"], ["titan", "suv"], ["nv", "xl"], ["nv200", "compact"],
+    ["nv1500", "xl"], ["nv2500", "xl"], ["nv3500", "xl"],
   ],
 
   hyundai: [
@@ -107,7 +108,7 @@ const DB: Record<string, Entry[]> = {
   kia: [
     ["rio", "compact"], ["forte", "compact"], ["k5", "sedan"], ["stinger", "sedan"],
     ["soul", "compact"], ["niro", "compact"], ["seltos", "compact"], ["sportage", "compact"], // 2-Row SUVs -> Small
-    ["sorento", "suv"], ["telluride", "suv"], ["carnival", "xl"],
+    ["sorento", "suv"], ["telluride", "suv"], ["carnival", "suv"],
   ],
 
   subaru: [
@@ -125,7 +126,7 @@ const DB: Record<string, Entry[]> = {
   volkswagen: [
     ["golf", "compact"], ["jetta", "compact"], ["passat", "sedan"], ["arteon", "sedan"],
     ["taos", "compact"], ["tiguan", "compact"], ["id4", "compact"], // 2-Row SUVs -> Small
-    ["atlas", "suv"], ["touareg", "suv"], ["idbuzz", "xl"], ["routan", "xl"],
+    ["atlas", "suv"], ["touareg", "suv"], ["idbuzz", "suv"], ["routan", "suv"],
   ],
 
   bmw: [

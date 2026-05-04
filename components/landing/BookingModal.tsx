@@ -76,6 +76,12 @@ const ALL_ADD_ONS = [
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
+  // ── Paint Correction add-ons ─────────────────────────────────────────────
+  { id: "ceramic_3yr",       label: "2–3 Year Pro Ceramic Sealant",          price: 300, desc: "Upgrade from the included 6-month spray to a professional-grade 2–3 year ceramic sealant. Pricing scales by size: $300 small · $350 mid · $425 large · $500 work van." },
+  { id: "ultimate_interior", label: "Ultimate Interior Add-on",              price: 175, desc: "Add the full Ultimate Interior service to your paint correction — hot water extraction, steam sanitation, salt neutralization. Adds 3 hrs to the appointment. Flat $175." },
+  // ── Work Van cargo cleaning (only shown when vehicle size = xl) ──────────
+  { id: "cargo_light",       label: "Cargo Space — Light/Moderate",          price: 100, desc: "Vacuum and wipe-down of work van cargo area. Best for light to moderate dust, dirt, and tool residue." },
+  { id: "cargo_heavy",       label: "Cargo Space — Heavy/Dirty",             price: 150, desc: "Deep clean of heavily soiled cargo area — built-up grime, embedded debris, stained surfaces and odors." },
   // ── Marine ───────────────────────────────────────────────────────────────
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Window Clarity",      price: 100, desc: "Haze/scratch removal + UV sealant on all enclosure windows" },
   { id: "marine_engine_bay", label: "Marine Engine Bay Deep Clean",          price: 150, desc: "Full degreasing and detail of engine compartment & bilge" },
@@ -96,29 +102,61 @@ const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_ge
 const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore", "ozone_treatment"];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
+/** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
+const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior"];
+/** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
+const CARGO_ADDON_IDS    = ["cargo_light", "cargo_heavy"];
 /** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
 const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
+/** Add-ons that extend service duration (additive) — id → minutes */
+const DURATION_EXTENDING_ADDONS: Record<string, number> = {
+  ultimate_interior: 180, // Ultimate Interior add-on adds 3 hrs to the appointment
+};
 
 const CERAMIC_PRICES: Record<string, number> = {
   compact: 350, sedan: 350, suv: 500, xl: 650,
   small: 350, medium: 350, large: 500, extra_large: 650,
 };
 
+/** 2–3 Year Professional Ceramic Sealant — 4-tier pricing for paint-correction packages. */
+const CERAMIC_3YR_PRICES: Record<string, number> = {
+  compact: 300, sedan: 350, suv: 425, xl: 500,
+  small: 300, medium: 350, large: 425, extra_large: 500,
+};
+
 function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
   if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 15;
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
+  if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
   return addon.price;
+}
+
+/** Returns true when the service is one of the new Ultimate Exterior + Paint Correction packages. */
+function isPaintCorrectionService(name?: string): boolean {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  return n.includes("paint correction") || n.includes("paint enhancement") || n.includes("single-stage") || n.includes("two-stage") || n.includes("1-step paint") || n.includes("2-step paint");
+}
+
+/** Total minutes added to the booking by selected duration-extending add-ons. */
+function getAddonExtraDurationMins(selectedAddons: { id: string }[]): number {
+  return selectedAddons.reduce((sum, a) => sum + (DURATION_EXTENDING_ADDONS[a.id] ?? 0), 0);
 }
 
 /**
  * Returns add-ons relevant to a given service.
  * Each service category only ever sees its own add-ons — no cross-category bleed.
+ *
+ * `vehicleSize` is optional and only used to surface Work Van cargo-cleaning add-ons
+ * on interior-touching services when the customer's vehicle is a work van (xl).
  */
-function getAddonsForService(serviceName: string): readonly AddonItem[] {
+function getAddonsForService(serviceName: string, vehicleSize?: string): readonly AddonItem[] {
   const n = serviceName.toLowerCase();
+  const isWorkVan = vehicleSize === "xl";
+  const cargoIds = isWorkVan ? CARGO_ADDON_IDS : [];
 
   // ── Marine / Boat ────────────────────────────────────────────────────────
   if (n.includes("boat")) {
@@ -132,24 +170,28 @@ function getAddonsForService(serviceName: string): readonly AddonItem[] {
 
   // ── Vehicle services below — never include marine or RV add-ons ──────────
 
-  // Paint correction: clay bar already part of the process; exterior-only scope
-  if (n.includes("paint") || n.includes("single-stage") || n.includes("two-stage")) {
-    return ALL_ADD_ONS.filter(a => a.id === "engine_bay");
+  // Paint correction: clay bar already part of the process. Allow ceramic upgrade
+  // and the Ultimate Interior add-on. Cargo cleaning surfaces only when the
+  // Ultimate Interior add-on is implied (handled at render-time on the interior side).
+  if (isPaintCorrectionService(serviceName)) {
+    return ALL_ADD_ONS.filter(a => PAINT_CORRECTION_ADDON_IDS.includes(a.id));
   }
 
-  // Ultimate packages: high-ticket upgrades only — shampoo & clay bar already included
+  // Ultimate packages: high-ticket upgrades. Cargo cleaning if work van.
   if (n.includes("ultimate")) {
-    return ALL_ADD_ONS.filter(a => ULTIMATE_ADDON_IDS.includes(a.id));
+    const ids = [...ULTIMATE_ADDON_IDS, ...cargoIds];
+    return ALL_ADD_ONS.filter(a => ids.includes(a.id));
   }
 
-  // Exterior Detail
+  // Exterior Detail (no cargo — exterior only)
   if (n.includes("exterior") && !n.includes("full")) {
     return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
   }
 
-  // Interior Detail (standalone)
+  // Interior Detail (standalone) — cargo if work van
   if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
-    return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
+    const ids = [...STANDARD_ADDON_IDS, ...cargoIds];
+    return ALL_ADD_ONS.filter(a => ids.includes(a.id));
   }
 
   // Maintenance plans: engine bay + floor shampoo (quick recurring visits)
@@ -157,8 +199,9 @@ function getAddonsForService(serviceName: string): readonly AddonItem[] {
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
   }
 
-  // Full Detail and anything else → standard 4 add-ons
-  return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
+  // Full Detail and anything else → standard 4 add-ons + cargo if work van
+  const ids = [...STANDARD_ADDON_IDS, ...cargoIds];
+  return ALL_ADD_ONS.filter(a => ids.includes(a.id));
 }
 
 /**
@@ -200,9 +243,11 @@ function boatLengthToSize(feet: number | ""): VehicleSizeSlug {
 function getServiceCategory(service: Service): { label: string; color: string } {
   const n = service.name.toLowerCase();
   if (service.is_subscription) return { label: "Maintenance Club",          color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
-  if (n.includes("ultimate"))   return { label: "Ultimate Series",           color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
+  // Paint correction is checked before Ultimate because the new "Ultimate Exterior +
+  // 1-Step / 2-Step Paint Correction" services contain both keywords.
   if (n.includes("paint") || n.includes("correction") || n.includes("single-stage") || n.includes("two-stage"))
                                 return { label: "Paint Correction",           color: "text-violet-400 bg-violet-500/10 border-violet-500/20" };
+  if (n.includes("ultimate"))   return { label: "Ultimate Series",           color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
   if (n.includes("boat"))       return { label: "Marine Detailing",          color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
   if (n.includes("rv") || n.includes("motorhome"))
                                 return { label: "RV Detailing",              color: "text-green-400 bg-green-500/10 border-green-500/20" };
@@ -260,25 +305,82 @@ const BOAT_DISPLAY_NAMES: Record<string, { name: string; tagline: string }> = {
   "Boat Showroom Package": { name: "Boat Showroom Package", tagline: "Exterior detail + machine polish — showroom-ready finish with ceramic or carnauba wax." },
 };
 
-const VEHICLE_SIZES: {
+type SizeKey = "price_small" | "price_medium" | "price_large" | "price_extra_large";
+
+type VehicleSizeOption = {
   id: VehicleSizeSlug;
   label: string;
   desc: string;
-  sizeKey: "price_small" | "price_medium" | "price_large" | "price_extra_large";
-}[] = [
+  sizeKey: SizeKey;
+};
+
+/** 3-tier picker shown for all standard services (Interior, Exterior, Full, Ultimate, etc.).
+ *  Compact and Sedan auto-detected sizes both display under "Small / Med". */
+const VEHICLE_SIZES: VehicleSizeOption[] = [
   {
     id: "compact",
-    label: "Small / Medium",
-    desc: "Sedans, Coupes, Small SUVs (No 3rd Row)",
+    label: "Small / Med",
+    desc: "Sedans, Coupes, 2-Row SUVs",
     sizeKey: "price_small",
   },
   {
     id: "suv",
-    label: "Large / 3-Row / Van",
-    desc: "3-Row SUVs, Vans, Large Trucks",
+    label: "Large / 3-Row / Passenger Van",
+    desc: "3-Row SUVs, Trucks, Sienna, Odyssey, Pacifica",
     sizeKey: "price_large",
   },
+  {
+    id: "xl",
+    label: "Work Van",
+    desc: "Sprinter, Transit, ProMaster, Express, Savana",
+    sizeKey: "price_extra_large",
+  },
 ];
+
+/** 4-tier picker shown only for Ultimate Exterior + Paint Correction packages. */
+const PAINT_CORRECTION_SIZES: VehicleSizeOption[] = [
+  {
+    id: "compact",
+    label: "Small Car",
+    desc: "Compacts, Sedans, Coupes",
+    sizeKey: "price_small",
+  },
+  {
+    id: "sedan",
+    label: "Mid Size",
+    desc: "Mid-size sedans & 2-Row SUVs",
+    sizeKey: "price_medium",
+  },
+  {
+    id: "suv",
+    label: "Large SUV / Truck",
+    desc: "3-Row SUVs, Trucks, Passenger Vans",
+    sizeKey: "price_large",
+  },
+  {
+    id: "xl",
+    label: "Sprinter / Work Van",
+    desc: "Sprinter, Transit, ProMaster, Express",
+    sizeKey: "price_extra_large",
+  },
+];
+
+/** Granular size → price column mapping. Always returns the most precise DB price.
+ *  For services where price_small === price_medium and price_large === price_extra_large
+ *  (the standard non-paint-correction case), the result naturally collapses to the right tier. */
+const SIZE_TO_PRICE_KEY: Record<VehicleSizeSlug, SizeKey> = {
+  compact: "price_small",
+  sedan:   "price_medium",
+  suv:     "price_large",
+  xl:      "price_extra_large",
+};
+
+/** When the 3-tier picker is active, sedan-sized vehicles visually collapse into the compact tier. */
+function getActiveTier(vehicleSize: VehicleSizeSlug | "" , isPaintCorrection: boolean): VehicleSizeSlug | "" {
+  if (!vehicleSize) return "";
+  if (isPaintCorrection) return vehicleSize;
+  return vehicleSize === "sedan" ? "compact" : vehicleSize;
+}
 
 const WORKDAY_START = "1:00 PM";
 const WORKDAY_END = "6:30 PM";
@@ -322,9 +424,8 @@ function getStepVariants(direction: number) {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getPriceForSize(service: Service, sizeId: VehicleSizeSlug): number {
-  const entry = VEHICLE_SIZES.find((v) => v.id === sizeId);
-  if (!entry) return service.price_small;
-  return service[entry.sizeKey];
+  const key = SIZE_TO_PRICE_KEY[sizeId];
+  return key ? service[key] : service.price_small;
 }
 
 /** "9:00 AM" or "09:00:00" → minutes from midnight */
@@ -519,7 +620,7 @@ function isWeekend(dateStr: string): boolean {
 
 // ─── Make Autocomplete ───────────────────────────────────────────────────────
 
-function MakeAutocomplete({
+export function MakeAutocomplete({
   value,
   onChange,
   onSelect,
@@ -587,7 +688,7 @@ function MakeAutocomplete({
 
 // ─── Model Autocomplete (scoped to selected make; onSelect provides size for auto-detect) ─
 
-function ModelAutocomplete({
+export function ModelAutocomplete({
   value,
   onChange,
   make,
@@ -749,6 +850,17 @@ export interface BookingSectionProps {
   onDraftRestored?: () => void;
   /** Pre-select a service category so the picker opens straight to that category */
   initialCategory?: "vehicle" | "boat" | "rv";
+  /** Pre-fill the vehicle fields when the section opens. Used by inline marketing
+   *  CTAs (e.g. landing-page paint correction picker) so the customer doesn't
+   *  re-type their make/model after picking a service. Applied once per open.
+   *  `size` is optional — when omitted, the booking modal's own auto-detect
+   *  will resolve the size from the typed make/model. */
+  prefilledVehicle?: {
+    make: string;
+    model: string;
+    size?: VehicleSizeSlug;
+    year?: string;
+  } | null;
   /** Called whenever booking step/progress changes so parent can show a summary bar */
   onProgress?: (data: BookingProgressData | null) => void;
 }
@@ -765,6 +877,7 @@ export function BookingSection({
   initialDraft = null,
   onDraftRestored,
   initialCategory,
+  prefilledVehicle = null,
   onProgress,
 }: BookingSectionProps) {
   const router = useRouter();
@@ -827,10 +940,12 @@ export function BookingSection({
       if (isSelected) {
         return prev.filter(a => a.id !== addon.id);
       } else {
-        // Floorboard shampoo tiers are mutually exclusive
+        // Floorboard shampoo & cargo tiers are mutually exclusive within their group
         let filtered = prev;
         if (FLOOR_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
+        } else if (CARGO_ADDON_IDS.includes(addon.id)) {
+          filtered = prev.filter(a => !CARGO_ADDON_IDS.includes(a.id));
         }
         return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string) }];
       }
@@ -967,7 +1082,8 @@ export function BookingSection({
       return sum + Math.max(30, base - 30);
     }, 0);
 
-    const total = primaryMins + addlMins;
+    const addonMins = getAddonExtraDurationMins(selectedAddons);
+    const total = primaryMins + addlMins + addonMins;
     const margin = 30;
     return { minMins: Math.max(30, total - margin), maxMins: total + margin };
   })();
@@ -1054,13 +1170,13 @@ export function BookingSection({
     };
   }, [isSubmittingAny]);
 
-  // Clear add-ons that are no longer valid when the service changes
+  // Clear add-ons that are no longer valid when the service or vehicle size changes
   useEffect(() => {
     if (!selectedService) return;
-    const available = getAddonsForService(selectedService.name);
+    const available = getAddonsForService(selectedService.name, vehicleSize as string);
     const availableIds = available.map(a => a.id) as string[];
     setSelectedAddons(prev => prev.filter(a => availableIds.includes(a.id)));
-  }, [selectedService?.id]);
+  }, [selectedService?.id, vehicleSize]);
 
   // ── Ultimate upsell nudge ──────────────────────────────────────────────────
   const [ultimateNudgeDismissed, setUltimateNudgeDismissed] = useState(false);
@@ -1090,8 +1206,14 @@ export function BookingSection({
   };
 
   // Ultimate packages are flat-rate — auto-set a neutral size so validation passes
-  // without ever showing the size picker to the customer
-  const isUltimateService = !!(selectedService?.name.toLowerCase().includes("ultimate"));
+  // without ever showing the size picker to the customer.
+  // Paint correction services include "Ultimate Exterior" in the name but are NOT flat-rate;
+  // they use the 4-tier picker, so they are explicitly excluded here.
+  const isUltimateService = !!(
+    selectedService &&
+    selectedService.name.toLowerCase().includes("ultimate") &&
+    !isPaintCorrectionService(selectedService.name)
+  );
 
   // Multi-vehicle support — only for standard car services (not boat/RV/paint/maintenance)
   const supportsMultiVehicle = !!(
@@ -1104,14 +1226,16 @@ export function BookingSection({
     return !n.includes("ultimate") && !n.includes("boat") && !n.includes("rv") && !n.includes("motorhome") && !n.includes("maintenance") && !n.includes("paint") && !n.includes("correction");
   })());
 
-  // Total booking duration: each additional vehicle gets -30 min efficiency discount (min 30)
+  // Total booking duration: each additional vehicle gets -30 min efficiency discount (min 30).
+  // Extra time from duration-extending add-ons (e.g. Ultimate Interior +3 hrs) is folded in here.
+  const addonExtraDurationMins = getAddonExtraDurationMins(selectedAddons);
   const primaryDurationMins = selectedService
     ? getDurationForService(
         selectedService.name,
         (isFootageService(selectedService.name)
           ? boatLengthToSize(boatLength)
           : (vehicleSize || "compact")) as VehicleSizeSlug
-      )
+      ) + addonExtraDurationMins
     : 120;
   const additionalDurationMins = additionalVehicles.reduce((sum, v) => {
     if (!v.serviceName || !v.vehicleSize) return sum;
@@ -1125,16 +1249,22 @@ export function BookingSection({
     }
   }, [isUltimateService]);
 
-  // Reset form state each time the booking section is opened (inline section — no body scroll lock)
+  // Reset form state each time the booking section is opened (inline section — no body scroll lock).
+  // If `prefilledVehicle` is supplied (e.g. from a marketing-page picker), seed the vehicle fields
+  // instead of clearing them so the customer doesn't re-type their make/model.
   useEffect(() => {
     if (isVisible) {
-      setShowServiceConfirm(!!selectedService);
+      // Skip the service-confirm preview screen — when a service is preselected
+      // (from a marketing card or paint-correction picker), drop the customer
+      // straight into step 1 of the booking flow.
+      setShowServiceConfirm(false);
       setBookingCategory(initialCategory ?? null);
       setStep(1);
-      setVehicleSize("");
-      setVehicleYear("");
-      setVehicleMake("");
-      setVehicleModel("");
+      setVehicleSize(prefilledVehicle?.size ?? "");
+      setVehicleYear(prefilledVehicle?.year ?? "");
+      setVehicleMake(prefilledVehicle?.make ?? "");
+      setVehicleModel(prefilledVehicle?.model ?? "");
+      setAutoDetected(!!(prefilledVehicle?.size));
       setBoatLength(20);
       setSelectedAddons([]);
       setAdditionalVehicles([]);
@@ -1535,7 +1665,7 @@ export function BookingSection({
   const hasFullDayAddon = selectedAddons.some(a => FULL_DAY_ADDON_IDS.includes(a.id));
   const effectiveDurationOverride = hasFullDayAddon
     ? FULL_DAY_DURATION_MIN
-    : additionalDurationMins > 0
+    : (additionalDurationMins > 0 || addonExtraDurationMins > 0)
       ? totalBookingDurationMins
       : undefined;
 
@@ -2019,8 +2149,12 @@ export function BookingSection({
   );
 
   // ── Derived display values ───────────────────────────────────────────────
-  const vehicleSizeLabel =
-    VEHICLE_SIZES.find((v) => v.id === vehicleSize)?.label ?? vehicleSize;
+  const vehicleSizeLabel = (() => {
+    const isPC = isPaintCorrectionService(selectedService?.name);
+    const tiers = isPC ? PAINT_CORRECTION_SIZES : VEHICLE_SIZES;
+    const activeTier = getActiveTier(vehicleSize as VehicleSizeSlug, isPC);
+    return tiers.find((v) => v.id === activeTier)?.label ?? vehicleSize;
+  })();
   const isSubscription = selectedService?.is_subscription === true;
   const isSuccess = bookingResult?.success === true;
   const confirmationId =
@@ -2047,28 +2181,32 @@ export function BookingSection({
               bg-zinc-950/80 backdrop-blur-xl border border-[#d4af37]/30
               rounded-b-xl shadow-lg"
           >
-            {/* Resume toast — shown briefly when saved progress is restored */}
+            {/* Resume toast — shown briefly when saved progress is restored.
+             *  Wrapper is a full-width flex row that centers the toast pill regardless of
+             *  parent/viewport quirks. Avoids the absolute+translate centering edge cases. */}
             <AnimatePresence>
               {showResumeToast && (
-                <motion.div
-                  key="resume-toast"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-[calc(100%-2rem)] max-w-xs"
-                >
-                  <div className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl bg-zinc-900/95 border border-[#D4AF37]/25 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-center">
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={12} className="text-[#D4AF37]" />
-                      <p className="text-xs font-bold text-white leading-tight">Draft restored</p>
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="absolute top-3 inset-x-0 z-50 px-4 flex justify-center pointer-events-none">
+                  <motion.div
+                    key="resume-toast"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="w-full max-w-xs"
+                  >
+                    <div className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl bg-zinc-900/95 border border-[#D4AF37]/25 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-center mx-auto">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={12} className="text-[#D4AF37]" />
+                        <p className="text-xs font-bold text-white leading-tight">Draft restored</p>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      </div>
+                      <p className="text-[11px] text-zinc-500 leading-tight truncate text-center w-full">
+                        {selectedService ? selectedService.name : "Picking up where you left off"}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-zinc-500 leading-tight truncate w-full">
-                      {selectedService ? selectedService.name : "Picking up where you left off"}
-                    </p>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               )}
             </AnimatePresence>
 
@@ -2152,20 +2290,22 @@ export function BookingSection({
                             / foot — enter your {isRVService(selectedService.name) ? "RV" : "boat"} length to calculate
                           </span>
                         </>
-                      ) : selectedService.price_small === selectedService.price_large ? (
-                        <>
-                          ${selectedService.price_small}
-                          <span className="text-zinc-500 font-normal text-xs ml-1">— flat rate, all sizes</span>
-                        </>
-                      ) : (
-                        <>
-                          ${selectedService.price_small}
-                          {selectedService.price_large !== selectedService.price_small && (
-                            <> – ${selectedService.price_large}</>
-                          )}
-                          <span className="text-zinc-500 font-normal text-xs ml-1">/ depending on vehicle size</span>
-                        </>
-                      )}
+                      ) : (() => {
+                        const prices = [selectedService.price_small, selectedService.price_medium, selectedService.price_large, selectedService.price_extra_large];
+                        const minPrice = Math.min(...prices);
+                        const maxPrice = Math.max(...prices);
+                        return minPrice === maxPrice ? (
+                          <>
+                            ${minPrice}
+                            <span className="text-zinc-500 font-normal text-xs ml-1">— flat rate, all sizes</span>
+                          </>
+                        ) : (
+                          <>
+                            ${minPrice} – ${maxPrice}
+                            <span className="text-zinc-500 font-normal text-xs ml-1">/ depending on vehicle size</span>
+                          </>
+                        );
+                      })()}
                     </p>
                   </div>
 
@@ -2771,25 +2911,34 @@ export function BookingSection({
                               <p className="text-sm">Enter your vehicle above to get your price</p>
                             </div>
                           ) : (
-                            /* ── Size chosen: show only the selected card ── */
+                            /* ── Size chosen: show only the selected card ──
+                             * Paint correction services use the 4-tier picker (PAINT_CORRECTION_SIZES);
+                             * everything else uses the 3-tier picker (VEHICLE_SIZES). When the 3-tier
+                             * picker is active and the auto-detected size is "sedan", we collapse it
+                             * visually to the "compact" tier card via getActiveTier. */
                             <>
-                              {VEHICLE_SIZES.filter(s => s.id === vehicleSize).map((size) => (
-                                <div
-                                  key={size.id}
-                                  className="w-full p-4 rounded-2xl border border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_18px_rgba(212,175,55,0.12)] text-center"
-                                >
-                                  <div className="flex items-center justify-center gap-2 mb-1">
-                                    <span className="text-sm font-bold text-[#D4AF37]">{size.label}</span>
-                                    <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />
+                              {(() => {
+                                const isPC = isPaintCorrectionService(selectedService?.name);
+                                const tiers = isPC ? PAINT_CORRECTION_SIZES : VEHICLE_SIZES;
+                                const activeTier = getActiveTier(vehicleSize as VehicleSizeSlug, isPC);
+                                return tiers.filter(s => s.id === activeTier).map((size) => (
+                                  <div
+                                    key={size.id}
+                                    className="w-full p-4 rounded-2xl border border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_18px_rgba(212,175,55,0.12)] text-center"
+                                  >
+                                    <div className="flex items-center justify-center gap-2 mb-1">
+                                      <span className="text-sm font-bold text-[#D4AF37]">{size.label}</span>
+                                      <Check size={14} className="text-[#D4AF37]" strokeWidth={3} />
+                                    </div>
+                                    <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
+                                    {selectedService && (
+                                      <p className="text-sm font-black mt-2 text-white">
+                                        ${getPriceForSize(selectedService, vehicleSize as VehicleSizeSlug)}
+                                      </p>
+                                    )}
                                   </div>
-                                  <p className="text-[11px] text-zinc-500 leading-snug">{size.desc}</p>
-                                  {selectedService && (
-                                    <p className="text-sm font-black mt-2 text-white">
-                                      ${selectedService[size.sizeKey]}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
+                                ));
+                              })()}
                             </>
                           )}
 
@@ -2803,7 +2952,7 @@ export function BookingSection({
 
                       {/* Enhance Your Detail (Smart per-service Add-ons) */}
                       {(() => {
-                        const available = getAddonsForService(selectedService?.name ?? "");
+                        const available = getAddonsForService(selectedService?.name ?? "", vehicleSize as string);
                         const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
                         const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
                         const note       = getIncludedNote(selectedService?.name ?? "");

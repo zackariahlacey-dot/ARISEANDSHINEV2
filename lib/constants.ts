@@ -31,14 +31,15 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 270, medium: 270, large: 270, extra_large: 270,
     compact: 270, sedan: 270, suv: 270, xl: 270,
   },
-  // Paint Correction
-  "Single-Stage Paint Enhancement": {
-    small: 240, medium: 240, large: 240, extra_large: 240,
-    compact: 240, sedan: 240, suv: 240, xl: 240,
+  // Paint Correction (Ultimate Exterior + 1-Step / 2-Step)
+  // Times scale by vehicle size since these are full exterior + machine polish jobs.
+  "Ultimate Exterior + 1-Step Paint Correction": {
+    small: 240, medium: 270, large: 300, extra_large: 420,
+    compact: 240, sedan: 270, suv: 300, xl: 420,
   },
-  "Two-Stage Paint Correction": {
-    small: 480, medium: 480, large: 480, extra_large: 480,
-    compact: 480, sedan: 480, suv: 480, xl: 480,
+  "Ultimate Exterior + 2-Step Paint Correction": {
+    small: 330, medium: 360, large: 420, extra_large: 510,
+    compact: 330, sedan: 360, suv: 420, xl: 510,
   },
   // Boat Detailing — durations scale by length bracket
   // compact/small = 15–20ft, sedan/medium = 21–30ft, suv/large = 31–45ft, xl/extra_large = 46ft+

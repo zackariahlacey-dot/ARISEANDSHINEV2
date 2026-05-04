@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// DB status values stay the same ("pending" | "contacted" | "booked" | "dismissed")
+// but the admin-facing labels use clearer language: New / Contacted / Scheduled / Dismissed.
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pending:   { label: "Pending",   color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20"  },
+  pending:   { label: "New",       color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20"  },
   contacted: { label: "Contacted", color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20"   },
-  booked:    { label: "Booked",    color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+  booked:    { label: "Scheduled", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
   dismissed: { label: "Dismissed", color: "text-zinc-500",    bg: "bg-zinc-800/60",    border: "border-zinc-700/30"   },
 };
 
@@ -329,7 +331,7 @@ export default function SqueezePage() {
 
   const filtered = requests.filter(r => {
     if (filter === "active")    return r.status === "pending" || r.status === "contacted";
-    if (filter === "booked")    return r.status === "booked";
+    if (filter === "scheduled") return r.status === "booked";
     if (filter === "dismissed") return r.status === "dismissed";
     return true;
   });
@@ -363,7 +365,7 @@ export default function SqueezePage() {
 
       {/* Filter tabs */}
       <div className="shrink-0 flex gap-1 px-4 py-3 border-b border-white/[0.03]">
-        {(["active", "booked", "dismissed", "all"] as const).map(f => (
+        {(["active", "scheduled", "dismissed", "all"] as const).map(f => (
           <button
             key={f}
             type="button"
@@ -388,7 +390,7 @@ export default function SqueezePage() {
             </div>
             <p className="text-sm font-bold text-zinc-600">No requests here</p>
             <p className="text-[11px] text-zinc-700">
-              {filter === "active" ? "No pending or contacted requests" : `No ${filter} requests yet`}
+              {filter === "active" ? "No new or contacted requests" : `No ${filter} requests yet`}
             </p>
           </div>
         ) : (

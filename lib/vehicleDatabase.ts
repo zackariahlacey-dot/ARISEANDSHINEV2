@@ -1,6 +1,7 @@
 /**
  * Vehicle make/model database for autocomplete and size auto-detect.
- * Sizes: small (compact), medium (sedan), large (SUV/truck), extra_large (van/minivan).
+ * Sizes: small (compact), medium (sedan), large (SUV/truck/passenger minivan),
+ * extra_large (work vans only — Sprinter / Transit / ProMaster / Express / Savana / E-Series / NV cargo).
  */
 
 export type SizeTier = "small" | "medium" | "large" | "extra_large";
@@ -24,7 +25,7 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "4Runner", size: "large" },
     { model: "Sequoia", size: "large" },
     { model: "Land Cruiser", size: "large" },
-    { model: "Sienna", size: "extra_large" },
+    { model: "Sienna", size: "large" },
     { model: "Tacoma", size: "large" },
     { model: "Tundra", size: "large" },
   ],
@@ -37,7 +38,7 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "CR-V", size: "large" },
     { model: "Passport", size: "large" },
     { model: "Pilot", size: "large" },
-    { model: "Odyssey", size: "extra_large" },
+    { model: "Odyssey", size: "large" },
     { model: "Ridgeline", size: "large" },
   ],
   Ford: [
@@ -56,7 +57,11 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "Maverick", size: "large" },
     { model: "Ranger", size: "large" },
     { model: "F-150", size: "large" },
+    { model: "F-250", size: "large" },
+    { model: "F-350", size: "large" },
+    { model: "Transit Connect", size: "small" },
     { model: "Transit", size: "extra_large" },
+    { model: "E-Series", size: "extra_large" },
   ],
   Chevrolet: [
     { model: "Spark", size: "small" },
@@ -71,7 +76,7 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "Blazer", size: "large" },
     { model: "Traverse", size: "large" },
     { model: "Tahoe", size: "large" },
-    { model: "Suburban", size: "extra_large" },
+    { model: "Suburban", size: "large" },
     { model: "Colorado", size: "large" },
     { model: "Silverado", size: "large" },
     { model: "Express", size: "extra_large" },
@@ -87,7 +92,11 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "Murano", size: "large" },
     { model: "Pathfinder", size: "large" },
     { model: "Armada", size: "large" },
-    { model: "Quest", size: "extra_large" },
+    { model: "Quest", size: "large" },
+    { model: "NV200", size: "small" },
+    { model: "NV1500", size: "extra_large" },
+    { model: "NV2500", size: "extra_large" },
+    { model: "NV3500", size: "extra_large" },
     { model: "Frontier", size: "large" },
     { model: "Titan", size: "large" },
   ],
@@ -111,7 +120,7 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "Sportage", size: "large" },
     { model: "Sorento", size: "large" },
     { model: "Telluride", size: "large" },
-    { model: "Carnival", size: "extra_large" },
+    { model: "Carnival", size: "large" },
   ],
   Tesla: [
     { model: "Model 3", size: "medium" },
@@ -209,12 +218,12 @@ export const VEHICLE_DATABASE: VehicleDatabase = {
     { model: "Charger", size: "medium" },
     { model: "Challenger", size: "medium" },
     { model: "Durango", size: "large" },
-    { model: "Caravan", size: "extra_large" },
+    { model: "Grand Caravan", size: "large" },
   ],
   Chrysler: [
     { model: "300", size: "medium" },
-    { model: "Pacifica", size: "extra_large" },
-    { model: "Voyager", size: "extra_large" },
+    { model: "Pacifica", size: "large" },
+    { model: "Voyager", size: "large" },
   ],
   Lexus: [
     { model: "IS", size: "medium" },
@@ -337,13 +346,16 @@ export function filterModelsByQuery(
   return models.filter((e) => e.model.toLowerCase().includes(q));
 }
 
-/** Map database size tier to booking modal VehicleSizeSlug (compact | suv) */
-export function sizeTierToSlug(tier: SizeTier): "compact" | "suv" {
-  const map: Record<SizeTier, "compact" | "suv"> = {
+/** Map database size tier to booking modal VehicleSizeSlug (compact | sedan | suv | xl).
+ *  Granular by design — the booking flow uses this for both the 3-tier picker (where
+ *  compact/sedan visually collapse into "Small / Med") and the 4-tier paint-correction
+ *  picker (where each tier renders separately). */
+export function sizeTierToSlug(tier: SizeTier): "compact" | "sedan" | "suv" | "xl" {
+  const map: Record<SizeTier, "compact" | "sedan" | "suv" | "xl"> = {
     small: "compact",
-    medium: "compact",
+    medium: "sedan",
     large: "suv",
-    extra_large: "suv",
+    extra_large: "xl",
   };
   return map[tier] ?? "compact";
 }
