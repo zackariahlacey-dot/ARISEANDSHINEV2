@@ -1808,6 +1808,7 @@ export function BookingSection({
       ...(setupFee > 0 && { setupFee }),
       ...(appliedCoupon && {
         couponId: appliedCoupon.couponId,
+        couponCode: appliedCoupon.code,
         couponDiscount,
       }),
       ...(appliedGiftCard && giftCardDiscount > 0 && {

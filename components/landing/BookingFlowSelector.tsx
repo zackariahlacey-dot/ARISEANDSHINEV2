@@ -2,17 +2,27 @@
 
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Car, Anchor, Truck, Zap } from "lucide-react";
+import { X, Car, Anchor, Truck, Zap, Layers } from "lucide-react";
 
 const FLOWS = [
   {
     href: "/detailing",
     icon: Car,
-    title: "My Vehicle",
+    title: "Auto Detailing",
     desc: "Cars, trucks, SUVs & vans — interior, exterior, full & ultimate packages",
     border: "border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04]",
     iconColor: "text-[#D4AF37]",
     iconBg: "bg-[#D4AF37]/10",
+    badge: null,
+  },
+  {
+    href: "/paint-correction",
+    icon: Layers,
+    title: "Paint Correction",
+    desc: "1-Step or 2-Step machine polish + Ultimate Exterior — from $300 with 6-month ceramic",
+    border: "border-violet-500/20 hover:border-violet-500/40 hover:bg-violet-500/[0.04]",
+    iconColor: "text-violet-400",
+    iconBg: "bg-violet-500/10",
     badge: null,
   },
   {

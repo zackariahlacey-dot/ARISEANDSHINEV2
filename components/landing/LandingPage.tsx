@@ -722,13 +722,8 @@ export function LandingPage({ services }: { services: Service[] }) {
               Our Services
             </h2>
             <p className="text-sm text-zinc-500 mt-3 max-w-lg mx-auto leading-relaxed">
-              A thorough professional clean — vacuum, wipe-down, wash, and protect. Perfect for regular upkeep and keeping your vehicle looking sharp week to week.
+              Auto detailing, ultimate restoration, paint correction, ceramic coatings — plus boats and RVs. All mobile, all premium.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-              {["Regular maintenance", "Everyday drivers", "Quick refresh", "Between seasons"].map(tag => (
-                <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-zinc-500">{tag}</span>
-              ))}
-            </div>
           </div>
 
           {/* ── Mobile/tablet: single carousel ──────────────────────── */}
@@ -799,15 +794,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 <div className="flex-1 h-px bg-white/[0.05]" />
               </div>
               <div className="text-center">
-                <h3 className="text-2xl md:text-3xl font-black text-white mb-2">Beyond clean — <span className="text-[#D4AF37]">restored.</span></h3>
-                <p className="text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
-                  Where a core package removes surface dirt, the Ultimate Series goes deep: hot water extraction, steam sanitation, paint decontamination, and a long-term ceramic seal. If your vehicle has road salt buildup, stained seats, or just hasn&apos;t had a proper deep clean in years — this is what it needs.
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                  {["Post-winter refresh", "Pre-sale prep", "Years of buildup", "Stained seats or carpets", "High-traffic vehicles"].map(tag => (
-                    <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/[0.06] text-[#D4AF37]">{tag}</span>
-                  ))}
-                </div>
+                <h3 className="text-2xl md:text-3xl font-black text-white">Beyond clean — <span className="text-[#D4AF37]">restored.</span></h3>
               </div>
             </div>
 
@@ -835,10 +822,6 @@ export function LandingPage({ services }: { services: Service[] }) {
                 ))}
               </div>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{ULTIMATE_CARDS[ultimateCarouselActiveIdx]?.name ?? ""}</p>
-              <div className="flex items-start gap-2 mt-4 max-w-sm mx-auto">
-                <AlertTriangle size={12} className="text-amber-500/60 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-zinc-600 leading-relaxed"><span className="text-zinc-500 font-semibold">Heavy Soil:</span> Vehicles with mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.</p>
-              </div>
             </div>}
 
             {/* Desktop: Ultimate grid */}
@@ -846,10 +829,6 @@ export function LandingPage({ services }: { services: Service[] }) {
               {ULTIMATE_CARDS.map((card) => (
                 <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} />
               ))}
-            </div>
-            <div className="hidden lg:flex items-center gap-2 mt-5">
-              <AlertTriangle size={12} className="text-amber-500/60 shrink-0" />
-              <p className="text-[11px] text-zinc-600"><span className="text-zinc-500 font-semibold">Heavy Soil:</span> Vehicles with mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.</p>
             </div>
 
             {/* ── Ultimate Paint Correction (sister sub-section) ── */}
@@ -1099,8 +1078,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <span className="block text-white mt-1">Forever.</span>
             </h2>
             <p className="text-zinc-400 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-              Climb the tier ladder with every detail. No points, no apps, no expirations.
-              Your discount is locked in — saved to your account, applied at checkout, every single time.
+              Every detail you book unlocks a bigger discount. Automatic, forever.
             </p>
           </div>
 
@@ -1410,7 +1388,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              No — we&apos;re 100% self-contained. We bring our own water supply, generator, and all professional-grade equipment. All we need is access to your vehicle.
+              No — we&apos;re 100% self-contained. Just give us access to the vehicle.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1419,7 +1397,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Interior Detail: 2–3 hrs. Exterior Detail: 1.5–2 hrs. Full Detail: 3–4 hrs. Ultimate packages run 4–6 hrs. Boat and RV appointments scale with footage — we&apos;ll give you an estimate when you book.
+              Interior 2–3 hrs · Exterior 1.5–2 hrs · Full Detail 3–4 hrs · Ultimate 4–6 hrs.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1428,7 +1406,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Not at all. As long as your vehicle is accessible at the scheduled time, we&apos;ll handle everything independently. We&apos;ll text you when we start and again when we&apos;re done.
+              Nope. As long as the vehicle is accessible, we text you when we start and finish.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1437,7 +1415,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              We&apos;ll reach out to reschedule at no charge — exterior work needs dry conditions to get the best result. Interior-only appointments can often still proceed in light rain. We&apos;ll figure it out together.
+              We&apos;ll reschedule at no charge for exterior work. Interior-only can usually still go.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1446,7 +1424,7 @@ export function LandingPage({ services }: { services: Service[] }) {
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Every car detail counts toward your tier automatically. 1 detail: 5% off (Member). 3 details: 10% off (Silver). 5 details: 15% off (Gold). 10 details: 20% off every detail, forever (VIP). No points, no tracking — just book and save.
+              1 detail = 5% off · 3 = 10% · 5 = 15% · 10 = 20% off forever. Auto-applied at checkout.
             </p>
           </details>
           <a href="/faq" className="mt-2 text-sm text-[#D4AF37]/70 hover:text-[#D4AF37] transition-colors font-medium">
@@ -2098,6 +2076,7 @@ function UltimateServiceCard({
   onBook: (name: string) => void;
   isFlagship: boolean;
 }) {
+  const [showFeatures, setShowFeatures] = useState(false);
   return (
     <div
       className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 group ${
@@ -2184,21 +2163,33 @@ function UltimateServiceCard({
         </div>
       </div>
 
-      {/* Features */}
+      {/* Features — collapsed by default; "Learn more" reveals the full list. */}
       <div className="px-7 pb-6 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-4">Everything Included</p>
-        <ul className="space-y-3">
-          {features.map((item) => (
-            <li key={item} className="flex items-start gap-3 leading-snug">
-              <CheckCircle
-                size={15}
-                className={`shrink-0 mt-[1px] ${isFlagship ? "text-[#D4AF37]" : "text-[#D4AF37]/65"}`}
-                strokeWidth={2}
-              />
-              <span className={`text-sm ${isFlagship ? "text-zinc-200" : "text-zinc-300"}`}>{item}</span>
-            </li>
-          ))}
-        </ul>
+        <button
+          type="button"
+          onClick={() => setShowFeatures(s => !s)}
+          aria-expanded={showFeatures}
+          className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/[0.03] transition-all"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+            {showFeatures ? "What's included" : "Learn more"}
+          </span>
+          <ChevronDown size={14} className={`text-[#D4AF37] transition-transform duration-200 ${showFeatures ? "rotate-180" : ""}`} />
+        </button>
+        {showFeatures && (
+          <ul className="space-y-3 mt-4">
+            {features.map((item) => (
+              <li key={item} className="flex items-start gap-3 leading-snug">
+                <CheckCircle
+                  size={15}
+                  className={`shrink-0 mt-[1px] ${isFlagship ? "text-[#D4AF37]" : "text-[#D4AF37]/65"}`}
+                  strokeWidth={2}
+                />
+                <span className={`text-sm ${isFlagship ? "text-zinc-200" : "text-zinc-300"}`}>{item}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* CTA */}
@@ -2239,6 +2230,9 @@ function LandingPaintCorrectionBlock({
   const [vehicleModel, setVehicleModel] = useState("");
   const [size, setSize] = useState<PaintSizeId | null>(null);
   const [autoDetected, setAutoDetected] = useState(false);
+  // Single shared expand state — toggling on one card expands both, since the
+  // included features are identical across the 1-Step / 2-Step packages.
+  const [showIncludes, setShowIncludes] = useState(false);
 
   // Mirror the booking modal's auto-detect — debounce on make/model change, run
   // detectVehicleSize, and update the size pill if a match is found. Returns one
@@ -2290,7 +2284,7 @@ function LandingPaintCorrectionBlock({
             Ultimate <span className="text-[#D4AF37]">Paint Correction.</span>
           </h3>
           <p className="text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
-            Machine polishing to remove swirls, oxidation, and scratches — paired with our full Ultimate Exterior detail and a 6-month ceramic spray. Enter your vehicle to see your exact price.
+            Machine polishing + our full Ultimate Exterior detail. 6-month ceramic spray included.
           </p>
         </div>
       </div>
@@ -2388,16 +2382,30 @@ function LandingPaintCorrectionBlock({
                   )}
                 </div>
 
-                {/* Ultimate Exterior includes — compact pill row */}
-                <div className="mb-4 rounded-xl px-3 py-2.5 bg-zinc-800/40 border border-white/[0.05]">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-1.5 text-center">Includes Ultimate Exterior</p>
-                  <div className="flex flex-wrap justify-center gap-1">
-                    {ULTIMATE_EXTERIOR_INCLUDES_LANDING.map((item) => (
-                      <span key={item} className="text-[9.5px] text-zinc-300 px-1.5 py-0.5 rounded-full bg-zinc-900/60 border border-white/[0.05]">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
+                {/* Ultimate Exterior includes — collapsed by default */}
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowIncludes(s => !s)}
+                    aria-expanded={showIncludes}
+                    className="w-full flex items-center justify-between py-2 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/[0.03] transition-all"
+                  >
+                    <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+                      {showIncludes ? "Includes Ultimate Exterior" : "Learn more"}
+                    </span>
+                    <ChevronDown size={12} className={`text-[#D4AF37] transition-transform duration-200 ${showIncludes ? "rotate-180" : ""}`} />
+                  </button>
+                  {showIncludes && (
+                    <div className="mt-2 rounded-xl px-3 py-2.5 bg-zinc-800/40 border border-white/[0.05]">
+                      <div className="flex flex-wrap justify-center gap-1">
+                        {ULTIMATE_EXTERIOR_INCLUDES_LANDING.map((item) => (
+                          <span key={item} className="text-[9.5px] text-zinc-300 px-1.5 py-0.5 rounded-full bg-zinc-900/60 border border-white/[0.05]">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button onClick={() => handleBook(card.serviceName)}

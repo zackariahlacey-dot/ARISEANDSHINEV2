@@ -44,6 +44,16 @@ function bAddress(b: any): string | null {
   const m = b.notes?.match(/📍 Service Location:\s*(.+)/);
   return m ? m[1].trim() : null;
 }
+/** Extract the promo code + discount $ from the booking notes (matches the
+ *  format written by bookDetailing.ts: "🏷️ Promo code SUMMER25 applied: $70.00 off"). */
+function bPromo(b: any): { code: string | null; amount: number } | null {
+  const note = b.notes ?? "";
+  if (!note.includes("🏷️ Promo code")) return null;
+  const match = note.match(/🏷️ Promo code(?:\s+([A-Z0-9_-]+))?\s+applied:\s+\$?([\d.]+)/i);
+  if (!match) return null;
+  const amount = parseFloat(match[2] ?? "0");
+  return { code: match[1] ?? null, amount: isNaN(amount) ? 0 : amount };
+}
 function bVehicle(b: any): string {
   return [b.vehicle_year ?? b.vehicles?.year, b.vehicle_make ?? b.vehicles?.make, b.vehicle_model ?? b.vehicles?.model].filter(Boolean).join(" ");
 }
@@ -547,6 +557,26 @@ export default function TodayPage() {
               {bEmail(activeBooking) && (
                 <DetailRow icon={<MessageSquare size={14} />} value={bEmail(activeBooking)!} />
               )}
+              {(() => {
+                const promo = bPromo(activeBooking);
+                if (!promo) return null;
+                return (
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-fuchsia-500/[0.08] border border-fuchsia-500/25 px-3 py-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-fuchsia-400 text-xs">🏷️</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-fuchsia-400">Promo</span>
+                      {promo.code && (
+                        <span className="font-mono text-xs font-bold text-fuchsia-200 px-2 py-0.5 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 truncate">
+                          {promo.code}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-black text-fuchsia-300 tabular-nums shrink-0">
+                      −${promo.amount.toFixed(0)}
+                    </span>
+                  </div>
+                );
+              })()}
               {(() => {
                 try {
                   const addons: any[] = Array.isArray(activeBooking.addons_json) ? activeBooking.addons_json : [];

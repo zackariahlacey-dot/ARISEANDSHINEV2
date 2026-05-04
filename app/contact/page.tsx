@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Calendar } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Calendar, Layers } from "lucide-react";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   },
 };
 
+// Phone hours — when calls/texts get a live reply. Booking slots themselves
+// run 1 PM – 6:30 PM on weekdays via the booking modal's calendar.
 const HOURS = [
   { day: "Monday – Friday", time: "10:00 AM – 6:00 PM" },
   { day: "Saturday",        time: "By appointment" },
@@ -20,10 +22,11 @@ const HOURS = [
 ];
 
 const QUICK_LINKS = [
-  { label: "Book Auto Detailing",  href: "/detailing",      icon: Sparkles },
-  { label: "Book Boat Detailing",  href: "/boat-detailing", icon: Anchor },
-  { label: "Book RV Detailing",    href: "/rv-detailing",   icon: Truck },
-  { label: "FAQs",                 href: "/faq",            icon: MessageCircle },
+  { label: "Book Auto Detailing",  href: "/detailing",        icon: Sparkles      },
+  { label: "Paint Correction",     href: "/paint-correction", icon: Layers        },
+  { label: "Book Boat Detailing",  href: "/boat-detailing",   icon: Anchor        },
+  { label: "Book RV Detailing",    href: "/rv-detailing",     icon: Truck         },
+  { label: "FAQs",                 href: "/faq",              icon: MessageCircle },
 ];
 
 export default function ContactPage() {
@@ -100,7 +103,7 @@ export default function ContactPage() {
               <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center mb-4">
                 <Clock size={20} className="text-[#D4AF37]" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-3">Hours</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-3">Phone Hours</p>
               <div className="space-y-2 w-full">
                 {HOURS.map(({ day, time }) => (
                   <div key={day} className="flex justify-between items-baseline gap-4">
@@ -109,7 +112,7 @@ export default function ContactPage() {
                   </div>
                 ))}
               </div>
-              <p className="text-zinc-600 text-[11px] mt-3">* Hours may vary seasonally</p>
+              <p className="text-zinc-600 text-[11px] mt-3">Appointments run 1 PM – 6:30 PM weekdays. <Link href="/detailing?book=1" className="text-[#D4AF37] hover:underline">See available slots →</Link></p>
             </div>
           </div>
 

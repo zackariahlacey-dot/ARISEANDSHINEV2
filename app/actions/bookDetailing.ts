@@ -61,6 +61,9 @@ export type BookingPayload = {
   /** Points to redeem (10 pts = $1 off). totalPrice is already discounted. */
   pointsToRedeem?: number;
   couponId?: string;
+  /** Promo code text (e.g. "SUMMER25") — snapshotted onto the booking notes
+   *  so admins can see which code was redeemed without joining the coupons table. */
+  couponCode?: string;
   couponDiscount?: number;
   /** Gift card code applied at checkout */
   giftCardCode?: string;
@@ -434,7 +437,7 @@ export async function bookDetailing(
         ? `🎁 Redeemed ${payload.pointsToRedeem} pts for $${(payload.pointsToRedeem / 10).toFixed(2)} off`
         : null,
       payload.couponDiscount != null && payload.couponDiscount > 0
-        ? `🏷️ Promo code applied: $${payload.couponDiscount.toFixed(2)} off`
+        ? `🏷️ Promo code${payload.couponCode ? ` ${payload.couponCode}` : ""} applied: $${payload.couponDiscount.toFixed(2)} off`
         : null,
       payload.giftCardCode && payload.giftCardDiscount != null && payload.giftCardDiscount > 0
         ? `🎁 Gift card (${payload.giftCardCode}): $${payload.giftCardDiscount.toFixed(2)} off`
@@ -557,7 +560,7 @@ export async function bookDetailing(
               }))
             ).slice(0, 499),
           }),
-          ...(payload.couponId ? { couponId: payload.couponId } : {}),
+          ...(payload.couponId ? { couponId: payload.couponId, couponCode: (payload.couponCode ?? "").slice(0, 50), couponDiscount: String(payload.couponDiscount ?? 0) } : {}),
           ...(payload.pointsToRedeem != null &&
             payload.pointsToRedeem > 0 && {
               pointsToRedeem: String(payload.pointsToRedeem),

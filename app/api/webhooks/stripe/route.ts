@@ -316,6 +316,17 @@ export async function POST(req: NextRequest) {
         }))
       : null;
 
+    // Stripe metadata caps `notes` at 500 chars, so the promo line may have been
+    // truncated. Reconstruct it from explicit metadata fields and prepend it so
+    // admins can always see which code was redeemed.
+    const promoLine = m.couponCode || m.couponDiscount
+      ? `🏷️ Promo code${m.couponCode ? ` ${m.couponCode}` : ""}${m.couponDiscount ? ` applied: $${Number(m.couponDiscount).toFixed(2)} off` : ""}`
+      : "";
+    const baseNotes = m.notes ?? "";
+    const finalNotes = promoLine && !baseNotes.includes("🏷️ Promo code")
+      ? (baseNotes ? `${promoLine}\n\n${baseNotes}` : promoLine)
+      : (baseNotes || null);
+
     const { data: booking, error: insertErr } = await supabase
       .from("bookings")
       .insert({
@@ -326,7 +337,7 @@ export async function POST(req: NextRequest) {
         booking_time: m.bookingTime,
         status: "confirmed",
         total_price:     Number(m.totalPrice) || 0,
-        notes:           m.notes ?? null,
+        notes:           finalNotes,
         distance_miles:  m.distanceMiles ? Number(m.distanceMiles) : null,
         // ── Direct lead capture snapshot ──────────────────────────────────
         customer_name:   m.customerName ?? null,
