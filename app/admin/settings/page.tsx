@@ -443,6 +443,7 @@ function CouponsSection() {
   const [code,        setCode]        = useState("");
   const [type,        setType]        = useState<"amount" | "percentage">("amount");
   const [value,       setValue]       = useState("");
+  const [maxUses,     setMaxUses]     = useState("");
   const [creating,    setCreating]    = useState(false);
   const [togglingId,  setTogglingId]  = useState<string | null>(null);
   const [deletingId,  setDeletingId]  = useState<string | null>(null);
@@ -451,13 +452,23 @@ function CouponsSection() {
     const v = Number(value);
     if (!code.trim()) { toast("Enter a code", "error"); return; }
     if (!v || v <= 0) { toast("Enter a valid discount value", "error"); return; }
+    const trimmedMax = maxUses.trim();
+    let parsedMaxUses: number | null = null;
+    if (trimmedMax) {
+      const m = Number(trimmedMax);
+      if (!Number.isFinite(m) || m < 1) {
+        toast("Max uses must be 1 or greater (or leave blank for unlimited)", "error");
+        return;
+      }
+      parsedMaxUses = Math.floor(m);
+    }
     setCreating(true);
     try {
-      const r = await createCoupon({ code, discountType: type, discountValue: v, isActive: true });
+      const r = await createCoupon({ code, discountType: type, discountValue: v, isActive: true, maxUses: parsedMaxUses });
       if (!r.success) { toast(r.error ?? "Failed", "error"); }
       else {
         toast(`Code ${r.coupon?.code} created!`);
-        setCode(""); setValue("");
+        setCode(""); setValue(""); setMaxUses("");
         queryClient.invalidateQueries({ queryKey: ["admin", "coupons"] });
       }
     } catch (e: any) { toast(e.message ?? "Error", "error"); }
@@ -534,6 +545,17 @@ function CouponsSection() {
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
               />
             </div>
+          </div>
+          {/* Usage limit (optional) */}
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              value={maxUses}
+              onChange={e => setMaxUses(e.target.value)}
+              placeholder="Max uses (blank = unlimited)"
+              min="1"
+              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
+            />
             <button
               onClick={handleCreate}
               disabled={creating}
@@ -542,6 +564,9 @@ function CouponsSection() {
               {creating ? <Loader2 className="animate-spin" size={13} /> : <><Plus size={12} /> Create</>}
             </button>
           </div>
+          <p className="text-[10px] text-zinc-600 leading-snug">
+            Optional: cap the code at N redemptions. It auto-deactivates when the limit is hit.
+          </p>
         </div>
 
         {/* Existing codes */}
@@ -559,7 +584,9 @@ function CouponsSection() {
                 <p className="text-sm font-black text-white font-mono tracking-wider">{c.code}</p>
                 <p className="text-[10px] text-zinc-500">
                   {c.discount_amount != null ? `$${c.discount_amount} off` : `${c.discount_percentage}% off`}
-                  {c.usage_count > 0 && ` · used ${c.usage_count}×`}
+                  {c.max_uses != null && c.max_uses > 0
+                    ? ` · ${c.usage_count ?? 0}/${c.max_uses} used`
+                    : c.usage_count > 0 && ` · used ${c.usage_count}×`}
                 </p>
               </div>
               <span className={cn(

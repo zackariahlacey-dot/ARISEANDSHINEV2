@@ -370,6 +370,25 @@ export async function POST(req: NextRequest) {
     const bookingId = booking.id;
     const totalPrice = Number(m.totalPrice) || 0;
 
+    // Auto-deactivate the coupon if this booking hit its max_uses limit.
+    // Mirrors the logic in bookDetailing.ts for the pay-at-arrival path.
+    if (m.couponId) {
+      const { data: couponRow } = await supabase
+        .from("coupons")
+        .select("max_uses, is_active")
+        .eq("id", m.couponId)
+        .maybeSingle();
+      if (couponRow?.is_active && couponRow.max_uses != null && couponRow.max_uses > 0) {
+        const { count } = await supabase
+          .from("bookings")
+          .select("id", { count: "exact", head: true })
+          .eq("coupon_id", m.couponId);
+        if ((count ?? 0) >= couponRow.max_uses) {
+          await supabase.from("coupons").update({ is_active: false }).eq("id", m.couponId);
+        }
+      }
+    }
+
     // Deduct gift card balance (Pay Now — deferred until payment confirmed)
     if (m.giftCardId && m.giftCardDiscount) {
       const gcDiscount = Number(m.giftCardDiscount) || 0;

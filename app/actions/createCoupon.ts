@@ -7,6 +7,9 @@ export interface CreateCouponPayload {
   discountType: "amount" | "percentage";
   discountValue: number;
   isActive: boolean;
+  /** Optional usage limit. When set, the code auto-deactivates after N
+   *  successful bookings. Pass null/undefined for unlimited uses. */
+  maxUses?: number | null;
 }
 
 export interface CouponRow {
@@ -15,6 +18,7 @@ export interface CouponRow {
   discount_amount: number | null;
   discount_percentage: number | null;
   is_active: boolean;
+  max_uses: number | null;
   created_at: string | null;
 }
 
@@ -27,6 +31,8 @@ export async function createCoupon(
     return { success: false, error: "Discount value must be greater than 0." };
   if (payload.discountType === "percentage" && payload.discountValue > 100)
     return { success: false, error: "Percentage cannot exceed 100%." };
+  if (payload.maxUses != null && (!Number.isFinite(payload.maxUses) || payload.maxUses < 1))
+    return { success: false, error: "Max uses must be 1 or greater (or leave blank for unlimited)." };
 
   const supabase = createAdminClient();
 
@@ -37,12 +43,13 @@ export async function createCoupon(
     discount_percentage:
       payload.discountType === "percentage" ? payload.discountValue : null,
     is_active: payload.isActive ?? true,
+    max_uses: payload.maxUses ?? null,
   };
 
   const { data, error } = await supabase
     .from("coupons")
     .insert(insert)
-    .select("id, code, discount_amount, discount_percentage, is_active, created_at")
+    .select("id, code, discount_amount, discount_percentage, is_active, max_uses, created_at")
     .single();
 
   if (error) {

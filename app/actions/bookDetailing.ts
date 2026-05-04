@@ -637,6 +637,30 @@ export async function bookDetailing(
     };
   }
 
+  // ── 3a-pre. Auto-deactivate the coupon if it just hit its usage limit ────
+  // Counted from the bookings table (not a separate counter) so cancellations
+  // and re-issuances don't drift. If the just-created booking pushed usage
+  // up to max_uses, flip is_active=false so future customers see "no longer active".
+  if (payload.couponId) {
+    const { data: couponRow } = await adminSupabase
+      .from("coupons")
+      .select("max_uses, is_active")
+      .eq("id", payload.couponId)
+      .maybeSingle();
+    if (couponRow?.is_active && couponRow.max_uses != null && couponRow.max_uses > 0) {
+      const { count } = await adminSupabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("coupon_id", payload.couponId);
+      if ((count ?? 0) >= couponRow.max_uses) {
+        await adminSupabase
+          .from("coupons")
+          .update({ is_active: false })
+          .eq("id", payload.couponId);
+      }
+    }
+  }
+
   // ── 3a. Deduct redeemed points — now that booking is confirmed ───────────
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
     const { data: redeemRow } = await adminSupabase
