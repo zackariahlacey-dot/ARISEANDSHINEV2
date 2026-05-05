@@ -23,7 +23,7 @@ import {
   blockRestOfDayAction,
   updateBookingDurationAction,
 } from "@/app/actions/adminActions";
-import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
+import { sendStripePaymentLink, getPaymentLinkUrl } from "@/app/actions/sendStripePaymentLink";
 import { useQuery } from "@tanstack/react-query";
 import { getSqueezeRequests, updateSqueezeStatus, type SqueezeRequest } from "@/app/actions/squeezeActions";
 import { useToast } from "@/components/admin/Toast";
@@ -34,6 +34,7 @@ import {
   Phone, MessageSquare, Navigation, Check, X, Trash2,
   RotateCcw, Loader2, Car, DollarSign, Lock, Zap, Send,
   Copy, Pencil, StickyNote, Mail, AlertCircle, ClipboardCheck,
+  UserPlus,
 } from "lucide-react";
 import {
   format, startOfMonth, getDay, getDaysInMonth,
@@ -1196,6 +1197,68 @@ export default function SchedulePage() {
     try { await sendOmw.mutateAsync(b.id); toast("On My Way sent!"); }
     catch { toast("Failed", "error"); }
   }
+  async function handleTextPayLink(b: any) {
+    const phone = bPhone(b);
+    if (!phone) { toast("No phone on file", "error"); return; }
+    if (!Number(b.total_price) || Number(b.total_price) <= 0) { toast("Invalid price", "error"); return; }
+    try {
+      const url = await getPaymentLinkUrl(b.id);
+      const firstName = bName(b).split(" ")[0] || "there";
+      const total = Number(b.total_price).toFixed(2);
+      const body =
+        `Hi ${firstName}, thanks again from Arise & Shine VT! ` +
+        `Here's your secure payment link for $${total}` +
+        (b.service_name ? ` (${b.service_name})` : "") + `:\n\n${url}\n\n` +
+        `You can also leave a tip on the page (totally optional).`;
+      const cleanPhone = phone.replace(/\D/g, "");
+      // iOS prefers `&body=`, Android uses `?body=` — `?&body=` works on both.
+      const smsUrl = `sms:${cleanPhone}?&body=${encodeURIComponent(body)}`;
+      window.location.href = smsUrl;
+    } catch { toast("Failed to build link", "error"); }
+  }
+  function handleSaveContact(b: any) {
+    const fullName = bName(b);
+    const phone = bPhone(b);
+    const email = bEmail(b);
+    const addr  = bAddress(b);
+
+    const parts = fullName.trim().split(/\s+/);
+    const firstRaw = parts[0] ?? fullName;
+    const lastRaw  = parts.slice(1).join(" ");
+    // Suffix " (client)" so the entry is identifiable on the iPhone contact list.
+    const first = `${firstRaw} (client)`;
+    const fn    = lastRaw ? `${firstRaw} ${lastRaw} (client)` : `${firstRaw} (client)`;
+
+    const vEsc = (s: string) => s.replace(/[\\;,\n]/g, m => "\\" + (m === "\n" ? "n" : m));
+    const cleanPhone = phone ? phone.replace(/[^\d+]/g, "") : "";
+
+    const lines = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      `N:${vEsc(lastRaw)};${vEsc(first)};;;`,
+      `FN:${vEsc(fn)}`,
+      "ORG:Arise & Shine VT — Client",
+    ];
+    if (cleanPhone) lines.push(`TEL;TYPE=CELL:${cleanPhone}`);
+    if (email) lines.push(`EMAIL;TYPE=INTERNET:${vEsc(email)}`);
+    if (addr) lines.push(`ADR;TYPE=HOME:;;${vEsc(addr)};;;;`);
+    if (b.notes) lines.push(`NOTE:${vEsc(`Booking notes: ${b.notes}`)}`);
+    lines.push("END:VCARD");
+
+    const vcard = lines.join("\r\n");
+
+    // Trigger download on iPhone Safari — tapping the .vcf opens the contact-add sheet.
+    const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${fullName.replace(/[^a-z0-9]+/gi, "_")}_client.vcf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("Contact card ready — open to save");
+  }
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(label);
@@ -2042,10 +2105,22 @@ export default function SchedulePage() {
                   onClick={() => handleOmw(activeBooking)}
                 />
                 <BigActionBtn
-                  icon={sendingLink ? <Loader2 size={18} className="animate-spin" /> : <DollarSign size={18} />}
-                  label={sendingLink ? "Sending…" : "Send Payment Link"}
+                  icon={sendingLink ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
+                  label={sendingLink ? "Sending…" : "Email Pay Link"}
                   onClick={() => handleStripeLink(activeBooking)}
                   disabled={sendingLink}
+                />
+                {phone && (
+                  <BigActionBtn
+                    icon={<DollarSign size={18} />}
+                    label="Text Pay Link"
+                    onClick={() => handleTextPayLink(activeBooking)}
+                  />
+                )}
+                <BigActionBtn
+                  icon={<UserPlus size={18} />}
+                  label="Save Contact"
+                  onClick={() => handleSaveContact(activeBooking)}
                 />
                 <BigActionBtn
                   icon={<RotateCcw size={18} />}

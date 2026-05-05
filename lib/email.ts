@@ -1519,6 +1519,375 @@ export async function sendBookingEmails(
   }
 }
 
+// ─── Payment Received (Customer thank-you + Owner notification) ─────────────
+export type PaymentReceivedData = {
+  bookingId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  serviceName: string;
+  baseAmount: number;
+  tipAmount: number;
+  totalPaid: number;
+  vehicleYear?: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleSize?: string;
+  bookingDate: string;
+  bookingTime: string;
+  serviceAddress?: string;
+};
+
+function fmtMoney(n: number): string {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function paymentThankYouHtml(data: PaymentReceivedData, formattedDate: string, shortRef: string): string {
+  const firstName = esc(data.customerName.trim().split(/\s+/)[0] ?? "there");
+  const vehicleStr = [data.vehicleYear, data.vehicleMake, data.vehicleModel].filter(Boolean).join(" ");
+  const tipRow = data.tipAmount > 0 ? `
+    <tr>
+      <td style="padding:14px 24px;border-bottom:1px solid #f0f0f0;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="font-size:13px;color:#888888;">
+              <span style="font-size:14px;">💛</span>&nbsp; Tip
+            </td>
+            <td align="right" style="font-size:14px;color:#111111;font-weight:700;">
+              $${fmtMoney(data.tipAmount)}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>` : "";
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Thank You — Payment Received</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+              ${logo}
+            </td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td style="background-color:#111111;padding:40px 40px 36px;text-align:center;border-bottom:1px solid #1e1e1e;">
+              <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 18px;">
+                <tr>
+                  <td width="68" height="68" style="background-color:#16a34a;border-radius:50%;text-align:center;vertical-align:middle;font-size:34px;color:#ffffff;font-weight:900;line-height:68px;">
+                    &#10003;
+                  </td>
+                </tr>
+              </table>
+              <h1 style="color:#ffffff;font-size:30px;font-weight:900;margin:0 0 10px;letter-spacing:-0.5px;line-height:1.1;">
+                Thank You, ${firstName}!
+              </h1>
+              <p style="color:#a1a1aa;font-size:14px;margin:0;line-height:1.6;max-width:420px;">
+                Your payment of <strong style="color:#d4af37;">$${fmtMoney(data.totalPaid)}</strong> has been received.
+                ${data.tipAmount > 0 ? "Your tip means the world to us. 💛" : "We loved working on your vehicle."}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff;padding:36px 40px;border-radius:0 0 16px 16px;">
+
+              <p style="font-size:14px;color:#666666;margin:0 0 28px;line-height:1.7;">
+                It was a pleasure taking care of your${vehicleStr ? ` <strong style="color:#111;">${esc(vehicleStr)}</strong>` : " vehicle"}.
+                Your payment is confirmed below — keep this email as your receipt.
+              </p>
+
+              <!-- Receipt -->
+              <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 10px;letter-spacing:0.18em;text-transform:uppercase;">
+                Receipt
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fafafa;border:1px solid #f0f0f0;border-radius:14px;overflow:hidden;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:14px 24px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#888888;">${esc(data.serviceName)}</td>
+                        <td align="right" style="font-size:14px;color:#111111;font-weight:700;">$${fmtMoney(data.baseAmount)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                ${tipRow}
+                <tr>
+                  <td style="padding:18px 24px;background-color:#fffbe6;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#a16207;letter-spacing:0.15em;text-transform:uppercase;">Total Paid</td>
+                        <td align="right" style="font-size:22px;color:#111111;font-weight:900;">$${fmtMoney(data.totalPaid)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Service summary -->
+              <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 10px;letter-spacing:0.18em;text-transform:uppercase;">
+                Service Summary
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fafafa;border:1px solid #f0f0f0;border-radius:14px;overflow:hidden;margin-bottom:32px;">
+                ${vehicleStr ? `
+                <tr>
+                  <td style="padding:13px 24px;border-bottom:1px solid #f0f0f0;">
+                    <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 4px;letter-spacing:0.12em;text-transform:uppercase;">Vehicle</p>
+                    <p style="font-size:14px;color:#111111;margin:0;font-weight:600;">${esc(vehicleStr)}</p>
+                  </td>
+                </tr>` : ""}
+                <tr>
+                  <td style="padding:13px 24px;${data.serviceAddress ? "border-bottom:1px solid #f0f0f0;" : ""}">
+                    <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 4px;letter-spacing:0.12em;text-transform:uppercase;">Service Date</p>
+                    <p style="font-size:14px;color:#111111;margin:0;font-weight:600;">${esc(formattedDate)}</p>
+                  </td>
+                </tr>
+                ${data.serviceAddress ? `
+                <tr>
+                  <td style="padding:13px 24px;">
+                    <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 4px;letter-spacing:0.12em;text-transform:uppercase;">Location</p>
+                    <p style="font-size:14px;color:#111111;margin:0;font-weight:600;">📍 ${esc(data.serviceAddress)}</p>
+                  </td>
+                </tr>` : ""}
+              </table>
+
+              <!-- Review CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg,#fffbe6 0%,#fff7d4 100%);border:1px solid #fde68a;border-radius:14px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:24px;text-align:center;">
+                    <p style="font-size:18px;color:#111111;margin:0 0 6px;font-weight:900;letter-spacing:-0.3px;">Loved the detail?</p>
+                    <p style="font-size:13px;color:#666666;margin:0 0 16px;line-height:1.6;">
+                      A quick Google review means everything to a small business like ours.
+                    </p>
+                    <a href="https://g.page/r/CarmTLBaSwkmEAE/review" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:900;padding:12px 28px;border-radius:8px;text-decoration:none;letter-spacing:0.05em;text-transform:uppercase;">
+                      ★ Leave a Review
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size:13px;color:#666666;margin:0 0 8px;line-height:1.7;text-align:center;">
+                Questions about this charge? Reply to this email or call
+                <a href="tel:8025855563" style="color:#111111;font-weight:700;text-decoration:none;">802-585-5563</a>.
+              </p>
+              <p style="text-align:center;font-size:11px;color:#cccccc;margin:18px 0 0;font-family:monospace;">
+                Receipt #${shortRef}
+              </p>
+
+            </td>
+          </tr>
+
+          ${footer}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function paymentOwnerHtml(data: PaymentReceivedData, formattedDate: string, shortRef: string): string {
+  const vehicleStr = [data.vehicleYear, data.vehicleMake, data.vehicleModel].filter(Boolean).join(" ");
+  const tipDisplay = data.tipAmount > 0
+    ? `<span style="color:#16a34a;font-weight:900;">+$${fmtMoney(data.tipAmount)}</span>`
+    : `<span style="color:#a1a1aa;">No tip</span>`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Received — ${esc(data.customerName)}</title>
+</head>
+<body style="${base}">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+          <tr>
+            <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:24px 40px;text-align:center;">
+              <p style="color:#d4af37;font-size:11px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;margin:0;">Arise &amp; Shine VT</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:linear-gradient(135deg,#064e3b 0%,#022c22 100%);padding:32px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
+              <p style="font-size:46px;margin:0 0 6px;line-height:1;">💰</p>
+              <h1 style="color:#ffffff;font-size:24px;font-weight:900;margin:0 0 6px;letter-spacing:-0.3px;">
+                Payment Received — $${fmtMoney(data.totalPaid)}
+              </h1>
+              <p style="color:#86efac;font-size:13px;margin:0;font-weight:600;">
+                ${esc(data.customerName)} just paid for ${esc(data.serviceName)}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#ffffff;padding:32px 40px;border-radius:0 0 16px 16px;">
+
+              <!-- Money breakdown -->
+              <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 10px;letter-spacing:0.18em;text-transform:uppercase;">Breakdown</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fafafa;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:14px 20px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#666666;">Service (${esc(data.serviceName)})</td>
+                        <td align="right" style="font-size:14px;color:#111111;font-weight:700;">$${fmtMoney(data.baseAmount)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 20px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:13px;color:#666666;">Tip</td>
+                        <td align="right" style="font-size:14px;font-weight:700;">${tipDisplay}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 20px;background-color:#ecfdf5;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#065f46;letter-spacing:0.15em;text-transform:uppercase;">Total Paid</td>
+                        <td align="right" style="font-size:20px;color:#065f46;font-weight:900;">$${fmtMoney(data.totalPaid)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Customer + booking summary -->
+              <p style="font-size:10px;font-weight:900;color:#aaaaaa;margin:0 0 10px;letter-spacing:0.18em;text-transform:uppercase;">Booking</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fafafa;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:13px 20px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#aaaaaa;letter-spacing:0.1em;text-transform:uppercase;width:90px;vertical-align:top;padding-top:1px;">Customer</td>
+                        <td style="font-size:14px;color:#111111;font-weight:600;">${esc(data.customerName)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                ${data.customerPhone ? `
+                <tr>
+                  <td style="padding:13px 20px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#aaaaaa;letter-spacing:0.1em;text-transform:uppercase;width:90px;vertical-align:top;padding-top:1px;">Phone</td>
+                        <td style="font-size:14px;color:#111111;font-weight:600;"><a href="tel:${esc(data.customerPhone)}" style="color:#111;text-decoration:none;">${esc(data.customerPhone)}</a></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>` : ""}
+                ${data.customerEmail ? `
+                <tr>
+                  <td style="padding:13px 20px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#aaaaaa;letter-spacing:0.1em;text-transform:uppercase;width:90px;vertical-align:top;padding-top:1px;">Email</td>
+                        <td style="font-size:14px;color:#111111;font-weight:600;">${esc(data.customerEmail)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>` : ""}
+                ${vehicleStr ? `
+                <tr>
+                  <td style="padding:13px 20px;border-bottom:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#aaaaaa;letter-spacing:0.1em;text-transform:uppercase;width:90px;vertical-align:top;padding-top:1px;">Vehicle</td>
+                        <td style="font-size:14px;color:#111111;font-weight:600;">${esc(vehicleStr)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>` : ""}
+                <tr>
+                  <td style="padding:13px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size:11px;font-weight:900;color:#aaaaaa;letter-spacing:0.1em;text-transform:uppercase;width:90px;vertical-align:top;padding-top:1px;">Date</td>
+                        <td style="font-size:14px;color:#111111;font-weight:600;">${esc(formattedDate)} · ${esc(data.bookingTime)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="text-align:center;font-size:11px;color:#cccccc;margin:0;font-family:monospace;">
+                Booking Ref #${shortRef}
+              </p>
+            </td>
+          </tr>
+
+          ${footer}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendPaymentReceivedEmails(data: PaymentReceivedData): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY is not set — skipping payment emails.");
+    return;
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const formattedDate = formatDate(data.bookingDate);
+  const shortRef = data.bookingId.slice(0, 8).toUpperCase();
+
+  const sends = await Promise.allSettled([
+    data.customerEmail
+      ? resend.emails.send({
+          from: FROM_ADDRESS,
+          to: data.customerEmail,
+          replyTo: REPLY_TO,
+          subject: `Thank You! Payment Received — $${fmtMoney(data.totalPaid)}`,
+          html: paymentThankYouHtml(data, formattedDate, shortRef),
+        })
+      : Promise.resolve(null),
+
+    resend.emails.send({
+      from: FROM_ADDRESS,
+      to: OWNER_EMAIL,
+      subject: `💰 Payment Received: ${data.customerName} — $${fmtMoney(data.totalPaid)}${data.tipAmount > 0 ? ` (+$${fmtMoney(data.tipAmount)} tip)` : ""}`,
+      html: paymentOwnerHtml(data, formattedDate, shortRef),
+    }),
+  ]);
+
+  for (const [label, result] of [["customer-thankyou", sends[0]], ["owner-payment", sends[1]]] as const) {
+    if (result.status === "rejected") {
+      console.error(`[email] ${label} send failed:`, result.reason);
+    } else if (result.value && "error" in result.value && result.value.error) {
+      console.error(`[email] ${label} resend error:`, result.value.error);
+    }
+  }
+}
+
 // ─── Price Updated Notification ───────────────────────────────────────────────
 export async function sendPriceUpdatedEmail(data: {
   customerName: string;

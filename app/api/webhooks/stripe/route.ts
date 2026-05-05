@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBookingEmails, sendGiftCardEmail } from "@/lib/email";
+import { sendBookingEmails, sendGiftCardEmail, sendPaymentReceivedEmails } from "@/lib/email";
 import { sendBookerAccountInviteEmail } from "@/app/actions/sendBookingEmail";
 import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import { checkAvailability } from "@/app/actions/bookDetailing";
@@ -219,23 +219,25 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (adminBooking) {
-        sendBookingEmails({
-          bookingId:          adminBooking.id,
-          customerName:       (adminBooking as any).customer_name  ?? "",
-          customerEmail:      (adminBooking as any).customer_email ?? "",
-          customerPhone:      (adminBooking as any).customer_phone ?? "",
-          serviceName:        (adminBooking as any).service_name   ?? "Detailing Service",
-          servicePrice:       Number((adminBooking as any).total_price) || 0,
-          bookingDate:        (adminBooking as any).booking_date   ?? "",
-          bookingTime:        (adminBooking as any).booking_time   ?? "",
-          vehicleYear:        (adminBooking as any).vehicle_year   ?? "",
-          vehicleMake:        (adminBooking as any).vehicle_make   ?? "",
-          vehicleModel:       (adminBooking as any).vehicle_model  ?? "",
-          vehicleSize:        (adminBooking as any).vehicle_size   ?? "sedan",
-          serviceAddress:     (adminBooking as any).service_address || undefined,
-          notes:              (adminBooking as any).notes          || undefined,
-          paymentMethod:      "pay_now",
-        }).catch((err) => console.error("[webhooks/stripe] Admin booking email error:", err));
+        const baseAmount = Number((adminBooking as any).total_price) || 0;
+        const totalPaid  = baseAmount + tipAmount;
+        sendPaymentReceivedEmails({
+          bookingId:      adminBooking.id,
+          customerName:   (adminBooking as any).customer_name  ?? "",
+          customerEmail:  (adminBooking as any).customer_email ?? "",
+          customerPhone:  (adminBooking as any).customer_phone ?? undefined,
+          serviceName:    (adminBooking as any).service_name   ?? "Detailing Service",
+          baseAmount,
+          tipAmount,
+          totalPaid,
+          vehicleYear:    (adminBooking as any).vehicle_year   ?? undefined,
+          vehicleMake:    (adminBooking as any).vehicle_make   ?? undefined,
+          vehicleModel:   (adminBooking as any).vehicle_model  ?? undefined,
+          vehicleSize:    (adminBooking as any).vehicle_size   ?? undefined,
+          bookingDate:    (adminBooking as any).booking_date   ?? "",
+          bookingTime:    (adminBooking as any).booking_time   ?? "",
+          serviceAddress: (adminBooking as any).service_address || undefined,
+        }).catch((err) => console.error("[webhooks/stripe] Payment received email error:", err));
       }
 
       return NextResponse.json({ received: true });

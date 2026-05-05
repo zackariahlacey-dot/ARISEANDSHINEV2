@@ -2,6 +2,11 @@
 
 import { Resend } from "resend";
 
+export async function getPaymentLinkUrl(bookingId: string): Promise<string> {
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+  return `${origin}/pay/${bookingId}`;
+}
+
 export async function sendStripePaymentLink(bookingId: string, booking: {
   serviceName: string;
   totalPrice: number;
