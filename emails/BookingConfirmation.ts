@@ -18,7 +18,11 @@ export type BookingConfirmationDetails = {
   bookingDate: string;
   bookingTime: string;
   travelFee: number;
+  /** Amount the customer will pay (cash price for pay-at-arrival, card price for pay-now). */
   totalPrice: number;
+  /** Original card-price total. When present and > totalPrice, the email shows a
+   *  "Cash $X · Card $Y" comparison so the customer knows both options. */
+  cardPrice?: number;
   /** Extra vehicles on the same booking (multi-vehicle discount) */
   additionalVehicles?: Array<{
     vehicleYear: string;
@@ -94,6 +98,53 @@ function detailRow(label: string, value: string, isLast = false): string {
       <p style="font-size:15px;font-weight:600;color:#111111;margin:0;line-height:1.45;">${value}</p>
     </td>
   </tr>`;
+}
+
+/**
+ * Renders the final Total cell. When a card price is provided AND it's
+ * higher than the total (i.e., a cash-on-arrival booking), shows the
+ * cash-vs-card comparison so the customer knows what to pay either way.
+ */
+function totalCell(label: string, totalPrice: number, cardPrice?: number): string {
+  const showDual = cardPrice != null && cardPrice > totalPrice;
+  if (!showDual) {
+    return `
+      <tr>
+        <td style="padding:16px 22px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td><p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0;
+                            letter-spacing:0.15em;text-transform:uppercase;">${label}</p></td>
+              <td align="right"><p style="font-size:24px;font-weight:900;color:#111111;margin:0;">
+                $${esc(totalPrice.toFixed(2))}</p></td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }
+  return `
+    <tr>
+      <td style="padding:18px 22px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="vertical-align:top;">
+              <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0;
+                        letter-spacing:0.15em;text-transform:uppercase;">${label}</p>
+            </td>
+            <td align="right" style="vertical-align:top;">
+              <p style="font-size:24px;font-weight:900;color:#111111;margin:0 0 2px;line-height:1;">
+                $${esc(totalPrice.toFixed(2))}
+                <span style="font-size:10px;font-weight:800;color:#16a34a;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">cash</span>
+              </p>
+              <p style="font-size:13px;font-weight:600;color:#999999;margin:0;line-height:1;">
+                $${esc(cardPrice.toFixed(2))}
+                <span style="font-size:9px;font-weight:700;color:#bbbbbb;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">card</span>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`;
 }
 
 function prepItem(emoji: string, text: string): string {
@@ -245,18 +296,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
               </table>
             </td>
           </tr>` : ""}
-          <tr>
-            <td style="padding:16px 22px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td><p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0;
-                                letter-spacing:0.15em;text-transform:uppercase;">Total Due at Arrival</p></td>
-                  <td align="right"><p style="font-size:24px;font-weight:900;color:#111111;margin:0;">
-                    $${esc(d.totalPrice.toFixed(2))}</p></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          ${totalCell("Total Due at Arrival", d.totalPrice, d.cardPrice)}
         </table>
 
         <!-- Payment note -->
@@ -267,7 +307,9 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
               &#128179; Payment at Arrival
             </p>
             <p style="font-size:12px;color:#b45309;margin:0;line-height:1.55;">
-              We accept cash or card on-site. No payment is taken until the job is complete and you're happy.
+              ${d.cardPrice != null && d.cardPrice > d.totalPrice
+                ? `Pay <strong>$${esc(d.totalPrice.toFixed(2))} cash</strong> on-site — or <strong>$${esc(d.cardPrice.toFixed(2))} card</strong>. No payment is taken until the job is complete and you're happy.`
+                : `We accept cash or card on-site. No payment is taken until the job is complete and you're happy.`}
             </p>
           </td></tr>
         </table>
@@ -395,18 +437,7 @@ function boatCustomerHtml(d: BookingConfirmationDetails, date: string): string {
               </table>
             </td>
           </tr>` : ""}
-          <tr>
-            <td style="padding:16px 22px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td><p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0;
-                                letter-spacing:0.15em;text-transform:uppercase;">Total Due at Arrival</p></td>
-                  <td align="right"><p style="font-size:24px;font-weight:900;color:#111111;margin:0;">
-                    $${esc(d.totalPrice.toFixed(2))}</p></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          ${totalCell("Total Due at Arrival", d.totalPrice, d.cardPrice)}
         </table>
 
         <!-- Waterline Up badge -->
@@ -547,18 +578,7 @@ function rvCustomerHtml(d: BookingConfirmationDetails, date: string): string {
               </table>
             </td>
           </tr>` : ""}
-          <tr>
-            <td style="padding:16px 22px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td><p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0;
-                                letter-spacing:0.15em;text-transform:uppercase;">Total Due at Arrival</p></td>
-                  <td align="right"><p style="font-size:24px;font-weight:900;color:#111111;margin:0;">
-                    $${esc(d.totalPrice.toFixed(2))}</p></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          ${totalCell("Total Due at Arrival", d.totalPrice, d.cardPrice)}
         </table>
 
         <!-- Mobile service badge -->

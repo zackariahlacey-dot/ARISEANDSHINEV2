@@ -330,6 +330,9 @@ export async function bookDetailing(
   const bookingTotal = !isPayNow && !isSubscriptionService
     ? cashPriceFor(payload.totalPrice)
     : payload.totalPrice;
+  // When a cash discount was applied, send the original price along too so
+  // emails can render the "Cash $X · Card $Y" comparison.
+  const emailCardPrice = bookingTotal < payload.totalPrice ? payload.totalPrice : undefined;
 
   // ── 1b. Validate point redemption (Pay at Arrival only) — deduction deferred until booking confirmed
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
@@ -739,6 +742,7 @@ export async function bookDetailing(
         bookingTime: payload.bookingTime,
         travelFee: Math.round(payload.travelFee ?? 0),
         totalPrice: bookingTotal,
+        cardPrice: emailCardPrice,
         addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
         additionalVehicles: (payload.additionalVehicles ?? []).length > 0
           ? payload.additionalVehicles!.map(av => ({
@@ -776,6 +780,7 @@ export async function bookDetailing(
       customerPhone: phoneDigits,
       serviceName: payload.serviceName,
       servicePrice: bookingTotal,
+      cardPrice: emailCardPrice,
       bookingDate: payload.bookingDate,
       bookingTime: payload.bookingTime,
       vehicleYear: payload.vehicleYear,
