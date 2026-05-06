@@ -3,9 +3,38 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
+import { logError } from "@/app/actions/logError";
 
-const ADMIN_EMAIL  = "zackariahlacey@gmail.com";
-const FROM_ADDR    = "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
+const FROM_ADDR   = process.env.EMAIL_FROM  ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const REPLY_TO    = "contact@ariseandshinevt.com";
+
+/**
+ * Send a Resend email with retry-on-failure.
+ * Resend can throw (network/SDK error) OR return { error } (API rejection) — we
+ * treat both as failures and retry with linear backoff.
+ */
+async function sendEmailWithRetry(
+  resend: Resend,
+  payload: Parameters<Resend["emails"]["send"]>[0],
+  attempts = 2,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let lastErr = "unknown error";
+  for (let i = 0; i <= attempts; i++) {
+    try {
+      const r = await resend.emails.send(payload);
+      if (r.error) {
+        lastErr = `${r.error.name}: ${r.error.message}`;
+      } else {
+        return { ok: true };
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+    }
+    if (i < attempts) await new Promise(res => setTimeout(res, 500 * (i + 1)));
+  }
+  return { ok: false, error: lastErr };
+}
 
 export type SqueezeRequest = {
   id: string;
@@ -57,7 +86,19 @@ export async function createSqueezeRequest(input: {
 
   if (error) return { success: false, error: error.message };
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    console.error("[squeezeActions] RESEND_API_KEY missing — admin notification skipped");
+    await logError({
+      type: "general",
+      source: "squeezeActions/createSqueezeRequest",
+      message: "RESEND_API_KEY missing — admin not notified of squeeze request",
+      details: { name: input.name, phone: input.phone, email: input.email, urgency: input.urgency },
+    });
+    return { success: true }; // request is still in DB; surface in admin UI
+  }
+
+  const resend = new Resend(resendKey);
 
   const urgencyLabel: Record<string, string> = {
     today:      "TODAY 🔴",
@@ -86,49 +127,67 @@ export async function createSqueezeRequest(input: {
       </tr>`;
   }
 
-  try {
-    await resend.emails.send({
-      from:    FROM_ADDR,
-      to:      ADMIN_EMAIL,
-      subject: `🚨 Squeeze Me In — ${input.name} (${urgencyLabel[input.urgency] ?? input.urgency})`,
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;color:#111;background:#fff;padding:24px;border-radius:8px">
-          <div style="border-left:4px solid #D4AF37;padding-left:16px;margin-bottom:20px">
-            <h2 style="color:#D4AF37;margin:0 0 4px;font-size:20px">Squeeze Me In Request</h2>
-            <p style="margin:0;color:#888;font-size:13px">Someone needs to get in ASAP</p>
-          </div>
-          <table style="width:100%;border-collapse:collapse;font-size:14px">
-            ${row("Name", `<strong>${input.name}</strong>`)}
-            ${row("Phone", `<a href="tel:${input.phone}" style="color:#D4AF37;font-weight:600;text-decoration:none">${input.phone}</a>`)}
-            ${row("Email", `<a href="mailto:${input.email}" style="color:#D4AF37;text-decoration:none">${input.email}</a>`)}
-            ${row("Contact", contactLabel[input.contactPreference] ?? input.contactPreference)}
-            ${row("Service", serviceLabel[input.serviceType] ?? input.serviceType)}
-            ${input.specificService ? row("Details", input.specificService) : ""}
-            ${input.vehicleInfo ? row("Vehicle / Unit", input.vehicleInfo) : ""}
-            ${input.serviceAddress ? row("Location", input.serviceAddress) : ""}
-            ${row("Urgency", urgencyLabel[input.urgency] ?? input.urgency, true)}
-            ${row("Available", input.availableDates.replace(/\n/g, "<br/>"))}
-            ${input.notes ? row("Notes", `<span style="color:#555">${input.notes}</span>`) : ""}
-          </table>
-          <div style="margin-top:24px;display:flex;gap:12px">
-            <a href="https://ariseandshinevt.com/admin/schedule" style="display:inline-block;background:#D4AF37;color:#000;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">
-              Open Schedule →
-            </a>
-            <a href="tel:${input.phone}" style="display:inline-block;background:#f5f5f5;color:#333;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px">
-              Call ${input.phone}
-            </a>
-          </div>
+  // ── Admin notification (must reach the inbox — retry on failure) ──────────
+  const adminPayload = {
+    from:    FROM_ADDR,
+    to:      ADMIN_EMAIL,
+    replyTo: REPLY_TO,
+    subject: `🚨 Squeeze Me In — ${input.name} (${urgencyLabel[input.urgency] ?? input.urgency})`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;color:#111;background:#fff;padding:24px;border-radius:8px">
+        <div style="border-left:4px solid #D4AF37;padding-left:16px;margin-bottom:20px">
+          <h2 style="color:#D4AF37;margin:0 0 4px;font-size:20px">Squeeze Me In Request</h2>
+          <p style="margin:0;color:#888;font-size:13px">Someone needs to get in ASAP</p>
         </div>
-      `,
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          ${row("Name", `<strong>${input.name}</strong>`)}
+          ${row("Phone", `<a href="tel:${input.phone}" style="color:#D4AF37;font-weight:600;text-decoration:none">${input.phone}</a>`)}
+          ${row("Email", `<a href="mailto:${input.email}" style="color:#D4AF37;text-decoration:none">${input.email}</a>`)}
+          ${row("Contact", contactLabel[input.contactPreference] ?? input.contactPreference)}
+          ${row("Service", serviceLabel[input.serviceType] ?? input.serviceType)}
+          ${input.specificService ? row("Details", input.specificService) : ""}
+          ${input.vehicleInfo ? row("Vehicle / Unit", input.vehicleInfo) : ""}
+          ${input.serviceAddress ? row("Location", input.serviceAddress) : ""}
+          ${row("Urgency", urgencyLabel[input.urgency] ?? input.urgency, true)}
+          ${row("Available", input.availableDates.replace(/\n/g, "<br/>"))}
+          ${input.notes ? row("Notes", `<span style="color:#555">${input.notes}</span>`) : ""}
+        </table>
+        <div style="margin-top:24px;display:flex;gap:12px">
+          <a href="https://ariseandshinevt.com/admin/schedule" style="display:inline-block;background:#D4AF37;color:#000;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">
+            Open Schedule →
+          </a>
+          <a href="tel:${input.phone}" style="display:inline-block;background:#f5f5f5;color:#333;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px">
+            Call ${input.phone}
+          </a>
+        </div>
+      </div>
+    `,
+  };
+
+  const adminResult = await sendEmailWithRetry(resend, adminPayload, 2);
+  if (!adminResult.ok) {
+    console.error("[squeezeActions] Admin notification failed after retries:", adminResult.error);
+    // Persist failure so the request shows up in error_logs and can be acted on.
+    await logError({
+      type: "general",
+      source: "squeezeActions/createSqueezeRequest/adminEmail",
+      message: `Admin squeeze notification failed: ${adminResult.error}`,
+      details: {
+        name: input.name,
+        phone: input.phone,
+        email: input.email,
+        urgency: input.urgency,
+        serviceType: input.serviceType,
+        availableDates: input.availableDates,
+      },
     });
-  } catch (emailErr) {
-    console.error("[squeezeActions] Failed to send admin notification:", emailErr);
   }
 
-  // Customer confirmation
-  resend.emails.send({
+  // ── Customer confirmation (best-effort, but log on failure) ──────────────
+  const customerPayload = {
     from:    FROM_ADDR,
     to:      input.email,
+    replyTo: REPLY_TO,
     subject: "We got your request — Arise & Shine VT",
     html: `
       <div style="font-family:sans-serif;max-width:480px;color:#111;background:#fff;padding:24px;border-radius:8px">
@@ -145,7 +204,11 @@ export async function createSqueezeRequest(input: {
         <p style="color:#999;font-size:13px;margin:0">— Zack<br/>Arise &amp; Shine VT</p>
       </div>
     `,
-  }).catch(() => {});
+  };
+  const customerResult = await sendEmailWithRetry(resend, customerPayload, 1);
+  if (!customerResult.ok) {
+    console.error("[squeezeActions] Customer confirmation failed:", customerResult.error);
+  }
 
   return { success: true };
 }
@@ -331,15 +394,17 @@ export async function scheduleSqueezeRequest(
     }).catch(err => console.error("[scheduleSqueezeRequest] email:", err));
   }
 
-  // 8. Send admin alert
-  try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+  // 8. Send admin alert (retry on failure, log to error_logs if it never lands)
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    const resend = new Resend(resendKey);
     const formattedDate = new Date(input.date + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric",
     });
-    await resend.emails.send({
+    const adminAlert = await sendEmailWithRetry(resend, {
       from:    FROM_ADDR,
       to:      ADMIN_EMAIL,
+      replyTo: REPLY_TO,
       subject: `✅ Squeezed In — ${sq.name} · ${formattedDate} at ${input.time}`,
       html: `
         <div style="font-family:sans-serif;max-width:480px;color:#111;background:#fff;padding:24px;border-radius:8px">
@@ -356,8 +421,17 @@ export async function scheduleSqueezeRequest(
           <p style="margin-top:20px;font-size:12px;color:#aaa">Confirmation email sent to ${sq.email || "no email on file"}.</p>
         </div>
       `,
-    });
-  } catch { /* non-fatal */ }
+    }, 2);
+    if (!adminAlert.ok) {
+      console.error("[scheduleSqueezeRequest] Admin alert failed after retries:", adminAlert.error);
+      await logError({
+        type: "general",
+        source: "squeezeActions/scheduleSqueezeRequest/adminEmail",
+        message: `Squeeze-scheduled admin alert failed: ${adminAlert.error}`,
+        details: { customerName: sq.name, bookingId: booking.id, date: input.date, time: input.time },
+      });
+    }
+  }
 
   return { success: true, bookingId: booking.id };
 }
