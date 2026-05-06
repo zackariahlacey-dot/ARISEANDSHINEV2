@@ -53,6 +53,7 @@ import { getAvailability, type OperatingHour } from "@/app/actions/getAvailabili
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 import { MONTHLY_PLAN_DURATIONS } from "@/lib/monthlyPlans";
+import { cashPriceFor } from "@/lib/cashPricing";
 
 /** Interior Monthly Maintenance = $75, Full Detail Monthly Maintenance = $120 */
 function getMaintenanceSetupFee(serviceName: string): number {
@@ -1121,6 +1122,16 @@ export function BookingSection({
     ? Math.round(servicePrice * loyaltyDiscountPct / 100 * 100) / 100
     : 0;
   const totalAfterDiscount = Math.max(0, totalWithTravel - loyaltyDiscountAmount);
+
+  // Cash-on-arrival pricing — server enforces the actual discount; this just
+  // displays the dual price so the customer can see the savings before they
+  // pick a payment method. Skipped for monthly subscriptions (Stripe-only).
+  const cashEligible =
+    !isMonthlyPlan
+    && selectedService?.is_subscription !== true
+    && totalAfterDiscount > 0;
+  const cashTotal = cashEligible ? cashPriceFor(totalAfterDiscount) : totalAfterDiscount;
+  const showDualPrice = cashEligible && cashTotal < totalAfterDiscount;
 
   // Initialise today string client-side (avoids Next.js Cache Components error)
   useEffect(() => {
@@ -3855,16 +3866,33 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
-                          <span className="font-bold text-zinc-300">
-                            Total
-                          </span>
-                          <span className="text-xl font-black text-white tabular-nums">
-                            {computedPrice !== null
-                              ? `$${totalAfterDiscount.toFixed(2)}`
-                              : "—"}
-                          </span>
-                        </div>
+                        {showDualPrice && computedPrice !== null ? (
+                          <div className="pt-4 mt-3 border-t border-[#2a2a2a]">
+                            <div className="flex items-baseline justify-between mb-1">
+                              <span className="font-bold text-zinc-300">Total</span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-2xl font-black text-[#D4AF37] tabular-nums leading-none">
+                                  ${cashTotal.toFixed(2)}
+                                  <span className="text-[10px] font-bold text-[#D4AF37]/80 ml-1.5 uppercase tracking-wider">cash</span>
+                                </span>
+                                <span className="text-xs text-zinc-500 tabular-nums mt-1">
+                                  ${totalAfterDiscount.toFixed(2)} <span className="text-[9px] uppercase tracking-wider text-zinc-600">card</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center pt-4 mt-3 border-t border-[#2a2a2a] min-w-0">
+                            <span className="font-bold text-zinc-300">
+                              Total
+                            </span>
+                            <span className="text-xl font-black text-white tabular-nums">
+                              {computedPrice !== null
+                                ? `$${totalAfterDiscount.toFixed(2)}`
+                                : "—"}
+                            </span>
+                          </div>
+                        )}
                         {computedPrice !== null && totalAfterDiscount > 0 && (
                           <p className="text-[11px] text-[#D4AF37]/70 mt-2 text-right">
                             Counts toward your loyalty tier
@@ -4056,10 +4084,18 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                           </div>
                           <div className="min-w-0">
                             <div className="text-base font-medium text-inherit tracking-wide">
-                              {isSubmitting ? "Processing…" : isSubscription ? "Subscribe & Pay at Arrival" : "Book & Pay at Arrival"}
+                              {isSubmitting
+                                ? "Processing…"
+                                : isSubscription
+                                  ? "Subscribe & Pay at Arrival"
+                                  : showDualPrice
+                                    ? `Pay $${cashTotal.toFixed(2)} Cash on Arrival`
+                                    : "Book & Pay at Arrival"}
                             </div>
                             <div className="text-xs text-zinc-500 mt-1">
-                              We&apos;ll confirm via text · Pay cash or card on the day
+                              {showDualPrice && !isSubmitting
+                                ? <>We&apos;ll confirm via text · or ${totalAfterDiscount.toFixed(2)} card</>
+                                : "We'll confirm via text · Pay cash or card on the day"}
                             </div>
                           </div>
                         </div>

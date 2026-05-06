@@ -9,6 +9,7 @@ import Stripe from "stripe";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
 import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
 import { logError } from "@/app/actions/logError";
+import { cashPriceFor } from "@/lib/cashPricing";
 
 export type VehicleSizeSlug = keyof typeof VEHICLE_SIZE_MAP;
 
@@ -321,6 +322,14 @@ export async function bookDetailing(
   }
 
   const isPayNow = payload.paymentMethod === "pay_now";
+  const isSubscriptionService = payload.serviceName.toLowerCase().includes("monthly");
+
+  // Cash-on-arrival discount applies only to non-subscription Pay-at-Arrival
+  // bookings. Pay Now goes through Stripe at full card price; subscriptions
+  // are billed via Stripe and shouldn't be discounted.
+  const bookingTotal = !isPayNow && !isSubscriptionService
+    ? cashPriceFor(payload.totalPrice)
+    : payload.totalPrice;
 
   // ── 1b. Validate point redemption (Pay at Arrival only) — deduction deferred until booking confirmed
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
@@ -606,7 +615,7 @@ export async function bookDetailing(
       booking_date: payload.bookingDate,
       booking_time: await to24h(payload.bookingTime),
       status: "confirmed",
-      total_price: payload.totalPrice,
+      total_price: bookingTotal,
       notes: notesBody,
       // ── Direct lead capture snapshot ──────────────────────────────────────
       customer_name:   payload.name,
@@ -683,7 +692,7 @@ export async function bookDetailing(
 
   // ── 3b. Earn points (1 pt per $1 of service cost, excluding travel) ─────
   const serviceSubtotal =
-    payload.totalPrice +
+    bookingTotal +
     (payload.pointsToRedeem ?? 0) / 10 -
     (payload.travelFee ?? 0);
   const earnedPoints = Math.floor(Math.max(0, serviceSubtotal));
@@ -729,7 +738,7 @@ export async function bookDetailing(
         bookingDate: payload.bookingDate,
         bookingTime: payload.bookingTime,
         travelFee: Math.round(payload.travelFee ?? 0),
-        totalPrice: payload.totalPrice,
+        totalPrice: bookingTotal,
         addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
         additionalVehicles: (payload.additionalVehicles ?? []).length > 0
           ? payload.additionalVehicles!.map(av => ({
@@ -742,7 +751,7 @@ export async function bookDetailing(
             }))
           : undefined,
       },
-      totalPrice: payload.totalPrice,
+      totalPrice: bookingTotal,
     }).catch((err) =>
       console.error("[bookDetailing] confirmation email error:", err)
     );
@@ -766,7 +775,7 @@ export async function bookDetailing(
       customerEmail: payload.email,
       customerPhone: phoneDigits,
       serviceName: payload.serviceName,
-      servicePrice: payload.totalPrice,
+      servicePrice: bookingTotal,
       bookingDate: payload.bookingDate,
       bookingTime: payload.bookingTime,
       vehicleYear: payload.vehicleYear,
