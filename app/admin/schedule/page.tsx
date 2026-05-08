@@ -107,6 +107,9 @@ const ADMIN_ADDONS = [
   // Vehicle — ultimate upgrades
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic",       price: 350 },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",               price: 75  },
+  // 2-Year Graphene Window Coating (size-tier priced; defaults to small/medium tier)
+  { id: "window_coat_windshield", label: "2-Year Graphene Window — Windshield",   price: 85  },
+  { id: "window_coat_all",        label: "2-Year Graphene Window — All Windows",  price: 150 },
   // Marine
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows",            price: 100 },
   { id: "marine_engine_bay", label: "Marine Engine Bay",                    price: 150 },
@@ -120,6 +123,22 @@ const ADMIN_ADDONS = [
 const VEHICLE_ADDON_IDS  = ["engine_bay","headlight_restore","odor_bomb","upholstery_shampoo","uv_interior","leather_condition","clay_bar","pet_hair","tar_bug","floor_1","floor_2","floor_all"];
 const BOAT_ADDON_IDS     = ["marine_isinglass","marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning","rv_slide_seal","rv_roof_coat","rv_generator","rv_step"];
+const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield","window_coat_all"];
+
+/** 2-Year Graphene Window Coating tier pricing — must match BookingModal. */
+const WINDOW_COAT_WINDSHIELD_PRICES: Record<string, number> = {
+  compact: 85, sedan: 85, suv: 100, xl: 100,
+};
+const WINDOW_COAT_ALL_PRICES: Record<string, number> = {
+  compact: 150, sedan: 150, suv: 175, xl: 175,
+};
+function getAdminAddonPrice(id: string, vehicleSize: string): number {
+  const a = ADMIN_ADDONS.find(x => x.id === id);
+  if (!a) return 0;
+  if (id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICES[vehicleSize] ?? a.price;
+  if (id === "window_coat_all")        return WINDOW_COAT_ALL_PRICES[vehicleSize] ?? a.price;
+  return a.price;
+}
 
 const VEHICLE_SIZES_ADMIN = [
   { value: "compact", label: "Compact / Small",  key: "price_small"       },
@@ -275,11 +294,16 @@ export function NewBookingForm({
     if (pathway === "rv")      return ADMIN_ADDONS.filter(a => RV_ADDON_IDS.includes(a.id));
     // vehicle: filter by service name
     const n = (selectedService?.name ?? "").toLowerCase();
-    if (n.includes("paint") || n.includes("correction")) return ADMIN_ADDONS.filter(a => a.id === "engine_bay");
-    if (n.includes("ultimate")) return ADMIN_ADDONS.filter(a => ["engine_bay","polish_ceramic","headlight_restore","ozone_treatment"].includes(a.id));
-    if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
+    // Window coating eligibility: paint correction, exterior touching services, full detail.
+    // NOT interior-only or interior-maintenance (no exterior glass touched).
+    const isInteriorOnly = n.includes("interior") && !n.includes("exterior") && !n.includes("full");
+    const isMaintenance  = n.includes("maintenance");
+    const windowIds = (!isInteriorOnly && !isMaintenance) ? WINDOW_COATING_ADDON_IDS : [];
+    if (n.includes("paint") || n.includes("correction")) return ADMIN_ADDONS.filter(a => ["engine_bay", ...windowIds].includes(a.id));
+    if (n.includes("ultimate")) return ADMIN_ADDONS.filter(a => ["engine_bay","polish_ceramic","headlight_restore","ozone_treatment", ...windowIds].includes(a.id));
+    if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
     if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
-    return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
+    return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
   }, [pathway, selectedService]);
 
   // Base price (before addons)
@@ -296,7 +320,7 @@ export function NewBookingForm({
     return Number(selectedService[key] ?? selectedService.price_medium ?? selectedService.price_small ?? 0);
   }, [selectedService, pathway, footage, vehicleSize]);
 
-  const addonTotal  = selectedAddons.reduce((sum, id) => sum + (ADMIN_ADDONS.find(a => a.id === id)?.price ?? 0), 0);
+  const addonTotal  = selectedAddons.reduce((sum, id) => sum + getAdminAddonPrice(id, vehicleSize), 0);
   const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => sum + Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT), 0);
   const totalPrice  = priceOverride !== "" ? Number(priceOverride) : basePrice + addonTotal + additionalVehiclesTotal;
 
@@ -323,7 +347,14 @@ export function NewBookingForm({
   }, [bookedSlots, selectedService, vehicleSize, operatingHours]);
 
   function toggleAddon(id: string) {
-    setSelectedAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+    setSelectedAddons(prev => {
+      if (prev.includes(id)) return prev.filter(a => a !== id);
+      // Window-coating tiers are mutually exclusive (windshield vs all glass)
+      const filtered = WINDOW_COATING_ADDON_IDS.includes(id)
+        ? prev.filter(a => !WINDOW_COATING_ADDON_IDS.includes(a))
+        : prev;
+      return [...filtered, id];
+    });
   }
 
   function hasTimeOverlap(): boolean {
@@ -758,7 +789,7 @@ export function NewBookingForm({
                       </div>
                       <span className={cn("text-sm font-bold", selected ? "text-amber-400" : "text-zinc-300")}>{addon.label}</span>
                     </div>
-                    <span className="text-sm font-black text-zinc-400">+${addon.price}</span>
+                    <span className="text-sm font-black text-zinc-400">+${getAdminAddonPrice(addon.id, vehicleSize)}</span>
                   </button>
                 );
               })}
@@ -770,7 +801,7 @@ export function NewBookingForm({
             <SummaryRow label="Base service" value={`$${basePrice}`} />
             {selectedAddons.map(id => {
               const a = ADMIN_ADDONS.find(x => x.id === id);
-              return a ? <SummaryRow key={id} label={a.label} value={`+$${a.price}`} /> : null;
+              return a ? <SummaryRow key={id} label={a.label} value={`+$${getAdminAddonPrice(id, vehicleSize)}`} /> : null;
             })}
             {priceOverride !== "" && <SummaryRow label="Override" value={`$${priceOverride}`} />}
             <div className="border-t border-white/[0.06] pt-1 mt-1 flex justify-between text-sm font-black">

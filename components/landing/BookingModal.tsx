@@ -80,6 +80,9 @@ const ALL_ADD_ONS = [
   // ── Paint Correction add-ons ─────────────────────────────────────────────
   { id: "ceramic_3yr",       label: "2–3 Year Pro Ceramic Sealant",          price: 300, desc: "Upgrade from the included 6-month spray to a professional-grade 2–3 year ceramic sealant. Pricing scales by size: $300 small · $350 mid · $425 large · $500 work van." },
   { id: "ultimate_interior", label: "Ultimate Interior Add-on",              price: 175, desc: "Add the full Ultimate Interior service to your paint correction — hot water extraction, steam sanitation, salt neutralization. Adds 3 hrs to the appointment. Flat $175." },
+  // ── 2-Year Graphene Ceramic Window Coating (size-tier priced) ────────────
+  { id: "window_coat_windshield", label: "2-Year Graphene Window Coat — Windshield Only", price: 85,  desc: "Hydrophobic graphene-infused ceramic coating bonded to the windshield. Rain beads off at speed, bugs and salt wipe clean. Lasts 2 full years. Pricing scales by vehicle size." },
+  { id: "window_coat_all",        label: "2-Year Graphene Window Coat — All Windows",     price: 150, desc: "Full-vehicle graphene ceramic coating on every piece of glass — windshield, side windows, and rear. Hydrophobic, anti-glare, and protected for 2 full years. Pricing scales by vehicle size." },
   // ── Work Van cargo cleaning (only shown when vehicle size = xl) ──────────
   { id: "cargo_light",       label: "Cargo Space — Light/Moderate",          price: 100, desc: "Vacuum and wipe-down of work van cargo area. Best for light to moderate dust, dirt, and tool residue." },
   { id: "cargo_heavy",       label: "Cargo Space — Heavy/Dirty",             price: 150, desc: "Deep clean of heavily soiled cargo area — built-up grime, embedded debris, stained surfaces and odors." },
@@ -107,6 +110,10 @@ const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "uph
 const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
 const CARGO_ADDON_IDS    = ["cargo_light", "cargo_heavy"];
+/** 2-Year Graphene Window Coating tiers — mutually exclusive (windshield-only OR all glass).
+ *  Surfaced only on services that touch the exterior glass: Exterior, Full,
+ *  Ultimate Interior + Exterior, and Paint Correction packages. */
+const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield", "window_coat_all"];
 /** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
 const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
 /** Add-ons that require a full-day appointment */
@@ -128,10 +135,22 @@ const CERAMIC_3YR_PRICES: Record<string, number> = {
   small: 300, medium: 350, large: 425, extra_large: 500,
 };
 
+/** 2-Year Graphene Window Coating — 2-tier pricing (car/sedan vs truck/SUV/minivan). */
+const WINDOW_COAT_WINDSHIELD_PRICES: Record<string, number> = {
+  compact: 85, sedan: 85, suv: 100, xl: 100,
+  small: 85, medium: 85, large: 100, extra_large: 100,
+};
+const WINDOW_COAT_ALL_PRICES: Record<string, number> = {
+  compact: 150, sedan: 150, suv: 175, xl: 175,
+  small: 150, medium: 150, large: 175, extra_large: 175,
+};
+
 function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
   if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 15;
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
+  if (addon.id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICES[vehicleSize] ?? addon.price;
+  if (addon.id === "window_coat_all")        return WINDOW_COAT_ALL_PRICES[vehicleSize] ?? addon.price;
   return addon.price;
 }
 
@@ -175,21 +194,29 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
   // and the Ultimate Interior add-on. Cargo cleaning surfaces only when the
   // Ultimate Interior add-on is implied (handled at render-time on the interior side).
   if (isPaintCorrectionService(serviceName)) {
-    return ALL_ADD_ONS.filter(a => PAINT_CORRECTION_ADDON_IDS.includes(a.id));
+    return ALL_ADD_ONS.filter(a => [...PAINT_CORRECTION_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS].includes(a.id));
   }
 
   // Ultimate packages: high-ticket upgrades. Cargo cleaning if work van.
+  // Window coating only when the package includes exterior work
+  // (Ultimate Interior + Exterior — NOT Ultimate Interior Reset).
   if (n.includes("ultimate")) {
-    const ids = [...ULTIMATE_ADDON_IDS, ...cargoIds];
+    const includesExterior = n.includes("exterior");
+    const ids = [
+      ...ULTIMATE_ADDON_IDS,
+      ...cargoIds,
+      ...(includesExterior ? WINDOW_COATING_ADDON_IDS : []),
+    ];
     return ALL_ADD_ONS.filter(a => ids.includes(a.id));
   }
 
   // Exterior Detail (no cargo — exterior only)
   if (n.includes("exterior") && !n.includes("full")) {
-    return ALL_ADD_ONS.filter(a => STANDARD_ADDON_IDS.includes(a.id));
+    return ALL_ADD_ONS.filter(a => [...STANDARD_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS].includes(a.id));
   }
 
-  // Interior Detail (standalone) — cargo if work van
+  // Interior Detail (standalone) — cargo if work van. No window coating —
+  // we don't touch exterior glass on an interior-only service.
   if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
     const ids = [...STANDARD_ADDON_IDS, ...cargoIds];
     return ALL_ADD_ONS.filter(a => ids.includes(a.id));
@@ -200,8 +227,8 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
   }
 
-  // Full Detail and anything else → standard 4 add-ons + cargo if work van
-  const ids = [...STANDARD_ADDON_IDS, ...cargoIds];
+  // Full Detail and anything else → standard 4 add-ons + cargo if work van + window coating
+  const ids = [...STANDARD_ADDON_IDS, ...cargoIds, ...WINDOW_COATING_ADDON_IDS];
   return ALL_ADD_ONS.filter(a => ids.includes(a.id));
 }
 
@@ -929,10 +956,17 @@ export function BookingSection({
     setAdditionalVehicles(prev => prev.map((v, i) => {
       if (i !== idx) return v;
       const has = v.selectedAddons.some(a => a.id === addon.id);
-      const filtered = has
-        ? v.selectedAddons.filter(a => a.id !== addon.id)
-        : [...v.selectedAddons.filter(a => !FLOOR_ADDON_IDS.includes(addon.id) || !FLOOR_ADDON_IDS.includes(a.id)), addon];
-      return { ...v, selectedAddons: filtered };
+      if (has) {
+        return { ...v, selectedAddons: v.selectedAddons.filter(a => a.id !== addon.id) };
+      }
+      // Mutually-exclusive groups: dropping a sibling tier when adding a new one
+      let kept = v.selectedAddons;
+      if (FLOOR_ADDON_IDS.includes(addon.id)) {
+        kept = kept.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
+      } else if (WINDOW_COATING_ADDON_IDS.includes(addon.id)) {
+        kept = kept.filter(a => !WINDOW_COATING_ADDON_IDS.includes(a.id));
+      }
+      return { ...v, selectedAddons: [...kept, addon] };
     }));
 
   const toggleAddon = (addon: AddonItem) => {
@@ -941,12 +975,14 @@ export function BookingSection({
       if (isSelected) {
         return prev.filter(a => a.id !== addon.id);
       } else {
-        // Floorboard shampoo & cargo tiers are mutually exclusive within their group
+        // Floorboard / cargo / window-coating tiers are mutually exclusive within their group
         let filtered = prev;
         if (FLOOR_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
         } else if (CARGO_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !CARGO_ADDON_IDS.includes(a.id));
+        } else if (WINDOW_COATING_ADDON_IDS.includes(addon.id)) {
+          filtered = prev.filter(a => !WINDOW_COATING_ADDON_IDS.includes(a.id));
         }
         return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string) }];
       }
