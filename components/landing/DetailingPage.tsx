@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   MapPin, Sparkles, Crown, CheckCircle, Leaf, ShieldCheck,
   BadgeCheck, Star, Phone, ArrowRight, Car, Gem, AlertTriangle,
-  Sofa, Droplets, Zap, Layers, Clock, Plus,
+  Sofa, Droplets, Zap, Layers, Clock, Plus, Snowflake,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
@@ -54,7 +54,8 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep clean your interior deserves.",
-    price: 250,
+    priceLow: 240,
+    priceHigh: 270,
     badge: "Best for Families",
     badgeIcon: Star,
     features: [
@@ -69,14 +70,15 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom condition — every surface, inside and out.",
-    price: 350,
+    priceLow: 350,
+    priceHigh: 400,
     badge: "Flagship Service",
     badgeIcon: Gem,
     features: [
       "Everything in Ultimate Interior Reset",
       "Full exterior decontamination & clay bar treatment",
       "Iron & fallout decontamination (paint prep)",
-      "12-Month Ceramic Sealant application",
+      "6-Month Ceramic Spray Coating",
       "All trim, rubber & glass dressing",
       "Exhaust tips & wheel barrels deep cleaned",
     ],
@@ -103,8 +105,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Layers,
     tagline: "Removes 60–75% of light defects — swirls, oxidation, water spots.",
     isFlagship: false,
-    prices: { compact: 300, sedan: 350, suv: 375, xl: 550 } satisfies Record<PaintSizeId, number>,
-    hours:  { compact: 4,   sedan: 4.5, suv: 5,   xl: 7   } satisfies Record<PaintSizeId, number>,
+    prices:    { compact: 350, sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { compact: 3.5, sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { compact: 4.5, sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
   },
   {
     serviceName: "Ultimate Exterior + 2-Step Paint Correction",
@@ -112,8 +115,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Gem,
     tagline: "Removes 85–95% of correctable defects — deeper scratches, heavy swirls.",
     isFlagship: true,
-    prices: { compact: 475, sedan: 575, suv: 650, xl: 800 } satisfies Record<PaintSizeId, number>,
-    hours:  { compact: 5.5, sedan: 6,   suv: 7,   xl: 8.5 } satisfies Record<PaintSizeId, number>,
+    prices:    { compact: 550, sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { compact: 6.5, sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { compact: 8.0, sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
   },
 ] as const;
 
@@ -127,7 +131,7 @@ const ULTIMATE_EXTERIOR_INCLUDES = [
 ];
 
 const CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  compact: 300, sedan: 350, suv: 425, xl: 500,
+  compact: 250, sedan: 300, suv: 350, xl: 400,
 };
 
 const sv = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } };
@@ -329,6 +333,70 @@ export function DetailingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
+      {/* ── Salt Season Recovery (Vermont Winter Defense) ───────────────────── */}
+      {(() => {
+        const saltSvc = services.find(s => s.name === "Salt Season Recovery");
+        if (!saltSvc) return null;
+        return (
+          <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+            className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+          >
+            <div className="max-w-4xl mx-auto">
+              <div className="mb-6 text-center">
+                <div className="inline-flex items-center gap-1.5 mb-2">
+                  <Snowflake size={14} className="text-cyan-400" />
+                  <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-cyan-400/80">Vermont Winter Defense</p>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Salt Season Recovery</h2>
+                <p className="text-zinc-400 mt-2 text-sm max-w-xl mx-auto leading-relaxed">
+                  Vermont road salt destroys cars. This quick monthly service flushes salt, neutralizes calcium buildup,
+                  and applies fresh paint protection — keeping your investment safe Nov through April.
+                </p>
+              </div>
+              <div className="relative rounded-2xl overflow-hidden border border-cyan-500/25 bg-gradient-to-br from-cyan-500/[0.04] to-zinc-900/60">
+                <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
+                <div className="p-6 md:p-7 flex flex-col md:flex-row md:items-center gap-5">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Snowflake size={16} className="text-cyan-400" />
+                      <h3 className="text-lg md:text-xl font-black text-white tracking-tight">Salt Season Recovery</h3>
+                    </div>
+                    <ul className="space-y-1.5 mt-3">
+                      {[
+                        "Full undercarriage rinse — flush trapped road salt",
+                        "Door jamb deep clean & salt neutralization",
+                        "Tire dressing & wheel barrel rinse",
+                        "3-month ceramic spray sealant for paint protection",
+                      ].map(item => (
+                        <li key={item} className="flex items-start gap-2 text-xs text-zinc-300 leading-snug">
+                          <CheckCircle size={11} className="text-cyan-400 shrink-0 mt-0.5" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
+                      <Clock size={10} className="inline -mt-0.5" /> About 1.5 hrs on site · Recommended every 4–6 weeks during salt season
+                    </p>
+                  </div>
+                  <div className="md:w-48 flex flex-col items-center gap-3">
+                    <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/[0.06] px-5 py-3 text-center w-full">
+                      <div className="text-3xl font-black text-white tabular-nums">$135</div>
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-cyan-300/70 mt-0.5">Flat Rate — All Sizes</div>
+                    </div>
+                    <button
+                      onClick={() => openBooking(saltSvc)}
+                      className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-cyan-400 text-zinc-950 hover:opacity-90 transition-all active:scale-[0.97] shadow-[0_4px_16px_rgba(34,211,238,0.25)]"
+                    >
+                      Book Salt Recovery
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.section>
+        );
+      })()}
+
       {/* ── Ultimate Series ──────────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
         className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
@@ -373,8 +441,8 @@ export function DetailingPage({ services }: { services: Service[] }) {
 
                     {/* Price */}
                     <div className={`rounded-xl mb-4 py-3 text-center border ${card.isFlagship ? "border-[#D4AF37]/20 bg-[#D4AF37]/[0.05]" : "border-white/[0.06] bg-white/[0.02]"}`}>
-                      <div className={`text-2xl font-black tabular-nums ${card.isFlagship ? "text-[#D4AF37]" : "text-white"}`}>${card.price}</div>
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 mt-0.5">Flat Rate — All Sizes</div>
+                      <div className={`text-2xl font-black tabular-nums ${card.isFlagship ? "text-[#D4AF37]" : "text-white"}`}>${card.priceLow}–${card.priceHigh}</div>
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 mt-0.5">Range — Varies by Size</div>
                     </div>
 
                     {/* Features */}
@@ -498,7 +566,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
 // Two ultra-premium cards with interactive 4-tier size pills. Picking a tier
 // updates the price and time-on-site readout per card. Both cards include the
 // shared "Ultimate Exterior Includes" feature list and a 6-month ceramic spray.
-// Add-on info strip below the cards summarises the 2–3 yr ceramic upgrade and
+// Add-on info strip below the cards summarises the 2-yr ceramic upgrade and
 // the Ultimate Interior add-on (configured & priced inside the booking flow).
 function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: string) => void }) {
   const [size, setSize] = useState<PaintSizeId>("compact");
@@ -520,7 +588,7 @@ function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: st
             Ultimate Paint Correction
           </h2>
           <p className="text-zinc-400 mt-3 text-sm max-w-xl mx-auto leading-relaxed">
-            Machine polishing to remove swirls, oxidation and scratches — paired with our full Ultimate Exterior detail and a 6-month ceramic spray. Optional 2–3 year professional ceramic sealant available below.
+            Machine polishing to remove swirls, oxidation and scratches — paired with our full Ultimate Exterior detail and a 6-month ceramic spray. Optional 2-year professional ceramic sealant available below.
           </p>
         </div>
 
@@ -553,7 +621,8 @@ function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: st
           {PAINT_CORRECTION_CARDS.map((card) => {
             const BadgeIcon = card.badgeIcon;
             const price = card.prices[size];
-            const hours = card.hours[size];
+            const hoursLow = card.hoursLow[size];
+            const hoursHigh = card.hoursHigh[size];
             return (
               <div key={card.serviceName}
                 className={`group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
@@ -610,7 +679,7 @@ function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: st
                           transition={{ duration: 0.18 }}
                           className="text-lg font-black tabular-nums text-zinc-200"
                         >
-                          {fmtHours(hours)}
+                          {hoursLow}–{hoursHigh} hrs
                         </motion.div>
                       </div>
                     </div>
@@ -666,14 +735,14 @@ function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: st
             <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Available Add-ons</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* 2-3 Year Ceramic */}
+            {/* 2-Year Ceramic */}
             <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.04] p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <ShieldCheck size={12} className="text-[#D4AF37]" />
-                <h4 className="text-[12px] font-black tracking-wide text-white">2–3 Year Pro Ceramic Sealant</h4>
+                <h4 className="text-[12px] font-black tracking-wide text-white">2-Year Pro Ceramic Sealant</h4>
               </div>
               <p className="text-[11px] text-zinc-500 leading-relaxed mb-3">
-                Upgrade from the included 6-month spray to a professional-grade 2–3 year ceramic sealant.
+                Upgrade from the included 6-month spray to a professional-grade 2-year ceramic sealant.
               </p>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-[#D4AF37] tabular-nums">${CERAMIC_3YR_PRICES[size]}</span>

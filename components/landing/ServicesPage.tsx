@@ -29,7 +29,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 250, priceLarge: 250,
+    priceNormal: 240, priceLarge: 270,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Full Detail",
@@ -44,13 +44,13 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom quality — every surface, inside and out. No polishing required.",
-    priceNormal: 350, priceLarge: 350,
+    priceNormal: 350, priceLarge: 400,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
       "Full Exterior Decontamination Wash & Clay Bar Treatment",
       "Iron & Fallout Decontamination (Paint Prep)",
-      "Ceramic Sealant Application — 12-Month Protection",
+      "Ceramic Spray Coating — 6-Month Protection",
       "All Exterior Trim, Rubber & Glass Dressing",
       "Exhaust Tips & Wheel Barrels Deep Cleaned",
     ],

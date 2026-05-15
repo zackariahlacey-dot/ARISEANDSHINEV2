@@ -93,9 +93,9 @@ const DAY_END_HOUR   = 20;
 const ADMIN_ADDONS = [
   // Vehicle — standard
   { id: "engine_bay",        label: "Engine Bay Detail",                     price: 50  },
-  { id: "headlight_restore", label: "Headlight Restoration",                 price: 40  },
+  { id: "headlight_restore", label: "Headlight Restoration",                 price: 60  },
   { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 60  },
-  { id: "upholstery_shampoo",label: "Upholstery & Floorboard Shampoo",       price: 60  },
+  { id: "upholstery_shampoo",label: "Upholstery & Floorboard Shampoo",       price: 75  },
   { id: "uv_interior",       label: "UV Protection & Interior Restoration",  price: 35  },
   { id: "leather_condition", label: "Leather Conditioning",                  price: 45  },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 30  },
@@ -107,9 +107,16 @@ const ADMIN_ADDONS = [
   // Vehicle — ultimate upgrades
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic",       price: 350 },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",               price: 75  },
-  // 2-Year Graphene Window Coating (size-tier priced; defaults to small/medium tier)
-  { id: "window_coat_windshield", label: "2-Year Graphene Window — Windshield",   price: 85  },
-  { id: "window_coat_all",        label: "2-Year Graphene Window — All Windows",  price: 150 },
+  // 2-Year Graphene Window Coating (flat-priced, 3-tier)
+  { id: "window_coat_windshield", label: "2-Year Graphene Window — Windshield",       price: 100 },
+  { id: "window_coat_front",      label: "2-Year Graphene Window — Front 3 Windows",  price: 150 },
+  { id: "window_coat_all",        label: "2-Year Graphene Window — All Windows",      price: 250 },
+  // 2-Year Pro Ceramic Sealant (size-tier priced; defaults to small tier)
+  { id: "ceramic_3yr",            label: "2-Year Pro Ceramic Sealant",                price: 250 },
+  // Wheel & Caliper Ceramic Coating (flat price)
+  { id: "wheel_ceramic",          label: "Wheel & Caliper Ceramic Coating",           price: 125 },
+  // Ultimate Interior add-on (flat — adds 3 hrs)
+  { id: "ultimate_interior",      label: "Ultimate Interior Add-on (+3 hrs)",         price: 175 },
   // Marine
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows",            price: 100 },
   { id: "marine_engine_bay", label: "Marine Engine Bay",                    price: 150 },
@@ -123,20 +130,26 @@ const ADMIN_ADDONS = [
 const VEHICLE_ADDON_IDS  = ["engine_bay","headlight_restore","odor_bomb","upholstery_shampoo","uv_interior","leather_condition","clay_bar","pet_hair","tar_bug","floor_1","floor_2","floor_all"];
 const BOAT_ADDON_IDS     = ["marine_isinglass","marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning","rv_slide_seal","rv_roof_coat","rv_generator","rv_step"];
-const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield","window_coat_all"];
+const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield","window_coat_front","window_coat_all"];
 
-/** 2-Year Graphene Window Coating tier pricing — must match BookingModal. */
-const WINDOW_COAT_WINDSHIELD_PRICES: Record<string, number> = {
-  compact: 85, sedan: 85, suv: 100, xl: 100,
+/** 2-Year Graphene Window Coating — flat pricing across all sizes (must match BookingModal). */
+const WINDOW_COAT_WINDSHIELD_PRICE = 100;
+const WINDOW_COAT_FRONT_PRICE      = 150;
+const WINDOW_COAT_ALL_PRICE        = 250;
+
+/** 2-Year Pro Ceramic Sealant — size-tier pricing (must match BookingModal). */
+const CERAMIC_3YR_PRICES_ADMIN: Record<string, number> = {
+  compact: 250, sedan: 300, suv: 350, xl: 400,
 };
-const WINDOW_COAT_ALL_PRICES: Record<string, number> = {
-  compact: 150, sedan: 150, suv: 175, xl: 175,
-};
+
 function getAdminAddonPrice(id: string, vehicleSize: string): number {
   const a = ADMIN_ADDONS.find(x => x.id === id);
   if (!a) return 0;
-  if (id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICES[vehicleSize] ?? a.price;
-  if (id === "window_coat_all")        return WINDOW_COAT_ALL_PRICES[vehicleSize] ?? a.price;
+  if (id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICE;
+  if (id === "window_coat_front")      return WINDOW_COAT_FRONT_PRICE;
+  if (id === "window_coat_all")        return WINDOW_COAT_ALL_PRICE;
+  if (id === "ceramic_3yr")            return CERAMIC_3YR_PRICES_ADMIN[vehicleSize] ?? a.price;
+  if (id === "upholstery_shampoo" && vehicleSize === "xl") return a.price + 20;
   return a.price;
 }
 
@@ -299,8 +312,13 @@ export function NewBookingForm({
     const isInteriorOnly = n.includes("interior") && !n.includes("exterior") && !n.includes("full");
     const isMaintenance  = n.includes("maintenance");
     const windowIds = (!isInteriorOnly && !isMaintenance) ? WINDOW_COATING_ADDON_IDS : [];
-    if (n.includes("paint") || n.includes("correction")) return ADMIN_ADDONS.filter(a => ["engine_bay", ...windowIds].includes(a.id));
-    if (n.includes("ultimate")) return ADMIN_ADDONS.filter(a => ["engine_bay","polish_ceramic","headlight_restore","ozone_treatment", ...windowIds].includes(a.id));
+    if (n.includes("paint") || n.includes("correction")) return ADMIN_ADDONS.filter(a => ["engine_bay","ceramic_3yr","wheel_ceramic","ultimate_interior", ...windowIds].includes(a.id));
+    if (n.includes("ultimate")) {
+      const includesExterior = n.includes("exterior");
+      const ultimateIds = ["engine_bay","polish_ceramic","headlight_restore","ozone_treatment", ...windowIds];
+      if (includesExterior) { ultimateIds.push("ceramic_3yr"); ultimateIds.push("wheel_ceramic"); }
+      return ADMIN_ADDONS.filter(a => ultimateIds.includes(a.id));
+    }
     if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
     if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
     return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
@@ -1800,6 +1818,31 @@ export default function SchedulePage() {
                           {bVehicle(b) && (
                             <p className="text-xs text-zinc-600 truncate mt-0.5">{bVehicle(b)}</p>
                           )}
+                          {/* Multi-vehicle + add-ons summary badges */}
+                          {(() => {
+                            const addlCount = Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json.length : 0;
+                            const vehicleCount = 1 + addlCount;
+                            const primaryAddons = Array.isArray(b.addons_json) ? b.addons_json.length : 0;
+                            const addlAddons = Array.isArray(b.additional_vehicles_json)
+                              ? b.additional_vehicles_json.reduce((s: number, av: any) => s + (Array.isArray(av?.selectedAddons) ? av.selectedAddons.length : 0), 0)
+                              : 0;
+                            const totalAddons = primaryAddons + addlAddons;
+                            if (vehicleCount === 1 && totalAddons === 0) return null;
+                            return (
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {vehicleCount > 1 && (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                                    {vehicleCount} vehicles
+                                  </span>
+                                )}
+                                {totalAddons > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25">
+                                    +{totalAddons} add-on{totalAddons === 1 ? "" : "s"}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div className="text-right shrink-0 space-y-1">
                           <p className="text-base font-black text-white">${Number(b.total_price).toFixed(0)}</p>
@@ -2054,6 +2097,86 @@ export default function SchedulePage() {
                   </div>
                 </div>
               </div>
+
+              {/* ── Vehicles & Add-ons ───────────────────────────────────── */}
+              {(() => {
+                const addls: any[] = Array.isArray(activeBooking.additional_vehicles_json) ? activeBooking.additional_vehicles_json : [];
+                const primaryAddons: any[] = Array.isArray(activeBooking.addons_json) ? activeBooking.addons_json : [];
+                if (addls.length === 0 && primaryAddons.length === 0) return null;
+                const totalVehicles = 1 + addls.length;
+                return (
+                  <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Vehicles & Add-ons</span>
+                      {totalVehicles > 1 && (
+                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                          {totalVehicles} vehicles
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Primary vehicle */}
+                    <div className="px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/25">Vehicle 1</span>
+                          </div>
+                          <p className="text-sm font-bold text-zinc-100">{vehicle || "—"}</p>
+                          <p className="text-xs text-zinc-500 mt-0.5">{service}</p>
+                        </div>
+                      </div>
+                      {primaryAddons.length > 0 && (
+                        <ul className="mt-2 space-y-1">
+                          {primaryAddons.map((a, i) => (
+                            <li key={i} className="flex items-center justify-between gap-2 text-xs">
+                              <span className="text-zinc-400 truncate">+ {a.label ?? a.id}</span>
+                              <span className="text-zinc-300 tabular-nums shrink-0">${Number(a.price ?? 0).toFixed(0)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Additional vehicles */}
+                    {addls.map((av: any, i: number) => {
+                      const yr = av.vehicleYear ?? av.yr ?? "";
+                      const mk = av.vehicleMake ?? av.mk ?? "";
+                      const md = av.vehicleModel ?? av.md ?? "";
+                      const sn = av.serviceName ?? av.sn ?? "";
+                      const sp = Number(av.servicePrice ?? av.sp ?? 0);
+                      const avAddons: any[] = Array.isArray(av.selectedAddons) ? av.selectedAddons : [];
+                      return (
+                        <div key={i} className="px-4 py-3 border-t border-white/[0.04]">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25">Vehicle {i + 2}</span>
+                              </div>
+                              <p className="text-sm font-bold text-zinc-100">{`${yr} ${mk} ${md}`.trim() || "—"}</p>
+                              <p className="text-xs text-zinc-500 mt-0.5">{sn}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-black text-zinc-200 tabular-nums">${sp.toFixed(0)}</p>
+                              <p className="text-[10px] text-emerald-400">−$25 multi</p>
+                            </div>
+                          </div>
+                          {avAddons.length > 0 && (
+                            <ul className="mt-2 space-y-1">
+                              {avAddons.map((a: any, j: number) => (
+                                <li key={j} className="flex items-center justify-between gap-2 text-xs">
+                                  <span className="text-zinc-400 truncate">+ {a.label ?? a.id}</span>
+                                  <span className="text-zinc-300 tabular-nums shrink-0">${Number(a.price ?? 0).toFixed(0)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* ── Contact rows ─────────────────────────────────────────── */}
               {(phone || email || addr) && (

@@ -40,6 +40,7 @@ async function DataProvider() {
   const VEHICLE_NAMES = [
     "Interior Detail", "Exterior Detail", "Full Detail",
     "Ultimate Interior Reset", "Ultimate Interior + Exterior Reset",
+    "Salt Season Recovery",
   ];
   return <DetailingPage services={(services ?? []).filter((s: Service) =>
     !s.is_subscription && VEHICLE_NAMES.includes(s.name)

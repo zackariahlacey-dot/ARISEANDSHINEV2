@@ -12,6 +12,7 @@ import { PlanRequestSection } from "@/components/dashboard/PlanRequestSection";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
 import { LevelUpConfetti } from "@/components/dashboard/LevelUpConfetti";
+import { MembershipPanel } from "@/components/dashboard/MembershipPanel";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
@@ -204,6 +205,9 @@ async function Dashboard() {
               })}
             </div>
           </div>
+
+          {/* ── Membership Panel ──────────────────────────────────────── */}
+          <MembershipPanel />
 
           {/* ── Book Now CTA ──────────────────────────────────────────── */}
           <Link

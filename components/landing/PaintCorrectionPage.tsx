@@ -37,8 +37,9 @@ const PAINT_CORRECTION_CARDS = [
     tagline: "Removes 60–75% of light defects — swirls, oxidation, water spots.",
     bestFor: "Newer cars or well-maintained paint",
     isFlagship: false,
-    prices: { compact: 300, sedan: 350, suv: 375, xl: 550 } satisfies Record<PaintSizeId, number>,
-    hours:  { compact: 4,   sedan: 4.5, suv: 5,   xl: 7   } satisfies Record<PaintSizeId, number>,
+    prices:    { compact: 350, sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { compact: 3.5, sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { compact: 4.5, sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
     process: [
       "Full hand wash & dry decontamination",
       "Clay bar & iron removal prep",
@@ -54,8 +55,9 @@ const PAINT_CORRECTION_CARDS = [
     tagline: "Removes 85–95% of correctable defects — deeper scratches, heavy swirls.",
     bestFor: "Dark colors or older paint with swirls & scratches",
     isFlagship: true,
-    prices: { compact: 475, sedan: 575, suv: 650, xl: 800 } satisfies Record<PaintSizeId, number>,
-    hours:  { compact: 5.5, sedan: 6,   suv: 7,   xl: 8.5 } satisfies Record<PaintSizeId, number>,
+    prices:    { compact: 550, sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { compact: 6.5, sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { compact: 8.0, sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
     process: [
       "Full hand wash & dry decontamination",
       "Clay bar & iron removal prep",
@@ -75,14 +77,14 @@ const ULTIMATE_EXTERIOR_INCLUDES = [
 ];
 
 const CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  compact: 300, sedan: 350, suv: 425, xl: 500,
+  compact: 250, sedan: 300, suv: 350, xl: 400,
 };
 
 const FAQ_ITEMS = [
   { q: "Do you need a garage or shade?", a: "For best results, yes. Paint correction requires a stable, temperature-controlled environment. We'll confirm site conditions before scheduling." },
-  { q: "How long does paint correction take?", a: "1-Step typically takes 4–7 hours depending on vehicle size. 2-Step ranges from 5.5 to 8.5 hours — large vehicles and work vans may run longer." },
+  { q: "How long does paint correction take?", a: "1-Step typically takes 3.5–8 hours depending on vehicle size. 2-Step runs 6.5–13+ hours — large vehicles and work vans may require a 2-day appointment." },
   { q: "Will it remove all scratches?", a: "We correct swirl marks, haze, and light-to-medium scratches in the clear coat. Deep scratches that go through to the primer or metal cannot be polished out." },
-  { q: "What's included beyond the polish?", a: "Both packages include the full Ultimate Exterior detail — hand wash & dry, clay bar, glass, wheel wells, tires, plastic trim restoration, and a 6-month ceramic spray sealant. The 2–3 year professional ceramic sealant upgrade is optional." },
+  { q: "What's included beyond the polish?", a: "Both packages include the full Ultimate Exterior detail — hand wash & dry, clay bar, glass, wheel wells, tires, plastic trim restoration, and a 6-month ceramic spray sealant. The 2-year professional ceramic sealant upgrade is optional." },
   { q: "Can I add an interior detail?", a: "Yes — the Ultimate Interior add-on is a flat $175 and adds about 3 hours to the appointment. For work vans we also offer cargo space cleaning ($100 light/moderate, $150 heavy)." },
 ];
 
@@ -193,7 +195,8 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
             {PAINT_CORRECTION_CARDS.map((card) => {
               const BadgeIcon = card.badgeIcon;
               const price = card.prices[size];
-              const hours = card.hours[size];
+              const hoursLow = card.hoursLow[size];
+              const hoursHigh = card.hoursHigh[size];
               return (
                 <div key={card.serviceName}
                   className={`group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
@@ -249,7 +252,7 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
                             transition={{ duration: 0.18 }}
                             className="text-lg font-black tabular-nums text-zinc-200"
                           >
-                            {hours} hrs
+                            {hoursLow}–{hoursHigh} hrs
                           </motion.div>
                         </div>
                       </div>
@@ -309,10 +312,10 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
               <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.04] p-4">
                 <div className="flex items-center gap-1.5 mb-2">
                   <ShieldCheck size={12} className="text-[#D4AF37]" />
-                  <h4 className="text-[12px] font-black tracking-wide text-white">2–3 Year Pro Ceramic Sealant</h4>
+                  <h4 className="text-[12px] font-black tracking-wide text-white">2-Year Pro Ceramic Sealant</h4>
                 </div>
                 <p className="text-[11px] text-zinc-500 leading-relaxed mb-3">
-                  Upgrade from the included 6-month spray to a professional-grade 2–3 year ceramic sealant.
+                  Upgrade from the included 6-month spray to a professional-grade 2-year ceramic sealant.
                 </p>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-[#D4AF37] tabular-nums">${CERAMIC_3YR_PRICES[size]}</span>

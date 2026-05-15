@@ -754,9 +754,12 @@ function PayBadge({ b }: { b: any }) {
 
 function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
   const stripe = isStripePaid(b);
-  const extraVehicles: any[] = (() => {
-    try { return Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json : []; } catch { return []; }
-  })();
+  const extraVehicles: any[] = Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json : [];
+  const primaryAddons: any[] = Array.isArray(b.addons_json) ? b.addons_json : [];
+  const extraAddons = extraVehicles.reduce((s: number, av: any) => s + (Array.isArray(av?.selectedAddons) ? av.selectedAddons.length : 0), 0);
+  const totalAddons = primaryAddons.length + extraAddons;
+  const totalVehicles = 1 + extraVehicles.length;
+  const vehicleLabel = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
   const statusColor: Record<string, string> = {
     confirmed: stripe ? "border-l-sky-500" : "border-l-emerald-500",
     completed: stripe ? "border-l-sky-400" : "border-l-emerald-400",
@@ -772,16 +775,24 @@ function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
       )}
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-xs font-black text-amber-500">{to12h((b.booking_time ?? "00:00").slice(0, 5))}</span>
           <span className="text-sm font-bold truncate">{b.customer_name ?? "Unknown"}</span>
-          {extraVehicles.length > 0 && (
+          {totalVehicles > 1 && (
             <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
-              {extraVehicles.length + 1} vehicles
+              {totalVehicles} vehicles
+            </span>
+          )}
+          {totalAddons > 0 && (
+            <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              +{totalAddons} add-on{totalAddons === 1 ? "" : "s"}
             </span>
           )}
         </div>
         <p className="text-xs text-zinc-500 truncate">{b.service_name ?? "Detail"}</p>
+        {vehicleLabel && (
+          <p className="text-[11px] text-zinc-600 truncate mt-0.5">{vehicleLabel}</p>
+        )}
       </div>
       <div className="text-right shrink-0 space-y-0.5">
         <p className="text-sm font-black">${Number(b.total_price).toFixed(0)}</p>

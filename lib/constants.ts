@@ -14,6 +14,10 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 210, medium: 210, large: 210, extra_large: 210,
     compact: 210, sedan: 210, suv: 210, xl: 210,
   },
+  "Salt Season Recovery": {
+    small: 90, medium: 90, large: 90, extra_large: 90,
+    compact: 90, sedan: 90, suv: 90, xl: 90,
+  },
   "Interior Monthly Maintenance": {
     small: 90, medium: 90, large: 120, extra_large: 120,
     compact: 90, sedan: 90, suv: 120, xl: 120,
@@ -32,14 +36,17 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     compact: 270, sedan: 270, suv: 270, xl: 270,
   },
   // Paint Correction (Ultimate Exterior + 1-Step / 2-Step)
-  // Times scale by vehicle size since these are full exterior + machine polish jobs.
+  // Times scale by vehicle size — these are full exterior + machine polish jobs.
+  // Booking system uses the high-end for slot reservation to avoid double-booking.
+  // Large/XL 2-Step is capped at 600 min (10 hrs = longest open day Tue/Wed/Fri 8a-6p);
+  // realistic jobs may run 11-13+ hrs and the booking blocks the whole day.
   "Ultimate Exterior + 1-Step Paint Correction": {
-    small: 240, medium: 270, large: 300, extra_large: 420,
-    compact: 240, sedan: 270, suv: 300, xl: 420,
+    small: 270, medium: 330, large: 390, extra_large: 480,
+    compact: 270, sedan: 330, suv: 390, xl: 480,
   },
   "Ultimate Exterior + 2-Step Paint Correction": {
-    small: 330, medium: 360, large: 420, extra_large: 510,
-    compact: 330, sedan: 360, suv: 420, xl: 510,
+    small: 480, medium: 540, large: 600, extra_large: 600,
+    compact: 480, sedan: 540, suv: 600, xl: 600,
   },
   // Boat Detailing — durations scale by length bracket
   // compact/small = 15–20ft, sedan/medium = 21–30ft, suv/large = 31–45ft, xl/extra_large = 46ft+

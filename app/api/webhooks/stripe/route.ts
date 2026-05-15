@@ -125,6 +125,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    // ── Premium Annual Membership purchase path ───────────────────────────
+    if (m?.sessionType === "membership_purchase") {
+      if (!m.profileId) {
+        console.error("[webhooks/stripe] Membership purchase missing profileId");
+        return NextResponse.json({ received: true });
+      }
+      const { createMembershipFromWebhook } = await import("@/app/actions/membership");
+      await createMembershipFromWebhook({
+        profileId: m.profileId,
+        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+        amountPaidCents: session.amount_total ?? 0,
+      });
+      return NextResponse.json({ received: true });
+    }
+
     // ── Gift card purchase path ───────────────────────────────────────────
     if (m?.sessionType === "gift_card") {
       const amount = Number(m.amount) || 0;
@@ -354,6 +370,12 @@ export async function POST(req: NextRequest) {
         addons_json:     addonsJson,
         additional_vehicles_json: additionalVehiclesForDb,
 ...(m.couponId ? { coupon_id: m.couponId } : {}),
+        ...(m.membershipId && m.membershipCreditAppliedCents
+          ? {
+              membership_id: m.membershipId,
+              membership_credit_applied_cents: Math.max(0, parseInt(m.membershipCreditAppliedCents, 10) || 0),
+            }
+          : {}),
         stripe_checkout_session_id: session.id,
       })
       .select("id")
@@ -387,6 +409,24 @@ export async function POST(req: NextRequest) {
           .eq("coupon_id", m.couponId);
         if ((count ?? 0) >= couponRow.max_uses) {
           await supabase.from("coupons").update({ is_active: false }).eq("id", m.couponId);
+        }
+      }
+    }
+
+    // Consume membership credit atomically — Pay Now path.
+    // Pay-at-Arrival consumes credit inside bookDetailing.ts; here we mirror
+    // that behavior post-payment so credit is never decremented for failed
+    // checkouts. RPC is balance-checked at the DB layer.
+    if (m.membershipId && m.membershipCreditAppliedCents) {
+      const creditCents = Math.max(0, parseInt(m.membershipCreditAppliedCents, 10) || 0);
+      if (creditCents > 0) {
+        const { error: consumeErr } = await supabase.rpc("consume_membership_credit", {
+          p_membership_id: m.membershipId,
+          p_amount_cents:  creditCents,
+        });
+        if (consumeErr) {
+          console.error("[webhooks/stripe] membership credit consume failed:", consumeErr.message, { bookingId, membershipId: m.membershipId, creditCents });
+          logError({ type: "webhook", source: "stripe_webhook/membershipCredit", message: consumeErr.message, details: { bookingId, membershipId: m.membershipId, creditCents } });
         }
       }
     }

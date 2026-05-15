@@ -49,6 +49,8 @@ import {
 } from "@/lib/vehicleDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getProfileByPhone } from "@/app/actions/getProfileByPhone";
+import { getMyActiveMembership } from "@/app/actions/membership";
+import { formatCentsCompact } from "@/lib/membership";
 import { getAvailability, type OperatingHour } from "@/app/actions/getAvailability";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
@@ -63,9 +65,9 @@ function getMaintenanceSetupFee(serviceName: string): number {
 const ALL_ADD_ONS = [
   // ── Vehicle / Standard ────────────────────────────────────────────────────
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
-  { id: "headlight_restore",   label: "Headlight Restoration",               price: 40,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
+  { id: "headlight_restore",   label: "Headlight Restoration",               price: 60,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
   { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 60,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",  label: "Upholstery & Floorboard Shampoo",    price: 60,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $75." },
+  { id: "upholstery_shampoo",  label: "Upholstery & Floorboard Shampoo",    price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $95." },
   { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
   { id: "leather_condition",   label: "Leather Conditioning",                 price: 45, desc: "Deep-clean and condition all leather surfaces with premium conditioner — restores softness, prevents cracking, and leaves a clean matte finish." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
@@ -78,11 +80,13 @@ const ALL_ADD_ONS = [
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
   // ── Paint Correction add-ons ─────────────────────────────────────────────
-  { id: "ceramic_3yr",       label: "2–3 Year Pro Ceramic Sealant",          price: 300, desc: "Upgrade from the included 6-month spray to a professional-grade 2–3 year ceramic sealant. Pricing scales by size: $300 small · $350 mid · $425 large · $500 work van." },
+  { id: "ceramic_3yr",       label: "2-Year Pro Ceramic Sealant",            price: 250, desc: "Upgrade from the included 6-month spray to a professional-grade 2-year ceramic sealant. Adds 1.5–2.5 hrs to the appointment. Pricing scales by size: $250 small · $300 mid · $350 large · $400 work van." },
   { id: "ultimate_interior", label: "Ultimate Interior Add-on",              price: 175, desc: "Add the full Ultimate Interior service to your paint correction — hot water extraction, steam sanitation, salt neutralization. Adds 3 hrs to the appointment. Flat $175." },
-  // ── 2-Year Graphene Ceramic Window Coating (size-tier priced) ────────────
-  { id: "window_coat_windshield", label: "2-Year Graphene Window Coat — Windshield Only", price: 85,  desc: "Hydrophobic graphene-infused ceramic coating bonded to the windshield. Rain beads off at speed, bugs and salt wipe clean. Lasts 2 full years. Pricing scales by vehicle size." },
-  { id: "window_coat_all",        label: "2-Year Graphene Window Coat — All Windows",     price: 150, desc: "Full-vehicle graphene ceramic coating on every piece of glass — windshield, side windows, and rear. Hydrophobic, anti-glare, and protected for 2 full years. Pricing scales by vehicle size." },
+  { id: "wheel_ceramic",     label: "Wheel & Caliper Ceramic Coating",       price: 125, desc: "Professional ceramic coating bonded to all 4 wheels and brake calipers. Brake dust wipes off, road grime can't grip, and the high-gloss finish lasts 2+ years. Flat $125 for all 4 wheels." },
+  // ── 2-Year Graphene Ceramic Window Coating (flat-priced tiers) ───────────
+  { id: "window_coat_windshield", label: "2-Year Graphene Window Coat — Windshield Only", price: 100, desc: "Hydrophobic graphene-infused ceramic coating bonded to the windshield. Rain beads off at speed, bugs and salt wipe clean. Lasts 2 full years." },
+  { id: "window_coat_front",      label: "2-Year Graphene Window Coat — Front 3 Windows", price: 150, desc: "Windshield plus both front side windows — full driver-zone visibility coverage. Hydrophobic, anti-glare, protected for 2 full years." },
+  { id: "window_coat_all",        label: "2-Year Graphene Window Coat — All Windows",     price: 250, desc: "Full-vehicle graphene ceramic coating on every piece of glass — windshield, all side windows, and rear. Hydrophobic, anti-glare, and protected for 2 full years." },
   // ── Work Van cargo cleaning (only shown when vehicle size = xl) ──────────
   { id: "cargo_light",       label: "Cargo Space — Light/Moderate",          price: 100, desc: "Vacuum and wipe-down of work van cargo area. Best for light to moderate dust, dirt, and tool residue." },
   { id: "cargo_heavy",       label: "Cargo Space — Heavy/Dirty",             price: 150, desc: "Deep clean of heavily soiled cargo area — built-up grime, embedded debris, stained surfaces and odors." },
@@ -107,21 +111,34 @@ const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore",
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
-const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior"];
+const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior", "wheel_ceramic"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
 const CARGO_ADDON_IDS    = ["cargo_light", "cargo_heavy"];
-/** 2-Year Graphene Window Coating tiers — mutually exclusive (windshield-only OR all glass).
+/** 2-Year Graphene Window Coating tiers — mutually exclusive (windshield / front 3 / all glass).
  *  Surfaced only on services that touch the exterior glass: Exterior, Full,
  *  Ultimate Interior + Exterior, and Paint Correction packages. */
-const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield", "window_coat_all"];
+const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield", "window_coat_front", "window_coat_all"];
 /** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
 const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
-/** Add-ons that extend service duration (additive) — id → minutes */
+/** Hard ceiling on a single-day booking. Longest open day is Tue/Wed/Fri 8am-6pm (600 min);
+ *  if a service + add-ons would otherwise overflow that, we clamp here so the booking
+ *  takes the whole day instead of failing to find any slots. Bookings longer than this
+ *  will only show slots on the longest-open weekdays. */
+export const MAX_SAME_DAY_BOOKING_MINS = 600;
+/** Add-ons that extend service duration (additive) — id → minutes.
+ *  Flat-duration add-ons live here; size-tiered add-ons (ceramic_3yr) are
+ *  resolved inside getAddonExtraDurationMins. */
 const DURATION_EXTENDING_ADDONS: Record<string, number> = {
   ultimate_interior: 180, // Ultimate Interior add-on adds 3 hrs to the appointment
+};
+
+/** 2-Year Pro Ceramic Sealant — application + flash time scales with surface area. */
+const CERAMIC_3YR_DURATION_MINS: Record<string, number> = {
+  compact: 90, sedan: 90, suv: 120, xl: 150,
+  small: 90, medium: 90, large: 120, extra_large: 150,
 };
 
 const CERAMIC_PRICES: Record<string, number> = {
@@ -129,28 +146,24 @@ const CERAMIC_PRICES: Record<string, number> = {
   small: 350, medium: 350, large: 500, extra_large: 650,
 };
 
-/** 2–3 Year Professional Ceramic Sealant — 4-tier pricing for paint-correction packages. */
+/** 2-Year Professional Ceramic Sealant — 4-tier pricing for paint-correction & Ultimate packages. */
 const CERAMIC_3YR_PRICES: Record<string, number> = {
-  compact: 300, sedan: 350, suv: 425, xl: 500,
-  small: 300, medium: 350, large: 425, extra_large: 500,
+  compact: 250, sedan: 300, suv: 350, xl: 400,
+  small: 250, medium: 300, large: 350, extra_large: 400,
 };
 
-/** 2-Year Graphene Window Coating — 2-tier pricing (car/sedan vs truck/SUV/minivan). */
-const WINDOW_COAT_WINDSHIELD_PRICES: Record<string, number> = {
-  compact: 85, sedan: 85, suv: 100, xl: 100,
-  small: 85, medium: 85, large: 100, extra_large: 100,
-};
-const WINDOW_COAT_ALL_PRICES: Record<string, number> = {
-  compact: 150, sedan: 150, suv: 175, xl: 175,
-  small: 150, medium: 150, large: 175, extra_large: 175,
-};
+/** 2-Year Graphene Window Coating — flat pricing across all vehicle sizes. */
+const WINDOW_COAT_WINDSHIELD_PRICE = 100;
+const WINDOW_COAT_FRONT_PRICE      = 150;
+const WINDOW_COAT_ALL_PRICE        = 250;
 
 function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
-  if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 15;
+  if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 20;
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
-  if (addon.id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICES[vehicleSize] ?? addon.price;
-  if (addon.id === "window_coat_all")        return WINDOW_COAT_ALL_PRICES[vehicleSize] ?? addon.price;
+  if (addon.id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICE;
+  if (addon.id === "window_coat_front")      return WINDOW_COAT_FRONT_PRICE;
+  if (addon.id === "window_coat_all")        return WINDOW_COAT_ALL_PRICE;
   return addon.price;
 }
 
@@ -161,9 +174,13 @@ function isPaintCorrectionService(name?: string): boolean {
   return n.includes("paint correction") || n.includes("paint enhancement") || n.includes("single-stage") || n.includes("two-stage") || n.includes("1-step paint") || n.includes("2-step paint");
 }
 
-/** Total minutes added to the booking by selected duration-extending add-ons. */
-function getAddonExtraDurationMins(selectedAddons: { id: string }[]): number {
-  return selectedAddons.reduce((sum, a) => sum + (DURATION_EXTENDING_ADDONS[a.id] ?? 0), 0);
+/** Total minutes added to the booking by selected duration-extending add-ons.
+ *  `vehicleSize` is required for size-tiered add-ons (e.g. ceramic_3yr). */
+function getAddonExtraDurationMins(selectedAddons: { id: string }[], vehicleSize: string = "sedan"): number {
+  return selectedAddons.reduce((sum, a) => {
+    if (a.id === "ceramic_3yr") return sum + (CERAMIC_3YR_DURATION_MINS[vehicleSize] ?? 90);
+    return sum + (DURATION_EXTENDING_ADDONS[a.id] ?? 0);
+  }, 0);
 }
 
 /**
@@ -198,21 +215,21 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
   }
 
   // Ultimate packages: high-ticket upgrades. Cargo cleaning if work van.
-  // Window coating only when the package includes exterior work
-  // (Ultimate Interior + Exterior — NOT Ultimate Interior Reset).
+  // Window coating + 2-yr ceramic sealant + wheel ceramic only when the package
+  // includes exterior work (Ultimate Interior + Exterior — NOT Ultimate Interior Reset).
   if (n.includes("ultimate")) {
     const includesExterior = n.includes("exterior");
     const ids = [
       ...ULTIMATE_ADDON_IDS,
       ...cargoIds,
-      ...(includesExterior ? WINDOW_COATING_ADDON_IDS : []),
+      ...(includesExterior ? [...WINDOW_COATING_ADDON_IDS, "ceramic_3yr", "wheel_ceramic"] : []),
     ];
     return ALL_ADD_ONS.filter(a => ids.includes(a.id));
   }
 
   // Exterior Detail (no cargo — exterior only)
   if (n.includes("exterior") && !n.includes("full")) {
-    return ALL_ADD_ONS.filter(a => [...STANDARD_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS].includes(a.id));
+    return ALL_ADD_ONS.filter(a => [...STANDARD_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS, "wheel_ceramic"].includes(a.id));
   }
 
   // Interior Detail (standalone) — cargo if work van. No window coating —
@@ -227,8 +244,8 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
   }
 
-  // Full Detail and anything else → standard 4 add-ons + cargo if work van + window coating
-  const ids = [...STANDARD_ADDON_IDS, ...cargoIds, ...WINDOW_COATING_ADDON_IDS];
+  // Full Detail and anything else → standard 4 add-ons + cargo if work van + window coating + wheel ceramic
+  const ids = [...STANDARD_ADDON_IDS, ...cargoIds, ...WINDOW_COATING_ADDON_IDS, "wheel_ceramic"];
   return ALL_ADD_ONS.filter(a => ids.includes(a.id));
 }
 
@@ -942,10 +959,10 @@ export function BookingSection({
       if (i !== idx) return v;
       const updated = { ...v, ...patch };
       if ("vehicleSize" in patch) {
-        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 50;
+        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
         updated.selectedAddons = updated.selectedAddons.map(a =>
           a.id === "upholstery_shampoo"
-            ? { ...a, price: updated.vehicleSize === "xl" ? base + 15 : base }
+            ? { ...a, price: updated.vehicleSize === "xl" ? base + 20 : base }
             : a
         );
       }
@@ -1033,6 +1050,15 @@ export function BookingSection({
   // Loyalty: discount % from profile (from auth prop or fetched by phone on step 3)
   const [loyaltyDiscountPct, setLoyaltyDiscountPct] = useState<number>(0);
 
+  // Premium Annual Membership — credit balance for logged-in members
+  const [activeMembership, setActiveMembership] = useState<{
+    id: string;
+    credit_balance_cents: number;
+    credit_total_cents: number;
+    expires_at: string;
+  } | null>(null);
+  const [applyMembershipCredit, setApplyMembershipCredit] = useState(true);
+
   // VIP success — redeem button loading state (logged-in users only)
   const [isRedeeming, setIsRedeeming] = useState(false);
 
@@ -1119,8 +1145,8 @@ export function BookingSection({
       return sum + Math.max(30, base - 30);
     }, 0);
 
-    const addonMins = getAddonExtraDurationMins(selectedAddons);
-    const total = primaryMins + addlMins + addonMins;
+    const addonMins = getAddonExtraDurationMins(selectedAddons, sizeKey);
+    const total = Math.min(MAX_SAME_DAY_BOOKING_MINS, primaryMins + addlMins + addonMins);
     const margin = 30;
     return { minMins: Math.max(30, total - margin), maxMins: total + margin };
   })();
@@ -1157,7 +1183,20 @@ export function BookingSection({
   const loyaltyDiscountAmount = isLoyaltyEligible
     ? Math.round(servicePrice * loyaltyDiscountPct / 100 * 100) / 100
     : 0;
-  const totalAfterDiscount = Math.max(0, totalWithTravel - loyaltyDiscountAmount);
+  const totalAfterLoyalty = Math.max(0, totalWithTravel - loyaltyDiscountAmount);
+
+  // Membership credit: applied after loyalty/coupons/gift cards. Caps at the
+  // remaining total OR the available balance, whichever is smaller. All math
+  // done in cents to avoid float-precision drift, then converted to dollars
+  // for the bookDetailing payload.
+  const totalAfterLoyaltyCents = Math.round(totalAfterLoyalty * 100);
+  const membershipBalanceCents = activeMembership?.credit_balance_cents ?? 0;
+  const hasMembershipBalance = membershipBalanceCents > 0;
+  const membershipCreditAppliedCents = activeMembership && applyMembershipCredit && hasMembershipBalance
+    ? Math.min(membershipBalanceCents, totalAfterLoyaltyCents)
+    : 0;
+  const membershipCreditApplied = membershipCreditAppliedCents / 100;
+  const totalAfterDiscount = Math.max(0, (totalAfterLoyaltyCents - membershipCreditAppliedCents) / 100);
 
   // Cash-on-arrival pricing — server enforces the actual discount; this just
   // displays the dual price so the customer can see the savings before they
@@ -1187,6 +1226,29 @@ export function BookingSection({
   useEffect(() => {
     if (!isVisible) return;
     setLoyaltyDiscountPct(initialLoyaltyDiscountPct ?? 0);
+  }, [isVisible, initialLoyaltyDiscountPct]);
+
+  // Fetch active membership credit when modal opens (logged-in users only).
+  // Guests don't have memberships — `initialLoyaltyDiscountPct === null` is
+  // the guest signal already used elsewhere in this component.
+  useEffect(() => {
+    if (!isVisible) return;
+    if (initialLoyaltyDiscountPct === null) {
+      setActiveMembership(null);
+      return;
+    }
+    getMyActiveMembership().then(m => {
+      if (m && m.credit_balance_cents > 0) {
+        setActiveMembership({
+          id: m.id,
+          credit_balance_cents: m.credit_balance_cents,
+          credit_total_cents: m.credit_total_cents,
+          expires_at: m.expires_at,
+        });
+      } else {
+        setActiveMembership(null);
+      }
+    }).catch(() => setActiveMembership(null));
   }, [isVisible, initialLoyaltyDiscountPct]);
 
   // Fetch profile by phone on step 3 for pre-fill + loyalty discount for guests
@@ -1244,26 +1306,20 @@ export function BookingSection({
       : "Ultimate Interior + Exterior Reset";
     const targetService = services.find(s => s.name === targetName);
     if (!targetService) return null;
-    const targetPrice = targetService.price_small ?? 0;
+    // Ultimate is size-tiered — compare against the customer's actual vehicle size
+    // so the upgrade delta is accurate. Falls back to price_small for safety.
+    const targetPrice = vehicleSize
+      ? getPriceForSize(targetService, vehicleSize as VehicleSizeSlug)
+      : (targetService.price_small ?? 0);
     const delta = targetPrice - (servicePrice + addonsTotal);
     return { targetService, targetName, targetPrice, delta };
-  }, [ultimateNudgeDismissed, selectedService, selectedAddons, services, servicePrice, addonsTotal]);
+  }, [ultimateNudgeDismissed, selectedService, selectedAddons, services, servicePrice, addonsTotal, vehicleSize]);
 
   const handleSwitchToUltimate = () => {
     if (!ultimateNudge) return;
     onSelectService(ultimateNudge.targetService);
     setUltimateNudgeDismissed(true);
   };
-
-  // Ultimate packages are flat-rate — auto-set a neutral size so validation passes
-  // without ever showing the size picker to the customer.
-  // Paint correction services include "Ultimate Exterior" in the name but are NOT flat-rate;
-  // they use the 4-tier picker, so they are explicitly excluded here.
-  const isUltimateService = !!(
-    selectedService &&
-    selectedService.name.toLowerCase().includes("ultimate") &&
-    !isPaintCorrectionService(selectedService.name)
-  );
 
   // Multi-vehicle support — only for standard car services (not boat/RV/paint/maintenance)
   const supportsMultiVehicle = !!(
@@ -1277,8 +1333,8 @@ export function BookingSection({
   })());
 
   // Total booking duration: each additional vehicle gets -30 min efficiency discount (min 30).
-  // Extra time from duration-extending add-ons (e.g. Ultimate Interior +3 hrs) is folded in here.
-  const addonExtraDurationMins = getAddonExtraDurationMins(selectedAddons);
+  // Extra time from duration-extending add-ons (e.g. Ultimate Interior +3 hrs, ceramic_3yr +1.5-2.5 hrs) is folded in here.
+  const addonExtraDurationMins = getAddonExtraDurationMins(selectedAddons, vehicleSize || "sedan");
   const primaryDurationMins = selectedService
     ? getDurationForService(
         selectedService.name,
@@ -1292,12 +1348,11 @@ export function BookingSection({
     const base = getDurationForService(v.serviceName, v.vehicleSize as VehicleSizeSlug);
     return sum + Math.max(30, base - 30);
   }, 0);
-  const totalBookingDurationMins = primaryDurationMins + additionalDurationMins;
-  useEffect(() => {
-    if (isUltimateService) {
-      setVehicleSize("compact");
-    }
-  }, [isUltimateService]);
+  // Cap at the same-day booking window so XL 2-Step + Ceramic-style combos
+  // still book (as a full-day appointment) instead of returning zero slots.
+  const totalBookingDurationMins = Math.min(MAX_SAME_DAY_BOOKING_MINS, primaryDurationMins + additionalDurationMins);
+  // Ultimate services used to be flat-rate; now they're size-tiered, so the
+  // customer must pick a vehicle size like any other service. No auto-set.
 
   // Reset form state each time the booking section is opened (inline section — no body scroll lock).
   // If `prefilledVehicle` is supplied (e.g. from a marketing-page picker), seed the vehicle fields
@@ -1598,10 +1653,10 @@ export function BookingSection({
 
   // ── Re-price upholstery shampoo if vehicle size changes after selection ────
   useEffect(() => {
-    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 50;
+    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
     setSelectedAddons(prev => prev.map(a =>
       a.id === "upholstery_shampoo"
-        ? { ...a, price: vehicleSize === "xl" ? base + 15 : base }
+        ? { ...a, price: vehicleSize === "xl" ? base + 20 : base }
         : a
     ));
   }, [vehicleSize]);
@@ -1777,10 +1832,8 @@ export function BookingSection({
         return !!(vehicleYear && vehicleMake && vehicleModel &&
           typeof boatLength === "number" && boatLength >= minFt);
       }
-      // Ultimate packages are flat-rate — no size selection needed
-      const primaryValid = isUltimateService
-        ? !!(vehicleYear && vehicleMake && vehicleModel)
-        : !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
+      // All vehicle services (including Ultimate, now size-tiered) require a size pick
+      const primaryValid = !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel);
       if (!primaryValid) return false;
       // Each additional vehicle must be fully filled out
       for (const av of additionalVehicles) {
@@ -1865,6 +1918,10 @@ export function BookingSection({
         giftCardId: appliedGiftCard.giftCardId,
         giftCardCode: appliedGiftCard.code,
         giftCardDiscount,
+      }),
+      ...(activeMembership && membershipCreditApplied > 0 && {
+        membershipId: activeMembership.id,
+        membershipCreditApplied,
       }),
     };
   };
@@ -2933,17 +2990,8 @@ export function BookingSection({
                         </div>
                       </div>
 
-                      {/* Vehicle Size — hidden for flat-rate Ultimate packages */}
-                      {isUltimateService ? (
-                        <div className="flex flex-col items-center text-center gap-1.5 rounded-2xl border border-[#D4AF37]/25 bg-[#D4AF37]/[0.05] px-5 py-4">
-                          <Crown size={16} className="text-[#D4AF37]" />
-                          <p className="text-sm font-bold text-white">
-                            {selectedService?.price_small != null ? `$${selectedService.price_small}` : ""} — Flat Rate
-                          </p>
-                          <p className="text-[11px] text-zinc-500">One price for all vehicle sizes. No upsell.</p>
-                        </div>
-                      ) : (
-                        <div>
+                      {/* Vehicle Size — required for all vehicle services (Ultimate is now size-tiered) */}
+                      <div>
                           <div className="flex flex-col items-center mb-3 gap-1">
                             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
                               Vehicle Size
@@ -2998,8 +3046,7 @@ export function BookingSection({
                               Vehicle not found in our database — please select your size above
                             </p>
                           )}
-                        </div>
-                      )}
+                      </div>
 
                       {/* Enhance Your Detail (Smart per-service Add-ons) */}
                       {(() => {
@@ -3219,13 +3266,24 @@ export function BookingSection({
                                               </div>
                                               <div className="px-3.5 py-2.5">
                                                 <div className="flex items-center gap-2 flex-wrap">
+                                                  <p className="text-xs font-bold text-zinc-100">Front 3 Windows</p>
+                                                  <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                    Best Value
+                                                  </span>
+                                                </div>
+                                                <p className="text-[11px] text-zinc-500 leading-snug mt-1">
+                                                  Windshield + both front side windows — full driver-zone coverage. Side mirrors stay clear in the rain.
+                                                </p>
+                                              </div>
+                                              <div className="px-3.5 py-2.5">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                   <p className="text-xs font-bold text-zinc-100">All Windows</p>
                                                   <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                                                     Recommended
                                                   </span>
                                                 </div>
                                                 <p className="text-[11px] text-zinc-500 leading-snug mt-1">
-                                                  Windshield + side windows + rear glass. Rain rolls off your side mirrors and stays clear of blind spots too.
+                                                  Windshield + all side windows + rear glass. Maximum protection — stays clear in blind spots too.
                                                 </p>
                                               </div>
                                             </div>
@@ -3235,11 +3293,17 @@ export function BookingSection({
                                     </AnimatePresence>
 
                                     {/* Tier sub-buttons — each is its own visibly-clickable card */}
-                                    <div className="grid grid-cols-2 gap-2 p-2 bg-zinc-950/60">
+                                    <div className="grid grid-cols-3 gap-2 p-2 bg-zinc-950/60">
                                       {windowCoatOpts.map((addon) => {
                                         const isSelected = selectedAddons.some(a => a.id === addon.id);
-                                        const shortLabel = addon.id === "window_coat_windshield" ? "Windshield Only" : "All Windows";
-                                        const subLabel   = addon.id === "window_coat_windshield" ? "Front glass only" : "Every piece of glass";
+                                        const shortLabel =
+                                          addon.id === "window_coat_windshield" ? "Windshield"
+                                          : addon.id === "window_coat_front"    ? "Front 3"
+                                          : "All Windows";
+                                        const subLabel =
+                                          addon.id === "window_coat_windshield" ? "Front glass only"
+                                          : addon.id === "window_coat_front"    ? "Windshield + 2 sides"
+                                          : "Every piece of glass";
                                         const price = getEffectiveAddonPrice(addon, vehicleSize as string);
                                         return (
                                           <button
@@ -3527,17 +3591,21 @@ export function BookingSection({
                                               <div>
                                                 <div className="flex items-center justify-center gap-1.5 mb-2">
                                                   <Crown size={11} className="text-[#D4AF37]" />
-                                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Ultimate Series — Flat Rate</span>
+                                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Ultimate Series</span>
                                                 </div>
                                                 <div className="grid grid-cols-1 gap-1.5">
                                                   {ultSvcs.map(svc => {
                                                     const selected = av.serviceId === svc.id;
-                                                    const price = svc.price_small ?? 0;
+                                                    // Ultimate is now size-tiered. If the additional vehicle already
+                                                    // has a size from auto-detect, use it; otherwise default to compact
+                                                    // (smallest price — customer can adjust if needed).
+                                                    const avSize = (av.vehicleSize || "compact") as VehicleSizeSlug;
+                                                    const price = getPriceForSize(svc, avSize);
                                                     return (
                                                       <button
                                                         key={svc.id}
                                                         type="button"
-                                                        onClick={() => updateAdditionalVehicle(idx, { serviceId: svc.id, serviceName: svc.name, servicePrice: price, selectedAddons: [], vehicleSize: "compact" })}
+                                                        onClick={() => updateAdditionalVehicle(idx, { serviceId: svc.id, serviceName: svc.name, servicePrice: price, selectedAddons: [], vehicleSize: avSize })}
                                                         className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
                                                           selected
                                                             ? "bg-[#D4AF37]/15 border-[#D4AF37]/60"
@@ -3546,7 +3614,7 @@ export function BookingSection({
                                                       >
                                                         <div className="min-w-0">
                                                           <span className={`text-sm font-semibold ${selected ? "text-[#D4AF37]" : "text-zinc-200"}`}>{svc.name}</span>
-                                                          <p className="text-[10px] text-zinc-500 mt-0.5">Deep clean — flat rate, any size</p>
+                                                          <p className="text-[10px] text-zinc-500 mt-0.5">Deep clean — from ${svc.price_small}</p>
                                                         </div>
                                                         <div className="shrink-0 flex flex-col items-end gap-0.5 ml-2">
                                                           <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
@@ -4070,18 +4138,55 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                               <span className="font-semibold">−${loyaltyDiscountAmount.toFixed(2)}</span>
                             </div>
                           )}
+                          {activeMembership && (
+                            <div className={`mt-2 rounded-xl border px-3 py-2.5 transition-colors ${
+                              hasMembershipBalance
+                                ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.04]"
+                                : "border-white/[0.06] bg-zinc-900/30 opacity-70"
+                            }`}>
+                              <label className={`flex items-start gap-2.5 ${hasMembershipBalance ? "cursor-pointer" : "cursor-not-allowed"}`}>
+                                <input
+                                  type="checkbox"
+                                  className="mt-0.5 w-4 h-4 accent-[#D4AF37] cursor-pointer disabled:cursor-not-allowed"
+                                  checked={applyMembershipCredit && hasMembershipBalance}
+                                  disabled={!hasMembershipBalance}
+                                  onChange={(e) => setApplyMembershipCredit(e.target.checked)}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <span className={`text-xs font-bold inline-flex items-center gap-1.5 ${hasMembershipBalance ? "text-[#D4AF37]" : "text-zinc-500"}`}>
+                                      <Crown size={11} fill="currentColor" />
+                                      {hasMembershipBalance ? "Apply membership credit" : "Membership credit used up"}
+                                    </span>
+                                    {membershipCreditApplied > 0 && (
+                                      <span className="text-sm font-black text-[#D4AF37] tabular-nums">
+                                        −${membershipCreditApplied.toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">
+                                    {hasMembershipBalance
+                                      ? `Available: ${formatCentsCompact(activeMembership.credit_balance_cents)} of ${formatCentsCompact(activeMembership.credit_total_cents)}`
+                                      : `0 remaining of ${formatCentsCompact(activeMembership.credit_total_cents)} — renews when membership is repurchased`}
+                                  </p>
+                                </div>
+                              </label>
+                            </div>
+                          )}
                         </div>
                         {showDualPrice && computedPrice !== null ? (
                           <div className="pt-4 mt-3 border-t border-[#2a2a2a]">
                             <div className="flex items-baseline justify-between mb-1">
                               <span className="font-bold text-zinc-300">Total</span>
                               <div className="flex flex-col items-end">
-                                <span className="text-2xl font-black text-[#D4AF37] tabular-nums leading-none">
-                                  ${cashTotal.toFixed(2)}
-                                  <span className="text-[10px] font-bold text-[#D4AF37]/80 ml-1.5 uppercase tracking-wider">cash</span>
+                                {/* Card price displayed as the main rate */}
+                                <span className="text-2xl font-black text-white tabular-nums leading-none">
+                                  ${totalAfterDiscount.toFixed(2)}
+                                  <span className="text-[10px] font-bold text-zinc-500 ml-1.5 uppercase tracking-wider">card</span>
                                 </span>
-                                <span className="text-xs text-zinc-500 tabular-nums mt-1">
-                                  ${totalAfterDiscount.toFixed(2)} <span className="text-[9px] uppercase tracking-wider text-zinc-600">card</span>
+                                {/* Cash price emphasized as the savings offer */}
+                                <span className="text-xs font-bold tabular-nums mt-1 text-[#D4AF37]">
+                                  ${cashTotal.toFixed(2)} <span className="text-[9px] uppercase tracking-wider text-[#D4AF37]/80">cash · save ${(totalAfterDiscount - cashTotal).toFixed(0)}</span>
                                 </span>
                               </div>
                             </div>
@@ -4294,12 +4399,12 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 : isSubscription
                                   ? "Subscribe & Pay at Arrival"
                                   : showDualPrice
-                                    ? `Pay $${cashTotal.toFixed(2)} Cash on Arrival`
+                                    ? `Pay $${totalAfterDiscount.toFixed(2)} on Arrival`
                                     : "Book & Pay at Arrival"}
                             </div>
                             <div className="text-xs text-zinc-500 mt-1">
                               {showDualPrice && !isSubmitting
-                                ? <>We&apos;ll confirm via text · or ${totalAfterDiscount.toFixed(2)} card</>
+                                ? <>We&apos;ll confirm via text · <span className="text-[#D4AF37] font-bold">or ${cashTotal.toFixed(2)} cash &middot; save ${(totalAfterDiscount - cashTotal).toFixed(0)}</span></>
                                 : "We'll confirm via text · Pay cash or card on the day"}
                             </div>
                           </div>

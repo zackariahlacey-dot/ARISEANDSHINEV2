@@ -102,8 +102,9 @@ function detailRow(label: string, value: string, isLast = false): string {
 
 /**
  * Renders the final Total cell. When a card price is provided AND it's
- * higher than the total (i.e., a cash-on-arrival booking), shows the
- * cash-vs-card comparison so the customer knows what to pay either way.
+ * higher than the total (i.e., a cash-on-arrival booking), displays the
+ * card price as the primary anchor and the cash price as the savings offer.
+ * The customer still pays `totalPrice` (cash) if they bring cash on arrival.
  */
 function totalCell(label: string, totalPrice: number, cardPrice?: number): string {
   const showDual = cardPrice != null && cardPrice > totalPrice;
@@ -122,6 +123,7 @@ function totalCell(label: string, totalPrice: number, cardPrice?: number): strin
         </td>
       </tr>`;
   }
+  const savings = (cardPrice! - totalPrice).toFixed(0);
   return `
     <tr>
       <td style="padding:18px 22px;">
@@ -133,12 +135,12 @@ function totalCell(label: string, totalPrice: number, cardPrice?: number): strin
             </td>
             <td align="right" style="vertical-align:top;">
               <p style="font-size:24px;font-weight:900;color:#111111;margin:0 0 2px;line-height:1;">
-                $${esc(totalPrice.toFixed(2))}
-                <span style="font-size:10px;font-weight:800;color:#16a34a;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">cash</span>
+                $${esc(cardPrice!.toFixed(2))}
+                <span style="font-size:10px;font-weight:800;color:#999999;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">card</span>
               </p>
-              <p style="font-size:13px;font-weight:600;color:#999999;margin:0;line-height:1;">
-                $${esc(cardPrice.toFixed(2))}
-                <span style="font-size:9px;font-weight:700;color:#bbbbbb;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">card</span>
+              <p style="font-size:13px;font-weight:700;color:#16a34a;margin:0;line-height:1;">
+                $${esc(totalPrice.toFixed(2))}
+                <span style="font-size:9px;font-weight:700;color:#16a34a;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">cash · save $${savings}</span>
               </p>
             </td>
           </tr>
@@ -308,7 +310,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
             </p>
             <p style="font-size:12px;color:#b45309;margin:0;line-height:1.55;">
               ${d.cardPrice != null && d.cardPrice > d.totalPrice
-                ? `Pay <strong>$${esc(d.totalPrice.toFixed(2))} cash</strong> on-site — or <strong>$${esc(d.cardPrice.toFixed(2))} card</strong>. No payment is taken until the job is complete and you're happy.`
+                ? `Pay <strong>$${esc(d.cardPrice.toFixed(2))} card</strong> on-site — or <strong style="color:#16a34a;">$${esc(d.totalPrice.toFixed(2))} cash</strong> and save $${esc((d.cardPrice - d.totalPrice).toFixed(0))}. No payment is taken until the job is complete and you're happy.`
                 : `We accept cash or card on-site. No payment is taken until the job is complete and you're happy.`}
             </p>
           </td></tr>

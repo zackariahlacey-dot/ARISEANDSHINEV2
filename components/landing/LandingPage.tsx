@@ -1991,7 +1991,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 250, priceLarge: 250,
+    priceNormal: 240, priceLarge: 270,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Interior Detail",
@@ -2005,13 +2005,13 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom quality — every surface, inside and out.",
-    priceNormal: 350, priceLarge: 350,
+    priceNormal: 350, priceLarge: 400,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
       "Full Exterior Hand Wash & Dry",
       "Plastic Trim Restoration",
-      "12-Month Ceramic Spray Coating",
+      "6-Month Ceramic Spray Coating",
     ],
     isFlagship: true,
   },
@@ -2036,8 +2036,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Layers,
     tagline: "Removes 60–75% of light defects.",
     isFlagship: false,
-    prices: { compact: 300, sedan: 350, suv: 375, xl: 550 } satisfies Record<PaintSizeId, number>,
-    hours:  { compact: 4,   sedan: 4.5, suv: 5,   xl: 7   } satisfies Record<PaintSizeId, number>,
+    prices:    { compact: 350, sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { compact: 3.5, sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { compact: 4.5, sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
   },
   {
     serviceName: "Ultimate Exterior + 2-Step Paint Correction",
@@ -2046,8 +2047,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Gem,
     tagline: "Removes 85–95% of correctable defects.",
     isFlagship: true,
-    prices: { compact: 475, sedan: 575, suv: 650, xl: 800 } satisfies Record<PaintSizeId, number>,
-    hours:  { compact: 5.5, sedan: 6,   suv: 7,   xl: 8.5 } satisfies Record<PaintSizeId, number>,
+    prices:    { compact: 550, sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { compact: 6.5, sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { compact: 8.0, sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
   },
 ] as const;
 
@@ -2061,7 +2063,7 @@ const ULTIMATE_EXTERIOR_INCLUDES_LANDING = [
 ];
 
 const PAINT_CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  compact: 300, sedan: 350, suv: 425, xl: 500,
+  compact: 250, sedan: 300, suv: 350, xl: 400,
 };
 
 // ─── Ultimate Service Card ─────────────────────────────────────────────────────
@@ -2151,9 +2153,11 @@ function UltimateServiceCard({
             ? "bg-gradient-to-br from-[#D4AF37]/[0.13] to-[#D4AF37]/[0.04] border-[#D4AF37]/30"
             : "bg-zinc-950/60 border-[#D4AF37]/18"
         }`}>
-          <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-2">Flat Rate — All Vehicle Sizes</div>
+          <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-2">
+            {priceNormal === priceLarge ? "Flat Rate — All Vehicle Sizes" : "Range — Varies by Vehicle Size"}
+          </div>
           <div className={`text-5xl font-black tabular-nums leading-none ${isFlagship ? "text-[#D4AF37]" : "text-white"}`}>
-            ${priceNormal}
+            {priceNormal === priceLarge ? `$${priceNormal}` : `$${priceNormal}–$${priceLarge}`}
           </div>
           <div className="text-xs text-zinc-600 mt-2">No hidden fees · We bring everything</div>
           {/* Decorative gem watermark */}
@@ -2317,7 +2321,8 @@ function LandingPaintCorrectionBlock({
         {PAINT_CORRECTION_CARDS.map((card) => {
           const BadgeIcon = card.badgeIcon;
           const price = card.prices[activeSize];
-          const hours = card.hours[activeSize];
+          const hoursLow = card.hoursLow[activeSize];
+          const hoursHigh = card.hoursHigh[activeSize];
           return (
             <div key={card.serviceName}
               className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
@@ -2371,7 +2376,7 @@ function LandingPaintCorrectionBlock({
                         transition={{ duration: 0.18 }}
                         className="text-base font-black tabular-nums text-zinc-200"
                       >
-                        {size ? `${hours} hrs` : `${card.hours.compact}–${card.hours.xl} hrs`}
+                        {size ? `${hoursLow}–${hoursHigh} hrs` : `${card.hoursLow.compact}–${card.hoursHigh.xl} hrs`}
                       </motion.div>
                     </div>
                   </div>
@@ -2427,7 +2432,7 @@ function LandingPaintCorrectionBlock({
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-[11px] text-zinc-400 text-center">
           <div className="flex items-center gap-1.5">
             <Plus size={11} className="text-[#D4AF37]" />
-            <span><strong className="text-zinc-200">2–3 yr Ceramic</strong>{" "}
+            <span><strong className="text-zinc-200">2-yr Ceramic</strong>{" "}
               {size
                 ? `+$${PAINT_CERAMIC_3YR_PRICES[activeSize]}`
                 : `+$${PAINT_CERAMIC_3YR_PRICES.compact}–$${PAINT_CERAMIC_3YR_PRICES.xl}`}

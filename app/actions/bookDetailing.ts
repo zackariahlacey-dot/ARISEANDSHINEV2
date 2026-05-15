@@ -72,6 +72,11 @@ export type BookingPayload = {
   giftCardDiscount?: number;
   /** Gift card UUID — needed to deduct the balance */
   giftCardId?: string;
+  /** Premium Annual Membership — credit applied to this booking (in dollars).
+   *  When set, the system validates the membership has sufficient balance
+   *  and atomically deducts it after the booking is confirmed. */
+  membershipId?: string;
+  membershipCreditApplied?: number;
 };
 
 export type BookingResult =
@@ -353,6 +358,29 @@ export async function bookDetailing(
     }
   }
 
+  // ── 1b2. Validate membership credit (deducted after booking confirms) ───
+  // Verify the membership belongs to this profile, is active, and has enough credit.
+  // Actual deduction happens atomically via consume_membership_credit RPC below.
+  if (payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0) {
+    const { data: m } = await adminSupabase
+      .from("memberships")
+      .select("id, profile_id, status, expires_at, credit_balance_cents")
+      .eq("id", payload.membershipId)
+      .maybeSingle();
+    const creditCents = Math.round(payload.membershipCreditApplied * 100);
+    if (!m
+      || m.profile_id !== profileId
+      || m.status !== "active"
+      || new Date(m.expires_at as string) <= new Date()
+      || Number(m.credit_balance_cents) < creditCents
+    ) {
+      return {
+        success: false,
+        error: "Membership credit could not be applied. Please refresh and try again.",
+      };
+    }
+  }
+
   // ── 1c. Deduct gift card balance (Pay at Arrival only) ──────────────────
   if (!isPayNow && payload.giftCardId && payload.giftCardDiscount && payload.giftCardDiscount > 0) {
     const { data: gc } = await adminSupabase
@@ -586,6 +614,10 @@ export async function bookDetailing(
             giftCardCode: payload.giftCardCode ?? "",
             giftCardDiscount: String(payload.giftCardDiscount),
           }),
+          ...(payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0 && {
+            membershipId: payload.membershipId,
+            membershipCreditAppliedCents: String(Math.round(payload.membershipCreditApplied * 100)),
+          }),
 },
         success_url: `${origin}/?stripe=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/?stripe=cancelled`,
@@ -636,6 +668,12 @@ export async function bookDetailing(
           : null,
       additional_vehicles_json: additionalVehiclesForDb,
 ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
+      ...(payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0
+        ? {
+            membership_id: payload.membershipId,
+            membership_credit_applied_cents: Math.round(payload.membershipCreditApplied * 100),
+          }
+        : {}),
     })
     .select("id")
     .single();
@@ -647,6 +685,22 @@ export async function bookDetailing(
       success: false,
       error: "Could not finalize your booking. Please try again.",
     };
+  }
+
+  // ── 3a-pre0. Consume membership credit atomically ──────────────────────
+  // RPC is atomic + balance-checked at the DB layer, so concurrent bookings
+  // can't drive the balance negative. If it fails after the booking row is
+  // already inserted, we log but don't fail the booking — admin can reconcile.
+  if (payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0) {
+    const creditCents = Math.round(payload.membershipCreditApplied * 100);
+    const { error: consumeErr } = await adminSupabase.rpc("consume_membership_credit", {
+      p_membership_id: payload.membershipId,
+      p_amount_cents:  creditCents,
+    });
+    if (consumeErr) {
+      console.error("[bookDetailing] membership credit consume failed (booking remains confirmed):", consumeErr);
+      logError({ type: "general", source: "bookDetailing/membershipCredit", message: consumeErr.message, details: { bookingId: booking.id, membershipId: payload.membershipId, creditCents } });
+    }
   }
 
   // ── 3a-pre. Auto-deactivate the coupon if it just hit its usage limit ────

@@ -22,7 +22,7 @@ export async function cancelBooking(bookingId: string): Promise<{
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_date, booking_time, status, total_price, user_id, stripe_checkout_session_id, customer_name, customer_email, service_name, profiles(first_name, last_name, email, completed_detail_count, loyalty_discount_pct), services(name)"
+      "id, booking_date, booking_time, status, total_price, user_id, stripe_checkout_session_id, customer_name, customer_email, service_name, membership_id, membership_credit_applied_cents, profiles(first_name, last_name, email, completed_detail_count, loyalty_discount_pct), services(name)"
     )
     .eq("id", bookingId)
     .single();
@@ -44,6 +44,19 @@ export async function cancelBooking(bookingId: string): Promise<{
   if (updateError) {
     console.error("[cancelBooking] update:", updateError);
     return { success: false, error: updateError.message };
+  }
+
+  // ── Restore membership credit if this booking used it ──────────────────
+  const membershipId = (booking as any).membership_id as string | null;
+  const creditAppliedCents = Number((booking as any).membership_credit_applied_cents ?? 0);
+  if (membershipId && creditAppliedCents > 0) {
+    const { error: restoreErr } = await supabase.rpc("restore_membership_credit", {
+      p_membership_id: membershipId,
+      p_amount_cents:  creditAppliedCents,
+    });
+    if (restoreErr) {
+      console.error("[cancelBooking] credit restore failed (cancellation still applied):", restoreErr);
+    }
   }
 
   // ── Loyalty: decrement count if this was a qualifying service ───────────
