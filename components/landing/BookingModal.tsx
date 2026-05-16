@@ -1923,6 +1923,10 @@ export function BookingSection({
         membershipId: activeMembership.id,
         membershipCreditApplied,
       }),
+      ...(loyaltyDiscountAmount > 0 && {
+        loyaltyDiscountPct,
+        loyaltyDiscountAmount,
+      }),
     };
   };
 

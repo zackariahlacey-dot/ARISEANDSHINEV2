@@ -34,7 +34,7 @@ import {
   Phone, MessageSquare, Navigation, Check, X, Trash2,
   RotateCcw, Loader2, Car, DollarSign, Lock, Zap, Send,
   Copy, Pencil, StickyNote, Mail, AlertCircle, ClipboardCheck,
-  UserPlus,
+  UserPlus, AlertTriangle,
 } from "lucide-react";
 import {
   format, startOfMonth, getDay, getDaysInMonth,
@@ -2174,6 +2174,123 @@ export default function SchedulePage() {
                         </div>
                       );
                     })}
+                  </div>
+                );
+              })()}
+
+              {/* ── Pricing Breakdown ───────────────────────────────────── */}
+              {(() => {
+                const b: any = activeBooking;
+                // Parse various discount/fee lines out of the notes blob since
+                // they aren't stored as separate columns yet.
+                const notesStr = (b.notes ?? "") as string;
+                const matchAmount = (re: RegExp): number | null => {
+                  const m = notesStr.match(re);
+                  return m ? Number(m[1]) : null;
+                };
+                const matchText = (re: RegExp): string | null => {
+                  const m = notesStr.match(re);
+                  return m ? m[1] : null;
+                };
+                const travelFee     = matchAmount(/🚗 Travel Fee:\s*\$(\d+(?:\.\d+)?)/);
+                const setupFee      = matchAmount(/🧹 One-time Setup & Reset:\s*\$(\d+(?:\.\d+)?)/);
+                const pointsAmt     = matchAmount(/🎁 Redeemed \d+ pts for \$(\d+(?:\.\d+)?)/);
+                const promoCode     = matchText(/🏷️ Promo code\s+(\S+)\s+applied/);
+                const promoAmt      = matchAmount(/🏷️ Promo code[^$]+\$(\d+(?:\.\d+)?)\s+off/);
+                const giftCode      = matchText(/🎁 Gift card \(([^)]+)\)/);
+                const giftAmt       = matchAmount(/🎁 Gift card[^$]+\$(\d+(?:\.\d+)?)\s+off/);
+                const loyaltyPct    = matchAmount(/⭐ Loyalty discount \((\d+)%/);
+                const loyaltyAmt    = matchAmount(/⭐ Loyalty discount[^$]+\$(\d+(?:\.\d+)?)\s+off/);
+                // Coupon from joined coupons table (admin client fetched it)
+                const couponObj     = Array.isArray(b.coupons) ? b.coupons[0] : b.coupons;
+                const couponCode    = promoCode ?? couponObj?.code ?? null;
+                // Service base — looked up from joined services table
+                const svcObj        = Array.isArray(b.services) ? b.services[0] : b.services;
+                const sizeKey       = ({ small: "price_small", medium: "price_medium", large: "price_large", extra_large: "price_extra_large" } as const)[(b.vehicle_size ?? "medium") as "small"|"medium"|"large"|"extra_large"] ?? "price_medium";
+                const servicePrice  = svcObj ? Number(svcObj[sizeKey] ?? svcObj.price_small ?? 0) : 0;
+                // Addons
+                const primaryAddons: any[] = Array.isArray(b.addons_json) ? b.addons_json : [];
+                const primaryAddonsTotal = primaryAddons.reduce((s, a) => s + Number(a.price ?? 0), 0);
+                const addls: any[] = Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json : [];
+                const addlVehiclesTotal = addls.reduce((s, av) => {
+                  const sp = Number(av.servicePrice ?? av.sp ?? 0);
+                  const addonSum = (Array.isArray(av.selectedAddons) ? av.selectedAddons : []).reduce((s2: number, a: any) => s2 + Number(a.price ?? 0), 0);
+                  return s + sp + addonSum;
+                }, 0);
+                // Membership credit
+                const memberCreditCents = Number(b.membership_credit_applied_cents ?? 0);
+                const memberCredit = memberCreditCents / 100;
+                // Computed subtotal
+                const subtotal = servicePrice + primaryAddonsTotal + addlVehiclesTotal + (travelFee ?? 0) + (setupFee ?? 0);
+                const knownDiscounts = (promoAmt ?? 0) + (giftAmt ?? 0) + (pointsAmt ?? 0) + (loyaltyAmt ?? 0) + memberCredit;
+                const totalPrice = Number(b.total_price ?? 0);
+                // Implied additional discount (cash discount or admin price edit)
+                const impliedExtra = Math.max(0, Math.round((subtotal - knownDiscounts - totalPrice) * 100) / 100);
+
+                if (servicePrice === 0 && subtotal === 0) return null; // Boat/RV footage-priced or missing data
+
+                const Row = ({ label, amount, negative, dim, accent }: { label: string; amount: string; negative?: boolean; dim?: boolean; accent?: string }) => (
+                  <div className="flex items-center justify-between px-4 py-2 text-xs">
+                    <span className={dim ? "text-zinc-600" : "text-zinc-400"}>{label}</span>
+                    <span className={`tabular-nums font-bold ${accent ?? (negative ? "text-emerald-400" : "text-zinc-200")}`}>
+                      {negative ? "−" : ""}{amount}
+                    </span>
+                  </div>
+                );
+
+                return (
+                  <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Pricing Breakdown</span>
+                    </div>
+                    <div className="divide-y divide-white/[0.03]">
+                      {servicePrice > 0 && (
+                        <Row label={`${svcObj?.name ?? "Service"} (${b.vehicle_size ?? "—"})`} amount={`$${servicePrice.toFixed(2)}`} />
+                      )}
+                      {primaryAddons.map((a: any, i: number) => (
+                        <Row key={`pa-${i}`} label={`+ ${a.label ?? a.id}`} amount={`$${Number(a.price ?? 0).toFixed(2)}`} dim />
+                      ))}
+                      {addls.length > 0 && (
+                        <Row label={`Additional vehicle${addls.length === 1 ? "" : "s"} subtotal (${addls.length})`} amount={`$${addlVehiclesTotal.toFixed(2)}`} />
+                      )}
+                      {travelFee != null && travelFee > 0 && (
+                        <Row label="Travel fee" amount={`$${travelFee.toFixed(2)}`} />
+                      )}
+                      {setupFee != null && setupFee > 0 && (
+                        <Row label="One-time setup fee" amount={`$${setupFee.toFixed(2)}`} />
+                      )}
+                      {loyaltyAmt != null && loyaltyAmt > 0 && (
+                        <Row label={`⭐ Loyalty (${loyaltyPct ?? "?"}% off)`} amount={`$${loyaltyAmt.toFixed(2)}`} negative />
+                      )}
+                      {promoAmt != null && promoAmt > 0 && (
+                        <Row label={`🏷️ Promo${couponCode ? ` ${couponCode}` : ""}`} amount={`$${promoAmt.toFixed(2)}`} negative />
+                      )}
+                      {!promoAmt && couponObj && (
+                        <Row label={`🏷️ Coupon ${couponObj.code}${couponObj.discount_percentage ? ` (${couponObj.discount_percentage}% off)` : couponObj.discount_amount ? ` ($${couponObj.discount_amount} off)` : ""}`} amount="—" dim />
+                      )}
+                      {giftAmt != null && giftAmt > 0 && (
+                        <Row label={`🎁 Gift card${giftCode ? ` ${giftCode}` : ""}`} amount={`$${giftAmt.toFixed(2)}`} negative />
+                      )}
+                      {pointsAmt != null && pointsAmt > 0 && (
+                        <Row label="🎁 Points redeemed" amount={`$${pointsAmt.toFixed(2)}`} negative />
+                      )}
+                      {memberCredit > 0 && (
+                        <Row label="👑 Membership credit" amount={`$${memberCredit.toFixed(2)}`} negative accent="text-[#D4AF37]" />
+                      )}
+                      {impliedExtra > 0.01 && loyaltyAmt == null && (
+                        <Row label="Other adjustment (cash discount / admin edit)" amount={`$${impliedExtra.toFixed(2)}`} negative dim />
+                      )}
+                    </div>
+                    <div className="px-4 py-3 border-t border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
+                      <span className="text-xs font-bold text-zinc-300">Charged total</span>
+                      <span className="text-base font-black text-white tabular-nums">${totalPrice.toFixed(2)}</span>
+                    </div>
+                    {/* Math check: warn if numbers don't reconcile */}
+                    {Math.abs(subtotal - knownDiscounts - impliedExtra - totalPrice) > 0.5 && (
+                      <div className="px-4 py-2 bg-amber-500/[0.06] border-t border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-1.5">
+                        <AlertTriangle size={11} /> Math mismatch — discounts may be missing from notes. Subtotal ${subtotal.toFixed(2)} − discounts ${(knownDiscounts + impliedExtra).toFixed(2)} ≠ ${totalPrice.toFixed(2)}.
+                      </div>
+                    )}
                   </div>
                 );
               })()}

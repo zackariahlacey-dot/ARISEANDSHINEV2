@@ -357,7 +357,8 @@ export async function getAllBookings() {
       *,
       profiles:user_id(id, first_name, last_name, phone, completed_detail_count, loyalty_discount_pct),
       vehicles:vehicle_id(id, make, model, year, size),
-      services:service_id(name, description)
+      services:service_id(name, description, price_small, price_medium, price_large, price_extra_large),
+      coupons:coupon_id(id, code, discount_amount, discount_percentage)
     `)
     .order("booking_date", { ascending: false })
     .order("booking_time", { ascending: false });

@@ -77,6 +77,11 @@ export type BookingPayload = {
    *  and atomically deducts it after the booking is confirmed. */
   membershipId?: string;
   membershipCreditApplied?: number;
+  /** Loyalty discount snapshot — pct + dollar amount applied to service price.
+   *  Stored on the booking notes so admin can audit exactly what discount was
+   *  applied without recomputing from the profile (which may have changed). */
+  loyaltyDiscountPct?: number;
+  loyaltyDiscountAmount?: number;
 };
 
 export type BookingResult =
@@ -478,6 +483,12 @@ export async function bookDetailing(
         : null,
       payload.couponDiscount != null && payload.couponDiscount > 0
         ? `🏷️ Promo code${payload.couponCode ? ` ${payload.couponCode}` : ""} applied: $${payload.couponDiscount.toFixed(2)} off`
+        : null,
+      payload.loyaltyDiscountAmount != null && payload.loyaltyDiscountAmount > 0
+        ? `⭐ Loyalty discount (${payload.loyaltyDiscountPct ?? 0}% off): $${payload.loyaltyDiscountAmount.toFixed(2)} off`
+        : null,
+      payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0
+        ? `👑 Membership credit applied: $${payload.membershipCreditApplied.toFixed(2)}`
         : null,
       payload.giftCardCode && payload.giftCardDiscount != null && payload.giftCardDiscount > 0
         ? `🎁 Gift card (${payload.giftCardCode}): $${payload.giftCardDiscount.toFixed(2)} off`
