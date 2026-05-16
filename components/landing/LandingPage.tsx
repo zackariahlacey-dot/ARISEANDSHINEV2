@@ -52,6 +52,7 @@ import {
 } from "@/lib/vehicleDatabase";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { SiteHeader } from "./SiteHeader";
+import { BuildYourPackage } from "./BuildYourPackage";
 import { SqueezeMeInModal } from "./SqueezeMeInModal";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
@@ -156,6 +157,12 @@ export function LandingPage({ services }: { services: Service[] }) {
     make: string;
     model: string;
     size?: VehicleSizeSlug;
+  } | null>(null);
+  const [builderPrefill, setBuilderPrefill] = useState<{
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleSize: VehicleSizeSlug;
+    addonIds: string[];
   } | null>(null);
   const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -726,8 +733,19 @@ export function LandingPage({ services }: { services: Service[] }) {
             </p>
           </div>
 
-          {/* ── Mobile/tablet: single carousel ──────────────────────── */}
-          {mounted && <div className="lg:hidden">
+          {/* ── Build Your Package (replaces basic detail cards) ──── */}
+          <BuildYourPackage
+            services={services}
+            onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel }) => {
+              const svc = services.find(s => s.name === serviceName) ?? null;
+              setSelectedService(svc);
+              setBuilderPrefill({ vehicleMake, vehicleModel, vehicleSize, addonIds });
+              setExpandedBookingId("services");
+            }}
+          />
+
+          {/* ── Legacy basic-services carousel (HIDDEN — superseded by builder) */}
+          {false && mounted && <div className="hidden">
             <div className="flex flex-col items-center w-full">
               <div
                 ref={carouselRef}
@@ -754,21 +772,21 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
           </div>}
 
-          {/* ── Desktop: standard services grid ──────────────────── */}
-          {carouselServices.length > 0 && (
-            <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
+          {/* Legacy desktop grid (HIDDEN) */}
+          {false && carouselServices.length > 0 && (
+            <div className="hidden">
               {carouselServices.map((service) => (
                 <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
               ))}
             </div>
           )}
 
-          {/* ── Inline booking for standard services ── */}
+          {/* ── Inline booking for standard services / Build Your Package handoff ── */}
           {mounted && expandedBookingId === "services" && (
             <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
               <BookingSection
                 isVisible={true}
-                onClose={() => setExpandedBookingId(null)}
+                onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
                 selectedService={selectedService}
                 services={services}
                 onSelectService={setSelectedService}
@@ -777,12 +795,19 @@ export function LandingPage({ services }: { services: Service[] }) {
                 initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
+                prefilledVehicle={builderPrefill ? {
+                  make: builderPrefill.vehicleMake,
+                  model: builderPrefill.vehicleModel,
+                  size: builderPrefill.vehicleSize,
+                } : null}
+                prefilledAddonIds={builderPrefill?.addonIds ?? null}
               />
             </div>
           )}
 
-          {/* ── Ultimate Series ──────────────────────────────────────── */}
-          <div className="mt-14 md:mt-20">
+          {/* ── Ultimate Series (HIDDEN — superseded by Build Your Package) ── */}
+          {false && (
+          <div className="hidden mt-14 md:mt-20">
             {/* Ultimate Series intro */}
             <div className="mb-8 md:mb-10">
               <div className="flex items-center gap-3 mb-6">
@@ -832,6 +857,12 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
 
             {/* ── Ultimate Paint Correction (sister sub-section) ── */}
+            <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
+          </div>
+          )}
+
+          {/* ── Ultimate Paint Correction (kept visible — premium offering) ── */}
+          <div className="mt-14 md:mt-20">
             <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
           </div>
 

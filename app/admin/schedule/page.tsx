@@ -2220,6 +2220,8 @@ export default function SchedulePage() {
                 const giftAmt       = matchAmount(/🎁 Gift card[^$]+\$(\d+(?:\.\d+)?)\s+off/);
                 const loyaltyPct    = matchAmount(/⭐ Loyalty discount \((\d+)%/);
                 const loyaltyAmt    = matchAmount(/⭐ Loyalty discount[^$]+\$(\d+(?:\.\d+)?)\s+off/);
+                const bundleAddons  = matchAmount(/🎁 Bundle discount \((\d+) add-ons\)/);
+                const bundleAmt     = matchAmount(/🎁 Bundle discount[^$]+\$(\d+(?:\.\d+)?)\s+off/);
                 // Coupon from joined coupons table (admin client fetched it)
                 const couponObj     = Array.isArray(b.coupons) ? b.coupons[0] : b.coupons;
                 const couponCode    = promoCode ?? couponObj?.code ?? null;
@@ -2241,7 +2243,7 @@ export default function SchedulePage() {
                 const memberCredit = memberCreditCents / 100;
                 // Computed subtotal
                 const subtotal = servicePrice + primaryAddonsTotal + addlVehiclesTotal + (travelFee ?? 0) + (setupFee ?? 0);
-                const knownDiscounts = (promoAmt ?? 0) + (giftAmt ?? 0) + (pointsAmt ?? 0) + (loyaltyAmt ?? 0) + memberCredit;
+                const knownDiscounts = (promoAmt ?? 0) + (giftAmt ?? 0) + (pointsAmt ?? 0) + (loyaltyAmt ?? 0) + (bundleAmt ?? 0) + memberCredit;
                 const totalPrice = Number(b.total_price ?? 0);
                 // Implied additional discount (cash discount or admin price edit)
                 const impliedExtra = Math.max(0, Math.round((subtotal - knownDiscounts - totalPrice) * 100) / 100);
@@ -2280,6 +2282,9 @@ export default function SchedulePage() {
                       )}
                       {loyaltyAmt != null && loyaltyAmt > 0 && (
                         <Row label={`⭐ Loyalty (${loyaltyPct ?? "?"}% off)`} amount={`$${loyaltyAmt.toFixed(2)}`} negative />
+                      )}
+                      {bundleAmt != null && bundleAmt > 0 && (
+                        <Row label={`🎁 Bundle (${bundleAddons ?? "?"} add-ons stacked)`} amount={`$${bundleAmt.toFixed(2)}`} negative accent="text-violet-400" />
                       )}
                       {promoAmt != null && promoAmt > 0 && (
                         <Row label={`🏷️ Promo${couponCode ? ` ${couponCode}` : ""}`} amount={`$${promoAmt.toFixed(2)}`} negative />

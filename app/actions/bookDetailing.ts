@@ -82,6 +82,10 @@ export type BookingPayload = {
    *  applied without recomputing from the profile (which may have changed). */
   loyaltyDiscountPct?: number;
   loyaltyDiscountAmount?: number;
+  /** Build Your Package bundle discount — total dollars off across all add-ons
+   *  when the customer stacked 2+. Snapshotted to notes for audit. */
+  bundleDiscount?: number;
+  bundleAddonCount?: number;
 };
 
 export type BookingResult =
@@ -491,6 +495,9 @@ export async function bookDetailing(
         : null,
       payload.loyaltyDiscountAmount != null && payload.loyaltyDiscountAmount > 0
         ? `⭐ Loyalty discount (${payload.loyaltyDiscountPct ?? 0}% off): $${payload.loyaltyDiscountAmount.toFixed(2)} off`
+        : null,
+      payload.bundleDiscount != null && payload.bundleDiscount > 0
+        ? `🎁 Bundle discount (${payload.bundleAddonCount ?? 0} add-ons): $${payload.bundleDiscount.toFixed(2)} off`
         : null,
       payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0
         ? `👑 Membership credit applied: $${payload.membershipCreditApplied.toFixed(2)}`

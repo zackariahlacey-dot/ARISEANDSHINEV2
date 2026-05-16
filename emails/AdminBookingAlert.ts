@@ -164,10 +164,16 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
   const addonsHtml = o.addonsJson?.length
     ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ($${a.price})</li>`).join("")
     : "";
+  // Interior/Exterior/Full Detail are now Build Your Package bookings — flag
+  // them in the alert so the owner sees at a glance which packages were stacked.
+  const svcLower = (o.serviceName ?? "").toLowerCase();
+  const isCustomPackage = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
+  const hasAddons = (o.addonsJson?.length ?? 0) > 0 || ((o.additionalVehicles?.length ?? 0) > 0);
+  const alertTitle = isCustomPackage && hasAddons ? "🛠️ New Custom Package Booking" : "🚗 New Vehicle Booking";
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>New Vehicle Booking — Arise And Shine VT</title></head>
+<title>${alertTitle} — Arise And Shine VT</title></head>
 <body style="${base}">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:32px 16px;">
@@ -181,7 +187,7 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
       <!-- ALERT BAR -->
       <tr><td style="background-color:#16a34a;padding:14px 24px;text-align:center;">
         <p style="color:#ffffff;font-size:16px;font-weight:900;margin:0;letter-spacing:0.02em;">
-          &#128663; New Vehicle Booking
+          ${alertTitle}
         </p>
         <p style="color:#bbf7d0;font-size:12px;margin:4px 0 0;">
           ${esc(o.bookingDate)} at ${esc(o.bookingTime)}

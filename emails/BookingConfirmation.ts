@@ -237,6 +237,15 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
   const firstName = esc(d.customerName.trim().split(/\s+/)[0] ?? "there");
   const vehicleLabel = `${esc(d.vehicleYear)} ${esc(d.vehicleMake)} ${esc(d.vehicleModel)}`;
   const travelStr = d.travelFee > 0 ? `$${d.travelFee}` : "Included";
+  // Build Your Package flow uses Interior/Exterior/Full Detail service rows.
+  // When the customer stacked add-ons via the builder, surface that clearly
+  // in the headline so they recognize the email as their custom package.
+  const svcLower = (d.serviceName ?? "").toLowerCase();
+  const isCustomPackage = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
+  const hasAddons = (d.addonsJson?.length ?? 0) > 0 || ((d.additionalVehicles?.length ?? 0) > 0);
+  const headline = isCustomPackage
+    ? (hasAddons ? "Your Custom Package is Scheduled!" : "Your Detail is Confirmed!")
+    : "Your Detail is Confirmed!";
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -256,8 +265,11 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
         <div style="width:60px;height:60px;background-color:#16a34a;border-radius:50%;
                     line-height:60px;font-size:28px;color:#fff;margin:0 auto 16px auto;text-align:center;">&#10003;</div>
         <h1 style="color:#ffffff;font-size:26px;font-weight:900;margin:0 0 8px;letter-spacing:-0.4px;">
-          Your Detail is Confirmed!
+          ${headline}
         </h1>
+        ${isCustomPackage && hasAddons ? `
+        <p style="display:inline-block;color:#D4AF37;font-size:10px;font-weight:800;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.35);border-radius:999px;padding:4px 10px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px;">Build Your Package</p>
+        ` : ""}
         <p style="color:#aaaaaa;font-size:14px;margin:0;">
           See you on <strong style="color:#ffffff;">${esc(date)}</strong>
           at <strong style="color:#ffffff;">${esc(d.bookingTime)}</strong>

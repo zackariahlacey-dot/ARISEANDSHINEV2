@@ -40,10 +40,16 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
     });
 
     const sn = bookingDetails.serviceName.toLowerCase();
+    // Interior/Exterior/Full Detail bookings now flow through the Build Your
+    // Package builder — surface that in the subject so customers recognize
+    // their custom-built order.
+    const isBuilderPackage = sn === "interior detail" || sn === "exterior detail" || sn === "full detail";
     const subjectPrefix = sn.includes("boat")
       ? "Your Boat Detail is Confirmed — Waterline Up"
       : sn.includes("rv") || sn.includes("motorhome")
       ? "Your RV Detail is Confirmed"
+      : isBuilderPackage
+      ? "Your Custom Detail Package is Scheduled"
       : "Your Detail is Confirmed";
 
     const { data, error } = await resend.emails.send({

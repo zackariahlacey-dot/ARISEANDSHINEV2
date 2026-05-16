@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
+import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { SiteHeader } from "./SiteHeader";
+import { BuildYourPackage } from "./BuildYourPackage";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -143,6 +145,12 @@ export function DetailingPage({ services }: { services: Service[] }) {
   const [mounted, setMounted] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [builderPrefill, setBuilderPrefill] = useState<{
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleSize: VehicleSizeSlug;
+    addonIds: string[];
+  } | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
 
@@ -226,9 +234,26 @@ export function DetailingPage({ services }: { services: Service[] }) {
         </div>
       </section>
 
-      {/* ── Core Packages ────────────────────────────────────────────────────── */}
+      {/* ── Build Your Package (replaces the old 3-card Core Packages grid) ──── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
         className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
+      >
+        <BuildYourPackage
+          services={services}
+          onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel }) => {
+            const svc = services.find(s => s.name === serviceName) ?? null;
+            setSelectedService(svc);
+            setBuilderPrefill({ vehicleMake, vehicleModel, vehicleSize, addonIds });
+            setBookingOpen(true);
+            setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+          }}
+        />
+      </motion.section>
+
+      {/* ── Legacy core-package grid (hidden — superseded by Build Your Package) */}
+      {false && (
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="hidden py-12 md:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-5xl mx-auto">
           <div className="mb-8 text-center">
@@ -332,6 +357,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
           )}
         </div>
       </motion.section>
+      )}
 
       {/* ── Salt Season Recovery (Vermont Winter Defense) ───────────────────── */}
       {(() => {
@@ -397,9 +423,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
         );
       })()}
 
-      {/* ── Ultimate Series ──────────────────────────────────────────────────── */}
+      {/* ── Ultimate Series (HIDDEN — superseded by Build Your Package) ──────── */}
+      {false && (
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+        className="hidden py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
         <div className="max-w-5xl mx-auto">
           <div className="mb-8 text-center">
@@ -479,6 +506,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
           </div>
         </div>
       </motion.section>
+      )}
 
       {/* ── Ultimate Paint Correction ────────────────────────────────────────── */}
       <PaintCorrectionSection openBooking={openUltimateBooking} />
@@ -514,7 +542,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
           {mounted && bookingOpen && (
             <BookingSection
               isVisible={true}
-              onClose={() => setBookingOpen(false)}
+              onClose={() => { setBookingOpen(false); setBuilderPrefill(null); }}
               selectedService={selectedService}
               services={services}
               onSelectService={setSelectedService}
@@ -522,6 +550,12 @@ export function DetailingPage({ services }: { services: Service[] }) {
               initialLoyaltyDiscountPct={null}
               initialDraft={null}
               onDraftRestored={() => {}}
+              prefilledVehicle={builderPrefill ? {
+                make: builderPrefill.vehicleMake,
+                model: builderPrefill.vehicleModel,
+                size: builderPrefill.vehicleSize,
+              } : null}
+              prefilledAddonIds={builderPrefill?.addonIds ?? null}
             />
           )}
         </div>

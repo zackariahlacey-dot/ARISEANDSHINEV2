@@ -66,16 +66,24 @@ const ALL_ADD_ONS = [
   // ── Vehicle / Standard ────────────────────────────────────────────────────
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
   { id: "headlight_restore",   label: "Headlight Restoration",               price: 60,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
-  { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 60,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",  label: "Upholstery & Floorboard Shampoo",    price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $95." },
+  { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 75,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
+  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $95." },
   { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
   { id: "leather_condition",   label: "Leather Conditioning",                 price: 45, desc: "Deep-clean and condition all leather surfaces with premium conditioner — restores softness, prevents cracking, and leaves a clean matte finish." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
   { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
-  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 30,  desc: "Remove embedded contaminants for a glass-smooth finish before wax or sealant." },
-  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 30,  desc: "Deep extraction of embedded pet hair from seats, carpet & cargo area. Applied upon inspection — only charged if heavy accumulation is present." },
+  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50,  desc: "Smooths paint by lifting embedded contaminants and upgrades your ceramic spray from 3-month to 6-month protection. Required prep before any sealant." },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 50,  desc: "Deep extraction of embedded pet hair from seats, carpet & cargo area. Applied upon inspection — only charged if heavy accumulation is present." },
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
+  // ── Build Your Package add-ons (new) ─────────────────────────────────────
+  { id: "headliner_clean",     label: "Headliner Cleaning",                   price: 40,  desc: "Gentle dry-foam cleaning of the fabric headliner — lifts stains, smoke residue and dust without saturating the adhesive." },
+  { id: "salt_stain_removal",  label: "Salt Stain Removal & Prevention",      price: 50,  desc: "Vermont winter survival: neutralize and lift dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
+  { id: "steam_sanitation",    label: "Steam Sanitation",                     price: 45,  desc: "High-pressure steam sanitizes vents, cup holders, seat tracks and every crevice — kills bacteria and lifts grime nothing else can reach." },
+  { id: "trim_dressing",       label: "Trim, Rubber & Glass Dressing",        price: 30,  desc: "UV-protective dressing on all exterior trim, rubber seals, and a streak-free glass polish. Brings tired plastics back to deep black." },
+  { id: "exhaust_wheel_barrel", label: "Exhaust Tips & Wheel Barrel Detail",  price: 35,  desc: "Polish exhaust tips to a mirror finish and deep-clean the inside (barrel) of each wheel — the part nobody else cleans." },
+  { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85,  desc: "The full-monty paint prep: clay bar + iron remover chemically dissolves embedded brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar." },
+  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on",  price: 85,  desc: "Add the Salt Season Recovery undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment to your exterior service. Cheaper than booking it standalone since the wash is already done." },
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
@@ -110,10 +118,16 @@ const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_ge
 const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore", "ozone_treatment"];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
+/** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
+const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation"];
+/** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
+const BUILDER_EXTERIOR_ADDON_IDS = ["clay_bar", "mech_chem_decon", "headlight_restore", "trim_dressing", "exhaust_wheel_barrel", "salt_recovery_addon", "wheel_ceramic"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
 const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior", "wheel_ceramic"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
 const CARGO_ADDON_IDS    = ["cargo_light", "cargo_heavy"];
+/** Decontamination tiers — mutually exclusive (clay bar alone OR full mech/chem decon) */
+const DECON_ADDON_IDS    = ["clay_bar", "mech_chem_decon"];
 /** 2-Year Graphene Window Coating tiers — mutually exclusive (windshield / front 3 / all glass).
  *  Surfaced only on services that touch the exterior glass: Exterior, Full,
  *  Ultimate Interior + Exterior, and Paint Correction packages. */
@@ -227,15 +241,15 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return ALL_ADD_ONS.filter(a => ids.includes(a.id));
   }
 
-  // Exterior Detail (no cargo — exterior only)
+  // Exterior Detail (Build Your Package foundation) — all exterior builder add-ons + window coating + cargo if work van
   if (n.includes("exterior") && !n.includes("full")) {
-    return ALL_ADD_ONS.filter(a => [...STANDARD_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS, "wheel_ceramic"].includes(a.id));
+    return ALL_ADD_ONS.filter(a => [...BUILDER_EXTERIOR_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS, "engine_bay"].includes(a.id));
   }
 
-  // Interior Detail (standalone) — cargo if work van. No window coating —
-  // we don't touch exterior glass on an interior-only service.
+  // Interior Detail (Build Your Package foundation) — all interior builder add-ons + cargo if work van.
+  // No window coating — we don't touch exterior glass on an interior-only service.
   if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
-    const ids = [...STANDARD_ADDON_IDS, ...cargoIds];
+    const ids = [...BUILDER_INTERIOR_ADDON_IDS, ...cargoIds];
     return ALL_ADD_ONS.filter(a => ids.includes(a.id));
   }
 
@@ -244,8 +258,8 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
   }
 
-  // Full Detail and anything else → standard 4 add-ons + cargo if work van + window coating + wheel ceramic
-  const ids = [...STANDARD_ADDON_IDS, ...cargoIds, ...WINDOW_COATING_ADDON_IDS, "wheel_ceramic"];
+  // Full Detail (Build Your Package foundation) → all interior + exterior add-ons + cargo if work van + window coating
+  const ids = [...BUILDER_INTERIOR_ADDON_IDS, ...BUILDER_EXTERIOR_ADDON_IDS, ...cargoIds, ...WINDOW_COATING_ADDON_IDS];
   return ALL_ADD_ONS.filter(a => ids.includes(a.id));
 }
 
@@ -906,6 +920,9 @@ export interface BookingSectionProps {
     size?: VehicleSizeSlug;
     year?: string;
   } | null;
+  /** Add-on IDs to pre-select when the modal opens — used by the Build Your
+   *  Package flow to carry the customer's choices into the booking modal. */
+  prefilledAddonIds?: string[] | null;
   /** Called whenever booking step/progress changes so parent can show a summary bar */
   onProgress?: (data: BookingProgressData | null) => void;
 }
@@ -923,6 +940,7 @@ export function BookingSection({
   onDraftRestored,
   initialCategory,
   prefilledVehicle = null,
+  prefilledAddonIds = null,
   onProgress,
 }: BookingSectionProps) {
   const router = useRouter();
@@ -992,7 +1010,8 @@ export function BookingSection({
       if (isSelected) {
         return prev.filter(a => a.id !== addon.id);
       } else {
-        // Floorboard / cargo / window-coating tiers are mutually exclusive within their group
+        // Mutually-exclusive groups: floorboard tiers, cargo tiers, window coating tiers,
+        // and decon (Clay Bar OR Mech/Chem — picking one removes the other).
         let filtered = prev;
         if (FLOOR_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !FLOOR_ADDON_IDS.includes(a.id));
@@ -1000,6 +1019,8 @@ export function BookingSection({
           filtered = prev.filter(a => !CARGO_ADDON_IDS.includes(a.id));
         } else if (WINDOW_COATING_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !WINDOW_COATING_ADDON_IDS.includes(a.id));
+        } else if (DECON_ADDON_IDS.includes(addon.id)) {
+          filtered = prev.filter(a => !DECON_ADDON_IDS.includes(a.id));
         }
         return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string) }];
       }
@@ -1116,7 +1137,21 @@ export function BookingSection({
   const isMonthlyPlan = selectedService?.name.toLowerCase().includes("monthly maintenance");
   const setupFee = isMonthlyPlan ? getMaintenanceSetupFee(selectedService?.name ?? "") : 0;
   const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
-  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  // ── Bundle discount (Build Your Package) ────────────────────────────────
+  // Each add-on gets cheaper as more are stacked: 0/$5/$10/$15/$20 off per
+  // add-on for 1/2/3/4/5+ items. Floor of $20 per add-on so cheap ones don't
+  // go below a reasonable amount. Total bundle discount is shown as a line
+  // item on the price summary + snapshotted in booking notes for admin audit.
+  const bundleDiscountPerAddon = selectedAddons.length <= 1 ? 0
+    : selectedAddons.length === 2 ? 5
+    : selectedAddons.length === 3 ? 10
+    : selectedAddons.length === 4 ? 15
+    : 20;
+  const bundleDiscount = selectedAddons.reduce((sum, a) => {
+    const effective = Math.max(20, a.price - bundleDiscountPerAddon);
+    return sum + (a.price - effective);
+  }, 0);
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0) - bundleDiscount;
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discountPercentage != null
       ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
@@ -1371,7 +1406,18 @@ export function BookingSection({
       setVehicleModel(prefilledVehicle?.model ?? "");
       setAutoDetected(!!(prefilledVehicle?.size));
       setBoatLength(20);
-      setSelectedAddons([]);
+      // Pre-fill add-ons from the Build Your Package handoff (if provided).
+      // Mapping addon id → ALL_ADD_ONS metadata so we get the right label + base price.
+      if (prefilledAddonIds && prefilledAddonIds.length > 0) {
+        const size = prefilledVehicle?.size as string | undefined;
+        const preAddons = prefilledAddonIds
+          .map(id => ALL_ADD_ONS.find(a => a.id === id))
+          .filter((a): a is AddonItem => !!a)
+          .map(a => ({ id: a.id, label: a.label, price: getEffectiveAddonPrice(a, size ?? "sedan") }));
+        setSelectedAddons(preAddons);
+      } else {
+        setSelectedAddons([]);
+      }
       setAdditionalVehicles([]);
       setSelectedDate("");
       setSelectedTime("");
@@ -1926,6 +1972,10 @@ export function BookingSection({
       ...(loyaltyDiscountAmount > 0 && {
         loyaltyDiscountPct,
         loyaltyDiscountAmount,
+      }),
+      ...(bundleDiscount > 0 && {
+        bundleDiscount,
+        bundleAddonCount: selectedAddons.length,
       }),
     };
   };
