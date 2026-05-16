@@ -27,9 +27,10 @@ export type BookingEmailData = {
   // Service
   serviceName: string;
   servicePrice: number;
-  /** Original card price — when > servicePrice, both prices are shown for
-   *  pay-at-arrival bookings (cash discount applied). */
-  cardPrice?: number;
+  /** Cash-discounted price — when set + less than servicePrice, both prices
+   *  are shown for pay-at-arrival bookings. servicePrice is the card/list
+   *  price stored on the booking; cashPrice is the "save $X" alternative. */
+  cashPrice?: number;
   // Schedule
   bookingDate: string; // YYYY-MM-DD
   bookingTime: string; // e.g. "10:00 AM"
@@ -1501,7 +1502,7 @@ export async function sendBookingEmails(
         bookingDate: formattedDate,
         bookingTime: data.bookingTime,
         totalPrice: data.servicePrice,
-        cardPrice: data.cardPrice,
+        cashPrice: data.cashPrice,
         paymentMethod: data.paymentMethod,
         distanceMiles: data.distanceMiles,
         notes: data.notes,

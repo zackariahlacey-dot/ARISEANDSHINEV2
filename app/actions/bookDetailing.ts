@@ -334,15 +334,20 @@ export async function bookDetailing(
   const isPayNow = payload.paymentMethod === "pay_now";
   const isSubscriptionService = payload.serviceName.toLowerCase().includes("monthly");
 
+  // Booking is always stored at the CARD/full price — that's the "owed" amount.
+  // Cash discount is shown in the UI and emails as a "save $X if paying cash"
+  // hint, but is only applied at the register when the customer hands over cash.
+  // Loyalty/points and accounting always reference the card price.
+  const bookingTotal = payload.totalPrice;
   // Cash-on-arrival discount applies only to non-subscription Pay-at-Arrival
-  // bookings. Pay Now goes through Stripe at full card price; subscriptions
-  // are billed via Stripe and shouldn't be discounted.
-  const bookingTotal = !isPayNow && !isSubscriptionService
-    ? cashPriceFor(payload.totalPrice)
-    : payload.totalPrice;
-  // When a cash discount was applied, send the original price along too so
-  // emails can render the "Cash $X · Card $Y" comparison.
-  const emailCardPrice = bookingTotal < payload.totalPrice ? payload.totalPrice : undefined;
+  // bookings. Pay Now goes through Stripe at the card price; subscriptions
+  // are Stripe-billed and shouldn't be discounted.
+  const cashTotal = !isPayNow && !isSubscriptionService && bookingTotal > 0
+    ? cashPriceFor(bookingTotal)
+    : null;
+  // Pass the cash-discounted amount to emails so they can render the
+  // "Card $X · Cash $Y if paying cash" comparison.
+  const emailCashPrice = cashTotal != null && cashTotal < bookingTotal ? cashTotal : undefined;
 
   // ── 1b. Validate point redemption (Pay at Arrival only) — deduction deferred until booking confirmed
   if (!isPayNow && payload.pointsToRedeem != null && payload.pointsToRedeem > 0) {
@@ -807,7 +812,7 @@ export async function bookDetailing(
         bookingTime: payload.bookingTime,
         travelFee: Math.round(payload.travelFee ?? 0),
         totalPrice: bookingTotal,
-        cardPrice: emailCardPrice,
+        cashPrice: emailCashPrice,
         addonsJson: payload.selectedAddons?.length ? payload.selectedAddons : undefined,
         additionalVehicles: (payload.additionalVehicles ?? []).length > 0
           ? payload.additionalVehicles!.map(av => ({
@@ -845,7 +850,7 @@ export async function bookDetailing(
       customerPhone: phoneDigits,
       serviceName: payload.serviceName,
       servicePrice: bookingTotal,
-      cardPrice: emailCardPrice,
+      cashPrice: emailCashPrice,
       bookingDate: payload.bookingDate,
       bookingTime: payload.bookingTime,
       vehicleYear: payload.vehicleYear,

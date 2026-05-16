@@ -24,6 +24,7 @@ import {
   updateBookingDurationAction,
 } from "@/app/actions/adminActions";
 import { sendStripePaymentLink, getPaymentLinkUrl } from "@/app/actions/sendStripePaymentLink";
+import { cashPriceFor } from "@/lib/cashPricing";
 import { useQuery } from "@tanstack/react-query";
 import { getSqueezeRequests, updateSqueezeStatus, type SqueezeRequest } from "@/app/actions/squeezeActions";
 import { useToast } from "@/components/admin/Toast";
@@ -2080,7 +2081,25 @@ export default function SchedulePage() {
                         </div>
                       ) : (
                         <>
-                          <p className={`text-3xl font-black ${priceColor}`}>${Number(activeBooking.total_price).toFixed(0)}</p>
+                          {(() => {
+                            const cardTotal = Number(activeBooking.total_price ?? 0);
+                            const stripeId = (activeBooking as any).stripe_checkout_session_id as string | null;
+                            const isStripe = !!stripeId;
+                            const showCash = !isStripe && cardTotal > 0;
+                            const cashTotal = showCash ? cashPriceFor(cardTotal) : null;
+                            const savings = cashTotal != null ? cardTotal - cashTotal : 0;
+                            return (
+                              <>
+                                <p className={`text-3xl font-black ${priceColor}`}>${cardTotal.toFixed(0)}</p>
+                                <p className="text-[9px] font-black uppercase tracking-wider text-zinc-500 mt-0.5">card · stored</p>
+                                {showCash && cashTotal != null && savings > 0 && (
+                                  <p className="text-xs font-bold text-emerald-400 mt-1 tabular-nums">
+                                    ${cashTotal.toFixed(0)} <span className="text-[9px] uppercase tracking-wider">cash · save ${savings.toFixed(0)}</span>
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
                           <div className="flex items-center justify-end gap-1.5 mt-1">
                             <StatusBadge status={activeBooking.status} />
                             <button
@@ -2282,9 +2301,25 @@ export default function SchedulePage() {
                       )}
                     </div>
                     <div className="px-4 py-3 border-t border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
-                      <span className="text-xs font-bold text-zinc-300">Charged total</span>
+                      <span className="text-xs font-bold text-zinc-300">Card total (stored)</span>
                       <span className="text-base font-black text-white tabular-nums">${totalPrice.toFixed(2)}</span>
                     </div>
+                    {/* Cash alternative — what to collect if paid in cash */}
+                    {(() => {
+                      const stripeId = (b as any).stripe_checkout_session_id as string | null;
+                      const isStripe = !!stripeId;
+                      if (isStripe || totalPrice <= 0) return null;
+                      const cashTotal = cashPriceFor(totalPrice);
+                      if (cashTotal >= totalPrice) return null;
+                      return (
+                        <div className="px-4 py-2.5 border-t border-emerald-500/20 bg-emerald-500/[0.04] flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-300">If paid in cash, collect</span>
+                          <span className="text-sm font-black text-emerald-400 tabular-nums">
+                            ${cashTotal.toFixed(2)} <span className="text-[10px] uppercase tracking-wider opacity-70">save ${(totalPrice - cashTotal).toFixed(0)}</span>
+                          </span>
+                        </div>
+                      );
+                    })()}
                     {/* Math check: warn if numbers don't reconcile */}
                     {Math.abs(subtotal - knownDiscounts - impliedExtra - totalPrice) > 0.5 && (
                       <div className="px-4 py-2 bg-amber-500/[0.06] border-t border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-1.5">

@@ -18,11 +18,12 @@ export type BookingConfirmationDetails = {
   bookingDate: string;
   bookingTime: string;
   travelFee: number;
-  /** Amount the customer will pay (cash price for pay-at-arrival, card price for pay-now). */
+  /** Amount the customer owes — always the CARD/list price (booking is stored at this). */
   totalPrice: number;
   /** Original card-price total. When present and > totalPrice, the email shows a
    *  "Cash $X · Card $Y" comparison so the customer knows both options. */
-  cardPrice?: number;
+  /** Cash-discounted price (when applicable) — shown as the savings offer. */
+  cashPrice?: number;
   /** Extra vehicles on the same booking (multi-vehicle discount) */
   additionalVehicles?: Array<{
     vehicleYear: string;
@@ -101,13 +102,12 @@ function detailRow(label: string, value: string, isLast = false): string {
 }
 
 /**
- * Renders the final Total cell. When a card price is provided AND it's
- * higher than the total (i.e., a cash-on-arrival booking), displays the
- * card price as the primary anchor and the cash price as the savings offer.
- * The customer still pays `totalPrice` (cash) if they bring cash on arrival.
+ * Renders the final Total cell. `totalPrice` is the card/list price (the
+ * amount the booking is stored at). When `cashPrice` is provided AND lower
+ * than total, shows the cash-savings offer below the main card price.
  */
-function totalCell(label: string, totalPrice: number, cardPrice?: number): string {
-  const showDual = cardPrice != null && cardPrice > totalPrice;
+function totalCell(label: string, totalPrice: number, cashPrice?: number): string {
+  const showDual = cashPrice != null && cashPrice < totalPrice;
   if (!showDual) {
     return `
       <tr>
@@ -123,7 +123,7 @@ function totalCell(label: string, totalPrice: number, cardPrice?: number): strin
         </td>
       </tr>`;
   }
-  const savings = (cardPrice! - totalPrice).toFixed(0);
+  const savings = (totalPrice - cashPrice!).toFixed(0);
   return `
     <tr>
       <td style="padding:18px 22px;">
@@ -135,11 +135,11 @@ function totalCell(label: string, totalPrice: number, cardPrice?: number): strin
             </td>
             <td align="right" style="vertical-align:top;">
               <p style="font-size:24px;font-weight:900;color:#111111;margin:0 0 2px;line-height:1;">
-                $${esc(cardPrice!.toFixed(2))}
+                $${esc(totalPrice.toFixed(2))}
                 <span style="font-size:10px;font-weight:800;color:#999999;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">card</span>
               </p>
               <p style="font-size:13px;font-weight:700;color:#16a34a;margin:0;line-height:1;">
-                $${esc(totalPrice.toFixed(2))}
+                $${esc(cashPrice!.toFixed(2))}
                 <span style="font-size:9px;font-weight:700;color:#16a34a;letter-spacing:0.15em;text-transform:uppercase;margin-left:4px;">cash · save $${savings}</span>
               </p>
             </td>
@@ -298,7 +298,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
               </table>
             </td>
           </tr>` : ""}
-          ${totalCell("Total Due at Arrival", d.totalPrice, d.cardPrice)}
+          ${totalCell("Total Due at Arrival", d.totalPrice, d.cashPrice)}
         </table>
 
         <!-- Payment note -->
@@ -309,8 +309,8 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
               &#128179; Payment at Arrival
             </p>
             <p style="font-size:12px;color:#b45309;margin:0;line-height:1.55;">
-              ${d.cardPrice != null && d.cardPrice > d.totalPrice
-                ? `Pay <strong>$${esc(d.cardPrice.toFixed(2))} card</strong> on-site — or <strong style="color:#16a34a;">$${esc(d.totalPrice.toFixed(2))} cash</strong> and save $${esc((d.cardPrice - d.totalPrice).toFixed(0))}. No payment is taken until the job is complete and you're happy.`
+              ${d.cashPrice != null && d.cashPrice < d.totalPrice
+                ? `Pay <strong>$${esc(d.totalPrice.toFixed(2))} card</strong> on-site — or <strong style="color:#16a34a;">$${esc(d.cashPrice.toFixed(2))} cash</strong> and save $${esc((d.totalPrice - d.cashPrice).toFixed(0))}. No payment is taken until the job is complete and you're happy.`
                 : `We accept cash or card on-site. No payment is taken until the job is complete and you're happy.`}
             </p>
           </td></tr>
@@ -439,7 +439,7 @@ function boatCustomerHtml(d: BookingConfirmationDetails, date: string): string {
               </table>
             </td>
           </tr>` : ""}
-          ${totalCell("Total Due at Arrival", d.totalPrice, d.cardPrice)}
+          ${totalCell("Total Due at Arrival", d.totalPrice, d.cashPrice)}
         </table>
 
         <!-- Waterline Up badge -->
@@ -580,7 +580,7 @@ function rvCustomerHtml(d: BookingConfirmationDetails, date: string): string {
               </table>
             </td>
           </tr>` : ""}
-          ${totalCell("Total Due at Arrival", d.totalPrice, d.cardPrice)}
+          ${totalCell("Total Due at Arrival", d.totalPrice, d.cashPrice)}
         </table>
 
         <!-- Mobile service badge -->

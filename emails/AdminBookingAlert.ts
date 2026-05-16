@@ -19,12 +19,12 @@ export type AdminBookingAlertOptions = {
   serviceName: string;
   bookingDate: string;   // formatted, e.g. "Monday, June 2, 2026"
   bookingTime: string;   // e.g. "9:00 AM"
-  /** Amount the customer will pay (cash price for pay-at-arrival, card price for pay-now). */
+  /** CARD/list price — the booking is stored at this amount. */
   totalPrice: number;
-  /** Original card-price total. When > totalPrice, the email shows a
-   *  "Cash $X · Card $Y" comparison so the owner knows what to charge
-   *  depending on how the customer pays on arrival. */
-  cardPrice?: number;
+  /** Cash-discounted alternative (when applicable). The email shows a
+   *  "Card $X · Cash $Y" comparison so the owner knows the cash savings
+   *  to apply at the register if the customer pays in cash. */
+  cashPrice?: number;
   paymentMethod?: "pay_at_arrival" | "pay_now";
   distanceMiles?: number;
   notes?: string;
@@ -105,26 +105,25 @@ function sectionHeader(text: string): string {
 }
 
 /**
- * Total cell value. When cardPrice > totalPrice (cash discount applied for
- * pay-at-arrival), shows the card price as the primary anchor and cash as
- * the savings offer. The customer pays `totalPrice` (cash) if they bring
- * cash; the booking is stored at the cash amount in the DB.
+ * Total cell value. `totalPrice` is the card/list price the booking is
+ * stored at. When `cashPrice` is set + lower, shows the cash savings
+ * underneath so the owner knows what to charge at the register.
  */
-function totalValue(totalPrice: number, cardPrice?: number): string {
-  if (cardPrice == null || cardPrice <= totalPrice) {
+function totalValue(totalPrice: number, cashPrice?: number): string {
+  if (cashPrice == null || cashPrice >= totalPrice) {
     return `<strong style="font-size:18px;color:#111;">$${esc(totalPrice.toFixed(2))}</strong>`;
   }
-  return `<strong style="font-size:18px;color:#111;">$${esc(cardPrice.toFixed(2))}</strong>` +
+  return `<strong style="font-size:18px;color:#111;">$${esc(totalPrice.toFixed(2))}</strong>` +
          `<span style="font-size:10px;font-weight:800;color:#999;letter-spacing:0.12em;text-transform:uppercase;margin-left:4px;">card</span>` +
-         `<br/><span style="font-size:13px;font-weight:700;color:#16a34a;">$${esc(totalPrice.toFixed(2))}` +
+         `<br/><span style="font-size:13px;font-weight:700;color:#16a34a;">$${esc(cashPrice.toFixed(2))}` +
          `<span style="font-size:9px;font-weight:700;color:#16a34a;letter-spacing:0.12em;text-transform:uppercase;margin-left:4px;">cash</span></span>`;
 }
 
 /** Payment-method label that calls out the cash savings when relevant. */
-function paymentLabel(method: AdminBookingAlertOptions["paymentMethod"], totalPrice: number, cardPrice?: number): string {
+function paymentLabel(method: AdminBookingAlertOptions["paymentMethod"], totalPrice: number, cashPrice?: number): string {
   if (method === "pay_now") return "<strong style='color:#16a34a;'>PAID ONLINE</strong>";
-  if (cardPrice != null && cardPrice > totalPrice) {
-    return `Due at Arrival — <strong>$${esc(cardPrice.toFixed(2))} card</strong> or <strong style='color:#16a34a;'>$${esc(totalPrice.toFixed(2))} cash</strong>`;
+  if (cashPrice != null && cashPrice < totalPrice) {
+    return `Due at Arrival — <strong>$${esc(totalPrice.toFixed(2))} card</strong> or <strong style='color:#16a34a;'>$${esc(cashPrice.toFixed(2))} cash</strong>`;
   }
   return "Due at Arrival";
 }
@@ -216,8 +215,8 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
           ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
-          ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cardPrice))}
-          ${row("Total", totalValue(o.totalPrice, o.cardPrice), !addonsHtml && !o.notes)}
+          ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cashPrice))}
+          ${row("Total", totalValue(o.totalPrice, o.cashPrice), !addonsHtml && !o.notes)}
           ${addonsHtml ? row("Add-ons", `<ul style="margin:4px 0;padding-left:16px;">${addonsHtml}</ul>`) : ""}
           ${o.notes ? row("Notes", `<em style="color:#555;">${esc(o.notes)}</em>`, true) : ""}
         </table>
@@ -317,8 +316,8 @@ function boatAdminHtml(o: AdminBookingAlertOptions): string {
           ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
-          ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cardPrice))}
-          ${row("Total", totalValue(o.totalPrice, o.cardPrice), !addonsHtml && !o.notes)}
+          ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cashPrice))}
+          ${row("Total", totalValue(o.totalPrice, o.cashPrice), !addonsHtml && !o.notes)}
           ${addonsHtml ? row("Add-ons", `<ul style="margin:4px 0;padding-left:16px;">${addonsHtml}</ul>`) : ""}
           ${o.notes ? row("Notes", `<em style="color:#555;">${esc(o.notes)}</em>`, true) : ""}
         </table>
@@ -435,8 +434,8 @@ function rvAdminHtml(o: AdminBookingAlertOptions): string {
           ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
-          ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cardPrice))}
-          ${row("Total", totalValue(o.totalPrice, o.cardPrice), !addonsHtml && !o.notes)}
+          ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cashPrice))}
+          ${row("Total", totalValue(o.totalPrice, o.cashPrice), !addonsHtml && !o.notes)}
           ${addonsHtml ? row("Add-ons", `<ul style="margin:4px 0;padding-left:16px;">${addonsHtml}</ul>`) : ""}
           ${o.notes ? row("Notes", `<em style="color:#555;">${esc(o.notes)}</em>`, true) : ""}
         </table>
