@@ -165,6 +165,9 @@ function downloadIcs(data: SuccessModalData) {
 export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
   const hasFiredConfetti = useRef(false);
   const [showCalendarOptions, setShowCalendarOptions] = useState(false);
+  // Auto-redirect countdown for signed-in customers (30s → /protected)
+  const isSignedIn = !!data && data.isGuest !== true;
+  const [autoRedirectSecs, setAutoRedirectSecs] = useState(30);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -172,6 +175,31 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
+
+  // Smart "Done" — signed-in goes to dashboard, guests go home
+  const handleDone = () => {
+    onClose();
+    if (typeof window !== "undefined") {
+      window.location.href = isSignedIn ? "/protected" : "/";
+    }
+  };
+
+  // 30s auto-redirect countdown for signed-in customers
+  useEffect(() => {
+    if (!isOpen || !isSignedIn) return;
+    setAutoRedirectSecs(30);
+    const interval = setInterval(() => {
+      setAutoRedirectSecs(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (typeof window !== "undefined") window.location.href = "/protected";
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isOpen, isSignedIn]);
 
   // Lock background scroll while the modal is open. Preserves the current
   // scroll position by setting body overflow:hidden instead of position:fixed
@@ -464,7 +492,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                   </motion.div>
                 )}
 
-                {/* Guest sign-up nudge */}
+                {/* Guest sign-up nudge — strengthened messaging about loyalty credit */}
                 {data?.isGuest && (
                   <motion.div
                     initial={{ opacity: 0, y: 6 }}
@@ -472,17 +500,31 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                     transition={{ delay: 0.42, duration: 0.3 }}
                   >
                     <a
-                      href={`/auth/login?signup=true${data?.email ? `&email=${encodeURIComponent(data.email)}` : ""}`}
-                      className="flex items-start gap-3 px-4 py-3.5 rounded-xl border border-[#d4af37]/20 bg-[#d4af37]/[0.04] hover:bg-[#d4af37]/[0.08] hover:border-[#d4af37]/35 transition-all text-left group"
+                      href={`/auth/sign-up${data?.email ? `?email=${encodeURIComponent(data.email)}` : ""}`}
+                      className="flex items-start gap-3 px-4 py-4 rounded-xl border border-[#d4af37]/35 bg-gradient-to-br from-[#d4af37]/[0.08] to-[#d4af37]/[0.02] hover:from-[#d4af37]/[0.12] hover:border-[#d4af37]/55 transition-all text-left group"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <UserPlus size={14} className="text-[#d4af37]" />
+                      <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <UserPlus size={15} className="text-[#d4af37]" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white mb-0.5">Save booking + track your loyalty tier</p>
-                        <p className="text-[11px] text-zinc-500 leading-snug">Create a free account to track appointments and unlock loyalty discounts.</p>
+                        <p className="text-sm font-black text-white mb-1">Sign up & this detail counts toward loyalty</p>
+                        <p className="text-[11px] text-zinc-400 leading-snug">
+                          We&apos;ll tie this booking to your account by email. <span className="text-[#d4af37] font-bold">Up to 20% off forever</span> at 10 details.
+                        </p>
                       </div>
                     </a>
+                  </motion.div>
+                )}
+
+                {/* Auto-redirect countdown — signed-in customers only */}
+                {isSignedIn && autoRedirectSecs > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.45, duration: 0.3 }}
+                    className="text-center text-[10px] text-zinc-600"
+                  >
+                    Heading to your dashboard in <span className="text-[#d4af37] font-bold tabular-nums">{autoRedirectSecs}s</span>
                   </motion.div>
                 )}
 
@@ -494,14 +536,14 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                   className="space-y-2.5"
                 >
                   <button
-                    onClick={onClose}
+                    onClick={handleDone}
                     className="w-full py-4 rounded-xl font-black text-sm tracking-wide text-zinc-950 transition-all active:scale-[0.98]"
                     style={{
                       background: "linear-gradient(135deg, #d4af37 0%, #f0d060 50%, #d4af37 100%)",
                       boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
                     }}
                   >
-                    Done
+                    {isSignedIn ? "Go to Dashboard" : "Back to Home"}
                   </button>
 
                   <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600">

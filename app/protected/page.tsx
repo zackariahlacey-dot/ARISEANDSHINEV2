@@ -13,6 +13,7 @@ import { SiteHeader } from "@/components/landing/SiteHeader";
 import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
 import { LevelUpConfetti } from "@/components/dashboard/LevelUpConfetti";
 import { MembershipPanel } from "@/components/dashboard/MembershipPanel";
+import { claimGuestBookings } from "@/app/actions/claimGuestBookings";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,11 @@ async function Dashboard() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth/login?redirect=/protected");
+
+  // Email-merge any guest bookings made before this user signed up — this
+  // retroactively credits past detail visits to their loyalty count.
+  // Safe to run on every dashboard load (no-op when there's nothing to merge).
+  await claimGuestBookings().catch(err => console.error("[dashboard] claimGuestBookings:", err));
 
   const profile = await getAuthProfile();
   const completedCount = profile?.completedDetailCount ?? 0;
