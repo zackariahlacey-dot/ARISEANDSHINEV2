@@ -1726,9 +1726,12 @@ export function BookingSection({
     let cancelled = false;
     setNextAvailLoading(true);
     setNextAvailDays([]);
-    // Pass combined duration so multi-vehicle slots are correctly filtered
-    const customDur = totalBookingDurationMins > primaryDurationMins ? totalBookingDurationMins : undefined;
-    getNextAvailableDays(selectedService.name, vehicleSize || "sedan", 3, 21, customDur)
+    // Always pass the actual total duration so days/slots reflect what the
+    // customer is REALLY trying to book (foundation + add-ons + additional
+    // vehicles). Previously this only passed a custom duration for multi-
+    // vehicle bookings, so single-vehicle bookings with add-ons showed days
+    // that didn't actually have enough open hours to fit the job.
+    getNextAvailableDays(selectedService.name, vehicleSize || "sedan", 3, 21, totalBookingDurationMins)
       .then(days => { if (!cancelled) setNextAvailDays(days); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setNextAvailLoading(false); });
