@@ -141,7 +141,7 @@ function additionalVehicleRows(vehicles: AdminBookingAlertOptions["additionalVeh
   return vehicles.map((av, i) => {
     const avAddons = av.selectedAddons?.length
       ? `<ul style="margin:4px 0 0;padding-left:16px;">${av.selectedAddons.map(a =>
-          `<li style="font-size:11px;color:#555;">+ ${esc(a.label)} ($${a.price})</li>`
+          `<li style="font-size:11px;color:#555;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`
         ).join("")}</ul>`
       : "";
     return row(
@@ -162,7 +162,7 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.customerAddress)}`
     : null;
   const addonsHtml = o.addonsJson?.length
-    ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ($${a.price})</li>`).join("")
+    ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`).join("")
     : "";
   // Interior/Exterior/Full Detail are now Build Your Package bookings — flag
   // them in the alert so the owner sees at a glance which packages were stacked.
@@ -266,7 +266,7 @@ function boatAdminHtml(o: AdminBookingAlertOptions): string {
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.customerAddress)}`
     : null;
   const addonsHtml = o.addonsJson?.length
-    ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ($${a.price})</li>`).join("")
+    ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`).join("")
     : "";
 
   return `<!DOCTYPE html><html lang="en">
@@ -384,7 +384,7 @@ function rvAdminHtml(o: AdminBookingAlertOptions): string {
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.customerAddress)}`
     : null;
   const addonsHtml = o.addonsJson?.length
-    ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ($${a.price})</li>`).join("")
+    ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`).join("")
     : "";
 
   return `<!DOCTYPE html><html lang="en">

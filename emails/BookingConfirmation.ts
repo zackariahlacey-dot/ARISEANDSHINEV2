@@ -217,7 +217,7 @@ function additionalVehicleRows(vehicles: BookingConfirmationDetails["additionalV
   return vehicles.map((v, i) => {
     const addonsHtml = v.selectedAddons?.length
       ? `<ul style="margin:4px 0 0;padding-left:14px;">${v.selectedAddons.map(a =>
-          `<li style="font-size:11px;color:#888888;">+ ${esc(a.label)} ($${a.price})</li>`
+          `<li style="font-size:11px;color:#888888;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`
         ).join("")}</ul>`
       : "";
     return `

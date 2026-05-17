@@ -1139,14 +1139,15 @@ export function BookingSection({
   // ── Bundle discount (Build Your Package) ────────────────────────────────
   // Each add-on gets cheaper as more are stacked: 0/$5/$10/$15/$20 off per
   // add-on for 1/2/3/4/5+ items. Floor of $20 per add-on so cheap ones don't
-  // go below a reasonable amount. Total bundle discount is shown as a line
-  // item on the price summary + snapshotted in booking notes for admin audit.
-  const bundleDiscountPerAddon = selectedAddons.length <= 1 ? 0
-    : selectedAddons.length === 2 ? 5
-    : selectedAddons.length === 3 ? 10
-    : selectedAddons.length === 4 ? 15
+  // go below a reasonable amount. Free-unlock add-ons (price 0) don't count
+  // toward the bundle tier and don't get discounted further.
+  const qualifyingAddons = selectedAddons.filter(a => a.price > 0);
+  const bundleDiscountPerAddon = qualifyingAddons.length <= 1 ? 0
+    : qualifyingAddons.length === 2 ? 5
+    : qualifyingAddons.length === 3 ? 10
+    : qualifyingAddons.length === 4 ? 15
     : 20;
-  const bundleDiscount = selectedAddons.reduce((sum, a) => {
+  const bundleDiscount = qualifyingAddons.reduce((sum, a) => {
     const effective = Math.max(20, a.price - bundleDiscountPerAddon);
     return sum + (a.price - effective);
   }, 0);
@@ -1409,10 +1410,18 @@ export function BookingSection({
       const hasBuilderHandoff = !!(prefilledAddonIds !== null && prefilledVehicle?.year && prefilledVehicle?.make && prefilledVehicle?.model && prefilledVehicle?.size);
       if (prefilledAddonIds && prefilledAddonIds.length > 0) {
         const size = prefilledVehicle?.size as string | undefined;
+        // Steam Sanitation is a free unlock from the builder when 3+ other
+        // add-ons are stacked — zero it out so the booking flow doesn't charge.
+        const qualifyingCount = prefilledAddonIds.filter(id => id !== "steam_sanitation").length;
+        const steamIsFree = prefilledAddonIds.includes("steam_sanitation") && qualifyingCount >= 3;
         const preAddons = prefilledAddonIds
           .map(id => ALL_ADD_ONS.find(a => a.id === id))
           .filter((a): a is AddonItem => !!a)
-          .map(a => ({ id: a.id, label: a.label, price: getEffectiveAddonPrice(a, size ?? "sedan") }));
+          .map(a => ({
+            id: a.id,
+            label: a.label,
+            price: (a.id === "steam_sanitation" && steamIsFree) ? 0 : getEffectiveAddonPrice(a, size ?? "sedan"),
+          }));
         setSelectedAddons(preAddons);
       } else {
         setSelectedAddons([]);

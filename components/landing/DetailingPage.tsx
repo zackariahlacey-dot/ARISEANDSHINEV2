@@ -540,7 +540,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
       {/* ── Booking anchor ───────────────────────────────────────────────────── */}
       <div id="booking-anchor" className="px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-3xl mx-auto">
-          {mounted && bookingOpen && (
+          {mounted && bookingOpen && (builderPrefill || selectedService?.name?.toLowerCase().includes("paint")) && (
             <BookingSection
               isVisible={true}
               onClose={() => { setBookingOpen(false); setBuilderPrefill(null); }}

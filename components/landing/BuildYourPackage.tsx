@@ -70,7 +70,7 @@ const INTERIOR_ADDONS: AddonDef[] = [
   { id: "leather_condition",  label: "Leather Conditioning",        price: 45, desc: "Deep-clean and condition all leather surfaces. Restores softness, prevents cracking, matte finish.", side: "interior", popular: true },
   { id: "uv_interior",        label: "UV Protection",               price: 35, desc: "UV-protective coating on all interior plastics, vinyl, and trim. Prevents fading, cracking, and sun damage.", side: "interior" },
   { id: "odor_bomb",          label: "Strong Odor Elimination",     price: 75, desc: "Heavy-duty neutralizer treatment kills embedded smoke, food, and pet odors throughout the cabin.", side: "interior" },
-  { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "High-pressure steam sanitizes vents, cup holders, seat tracks. Kills bacteria nothing else can reach.", side: "interior" },
+  { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "FREE BONUS — unlocks automatically when you add 3 or more other add-ons. High-pressure steam sanitizes vents, cup holders, and seat tracks. Kills bacteria nothing else can reach.", side: "interior" },
   { id: "headliner_clean",    label: "Headliner Cleaning",          price: 40, desc: "Gentle dry-foam cleaning of the fabric headliner. Lifts stains and smoke residue without saturating adhesive.", side: "interior" },
   { id: "salt_stain_removal", label: "Salt Stain Removal & Prevention", price: 50, desc: "Vermont winter survival: neutralize dried salt stains from carpets and door sills, then apply a salt repellent.", side: "interior" },
 ];
@@ -273,11 +273,29 @@ export function BuildYourPackage({
   };
 
   // ─── Price math ─────────────────────────────────────────────────────────
+  // Steam Sanitation is a FREE unlock at 3+ qualifying add-ons. It doesn't
+  // contribute to subtotal, doesn't get the per-addon bundle discount, and
+  // doesn't count toward the bundle-tier threshold.
+  const FREE_UNLOCK_ID = "steam_sanitation";
+  const FREE_UNLOCK_THRESHOLD = 3;
   const foundationPrice = getFoundationPrice(foundationService, vehicleSize);
   const selectedAddons = allAvailable.filter(a => selectedAddonIds.includes(a.id));
-  const addonsSubtotal = selectedAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize), 0);
-  const discountPerAddon = computeBundleDiscountPerAddon(selectedAddonIds.length);
-  const bundleDiscount = selectedAddons.reduce((s, a) => {
+  const qualifyingAddons = selectedAddons.filter(a => a.id !== FREE_UNLOCK_ID);
+  const qualifyingCount = qualifyingAddons.length;
+  const discountPerAddon = computeBundleDiscountPerAddon(qualifyingCount);
+  // Preview discount the customer WOULD get if they added one more — drives stacking
+  const nextTierDiscount = computeBundleDiscountPerAddon(qualifyingCount + 1);
+  const steamUnlocked = qualifyingCount >= FREE_UNLOCK_THRESHOLD;
+  const steamSelected = selectedAddonIds.includes(FREE_UNLOCK_ID);
+  // If steam is selected but unlock isn't met yet, drop it from selection silently
+  useEffect(() => {
+    if (steamSelected && !steamUnlocked) {
+      setSelectedAddonIds(prev => prev.filter(id => id !== FREE_UNLOCK_ID));
+    }
+  }, [steamSelected, steamUnlocked]);
+
+  const addonsSubtotal = qualifyingAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize), 0);
+  const bundleDiscount = qualifyingAddons.reduce((s, a) => {
     const base = getAddonEffectivePrice(a, vehicleSize);
     return s + (base - Math.max(20, base - discountPerAddon));
   }, 0);
@@ -304,46 +322,87 @@ export function BuildYourPackage({
   const renderAddonCard = (addon: AddonDef) => {
     const isSelected = selectedAddonIds.includes(addon.id);
     const isExpanded = expandedAddon === addon.id;
+    const isFreeUnlock = addon.id === FREE_UNLOCK_ID;
+    const isLocked = isFreeUnlock && !steamUnlocked;
     const base = getAddonEffectivePrice(addon, vehicleSize);
-    const effective = isSelected ? Math.max(20, base - discountPerAddon) : base;
-    const showDiscount = isSelected && discountPerAddon > 0 && effective < base;
+    // Selected price: regular discount applies. Unselected: preview the
+    // "would-be" price at the NEXT tier so it looks more enticing.
+    const effective = isSelected
+      ? Math.max(20, base - discountPerAddon)
+      : Math.max(20, base - nextTierDiscount);
+    const showSelectedDiscount = isSelected && discountPerAddon > 0 && effective < base;
+    const showPreviewDiscount = !isSelected && !isFreeUnlock && nextTierDiscount > 0 && effective < base;
+
+    const handleClick = () => {
+      if (isLocked) return; // can't manually add steam before unlock
+      toggleAddon(addon);
+    };
+
     return (
       <div
         key={addon.id}
         className={`relative rounded-xl border transition-all overflow-hidden ${
           isSelected
-            ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] shadow-[0_0_14px_rgba(212,175,55,0.12)]"
-            : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
+            ? isFreeUnlock
+              ? "border-emerald-500 bg-gradient-to-br from-emerald-500/[0.10] to-emerald-500/[0.02] shadow-[0_0_14px_rgba(16,185,129,0.18)]"
+              : "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] shadow-[0_0_14px_rgba(212,175,55,0.12)]"
+            : isFreeUnlock && steamUnlocked
+              ? "border-emerald-500/60 bg-emerald-500/[0.05] hover:border-emerald-500"
+              : isLocked
+                ? "border-white/[0.05] bg-zinc-900/20 opacity-60"
+                : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
         }`}
       >
         <button
-          onClick={() => toggleAddon(addon)}
-          className="w-full p-2.5 active:scale-[0.98] transition-transform text-left"
+          onClick={handleClick}
+          disabled={isLocked}
+          className={`w-full p-2.5 transition-transform text-left ${isLocked ? "cursor-not-allowed" : "active:scale-[0.98]"}`}
           aria-pressed={isSelected}
         >
           <div className="flex items-center gap-2 min-w-0">
             {/* Checkbox */}
             <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
-              isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
+              isSelected
+                ? isFreeUnlock ? "bg-emerald-500" : "bg-[#D4AF37]"
+                : "bg-zinc-800 border border-zinc-700"
             }`}>
-              {isSelected ? <Check size={9} className="text-black" strokeWidth={3} /> : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
+              {isSelected
+                ? <Check size={9} className="text-black" strokeWidth={3} />
+                : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
             </span>
 
-            {/* Label + optional popular flame */}
+            {/* Label + flair */}
             <div className="flex-1 min-w-0 flex items-center gap-1.5">
-              <span className={`text-[11.5px] font-bold leading-tight truncate ${isSelected ? "text-white" : "text-zinc-200"}`}>
+              <span className={`text-[11.5px] font-bold leading-tight truncate ${isSelected ? "text-white" : isLocked ? "text-zinc-500" : "text-zinc-200"}`}>
                 {addon.label}
               </span>
-              {addon.popular && !isSelected && (
+              {addon.popular && !isSelected && !isLocked && (
                 <Flame size={10} className="text-amber-400 shrink-0" fill="currentColor" />
               )}
             </div>
 
-            {/* Price (right-aligned, fixed width) */}
+            {/* Price / FREE state */}
             <div className="shrink-0 text-right">
-              {showDiscount ? (
-                <div className="flex items-baseline gap-1">
+              {isFreeUnlock ? (
+                isSelected ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    <Check size={9} strokeWidth={3} /> Free
+                  </span>
+                ) : steamUnlocked ? (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">Free · tap</span>
+                ) : (
+                  <span className="text-[9px] font-bold text-zinc-500 leading-tight inline-block text-right">
+                    FREE at<br/>{FREE_UNLOCK_THRESHOLD} add-ons
+                  </span>
+                )
+              ) : showSelectedDiscount ? (
+                <div className="flex items-baseline gap-1 justify-end">
                   <span className="text-xs font-black text-[#D4AF37] tabular-nums">${effective}</span>
+                  <span className="text-[9px] text-zinc-600 line-through tabular-nums">${base}</span>
+                </div>
+              ) : showPreviewDiscount ? (
+                <div className="flex items-baseline gap-1 justify-end">
+                  <span className="text-xs font-black text-violet-400 tabular-nums">${effective}</span>
                   <span className="text-[9px] text-zinc-600 line-through tabular-nums">${base}</span>
                 </div>
               ) : (

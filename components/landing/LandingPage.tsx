@@ -306,11 +306,12 @@ export function LandingPage({ services }: { services: Service[] }) {
           setShowSuccessModal(true);
         }
       } else {
-        // Cancelled or rebook — restore the booking form
-        setInitialDraft(draft);
-        setSelectedService(services.find((s) => s.id === draft.serviceId) ?? null);
-        setExpandedBookingId("hero");
-        setShowRestoreToast(true);
+        // Cancelled or rebook — old behavior auto-opened the BookingSection.
+        // New flow: just clear and let them re-enter via the builder. The old
+        // BookingSection is preserved for the builder handoff + Ultimate paths
+        // only, not as an auto-popup.
+        setInitialDraft(null);
+        try { sessionStorage.removeItem("draftBooking"); } catch {}
       }
     } catch {
       // invalid draft
@@ -341,12 +342,12 @@ export function LandingPage({ services }: { services: Service[] }) {
   }, []);
 
   const openBooking = (service?: Service) => {
-    setSelectedService(service ?? null);
-    if (!service) {
-      setExpandedBookingId("hero");
-    } else {
-      setExpandedBookingId("services");
-    }
+    // The old direct BookingSection is preserved ONLY for the builder handoff
+    // (services category, requires builderPrefill) and the Ultimate flow.
+    // All "Book Now" buttons now route to the builder by scrolling to the
+    // services section — customers must build their package first.
+    void service; // ignored — selection happens in the builder
+    document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const scrollToServices = useCallback(() => {
@@ -595,8 +596,11 @@ export function LandingPage({ services }: { services: Service[] }) {
             </button>
           </div>
 
-          {/* Inline booking dropdown (Hero) — client-only to avoid hydration mismatch */}
-          {mounted && (
+          {/* Hero inline-booking dropdown — disabled. The old BookingSection
+              no longer auto-opens from the hero; all CTAs route to the Build
+              Your Package section below via openBooking(). The component is
+              preserved for the builder handoff + Ultimate paths only. */}
+          {false && mounted && (
             <div className="w-full max-w-3xl mx-auto mt-2">
               <BookingSection
                 isVisible={expandedBookingId === "hero"}
@@ -782,8 +786,8 @@ export function LandingPage({ services }: { services: Service[] }) {
             </div>
           )}
 
-          {/* ── Inline booking for standard services / Build Your Package handoff ── */}
-          {mounted && expandedBookingId === "services" && (
+          {/* ── Inline booking — ONLY opens when builder hands off (builderPrefill set) ── */}
+          {mounted && expandedBookingId === "services" && builderPrefill && (
             <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
               <BookingSection
                 isVisible={true}
