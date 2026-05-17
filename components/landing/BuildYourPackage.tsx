@@ -67,7 +67,7 @@ type AddonDef = {
 };
 
 const INTERIOR_ADDONS: AddonDefExt[] = [
-  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. XL adds $20.", side: "interior", popular: true, premium: true },
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. XL adds $20.", side: "interior", popular: true },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      price: 50, desc: "Deep extraction of embedded pet hair from seats, carpet, and cargo. Only charged if heavy accumulation present.", side: "interior", popular: true },
   { id: "leather_condition",  label: "Leather Conditioning",        price: 45, desc: "Deep-clean and condition all leather surfaces. Restores softness, prevents cracking, matte finish.", side: "interior", popular: true },
   { id: "uv_interior",        label: "UV Protection",               price: 35, desc: "UV-protective coating on all interior plastics, vinyl, and trim. Prevents fading, cracking, and sun damage.", side: "interior" },
@@ -830,11 +830,91 @@ export function BuildYourPackage({
                   <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
               )}
-              {exteriorAvailable.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 text-left max-w-3xl mx-auto">
-                  {exteriorAvailable.map(renderAddonCard)}
-                </div>
-              )}
+              {exteriorAvailable.length > 0 && (() => {
+                // Window coatings render as ONE wide card with 3 sub-tier buttons,
+                // not 3 separate cards in the grid. Filter them out here.
+                const windowIds = ["window_coat_windshield", "window_coat_front", "window_coat_all"];
+                const regularExt = exteriorAvailable.filter(a => !windowIds.includes(a.id));
+                const windowOpts = exteriorAvailable.filter(a => windowIds.includes(a.id));
+                const selectedWindow = windowOpts.find(a => selectedAddonIds.includes(a.id));
+                return (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 text-left max-w-3xl mx-auto">
+                      {regularExt.map(renderAddonCard)}
+                    </div>
+                    {/* ── Graphene Window Coating — consolidated card ────────── */}
+                    {windowOpts.length > 0 && (
+                      <div className="mt-3 max-w-3xl mx-auto">
+                        <div className={`relative rounded-2xl border overflow-hidden transition-all ${
+                          selectedWindow
+                            ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.15] via-[#F0D060]/[0.06] to-[#D4AF37]/[0.02] shadow-[0_0_20px_rgba(212,175,55,0.22)]"
+                            : "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.04] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/65 hover:from-[#D4AF37]/[0.07]"
+                        }`}>
+                          {/* Header */}
+                          <div className="px-4 pt-3.5 pb-3 border-b border-white/[0.06] text-left">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm font-black text-white leading-tight">2-Year Graphene Window Coating</span>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-wider shrink-0">
+                                  <Crown size={8} fill="currentColor" />Premium
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-zinc-400 leading-snug">
+                              Hydrophobic graphene ceramic on your glass — water beads + rolls off at speed, bugs and salt wipe clean. Lasts 2 full years.
+                            </p>
+                          </div>
+                          {/* 3-tier sub-buttons */}
+                          <div className="grid grid-cols-3 gap-2 p-2 bg-zinc-950/40">
+                            {windowOpts.map(opt => {
+                              const isSelected = selectedAddonIds.includes(opt.id);
+                              const shortLabel = opt.id === "window_coat_windshield" ? "Windshield"
+                                : opt.id === "window_coat_front" ? "Front 3"
+                                : "All Glass";
+                              const subLabel = opt.id === "window_coat_windshield" ? "Front glass only"
+                                : opt.id === "window_coat_front" ? "+ 2 side windows"
+                                : "Every window + rear";
+                              const isMidTier = opt.id === "window_coat_front";
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => toggleAddon(opt)}
+                                  className={`relative px-2 py-3 rounded-xl border-2 text-center transition-all active:scale-[0.97] ${
+                                    isSelected
+                                      ? "bg-gradient-to-b from-[#D4AF37]/30 to-[#D4AF37]/10 border-[#D4AF37] shadow-[0_0_12px_rgba(212,175,55,0.3)] -translate-y-0.5"
+                                      : "bg-zinc-900/60 border-white/10 hover:border-[#D4AF37]/50 hover:bg-zinc-900"
+                                  }`}
+                                >
+                                  {isMidTier && !isSelected && (
+                                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-[#D4AF37] text-black text-[7px] font-black uppercase tracking-wider">
+                                      Best Value
+                                    </span>
+                                  )}
+                                  <div className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
+                                    isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
+                                  }`}>
+                                    {isSelected ? <Check size={9} className="text-black" strokeWidth={3} /> : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
+                                  </div>
+                                  <div className={`text-[10px] font-black uppercase tracking-wider mt-1 ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                    {shortLabel}
+                                  </div>
+                                  <div className={`text-[9px] font-medium mt-0.5 ${isSelected ? "text-[#D4AF37]/80" : "text-zinc-500"}`}>
+                                    {subLabel}
+                                  </div>
+                                  <div className={`text-base font-black mt-1.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                    +${opt.price}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </motion.div>
         )}
