@@ -243,8 +243,11 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
   const svcLower = (d.serviceName ?? "").toLowerCase();
   const isCustomPackage = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
   const hasAddons = (d.addonsJson?.length ?? 0) > 0 || ((d.additionalVehicles?.length ?? 0) > 0);
+  const foundationLabel = svcLower === "interior detail" ? "Interior"
+    : svcLower === "exterior detail" ? "Exterior"
+    : "Full";
   const headline = isCustomPackage
-    ? (hasAddons ? "Your Custom Package is Scheduled!" : "Your Detail is Confirmed!")
+    ? "Your Custom Package is Scheduled!"
     : "Your Detail is Confirmed!";
 
   return `<!DOCTYPE html><html lang="en">
@@ -290,7 +293,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:14px;overflow:hidden;margin-bottom:28px;
                       border:1px solid #eeeeee;">
-          ${detailRow("Service", esc(d.serviceName))}
+          ${detailRow("Service", esc(isCustomPackage ? (hasAddons ? `Custom Package (${foundationLabel})` : d.serviceName) : d.serviceName))}
           ${detailRow("Vehicle 1", vehicleLabel)}
           ${additionalVehicleRows(d.additionalVehicles)}
           ${detailRow("Date", esc(date))}

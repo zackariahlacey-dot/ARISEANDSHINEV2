@@ -61,7 +61,16 @@ function fmtPhone(p: string | null | undefined): string {
 }
 function bPhone(b: any): string | null { return b.customer_phone ?? b.profiles?.phone ?? null; }
 function bEmail(b: any): string | null { return b.customer_email ?? b.profiles?.email ?? null; }
-function bService(b: any): string { return b.service_name ?? b.services?.name ?? "Detail"; }
+function bService(b: any): string {
+  const raw = b.service_name ?? b.services?.name ?? "Detail";
+  const lower = raw.toLowerCase();
+  // Builder bookings (Interior/Exterior/Full Detail) display as "Custom Package".
+  // Admin still sees the underlying service name in the Pricing Breakdown.
+  if (lower === "interior detail") return "Custom Package (Interior)";
+  if (lower === "exterior detail") return "Custom Package (Exterior)";
+  if (lower === "full detail") return "Custom Package (Full)";
+  return raw;
+}
 function bAddress(b: any): string | null {
   if (b.service_address) return b.service_address;
   const m = b.notes?.match(/📍 Service Location:\s*(.+)/);

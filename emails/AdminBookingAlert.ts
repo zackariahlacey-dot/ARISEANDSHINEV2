@@ -169,7 +169,10 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
   const svcLower = (o.serviceName ?? "").toLowerCase();
   const isCustomPackage = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
   const hasAddons = (o.addonsJson?.length ?? 0) > 0 || ((o.additionalVehicles?.length ?? 0) > 0);
-  const alertTitle = isCustomPackage && hasAddons ? "🛠️ New Custom Package Booking" : "🚗 New Vehicle Booking";
+  const foundationLabel = svcLower === "interior detail" ? "Interior"
+    : svcLower === "exterior detail" ? "Exterior"
+    : "Full";
+  const alertTitle = isCustomPackage ? "🛠️ New Custom Package Booking" : "🚗 New Vehicle Booking";
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -216,7 +219,7 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
         ${sectionHeader("Booking")}
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
-          ${row("Service", esc(o.serviceName))}
+          ${row("Service", isCustomPackage ? `<strong>${esc("Custom Package (" + foundationLabel + ")")}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>` : esc(o.serviceName))}
           ${row("Vehicle 1", esc(vehicleLabel) + (o.vehicleSize ? `<span style="color:#999;font-size:11px;"> — ${esc(o.vehicleSize)}</span>` : ""))}
           ${additionalVehicleRows(o.additionalVehicles)}
           ${row("Date", esc(o.bookingDate))}

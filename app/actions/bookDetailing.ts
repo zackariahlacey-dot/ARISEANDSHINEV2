@@ -568,12 +568,21 @@ export async function bookDetailing(
         });
       }
     } else {
+      // Builder bookings (Interior/Exterior/Full Detail) display as
+      // "Custom Package (Foundation)" on the Stripe checkout page so the
+      // customer recognizes their builder order.
+      const svcLower = (payload.serviceName ?? "").toLowerCase();
+      const isBuilder = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
+      const foundationLabel = svcLower === "interior detail" ? "Interior"
+        : svcLower === "exterior detail" ? "Exterior"
+        : "Full";
+      const stripeProductName = isBuilder ? `Custom Package (${foundationLabel})` : payload.serviceName;
       line_items.push({
         price_data: {
           currency: "usd",
           unit_amount: Math.round(payload.totalPrice * 100),
           product_data: {
-            name: payload.serviceName,
+            name: stripeProductName,
             description: `${payload.vehicleYear} ${payload.vehicleMake} ${payload.vehicleModel} · ${payload.bookingDate} at ${payload.bookingTime}`,
           },
         },

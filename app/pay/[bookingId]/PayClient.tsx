@@ -57,7 +57,13 @@ export default function PayClient({ booking }: PayClientProps) {
   const vehicleStr = [booking.vehicle_year, booking.vehicle_make, booking.vehicle_model]
     .filter(Boolean).join(" ");
 
-  const service = booking.service_name ?? "Detailing Service";
+  // Builder bookings show as "Custom Package (Foundation)" on the pay page.
+  const rawSvc = booking.service_name ?? "Detailing Service";
+  const svcLower = rawSvc.toLowerCase();
+  const service = svcLower === "interior detail" ? "Custom Package (Interior)"
+    : svcLower === "exterior detail" ? "Custom Package (Exterior)"
+    : svcLower === "full detail" ? "Custom Package (Full)"
+    : rawSvc;
   const firstName = booking.customer_name?.split(" ")[0] ?? "there";
 
   function handleTipPct(pct: number) {
