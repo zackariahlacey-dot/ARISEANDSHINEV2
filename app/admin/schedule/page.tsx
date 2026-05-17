@@ -104,13 +104,21 @@ const ADMIN_ADDONS = [
   // Vehicle — standard
   { id: "engine_bay",        label: "Engine Bay Detail",                     price: 50  },
   { id: "headlight_restore", label: "Headlight Restoration",                 price: 60  },
-  { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 60  },
-  { id: "upholstery_shampoo",label: "Upholstery & Floorboard Shampoo",       price: 75  },
+  { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 75  },
+  { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
   { id: "uv_interior",       label: "UV Protection & Interior Restoration",  price: 35  },
   { id: "leather_condition", label: "Leather Conditioning",                  price: 45  },
-  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 30  },
-  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 30  },
+  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50  },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 50  },
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35  },
+  // Build Your Package add-ons
+  { id: "headliner_clean",   label: "Headliner Cleaning",                    price: 40  },
+  { id: "salt_stain_removal",label: "Salt Stain Removal & Prevention",       price: 50  },
+  { id: "steam_sanitation",  label: "Steam Sanitation (free at 3+ addons)",  price: 45  },
+  { id: "seat_removal",      label: "Seat Removal — Deepest Clean",          price: 125 },
+  { id: "trim_dressing",     label: "Rubber, Plastics & Vinyl Dressing",     price: 30  },
+  { id: "mech_chem_decon",   label: "Mechanical & Chemical Decontamination", price: 85  },
+  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on", price: 85  },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30  },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45  },
   { id: "floor_all",         label: "Floorboard Shampoo – All",             price: 60  },
@@ -138,6 +146,10 @@ const ADMIN_ADDONS = [
   { id: "rv_step",           label: "Entry Step & Threshold",               price: 30  },
 ];
 const VEHICLE_ADDON_IDS  = ["engine_bay","headlight_restore","odor_bomb","upholstery_shampoo","uv_interior","leather_condition","clay_bar","pet_hair","tar_bug","floor_1","floor_2","floor_all"];
+/** Build Your Package interior add-ons — surfaced for Interior + Full bookings */
+const BUILDER_INTERIOR_IDS = ["upholstery_shampoo","pet_hair","leather_condition","uv_interior","odor_bomb","steam_sanitation","headliner_clean","salt_stain_removal","seat_removal"];
+/** Build Your Package exterior add-ons — surfaced for Exterior + Full bookings */
+const BUILDER_EXTERIOR_IDS = ["clay_bar","mech_chem_decon","headlight_restore","trim_dressing","salt_recovery_addon","wheel_ceramic","ceramic_3yr"];
 const BOAT_ADDON_IDS     = ["marine_isinglass","marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning","rv_slide_seal","rv_roof_coat","rv_generator","rv_step"];
 const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield","window_coat_front","window_coat_all"];
@@ -255,6 +267,9 @@ export function NewBookingForm({
   const [serviceId,    setServiceId]    = useState("");
   const [footage,      setFootage]      = useState<number | "">("");
   const [priceOverride,setPriceOverride]= useState("");
+  // Duration override (in minutes) — when set, used as total_duration_mins
+  // on the booking insert so the slot reflects the admin-chosen length.
+  const [durationOverride, setDurationOverride] = useState("");
 
   // Step 3 — Add-ons
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -329,9 +344,15 @@ export function NewBookingForm({
       if (includesExterior) { ultimateIds.push("ceramic_3yr"); ultimateIds.push("wheel_ceramic"); }
       return ADMIN_ADDONS.filter(a => ultimateIds.includes(a.id));
     }
+    // Interior/Exterior/Full Detail = Build Your Package — surface the full
+    // builder add-on lineup so admin can recreate or override any custom build.
+    if (n === "exterior detail") return ADMIN_ADDONS.filter(a => [...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
+    if (n === "interior detail") return ADMIN_ADDONS.filter(a => BUILDER_INTERIOR_IDS.includes(a.id));
+    if (n === "full detail")     return ADMIN_ADDONS.filter(a => [...BUILDER_INTERIOR_IDS, ...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
+    // Legacy/other vehicle services keep the broader pool
     if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
     if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
-    return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
+    return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...BUILDER_INTERIOR_IDS, ...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
   }, [pathway, selectedService]);
 
   // Base price (before addons)
@@ -422,6 +443,7 @@ export function NewBookingForm({
             `${i + 2}. ${v.vehicleYear} ${v.vehicleMake} ${v.vehicleModel} — ${v.serviceName} ($${Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT)}, $${ADMIN_MULTI_VEHICLE_DISCOUNT} off)`
           ).join("; ")}`
         : "";
+      const durationMins = durationOverride ? parseInt(durationOverride, 10) : undefined;
       const res = await adminQuickBookAction({
         name, phone, email, address,
         vehicleYear, vehicleMake, vehicleModel,
@@ -430,6 +452,7 @@ export function NewBookingForm({
         bookingDate, bookingTime: to12h(bookingTime),
         totalPrice,
         allowOverlap,
+        ...(durationMins && durationMins > 0 ? { durationOverrideMins: durationMins } : {}),
         notes: [notes, footageNote, addonNote, addlVehicleNote].filter(Boolean).join(""),
         ...(clientPrefill?.profileId ? { preferredProfileId: clientPrefill.profileId } : {}),
         ...(pathway === "vehicle" && existingVehicleId ? { existingVehicleId } : {}),
@@ -626,6 +649,14 @@ export function NewBookingForm({
               </div>
               <FieldLabel>Price Override (optional)</FieldLabel>
               <Input value={priceOverride} onChange={setPriceOverride} placeholder={`Auto: $${basePrice}`} type="number" />
+
+              <FieldLabel>Duration Override — minutes (optional)</FieldLabel>
+              <Input
+                value={durationOverride}
+                onChange={setDurationOverride}
+                placeholder={`Auto: ${getDurationMins(selectedService?.name ?? "", vehicleSize)} min`}
+                type="number"
+              />
 
               {/* Multi-vehicle section */}
               {supportsAdminMultiVehicle && (

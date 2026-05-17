@@ -196,7 +196,10 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   const bookedTime24 = _to24h(payload.bookingTime);
   const requestedSlot = _toMins(bookedTime24);
-  const newDur = _getDur(payload.serviceName, payload.vehicleSize);
+  // Use duration override (if admin set it) for the conflict check too
+  const newDur = (payload.durationOverrideMins && payload.durationOverrideMins > 0)
+    ? payload.durationOverrideMins
+    : _getDur(payload.serviceName, payload.vehicleSize);
   const slotsWithDur = (existingOnDate ?? []).map((b: any) => ({
     ...b,
     total_duration_mins: b.duration_override ?? undefined,
@@ -268,6 +271,11 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
       service_name:    payload.serviceName,
       addons_json:     null,
       additional_vehicles_json: additionalVehiclesForDb,
+      // Admin can override the booking duration (in minutes) — when set,
+      // the slot reservation uses this instead of the service's default.
+      ...(payload.durationOverrideMins && payload.durationOverrideMins > 0
+        ? { duration_override: payload.durationOverrideMins }
+        : {}),
     })
     .select("id")
     .single();
