@@ -540,6 +540,18 @@ export function DetailingPage({ services }: { services: Service[] }) {
       {/* ── Booking anchor ───────────────────────────────────────────────────── */}
       <div id="booking-anchor" className="px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-3xl mx-auto">
+          {/* Step-4 header — shown when the builder hands off so the booking
+              section feels like a continuation, not a separate flow */}
+          {mounted && bookingOpen && builderPrefill && (
+            <div className="text-center mb-5 animate-in fade-in slide-in-from-top-2 duration-500">
+              <div className="inline-flex items-center justify-center gap-2 mb-2">
+                <span className="w-6 h-6 rounded-full bg-[#D4AF37] text-black flex items-center justify-center text-[10px] font-black">4</span>
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-300">Schedule & Pay</p>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black text-white">Pick a date, time, and how you want to pay.</h3>
+              <p className="text-[11px] text-zinc-500 mt-1">Your build is locked in — Pay at Arrival or Pay Now after you choose a slot.</p>
+            </div>
+          )}
           {mounted && bookingOpen && (builderPrefill || selectedService?.name?.toLowerCase().includes("paint")) && (
             <BookingSection
               isVisible={true}

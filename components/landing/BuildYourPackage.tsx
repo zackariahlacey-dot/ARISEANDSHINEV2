@@ -73,6 +73,7 @@ const INTERIOR_ADDONS: AddonDef[] = [
   { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "FREE BONUS — unlocks automatically when you add 3 or more other add-ons. High-pressure steam sanitizes vents, cup holders, and seat tracks. Kills bacteria nothing else can reach.", side: "interior" },
   { id: "headliner_clean",    label: "Headliner Cleaning",          price: 40, desc: "Gentle dry-foam cleaning of the fabric headliner. Lifts stains and smoke residue without saturating adhesive.", side: "interior" },
   { id: "salt_stain_removal", label: "Salt Stain Removal & Prevention", price: 50, desc: "Vermont winter survival: neutralize dried salt stains from carpets and door sills, then apply a salt repellent.", side: "interior" },
+  { id: "seat_removal",       label: "Seat Removal — Deepest Clean", price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface.", side: "interior" },
 ];
 
 const EXTERIOR_ADDONS: AddonDef[] = [

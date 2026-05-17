@@ -79,6 +79,7 @@ const ALL_ADD_ONS = [
   // ── Build Your Package add-ons (new) ─────────────────────────────────────
   { id: "headliner_clean",     label: "Headliner Cleaning",                   price: 40,  desc: "Gentle dry-foam cleaning of the fabric headliner — lifts stains, smoke residue and dust without saturating the adhesive." },
   { id: "salt_stain_removal",  label: "Salt Stain Removal & Prevention",      price: 50,  desc: "Vermont winter survival: neutralize and lift dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
+  { id: "seat_removal",        label: "Seat Removal — Deepest Clean",         price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface. The single deepest clean we offer." },
   { id: "steam_sanitation",    label: "Steam Sanitation",                     price: 45,  desc: "High-pressure steam sanitizes vents, cup holders, seat tracks and every crevice — kills bacteria and lifts grime nothing else can reach." },
   { id: "trim_dressing",       label: "Trim, Rubber & Glass Dressing",        price: 30,  desc: "UV-protective dressing on all exterior trim, rubber seals, and a streak-free glass polish. Brings tired plastics back to deep black." },
   { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85,  desc: "The full-monty paint prep: clay bar + iron remover chemically dissolves embedded brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar." },
@@ -118,7 +119,7 @@ const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore",
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
-const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation"];
+const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation", "seat_removal"];
 /** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
 const BUILDER_EXTERIOR_ADDON_IDS = ["clay_bar", "mech_chem_decon", "headlight_restore", "trim_dressing", "salt_recovery_addon", "wheel_ceramic"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
@@ -2823,8 +2824,10 @@ export function BookingSection({
                   </p>
                 )}
 
-                {/* Step progress — Midnight & Champagne */}
-                <div className="flex items-center mt-6">
+                {/* Step progress — Midnight & Champagne.
+                    Hidden when the builder hands off (foundation/vehicle/add-ons
+                    are already done — showing 1/2/3 here is confusing/duplicative). */}
+                <div className={`flex items-center mt-6 ${prefilledAddonIds !== null ? "hidden" : ""}`}>
                   {STEPS.map((s, i) => {
                     const isDone = step > s.num;
                     const isActive = step === s.num;

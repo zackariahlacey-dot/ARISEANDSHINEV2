@@ -789,6 +789,14 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* ── Inline booking — ONLY opens when builder hands off (builderPrefill set) ── */}
           {mounted && expandedBookingId === "services" && builderPrefill && (
             <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="text-center mb-5">
+                <div className="inline-flex items-center justify-center gap-2 mb-2">
+                  <span className="w-6 h-6 rounded-full bg-[#D4AF37] text-black flex items-center justify-center text-[10px] font-black">4</span>
+                  <p className="text-xs font-black uppercase tracking-widest text-zinc-300">Schedule & Pay</p>
+                </div>
+                <h3 className="text-xl md:text-2xl font-black text-white">Pick a date, time, and how you want to pay.</h3>
+                <p className="text-[11px] text-zinc-500 mt-1">Your build is locked in — Pay at Arrival or Pay Now after you choose a slot.</p>
+              </div>
               <BookingSection
                 isVisible={true}
                 onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
