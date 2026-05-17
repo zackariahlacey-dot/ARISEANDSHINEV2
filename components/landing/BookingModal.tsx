@@ -4433,8 +4433,12 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             value={field.value}
                             onChange={(e) => {
                               if (field.id === "phone") {
-                                const rawValue = e.target.value.replace(/[^\d]/g, "").slice(0, 10);
-                                setPhone(formatPhoneNumber(rawValue));
+                                // Pass the raw value straight to formatPhoneNumber —
+                                // it handles stripping non-digits, the leading "1"
+                                // country code (autofill quirk), and slicing to 10.
+                                // Pre-slicing to 10 here would chop off the last
+                                // digit of an 11-digit autofill like "18025859179".
+                                setPhone(formatPhoneNumber(e.target.value));
                               } else {
                                 field.setter(e.target.value);
                               }
