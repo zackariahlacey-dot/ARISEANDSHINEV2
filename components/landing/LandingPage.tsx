@@ -762,21 +762,9 @@ export function LandingPage({ services }: { services: Service[] }) {
       >
         <div className="w-full max-w-7xl mx-auto">
 
-          {/* Section header */}
-          <div className="text-center mb-8 md:mb-14">
-            <p className="text-xs font-bold tracking-[0.22em] uppercase text-[#D4AF37] mb-3">
-              What We Offer
-            </p>
-            <h2
-              className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-              style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.2))" }}
-            >
-              Our Services
-            </h2>
-            <p className="text-sm text-zinc-500 mt-3 max-w-lg mx-auto leading-relaxed">
-              Auto detailing, ultimate restoration, paint correction, ceramic coatings — plus boats and RVs. All mobile, all premium.
-            </p>
-          </div>
+          {/* Section header HIDDEN — the BuildYourPackage component below has its
+              own hero ("Pay For What You Need") which works as the section title.
+              The old "Our Services" / "What We Offer" copy was redundant. */}
 
           {/* ── Build Your Package (replaces basic detail cards) ──── */}
           <BuildYourPackage
