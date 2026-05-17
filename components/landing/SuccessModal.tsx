@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Check, Calendar, Clock, MapPin, Smartphone, ChevronDown, ExternalLink, UserPlus, Sparkles, Trophy, Zap, ShieldCheck, Star } from "lucide-react";
+import { X, Check, Calendar, Clock, MapPin, Smartphone, ChevronDown, ExternalLink, UserPlus, Sparkles, Trophy, Zap, ShieldCheck, Star, Wrench } from "lucide-react";
 import { LOYALTY_TIERS, getTier, detailsToNextTier } from "@/lib/loyalty";
+import { isCustomPackageService, getServiceDisplayName } from "@/lib/serviceDisplay";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 
@@ -172,12 +173,25 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  // NOTE: body scroll intentionally NOT locked — background remains scrollable
+  // Lock background scroll while the modal is open. Preserves the current
+  // scroll position by setting body overflow:hidden instead of position:fixed
+  // (which would jump to top). Restores on close.
   useEffect(() => {
     if (!isOpen) {
       hasFiredConfetti.current = false;
       setShowCalendarOptions(false);
+      return;
     }
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+    // Add padding to compensate for the scrollbar disappearing (avoids layout shift)
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -251,11 +265,21 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2, duration: 0.3 }}
                 >
+                  {data && isCustomPackageService(data.serviceName) && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#d4af37]/45 bg-[#d4af37]/[0.08] mb-2.5">
+                      <Wrench size={10} className="text-[#d4af37]" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.22em] text-[#d4af37]">Your Custom Package</span>
+                    </div>
+                  )}
                   <h2 className="text-2xl font-black text-white tracking-tight mb-1">
-                    You&apos;re all set{data?.firstName ? `, ${data.firstName}` : ""}!
+                    {data && isCustomPackageService(data.serviceName)
+                      ? `Locked In${data?.firstName ? `, ${data.firstName}` : ""}!`
+                      : `You're all set${data?.firstName ? `, ${data.firstName}` : ""}!`}
                   </h2>
                   <p className="text-sm text-zinc-400">
-                    Confirmation sent to your email.
+                    {data && isCustomPackageService(data.serviceName)
+                      ? "Your custom build is scheduled — confirmation in your inbox."
+                      : "Confirmation sent to your email."}
                   </p>
                 </motion.div>
               </div>
@@ -269,14 +293,18 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                     transition={{ delay: 0.25, duration: 0.3 }}
                   >
                     <div className="rounded-2xl border border-white/[0.08] bg-zinc-950/60 overflow-hidden divide-y divide-white/[0.05]">
-                      {/* Service name */}
+                      {/* Service name — Custom Package branded for builder bookings */}
                       <div className="px-5 py-3.5 flex items-center gap-3">
                         <div className="w-7 h-7 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center shrink-0">
-                          <Sparkles size={13} className="text-[#d4af37]" />
+                          {isCustomPackageService(data.serviceName)
+                            ? <Wrench size={13} className="text-[#d4af37]" />
+                            : <Sparkles size={13} className="text-[#d4af37]" />}
                         </div>
                         <div>
-                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">Service</p>
-                          <p className="text-sm font-bold text-white">{data.serviceName}</p>
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-0.5">
+                            {isCustomPackageService(data.serviceName) ? "Package" : "Service"}
+                          </p>
+                          <p className="text-sm font-bold text-white">{getServiceDisplayName(data.serviceName)}</p>
                         </div>
                       </div>
 
