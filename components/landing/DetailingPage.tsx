@@ -143,15 +143,47 @@ export function DetailingPage({ services }: { services: Service[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  // Persist booking-open + builder-prefill across page reloads so customers
+  // who refresh mid-checkout land back where they were. Read sync on first
+  // render so the BookingSection renders on the first paint, not after.
+  const HANDOFF_KEY = "buildYourPackageHandoff";
+  const initialHandoff = (() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(HANDOFF_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+  const [bookingOpen, setBookingOpen] = useState<boolean>(!!initialHandoff?.bookingOpen);
+  const [selectedService, setSelectedService] = useState<Service | null>(() => {
+    if (initialHandoff?.serviceName) {
+      return services.find(s => s.name === initialHandoff.serviceName) ?? null;
+    }
+    return null;
+  });
   const [builderPrefill, setBuilderPrefill] = useState<{
     vehicleMake: string;
     vehicleModel: string;
     vehicleYear: string;
     vehicleSize: VehicleSizeSlug;
     addonIds: string[];
-  } | null>(null);
+  } | null>(initialHandoff?.builderPrefill ?? null);
+
+  // Save handoff state to sessionStorage on every change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (bookingOpen && builderPrefill) {
+        sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({
+          bookingOpen,
+          builderPrefill,
+          serviceName: selectedService?.name ?? null,
+        }));
+      } else {
+        sessionStorage.removeItem(HANDOFF_KEY);
+      }
+    } catch {}
+  }, [bookingOpen, builderPrefill, selectedService]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
 

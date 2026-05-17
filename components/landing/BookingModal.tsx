@@ -1434,17 +1434,19 @@ export function BookingSection({
       const hasBuilderHandoff = !!(prefilledAddonIds !== null && prefilledVehicle?.year && prefilledVehicle?.make && prefilledVehicle?.model && prefilledVehicle?.size);
       if (prefilledAddonIds && prefilledAddonIds.length > 0) {
         const size = prefilledVehicle?.size as string | undefined;
-        // Steam Sanitation is a free unlock from the builder when 3+ other
-        // add-ons are stacked — zero it out so the booking flow doesn't charge.
-        const qualifyingCount = prefilledAddonIds.filter(id => id !== "steam_sanitation").length;
-        const steamIsFree = prefilledAddonIds.includes("steam_sanitation") && qualifyingCount >= 3;
+        // Free-unlock add-ons (Steam Sanitation + Rubber/Plastics/Vinyl Dressing)
+        // become free when 3+ other paid add-ons are stacked. Zero them out
+        // here so the booking flow shows the actual $0 the customer expects.
+        const FREE_UNLOCK_IDS_BM = ["steam_sanitation", "trim_dressing"] as const;
+        const qualifyingCount = prefilledAddonIds.filter(id => !(FREE_UNLOCK_IDS_BM as readonly string[]).includes(id)).length;
+        const freeUnlocked = qualifyingCount >= 3;
         const preAddons = prefilledAddonIds
           .map(id => ALL_ADD_ONS.find(a => a.id === id))
           .filter((a): a is AddonItem => !!a)
           .map(a => ({
             id: a.id,
             label: a.label,
-            price: (a.id === "steam_sanitation" && steamIsFree) ? 0 : getEffectiveAddonPrice(a, size ?? "sedan"),
+            price: ((FREE_UNLOCK_IDS_BM as readonly string[]).includes(a.id) && freeUnlocked) ? 0 : getEffectiveAddonPrice(a, size ?? "sedan"),
           }));
         setSelectedAddons(preAddons);
       } else {
@@ -1587,10 +1589,9 @@ export function BookingSection({
   const [showResumeToast, setShowResumeToast] = useState(false);
   useEffect(() => {
     // initialDraft takes priority (Stripe return / rebook); localStorage is the fallback.
-    // SKIP all of this when the builder hands off — the builder is the source of truth
-    // and there's no draft to "restore" (avoids phantom "Draft restored" toast).
+    // When the builder hands off (prefilledAddonIds set), we still restore date/time/
+    // contact from localStorage, but the resume toast is suppressed lower in the effect.
     if (initialDraft || !isVisible) return;
-    if (prefilledAddonIds !== null) return;
     let saved: DraftBooking | null = null;
     try {
       const raw = localStorage.getItem(PERSISTENT_DRAFT_KEY);
@@ -1599,12 +1600,17 @@ export function BookingSection({
     if (!saved || (!saved.serviceId && !saved.name && !saved.vehicleYear)) return;
 
     const service = services.find((s) => s.id === saved!.serviceId);
-    if (service) onSelectService(service);
-    if (saved.bookingCategory) setBookingCategory(saved.bookingCategory);
-    setVehicleSize(saved.vehicleSize || "");
-    setVehicleYear(saved.vehicleYear || "");
-    setVehicleMake(saved.vehicleMake || "");
-    setVehicleModel(saved.vehicleModel || "");
+    // Builder handoff supplies service + vehicle from prefilled props. Don't
+    // overwrite them with a possibly-stale localStorage draft.
+    const fromBuilder = prefilledAddonIds !== null;
+    if (!fromBuilder) {
+      if (service) onSelectService(service);
+      if (saved.bookingCategory) setBookingCategory(saved.bookingCategory);
+      setVehicleSize(saved.vehicleSize || "");
+      setVehicleYear(saved.vehicleYear || "");
+      setVehicleMake(saved.vehicleMake || "");
+      setVehicleModel(saved.vehicleModel || "");
+    }
 
     // Only restore a future date — past dates are useless
     const today = new Date().toISOString().slice(0, 10);
@@ -1623,8 +1629,11 @@ export function BookingSection({
     setDistanceMiles(saved.distanceMiles ?? null);
     setCouponCode(saved.couponCode || "");
     setAppliedCoupon(saved.appliedCoupon ?? null);
-    if (saved.boatLength !== undefined) setBoatLength(saved.boatLength);
-    if (saved.selectedAddonIds?.length && service) {
+    if (saved.boatLength !== undefined && !fromBuilder) setBoatLength(saved.boatLength);
+    // Add-ons: only restore from localStorage when there's no builder handoff
+    // (the builder already supplies them via prefilledAddonIds, which the
+    // open-effect resolves into selectedAddons with proper $0 for free unlocks).
+    if (!fromBuilder && saved.selectedAddonIds?.length && service) {
       const available = getAddonsForService(service.name);
       setSelectedAddons(available.filter((a) => saved!.selectedAddonIds!.includes(a.id)));
     }
@@ -1649,7 +1658,9 @@ export function BookingSection({
       setStep(2);
     }
 
-    setShowResumeToast(true);
+    // Suppress the "Draft restored" toast for builder handoffs — customer is
+    // mid-flow and doesn't need the prompt; the data restore is silent.
+    if (prefilledAddonIds === null) setShowResumeToast(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, initialDraft]);
 
@@ -2924,7 +2935,7 @@ export function BookingSection({
               </div>
 
               {/* ── STEP CONTENT ───────────────────────────────────────── */}
-              <div className="px-4 sm:px-6 py-6 sm:py-8 pb-20 flex flex-col justify-start h-auto">
+              <div className={`px-4 sm:px-6 py-6 sm:py-8 pb-20 flex flex-col justify-start h-auto ${prefilledAddonIds !== null ? "max-w-xl mx-auto w-full text-left sm:text-center" : ""}`}>
                 <AnimatePresence mode="wait">
                   {/* Step 1: Vehicle Info — Year/Make/Model first, then size cards (auto-detect from make/model) */}
                   {step === 1 && (

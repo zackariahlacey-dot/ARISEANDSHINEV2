@@ -150,7 +150,21 @@ export function LandingPage({ services }: { services: Service[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-  const [expandedBookingId, setExpandedBookingId] = useState<ExpandedBookingId>(null);
+
+  // Persist booking-open + builder handoff across reloads so customers don't
+  // restart their build on refresh mid-checkout.
+  const HANDOFF_KEY = "buildYourPackageHandoff";
+  const initialHandoff = (() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(HANDOFF_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+
+  const [expandedBookingId, setExpandedBookingId] = useState<ExpandedBookingId>(
+    initialHandoff?.bookingOpen ? "services" : null
+  );
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [initialDraft, setInitialDraft] = useState<DraftBooking | null>(null);
   const [prefilledVehicle, setPrefilledVehicle] = useState<{
@@ -164,7 +178,33 @@ export function LandingPage({ services }: { services: Service[] }) {
     vehicleYear: string;
     vehicleSize: VehicleSizeSlug;
     addonIds: string[];
-  } | null>(null);
+  } | null>(initialHandoff?.builderPrefill ?? null);
+
+  // Save handoff state for refresh-resume
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (expandedBookingId === "services" && builderPrefill) {
+        sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({
+          bookingOpen: true,
+          builderPrefill,
+          serviceName: selectedService?.name ?? null,
+        }));
+      } else {
+        sessionStorage.removeItem(HANDOFF_KEY);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedBookingId, builderPrefill]);
+
+  // Restore selectedService from saved handoff once services load
+  useEffect(() => {
+    if (initialHandoff?.serviceName && !selectedService) {
+      const svc = services.find(s => s.name === initialHandoff.serviceName);
+      if (svc) setSelectedService(svc);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services]);
   const [showRestoreToast, setShowRestoreToast] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPastHero, setIsPastHero] = useState(false);
