@@ -2935,7 +2935,7 @@ export function BookingSection({
               </div>
 
               {/* ── STEP CONTENT ───────────────────────────────────────── */}
-              <div className={`px-4 sm:px-6 py-6 sm:py-8 pb-20 flex flex-col justify-start h-auto ${prefilledAddonIds !== null ? "max-w-xl mx-auto w-full text-left sm:text-center" : ""}`}>
+              <div className={`px-4 sm:px-6 py-6 sm:py-8 pb-20 flex flex-col justify-start h-auto ${prefilledAddonIds !== null ? "max-w-md mx-auto w-full" : ""}`}>
                 <AnimatePresence mode="wait">
                   {/* Step 1: Vehicle Info — Year/Make/Model first, then size cards (auto-detect from make/model) */}
                   {step === 1 && (
