@@ -2808,17 +2808,41 @@ export function BookingSection({
                 <h2 className="text-lg font-bold text-white">
                   {isSubscription ? "Maintenance Club Setup" : "Book Your Detail"}
                 </h2>
-                {selectedService ? (
-                  <p className="text-sm text-[#D4AF37] mt-0.5 font-medium">
-                    {BOAT_DISPLAY_NAMES[selectedService.name]?.name ?? selectedService.name}
-                    {computedPrice != null && (
-                      <span className="text-white font-semibold">
-                        {" "}
-                        — ${computedPrice}
-                      </span>
-                    )}
-                  </p>
-                ) : (
+                {selectedService ? (() => {
+                  // Builder handoff: re-label as "Custom Package (Foundation)" and
+                  // include the full build total (foundation + add-ons after bundle),
+                  // not just the foundation base price.
+                  const svcLower = selectedService.name.toLowerCase();
+                  const isBuilder = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
+                  const fromBuilder = isBuilder && prefilledAddonIds !== null;
+                  const foundationLabel = svcLower === "interior detail" ? "Interior"
+                    : svcLower === "exterior detail" ? "Exterior"
+                    : "Full";
+                  const displayName = fromBuilder
+                    ? `Custom Package (${foundationLabel})`
+                    : (BOAT_DISPLAY_NAMES[selectedService.name]?.name ?? selectedService.name);
+                  const buildTotal = (computedPrice ?? 0) + addonsTotal;
+                  return (
+                    <>
+                      <p className="text-sm text-[#D4AF37] mt-0.5 font-medium">
+                        {displayName}
+                        {computedPrice != null && (
+                          <span className="text-white font-semibold">
+                            {" "}— ${fromBuilder ? buildTotal.toFixed(0) : computedPrice}
+                          </span>
+                        )}
+                      </p>
+                      {fromBuilder && selectedAddons.length > 0 && (
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          Base ${computedPrice} · {selectedAddons.length} add-on{selectedAddons.length === 1 ? "" : "s"}
+                          {bundleDiscount > 0 && (
+                            <> · <span className="text-violet-400 font-bold">−${bundleDiscount} bundle</span></>
+                          )}
+                        </p>
+                      )}
+                    </>
+                  );
+                })() : (
                   <p className="text-sm text-zinc-500 mt-0.5">
                     Complete the steps below to schedule your service
                   </p>
