@@ -874,7 +874,6 @@ export function BuildYourPackage({
                               const subLabel = opt.id === "window_coat_windshield" ? "Front glass only"
                                 : opt.id === "window_coat_front" ? "+ 2 side windows"
                                 : "Every window + rear";
-                              const isMidTier = opt.id === "window_coat_front";
                               return (
                                 <button
                                   key={opt.id}
@@ -886,11 +885,6 @@ export function BuildYourPackage({
                                       : "bg-zinc-900/60 border-white/10 hover:border-[#D4AF37]/50 hover:bg-zinc-900"
                                   }`}
                                 >
-                                  {isMidTier && !isSelected && (
-                                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-[#D4AF37] text-black text-[7px] font-black uppercase tracking-wider">
-                                      Best Value
-                                    </span>
-                                  )}
                                   <div className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
                                     isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
                                   }`}>
