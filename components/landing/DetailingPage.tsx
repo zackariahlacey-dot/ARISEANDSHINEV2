@@ -148,6 +148,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
   const [builderPrefill, setBuilderPrefill] = useState<{
     vehicleMake: string;
     vehicleModel: string;
+    vehicleYear: string;
     vehicleSize: VehicleSizeSlug;
     addonIds: string[];
   } | null>(null);
@@ -240,10 +241,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
       >
         <BuildYourPackage
           services={services}
-          onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel }) => {
+          onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear }) => {
             const svc = services.find(s => s.name === serviceName) ?? null;
             setSelectedService(svc);
-            setBuilderPrefill({ vehicleMake, vehicleModel, vehicleSize, addonIds });
+            setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds });
             setBookingOpen(true);
             setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
           }}
@@ -554,6 +555,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
                 make: builderPrefill.vehicleMake,
                 model: builderPrefill.vehicleModel,
                 size: builderPrefill.vehicleSize,
+                year: builderPrefill.vehicleYear,
               } : null}
               prefilledAddonIds={builderPrefill?.addonIds ?? null}
             />

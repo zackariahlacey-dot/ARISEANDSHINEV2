@@ -81,7 +81,6 @@ const ALL_ADD_ONS = [
   { id: "salt_stain_removal",  label: "Salt Stain Removal & Prevention",      price: 50,  desc: "Vermont winter survival: neutralize and lift dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
   { id: "steam_sanitation",    label: "Steam Sanitation",                     price: 45,  desc: "High-pressure steam sanitizes vents, cup holders, seat tracks and every crevice — kills bacteria and lifts grime nothing else can reach." },
   { id: "trim_dressing",       label: "Trim, Rubber & Glass Dressing",        price: 30,  desc: "UV-protective dressing on all exterior trim, rubber seals, and a streak-free glass polish. Brings tired plastics back to deep black." },
-  { id: "exhaust_wheel_barrel", label: "Exhaust Tips & Wheel Barrel Detail",  price: 35,  desc: "Polish exhaust tips to a mirror finish and deep-clean the inside (barrel) of each wheel — the part nobody else cleans." },
   { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85,  desc: "The full-monty paint prep: clay bar + iron remover chemically dissolves embedded brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar." },
   { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on",  price: 85,  desc: "Add the Salt Season Recovery undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment to your exterior service. Cheaper than booking it standalone since the wash is already done." },
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
@@ -121,7 +120,7 @@ const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "uph
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
 const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation"];
 /** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
-const BUILDER_EXTERIOR_ADDON_IDS = ["clay_bar", "mech_chem_decon", "headlight_restore", "trim_dressing", "exhaust_wheel_barrel", "salt_recovery_addon", "wheel_ceramic"];
+const BUILDER_EXTERIOR_ADDON_IDS = ["clay_bar", "mech_chem_decon", "headlight_restore", "trim_dressing", "salt_recovery_addon", "wheel_ceramic"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
 const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior", "wheel_ceramic"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
@@ -1399,7 +1398,6 @@ export function BookingSection({
       // straight into step 1 of the booking flow.
       setShowServiceConfirm(false);
       setBookingCategory(initialCategory ?? null);
-      setStep(1);
       setVehicleSize(prefilledVehicle?.size ?? "");
       setVehicleYear(prefilledVehicle?.year ?? "");
       setVehicleMake(prefilledVehicle?.make ?? "");
@@ -1408,6 +1406,7 @@ export function BookingSection({
       setBoatLength(20);
       // Pre-fill add-ons from the Build Your Package handoff (if provided).
       // Mapping addon id → ALL_ADD_ONS metadata so we get the right label + base price.
+      const hasBuilderHandoff = !!(prefilledAddonIds !== null && prefilledVehicle?.year && prefilledVehicle?.make && prefilledVehicle?.model && prefilledVehicle?.size);
       if (prefilledAddonIds && prefilledAddonIds.length > 0) {
         const size = prefilledVehicle?.size as string | undefined;
         const preAddons = prefilledAddonIds
@@ -1418,6 +1417,9 @@ export function BookingSection({
       } else {
         setSelectedAddons([]);
       }
+      // Builder handoff: skip Step 1 (vehicle + add-ons) since everything was
+      // configured upstream. Drop them straight onto the schedule step.
+      setStep(hasBuilderHandoff ? 2 : 1);
       setAdditionalVehicles([]);
       setSelectedDate("");
       setSelectedTime("");

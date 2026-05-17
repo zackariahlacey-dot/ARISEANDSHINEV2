@@ -161,6 +161,7 @@ export function LandingPage({ services }: { services: Service[] }) {
   const [builderPrefill, setBuilderPrefill] = useState<{
     vehicleMake: string;
     vehicleModel: string;
+    vehicleYear: string;
     vehicleSize: VehicleSizeSlug;
     addonIds: string[];
   } | null>(null);
@@ -736,10 +737,10 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* ── Build Your Package (replaces basic detail cards) ──── */}
           <BuildYourPackage
             services={services}
-            onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel }) => {
+            onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear }) => {
               const svc = services.find(s => s.name === serviceName) ?? null;
               setSelectedService(svc);
-              setBuilderPrefill({ vehicleMake, vehicleModel, vehicleSize, addonIds });
+              setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds });
               setExpandedBookingId("services");
             }}
           />
@@ -799,6 +800,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                   make: builderPrefill.vehicleMake,
                   model: builderPrefill.vehicleModel,
                   size: builderPrefill.vehicleSize,
+                  year: builderPrefill.vehicleYear,
                 } : null}
                 prefilledAddonIds={builderPrefill?.addonIds ?? null}
               />

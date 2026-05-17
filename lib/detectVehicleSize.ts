@@ -168,6 +168,67 @@ for (const [rawMake, entries] of Object.entries(DB)) {
   MAKE_INDEX.set(n, [...existing, ...entries]);
 }
 
+// Display-friendly capitalization for autocomplete suggestions.
+// Most model keys are normalized (lowercase, no spaces/hyphens); we capitalize
+// the first letter for display. Special cases like "RAV4", "F-150", "CR-V"
+// get cleaned up here.
+const MODEL_DISPLAY_OVERRIDES: Record<string, string> = {
+  rav4: "RAV4", chr: "C-HR", bz3: "bZ3", bz4x: "bZ4X", gr86: "GR86", "86": "86",
+  crv: "CR-V", crz: "CR-Z", hrv: "HR-V",
+  f150: "F-150", f250: "F-250", f350: "F-350",
+  cx3: "CX-3", cx30: "CX-30", cx5: "CX-5", cx50: "CX-50", cx9: "CX-9", cx90: "CX-90",
+  mazda3: "Mazda3", mazda6: "Mazda6",
+  id4: "ID.4", idbuzz: "ID. Buzz",
+  "1series": "1 Series", "2series": "2 Series", "3series": "3 Series", "4series": "4 Series", "5series": "5 Series", "7series": "7 Series",
+  x1: "X1", x2: "X2", x3: "X3", x4: "X4", x5: "X5", x6: "X6", x7: "X7",
+  aclass: "A-Class", cclass: "C-Class", eclass: "E-Class", sclass: "S-Class", gclass: "G-Class",
+  cla: "CLA", cls: "CLS", gla: "GLA", glb: "GLB", glc: "GLC", gle: "GLE", gls: "GLS",
+  a1: "A1", a3: "A3", a4: "A4", a5: "A5", a6: "A6", a7: "A7", a8: "A8",
+  q2: "Q2", q3: "Q3", q5: "Q5", q7: "Q7", q8: "Q8",
+  etron: "e-tron",
+  is: "IS", es: "ES", ls: "LS", rc: "RC", lc: "LC", ux: "UX", nx: "NX", rx: "RX", gx: "GX", lx: "LX", tx: "TX",
+  model3: "Model 3", models: "Model S", modely: "Model Y", modelx: "Model X",
+  cybertruck: "Cybertruck",
+  k5: "K5", grandcherokee: "Grand Cherokee", grandwaganeer: "Grand Wagoneer",
+  grandcaravan: "Grand Caravan", grandhighlander: "Grand Highlander",
+  landcruiser: "Land Cruiser", fjcruiser: "FJ Cruiser",
+  priusc: "Prius C", priusprime: "Prius Prime", priusv: "Prius V",
+  yukonxl: "Yukon XL",
+  promaster: "ProMaster", promastercity: "ProMaster City", promastercitycargo: "ProMaster City Cargo",
+  transitconnect: "Transit Connect", broncosport: "Bronco Sport", santafe: "Santa Fe", santacruz: "Santa Cruz",
+  eseries: "E-Series", econoline: "Econoline",
+  nv: "NV", nv200: "NV200", nv1500: "NV1500", nv2500: "NV2500", nv3500: "NV3500",
+  ioniq5: "Ioniq 5", ioniq6: "Ioniq 6",
+};
+const MAKE_DISPLAY_OVERRIDES: Record<string, string> = {
+  bmw: "BMW", gmc: "GMC", vw: "VW", volkswagen: "Volkswagen", mercedes: "Mercedes",
+};
+
+function displayModel(key: string): string {
+  if (MODEL_DISPLAY_OVERRIDES[key]) return MODEL_DISPLAY_OVERRIDES[key];
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+function displayMake(key: string): string {
+  if (MAKE_DISPLAY_OVERRIDES[key]) return MAKE_DISPLAY_OVERRIDES[key];
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+/** All known make names (display-friendly), sorted alphabetically. */
+export function getAllMakeSuggestions(): string[] {
+  const makes = Object.keys(DB).map(displayMake);
+  return [...new Set(makes)].sort();
+}
+
+/** Model suggestions for a typed make, fuzzy-matched. */
+export function getModelSuggestionsForMake(makeInput: string): string[] {
+  if (!makeInput.trim()) return [];
+  const nm = norm(makeInput);
+  const resolved = MAKE_ALIASES[nm] ? norm(MAKE_ALIASES[nm]) : nm;
+  const entries = MAKE_INDEX.get(resolved);
+  if (!entries) return [];
+  return entries.map(([key]) => displayModel(key));
+}
+
 export function detectVehicleSize(make: string, model: string): VehicleSizeSlug | null {
   if (!make.trim() || model.trim().length < 1) return null;
   const normMake = norm(make);
