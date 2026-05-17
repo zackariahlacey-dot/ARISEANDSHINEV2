@@ -776,7 +776,7 @@ export function BuildYourPackage({
                   onClick={handleContinue}
                   className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-black text-sm uppercase tracking-wider bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_4px_16px_rgba(212,175,55,0.3)] active:scale-[0.97] transition-all"
                 >
-                  Continue to Booking <ChevronRight size={16} />
+                  Pick Date & Time <ChevronRight size={16} />
                 </button>
                 <p className="text-[9px] text-zinc-600 text-center mt-3">
                   <ShieldCheck size={9} className="inline -mt-0.5" /> Choose Pay at Arrival or Pay Now on the next screen
@@ -837,7 +837,7 @@ export function BuildYourPackage({
                   : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
               }`}
             >
-              {canContinue ? <>Continue<ChevronRight size={15} /></> : !foundationId ? "Pick foundation" : !vehicleConfirmed ? "Confirm vehicle" : "Continue"}
+              {canContinue ? <>Pick Date & Time<ChevronRight size={15} /></> : !foundationId ? "Pick foundation" : !vehicleConfirmed ? "Confirm vehicle" : "Pick Date & Time"}
             </button>
             <p className="text-[9px] text-zinc-600 text-center mt-2">
               <ShieldCheck size={9} className="inline -mt-0.5" /> Pay at Arrival or Pay Now next
