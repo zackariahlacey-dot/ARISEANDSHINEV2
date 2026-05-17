@@ -23,7 +23,6 @@ const FOUNDATIONS: { id: FoundationId; serviceName: string; label: string; icon:
     includes: [
       "Full vacuum — every crack & crevice",
       "Wipe-down + disinfect of all surfaces",
-      "Plastics, vinyl & leather conditioned",
       "Interior glass cleaned",
     ],
   },
@@ -301,7 +300,7 @@ export function BuildYourPackage({
     });
   };
 
-  // ─── Add-on card ────────────────────────────────────────────────────────
+  // ─── Add-on card (compact horizontal row) ──────────────────────────────
   const renderAddonCard = (addon: AddonDef) => {
     const isSelected = selectedAddonIds.includes(addon.id);
     const isExpanded = expandedAddon === addon.id;
@@ -319,51 +318,54 @@ export function BuildYourPackage({
       >
         <button
           onClick={() => toggleAddon(addon)}
-          className="w-full text-left p-3 active:scale-[0.98] transition-transform"
+          className="w-full p-2.5 active:scale-[0.98] transition-transform text-left"
           aria-pressed={isSelected}
         >
-          {/* Title row — full width */}
-          <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Checkbox */}
             <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
               isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
             }`}>
               {isSelected ? <Check size={9} className="text-black" strokeWidth={3} /> : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
             </span>
-            <span className={`text-xs font-bold leading-tight ${isSelected ? "text-white" : "text-zinc-300"}`}>
-              {addon.label}
-            </span>
-          </div>
 
-          {/* Popular badge — between title and price (no overlap) */}
-          {addon.popular && !isSelected && (
-            <div className="mb-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30">
-              <Flame size={8} className="text-amber-400" fill="currentColor" />
-              <span className="text-[8px] font-black uppercase tracking-wider text-amber-400">Popular</span>
+            {/* Label + optional popular flame */}
+            <div className="flex-1 min-w-0 flex items-center gap-1.5">
+              <span className={`text-[11.5px] font-bold leading-tight truncate ${isSelected ? "text-white" : "text-zinc-200"}`}>
+                {addon.label}
+              </span>
+              {addon.popular && !isSelected && (
+                <Flame size={10} className="text-amber-400 shrink-0" fill="currentColor" />
+              )}
             </div>
-          )}
 
-          {/* Price row */}
-          <div className="flex items-baseline gap-2">
-            {showDiscount ? (
-              <>
-                <p className="text-sm font-black text-[#D4AF37] tabular-nums">${effective}</p>
-                <p className="text-[10px] text-zinc-600 line-through tabular-nums">${base}</p>
-              </>
-            ) : (
-              <p className={`text-sm font-black tabular-nums ${isSelected ? "text-[#D4AF37]" : "text-zinc-300"}`}>
-                ${base}
-              </p>
-            )}
+            {/* Price (right-aligned, fixed width) */}
+            <div className="shrink-0 text-right">
+              {showDiscount ? (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xs font-black text-[#D4AF37] tabular-nums">${effective}</span>
+                  <span className="text-[9px] text-zinc-600 line-through tabular-nums">${base}</span>
+                </div>
+              ) : (
+                <span className={`text-xs font-black tabular-nums ${isSelected ? "text-[#D4AF37]" : "text-zinc-300"}`}>
+                  ${base}
+                </span>
+              )}
+            </div>
+
+            {/* Info button */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setExpandedAddon(isExpanded ? null : addon.id); }}
+              className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                isExpanded ? "bg-[#D4AF37]/25 text-[#D4AF37]" : "bg-white/[0.06] text-zinc-500 hover:text-[#D4AF37]"
+              }`}
+              aria-expanded={isExpanded}
+              aria-label="More info"
+            >
+              <Info size={10} />
+            </button>
           </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpandedAddon(isExpanded ? null : addon.id)}
-          className="w-full px-3 pb-2 text-[10px] text-zinc-500 hover:text-[#D4AF37] flex items-center justify-center gap-1 transition-colors"
-          aria-expanded={isExpanded}
-        >
-          <ChevronRight size={9} className={`transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-          {isExpanded ? "Hide details" : "What's this?"}
         </button>
         <AnimatePresence initial={false}>
           {isExpanded && (
@@ -373,9 +375,9 @@ export function BuildYourPackage({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="overflow-hidden"
+              className="overflow-hidden border-t border-white/[0.06]"
             >
-              <p className="px-3 pb-3 text-[11px] text-zinc-400 leading-snug text-center">{addon.desc}</p>
+              <p className="px-3 py-2 text-[11px] text-zinc-400 leading-snug">{addon.desc}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -668,7 +670,7 @@ export function BuildYourPackage({
                 </div>
               )}
               {interiorAvailable.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 mb-4 text-left">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 mb-4 text-left max-w-3xl mx-auto">
                   {interiorAvailable.map(renderAddonCard)}
                 </div>
               )}
@@ -683,7 +685,7 @@ export function BuildYourPackage({
                 </div>
               )}
               {exteriorAvailable.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 text-left">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 text-left max-w-3xl mx-auto">
                   {exteriorAvailable.map(renderAddonCard)}
                 </div>
               )}
