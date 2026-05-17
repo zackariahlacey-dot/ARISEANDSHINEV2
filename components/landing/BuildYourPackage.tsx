@@ -326,7 +326,7 @@ export function BuildYourPackage({
   );
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 pb-8 text-center">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-8 text-center">
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center gap-1.5 mb-2">
@@ -342,28 +342,34 @@ export function BuildYourPackage({
       </div>
 
       {/* ── Quick Picks ─────────────────────────────────────────────────── */}
-      <div className="mb-8">
+      <div className="mb-8 max-w-3xl mx-auto">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 mb-3 text-center">Or Start with a Quick Pick</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
           {QUICK_PICKS.map(qp => {
             const Icon = qp.icon;
             return (
               <button
                 key={qp.id}
                 onClick={() => applyQuickPick(qp)}
-                className="group rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.04] to-zinc-900/40 px-4 py-3 text-center hover:border-[#D4AF37]/45 hover:from-[#D4AF37]/[0.08] transition-all active:scale-[0.98]"
+                className="group rounded-xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.04] to-zinc-900/40 px-2 py-2.5 sm:px-4 sm:py-3 text-center hover:border-[#D4AF37]/45 hover:from-[#D4AF37]/[0.08] transition-all active:scale-[0.98]"
               >
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Icon size={12} className="text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">{qp.label}</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
+                  <Icon size={11} className="text-[#D4AF37]" />
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">{qp.label}</span>
                 </div>
-                <p className="text-[11px] text-zinc-500 leading-snug">{qp.tagline}</p>
+                <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-snug hidden sm:block">{qp.tagline}</p>
               </button>
             );
           })}
         </div>
         <p className="text-[10px] text-zinc-600 text-center mt-3">— or build your own below —</p>
       </div>
+
+      {/* ── 2-column layout on desktop: steps on left, sticky summary on right ── */}
+      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6 lg:items-start lg:text-left">
+
+      {/* LEFT — progressive steps */}
+      <div className="lg:min-w-0">
 
       {/* ── STEP 1: Foundation (always visible) ─────────────────────────── */}
       <div className="mb-6">
@@ -600,7 +606,7 @@ export function BuildYourPackage({
                 </div>
               )}
               {interiorAvailable.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 mb-4 text-left">
                   {interiorAvailable.map(renderAddonCard)}
                 </div>
               )}
@@ -615,7 +621,7 @@ export function BuildYourPackage({
                 </div>
               )}
               {exteriorAvailable.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 text-left">
                   {exteriorAvailable.map(renderAddonCard)}
                 </div>
               )}
@@ -624,7 +630,7 @@ export function BuildYourPackage({
         )}
       </AnimatePresence>
 
-      {/* ── In-flow Continue card (only when vehicle confirmed) ─────────── */}
+      {/* ── In-flow Continue card (mobile only — desktop uses sticky sidebar) ── */}
       <AnimatePresence initial={false}>
         {canContinue && (
           <motion.div
@@ -633,7 +639,7 @@ export function BuildYourPackage({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25 }}
-            className="mt-6 max-w-md mx-auto"
+            className="mt-6 max-w-md mx-auto lg:hidden"
           >
             <div className="rounded-2xl border border-[#D4AF37]/45 bg-zinc-950/80 overflow-hidden">
               <div className="px-5 py-4 text-center">
@@ -656,6 +662,67 @@ export function BuildYourPackage({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* close LEFT column */}
+      </div>
+
+      {/* RIGHT — sticky summary sidebar (desktop only) */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-6 rounded-2xl border border-[#D4AF37]/30 bg-zinc-950/80 overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/[0.06] text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Your Build</p>
+            <p className="text-4xl font-black text-white tabular-nums leading-none">${total}</p>
+            {bundleDiscount > 0 && (
+              <p className="text-[11px] text-violet-400 font-bold mt-1">Saved ${bundleDiscount}</p>
+            )}
+          </div>
+          <div className="px-4 py-3 space-y-1 text-left text-[11px] max-h-[40vh] overflow-y-auto">
+            {foundation && (
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400 truncate pr-2">{foundation.label}</span>
+                <span className="text-zinc-300 tabular-nums shrink-0">${foundationPrice}</span>
+              </div>
+            )}
+            {selectedAddons.length === 0 && foundation && (
+              <p className="text-zinc-600 italic text-center pt-1">No add-ons yet</p>
+            )}
+            {selectedAddons.map(a => {
+              const base = getAddonEffectivePrice(a, vehicleSize);
+              const eff = Math.max(20, base - discountPerAddon);
+              return (
+                <div key={a.id} className="flex items-center justify-between">
+                  <span className="text-zinc-500 truncate pr-2">+ {a.label}</span>
+                  <span className="text-zinc-300 tabular-nums shrink-0">${eff}</span>
+                </div>
+              );
+            })}
+            {bundleDiscount > 0 && (
+              <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-white/[0.04] text-violet-400 font-bold">
+                <span>🎁 Bundle</span>
+                <span className="tabular-nums">−${bundleDiscount}</span>
+              </div>
+            )}
+          </div>
+          <div className="px-4 py-3 border-t border-white/[0.06]">
+            <button
+              onClick={handleContinue}
+              disabled={!canContinue}
+              className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] ${
+                canContinue
+                  ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_4px_16px_rgba(212,175,55,0.3)]"
+                  : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+              }`}
+            >
+              {canContinue ? <>Continue<ChevronRight size={15} /></> : !foundationId ? "Pick foundation" : !vehicleConfirmed ? "Confirm vehicle" : "Continue"}
+            </button>
+            <p className="text-[9px] text-zinc-600 text-center mt-2">
+              <ShieldCheck size={9} className="inline -mt-0.5" /> Pay at Arrival or Pay Now next
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      </div>{/* close 2-column grid */}
     </div>
   );
 }
