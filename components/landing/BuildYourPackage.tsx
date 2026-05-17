@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Sofa, Droplets, Zap, Check, ChevronRight, Crown,
   Wrench, Star, ShieldCheck, Plus, X, Info, Flame, Lock, Car,
+  ArrowLeft, Edit3,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
@@ -37,6 +38,7 @@ const FOUNDATIONS: { id: FoundationId; serviceName: string; label: string; icon:
       "3-month ceramic spray coating",
       "Wheel & wheel-well clean",
       "Tire shine + exhaust tip polish (free)",
+      "Glass polish & cleaning (free)",
     ],
   },
   {
@@ -64,24 +66,39 @@ type AddonDef = {
   popular?: boolean;
 };
 
-const INTERIOR_ADDONS: AddonDef[] = [
-  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. XL adds $20.", side: "interior", popular: true },
+const INTERIOR_ADDONS: AddonDefExt[] = [
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. XL adds $20.", side: "interior", popular: true, premium: true },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      price: 50, desc: "Deep extraction of embedded pet hair from seats, carpet, and cargo. Only charged if heavy accumulation present.", side: "interior", popular: true },
   { id: "leather_condition",  label: "Leather Conditioning",        price: 45, desc: "Deep-clean and condition all leather surfaces. Restores softness, prevents cracking, matte finish.", side: "interior", popular: true },
   { id: "uv_interior",        label: "UV Protection",               price: 35, desc: "UV-protective coating on all interior plastics, vinyl, and trim. Prevents fading, cracking, and sun damage.", side: "interior" },
-  { id: "odor_bomb",          label: "Strong Odor Elimination",     price: 75, desc: "Heavy-duty neutralizer treatment kills embedded smoke, food, and pet odors throughout the cabin.", side: "interior" },
-  { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "FREE BONUS — unlocks automatically when you add 3 or more other add-ons. High-pressure steam sanitizes vents, cup holders, and seat tracks. Kills bacteria nothing else can reach.", side: "interior" },
+  { id: "odor_bomb",          label: "Strong Odor Elimination",     price: 75, desc: "Heavy-duty neutralizer treatment kills embedded smoke, food, and pet odors throughout the cabin.", side: "interior", premium: true },
+  { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "FREE BONUS — unlocks automatically when you add 3 or more other add-ons. High-pressure steam sanitizes vents, cup holders, and seat tracks. Kills bacteria nothing else can reach.", side: "interior", freeUnlock: true },
   { id: "headliner_clean",    label: "Headliner Cleaning",          price: 40, desc: "Gentle dry-foam cleaning of the fabric headliner. Lifts stains and smoke residue without saturating adhesive.", side: "interior" },
   { id: "salt_stain_removal", label: "Salt Stain Removal & Prevention", price: 50, desc: "Vermont winter survival: neutralize dried salt stains from carpets and door sills, then apply a salt repellent.", side: "interior" },
-  { id: "seat_removal",       label: "Seat Removal — Deepest Clean", price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface.", side: "interior" },
+  { id: "seat_removal",       label: "Seat Removal — Deepest Clean", price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface.", side: "interior", premium: true },
 ];
 
-const EXTERIOR_ADDONS: AddonDef[] = [
+type AddonDefExt = AddonDef & {
+  premium?: boolean;
+  freeUnlock?: boolean;
+  /** When present, price scales by vehicle size (matches BookingModal). */
+  sizedPrice?: Record<VehicleSizeSlug, number>;
+};
+
+const EXTERIOR_ADDONS: AddonDefExt[] = [
   { id: "clay_bar",            label: "Clay Bar Treatment",         price: 50, desc: "Smooths paint by lifting embedded contaminants. Upgrades your 3-month ceramic spray to 6-month protection.", side: "exterior", exclusiveGroup: "decon", popular: true },
   { id: "headlight_restore",   label: "Headlight Restoration",      price: 60, desc: "Restore cloudy or yellowed lenses to like-new clarity. UV sealed to prevent re-hazing.", side: "exterior", popular: true },
-  { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85, desc: "Clay bar + iron remover chemically dissolves brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar.", side: "exterior", exclusiveGroup: "decon" },
-  { id: "trim_dressing",       label: "Trim, Rubber & Glass Dressing", price: 30, desc: "UV-protective dressing on all exterior trim, rubber seals + a streak-free glass polish. Brings tired plastics back to deep black.", side: "exterior" },
-  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage", price: 85, desc: "Add the full Salt Season Recovery: undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment. Cheaper than booking standalone.", side: "exterior" },
+  { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85, desc: "Clay bar + iron remover chemically dissolves brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar.", side: "exterior", exclusiveGroup: "decon", premium: true },
+  { id: "trim_dressing",       label: "Rubber, Plastics & Vinyl Dressing", price: 30, desc: "UV-protective dressing on all exterior trim, rubber seals, plastics, and vinyl. Brings tired surfaces back to deep black. Glass polish is already included free with every exterior package.", side: "exterior", freeUnlock: true },
+  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage", price: 85, desc: "Add the full Salt Season Recovery: undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment. Cheaper than booking standalone.", side: "exterior", premium: true },
+  // ── Ceramic Coatings (premium) ──────────────────────────────────────────
+  { id: "ceramic_3yr",         label: "2-Year Pro Ceramic Sealant (Body)", price: 250, desc: "Pro-grade 2-year ceramic sealant bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. Pricing scales by vehicle size.", side: "exterior", premium: true,
+    sizedPrice: { compact: 250, sedan: 300, suv: 350, xl: 400 } },
+  { id: "wheel_ceramic",       label: "Wheel & Caliper Ceramic Coating", price: 125, desc: "Ceramic-coat all 4 wheels and brake calipers. Brake dust wipes off, salt and grime can't grip, gloss lasts 1-2 years.", side: "exterior", premium: true },
+  // Window coatings — mutually exclusive tier set
+  { id: "window_coat_windshield", label: "Graphene Window — Windshield Only", price: 100, desc: "Hydrophobic graphene coating bonded to the windshield. Rain beads off at speed, bugs wipe clean. Lasts 2 full years.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
+  { id: "window_coat_front",      label: "Graphene Window — Front 3 Windows", price: 150, desc: "Windshield + both front side windows for full driver-zone coverage. Side mirrors stay clear in the rain.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
+  { id: "window_coat_all",        label: "Graphene Window — All Windows",     price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 2 full years.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
 ];
 
 const QUICK_PICKS = [
@@ -97,7 +114,8 @@ function getFoundationPrice(service: Service | null, size: VehicleSizeSlug): num
   return Number(service[key] ?? service.price_small ?? 0);
 }
 
-function getAddonEffectivePrice(addon: AddonDef, size: VehicleSizeSlug): number {
+function getAddonEffectivePrice(addon: AddonDefExt, size: VehicleSizeSlug): number {
+  if (addon.sizedPrice) return addon.sizedPrice[size] ?? addon.price;
   if (addon.id === "upholstery_shampoo" && size === "xl") return addon.price + 20;
   return addon.price;
 }
@@ -197,19 +215,51 @@ export function BuildYourPackage({
     vehicleYear: string;
   }) => void;
 }) {
-  const [foundationId, setFoundationId] = useState<FoundationId | null>(null);
-  const [vehicleMake, setVehicleMake] = useState("");
-  const [vehicleModel, setVehicleModel] = useState("");
-  const [vehicleYear, setVehicleYear] = useState("");
-  const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug>("sedan");
-  const [autoDetected, setAutoDetected] = useState(false);
-  const [vehicleConfirmed, setVehicleConfirmed] = useState(false);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  // Persist builder state across reloads so customers don't restart on refresh.
+  // Read sync on first render to avoid a flash of empty state.
+  const BUILDER_STORAGE_KEY = "buildYourPackageDraft";
+  const initialState = (() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(BUILDER_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+
+  const [foundationId, setFoundationId] = useState<FoundationId | null>(initialState?.foundationId ?? null);
+  const [vehicleMake, setVehicleMake] = useState<string>(initialState?.vehicleMake ?? "");
+  const [vehicleModel, setVehicleModel] = useState<string>(initialState?.vehicleModel ?? "");
+  const [vehicleYear, setVehicleYear] = useState<string>(initialState?.vehicleYear ?? "");
+  const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug>(initialState?.vehicleSize ?? "sedan");
+  const [autoDetected, setAutoDetected] = useState<boolean>(initialState?.autoDetected ?? false);
+  const [vehicleConfirmed, setVehicleConfirmed] = useState<boolean>(initialState?.vehicleConfirmed ?? false);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(initialState?.selectedAddonIds ?? []);
   const [expandedAddon, setExpandedAddon] = useState<string | null>(null);
 
   // Refs for smooth auto-scroll into each newly-unlocked step
   const vehicleStepRef = useRef<HTMLDivElement>(null);
   const addonsStepRef  = useRef<HTMLDivElement>(null);
+
+  // Step lock state — once a step is completed it visually blurs + locks;
+  // customer taps the "Edit" pill to unlock and change. Restored from session.
+  const [foundationLocked, setFoundationLocked] = useState<boolean>(initialState?.foundationLocked ?? !!initialState?.foundationId);
+  const [vehicleLocked, setVehicleLocked] = useState<boolean>(initialState?.vehicleLocked ?? !!initialState?.vehicleConfirmed);
+
+  // Auto-lock as the customer progresses
+  useEffect(() => { if (foundationId) setFoundationLocked(true); }, [foundationId]);
+  useEffect(() => { if (vehicleConfirmed) setVehicleLocked(true); }, [vehicleConfirmed]);
+
+  // Save builder state on every change so refresh preserves progress
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      sessionStorage.setItem(BUILDER_STORAGE_KEY, JSON.stringify({
+        foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize,
+        autoDetected, vehicleConfirmed, selectedAddonIds,
+        foundationLocked, vehicleLocked,
+      }));
+    } catch {}
+  }, [foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize, autoDetected, vehicleConfirmed, selectedAddonIds, foundationLocked, vehicleLocked]);
 
   const foundation = foundationId ? FOUNDATIONS.find(f => f.id === foundationId)! : null;
   const foundationService = useMemo(
@@ -274,26 +324,35 @@ export function BuildYourPackage({
   };
 
   // ─── Price math ─────────────────────────────────────────────────────────
-  // Steam Sanitation is a FREE unlock at 3+ qualifying add-ons. It doesn't
-  // contribute to subtotal, doesn't get the per-addon bundle discount, and
-  // doesn't count toward the bundle-tier threshold.
-  const FREE_UNLOCK_ID = "steam_sanitation";
+  // Free-unlock add-ons (steam_sanitation, trim_dressing) become FREE when
+  // 3+ qualifying add-ons are stacked. They don't contribute to subtotal,
+  // don't get the per-addon bundle discount, and don't count toward the
+  // bundle-tier threshold themselves.
+  const FREE_UNLOCK_IDS = ["steam_sanitation", "trim_dressing"] as const;
   const FREE_UNLOCK_THRESHOLD = 3;
+  const isFreeUnlockId = (id: string) => (FREE_UNLOCK_IDS as readonly string[]).includes(id);
   const foundationPrice = getFoundationPrice(foundationService, vehicleSize);
   const selectedAddons = allAvailable.filter(a => selectedAddonIds.includes(a.id));
-  const qualifyingAddons = selectedAddons.filter(a => a.id !== FREE_UNLOCK_ID);
+  const qualifyingAddons = selectedAddons.filter(a => !isFreeUnlockId(a.id));
   const qualifyingCount = qualifyingAddons.length;
   const discountPerAddon = computeBundleDiscountPerAddon(qualifyingCount);
-  // Preview discount the customer WOULD get if they added one more — drives stacking
   const nextTierDiscount = computeBundleDiscountPerAddon(qualifyingCount + 1);
-  const steamUnlocked = qualifyingCount >= FREE_UNLOCK_THRESHOLD;
-  const steamSelected = selectedAddonIds.includes(FREE_UNLOCK_ID);
-  // If steam is selected but unlock isn't met yet, drop it from selection silently
+  const freeUnlocked = qualifyingCount >= FREE_UNLOCK_THRESHOLD;
+
+  // Auto-add ALL available free-unlock add-ons when threshold is met,
+  // remove them when count drops below.
   useEffect(() => {
-    if (steamSelected && !steamUnlocked) {
-      setSelectedAddonIds(prev => prev.filter(id => id !== FREE_UNLOCK_ID));
+    const availableFreeIds = allAvailable.filter(a => isFreeUnlockId(a.id)).map(a => a.id);
+    if (freeUnlocked) {
+      setSelectedAddonIds(prev => {
+        const missing = availableFreeIds.filter(id => !prev.includes(id));
+        return missing.length > 0 ? [...prev, ...missing] : prev;
+      });
+    } else {
+      setSelectedAddonIds(prev => prev.filter(id => !isFreeUnlockId(id)));
     }
-  }, [steamSelected, steamUnlocked]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freeUnlocked, foundationId]);
 
   const addonsSubtotal = qualifyingAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize), 0);
   const bundleDiscount = qualifyingAddons.reduce((s, a) => {
@@ -320,14 +379,13 @@ export function BuildYourPackage({
   };
 
   // ─── Add-on card (compact horizontal row) ──────────────────────────────
-  const renderAddonCard = (addon: AddonDef) => {
+  const renderAddonCard = (addon: AddonDefExt) => {
     const isSelected = selectedAddonIds.includes(addon.id);
     const isExpanded = expandedAddon === addon.id;
-    const isFreeUnlock = addon.id === FREE_UNLOCK_ID;
-    const isLocked = isFreeUnlock && !steamUnlocked;
+    const isFreeUnlock = isFreeUnlockId(addon.id);
+    const isLocked = isFreeUnlock && !freeUnlocked;
+    const isPremium = !!addon.premium;
     const base = getAddonEffectivePrice(addon, vehicleSize);
-    // Selected price: regular discount applies. Unselected: preview the
-    // "would-be" price at the NEXT tier so it looks more enticing.
     const effective = isSelected
       ? Math.max(20, base - discountPerAddon)
       : Math.max(20, base - nextTierDiscount);
@@ -335,7 +393,7 @@ export function BuildYourPackage({
     const showPreviewDiscount = !isSelected && !isFreeUnlock && nextTierDiscount > 0 && effective < base;
 
     const handleClick = () => {
-      if (isLocked) return; // can't manually add steam before unlock
+      if (isLocked) return;
       toggleAddon(addon);
     };
 
@@ -346,12 +404,16 @@ export function BuildYourPackage({
           isSelected
             ? isFreeUnlock
               ? "border-emerald-500 bg-gradient-to-br from-emerald-500/[0.10] to-emerald-500/[0.02] shadow-[0_0_14px_rgba(16,185,129,0.18)]"
-              : "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] shadow-[0_0_14px_rgba(212,175,55,0.12)]"
-            : isFreeUnlock && steamUnlocked
+              : isPremium
+                ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.15] via-[#F0D060]/[0.06] to-[#D4AF37]/[0.02] shadow-[0_0_20px_rgba(212,175,55,0.22)]"
+                : "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] shadow-[0_0_14px_rgba(212,175,55,0.12)]"
+            : isFreeUnlock && freeUnlocked
               ? "border-emerald-500/60 bg-emerald-500/[0.05] hover:border-emerald-500"
               : isLocked
                 ? "border-white/[0.05] bg-zinc-900/20 opacity-60"
-                : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
+                : isPremium
+                  ? "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.04] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/65 hover:from-[#D4AF37]/[0.07]"
+                  : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
         }`}
       >
         <button
@@ -361,7 +423,6 @@ export function BuildYourPackage({
           aria-pressed={isSelected}
         >
           <div className="flex items-center gap-2 min-w-0">
-            {/* Checkbox */}
             <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
               isSelected
                 ? isFreeUnlock ? "bg-emerald-500" : "bg-[#D4AF37]"
@@ -372,24 +433,27 @@ export function BuildYourPackage({
                 : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
             </span>
 
-            {/* Label + flair */}
             <div className="flex-1 min-w-0 flex items-center gap-1.5">
               <span className={`text-[11.5px] font-bold leading-tight truncate ${isSelected ? "text-white" : isLocked ? "text-zinc-500" : "text-zinc-200"}`}>
                 {addon.label}
               </span>
-              {addon.popular && !isSelected && !isLocked && (
+              {isPremium && !isSelected && !isLocked && (
+                <span className="inline-flex items-center gap-0.5 px-1 py-px rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[7px] font-black uppercase tracking-wider shrink-0">
+                  <Crown size={7} fill="currentColor" />Premium
+                </span>
+              )}
+              {addon.popular && !isSelected && !isLocked && !isPremium && (
                 <Flame size={10} className="text-amber-400 shrink-0" fill="currentColor" />
               )}
             </div>
 
-            {/* Price / FREE state */}
             <div className="shrink-0 text-right">
               {isFreeUnlock ? (
                 isSelected ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">
                     <Check size={9} strokeWidth={3} /> Free
                   </span>
-                ) : steamUnlocked ? (
+                ) : freeUnlocked ? (
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">Free · tap</span>
                 ) : (
                   <span className="text-[9px] font-bold text-zinc-500 leading-tight inline-block text-right">
@@ -506,7 +570,18 @@ export function BuildYourPackage({
       <div className="lg:min-w-0">
 
       {/* ── STEP 1: Foundation (always visible) ─────────────────────────── */}
-      <div className="mb-6">
+      <div className="mb-6 relative">
+        {/* Lock overlay — appears once foundation is picked and customer moved on */}
+        {foundationLocked && foundationId && (
+          <button
+            onClick={() => setFoundationLocked(false)}
+            className="absolute inset-0 z-20 rounded-2xl bg-zinc-950/55 backdrop-blur-[2px] flex items-center justify-center group transition-all hover:bg-zinc-950/40"
+          >
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D4AF37] text-black text-[10px] font-black uppercase tracking-wider shadow-[0_4px_12px_rgba(212,175,55,0.4)] group-hover:scale-105 transition-transform">
+              <Edit3 size={11} strokeWidth={3} /> Change Foundation
+            </span>
+          </button>
+        )}
         <StepHeader step={1} label="Pick Your Foundation" complete={!!foundationId} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {FOUNDATIONS.map(f => {
@@ -582,7 +657,18 @@ export function BuildYourPackage({
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="mb-6 pt-2">
+            <div className="mb-6 pt-2 relative">
+              {/* Lock overlay — appears once vehicle is confirmed and customer moved on */}
+              {vehicleLocked && vehicleConfirmed && (
+                <button
+                  onClick={() => { setVehicleLocked(false); setVehicleConfirmed(false); }}
+                  className="absolute inset-0 z-20 rounded-2xl bg-zinc-950/55 backdrop-blur-[2px] flex items-center justify-center group transition-all hover:bg-zinc-950/40"
+                >
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D4AF37] text-black text-[10px] font-black uppercase tracking-wider shadow-[0_4px_12px_rgba(212,175,55,0.4)] group-hover:scale-105 transition-transform">
+                    <Edit3 size={11} strokeWidth={3} /> Change Vehicle
+                  </span>
+                </button>
+              )}
               <StepHeader step={2} label="Your Vehicle" complete={vehicleConfirmed} />
               <div className="grid grid-cols-3 gap-2.5 max-w-md mx-auto">
                 <input

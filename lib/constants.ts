@@ -3,16 +3,18 @@ import { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 // Service durations in minutes (pure service time, no travel)
 export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
   "Interior Detail": {
-    small: 180, medium: 180, large: 180, extra_large: 180,
-    compact: 180, sedan: 180, suv: 180, xl: 180,
+    // 2.5 hrs base — customer-facing display window shows "1.5–2.5 hrs"
+    small: 150, medium: 150, large: 150, extra_large: 150,
+    compact: 150, sedan: 150, suv: 150, xl: 150,
   },
   "Exterior Detail": {
     small: 120, medium: 120, large: 120, extra_large: 120,
     compact: 120, sedan: 120, suv: 120, xl: 120,
   },
   "Full Detail": {
-    small: 210, medium: 210, large: 210, extra_large: 210,
-    compact: 210, sedan: 210, suv: 210, xl: 210,
+    // 3 hrs base — display window shows "2–3 hrs" to customer
+    small: 180, medium: 180, large: 180, extra_large: 180,
+    compact: 180, sedan: 180, suv: 180, xl: 180,
   },
   "Salt Season Recovery": {
     small: 90, medium: 90, large: 90, extra_large: 90,

@@ -81,7 +81,7 @@ const ALL_ADD_ONS = [
   { id: "salt_stain_removal",  label: "Salt Stain Removal & Prevention",      price: 50,  desc: "Vermont winter survival: neutralize and lift dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
   { id: "seat_removal",        label: "Seat Removal — Deepest Clean",         price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface. The single deepest clean we offer." },
   { id: "steam_sanitation",    label: "Steam Sanitation",                     price: 45,  desc: "High-pressure steam sanitizes vents, cup holders, seat tracks and every crevice — kills bacteria and lifts grime nothing else can reach." },
-  { id: "trim_dressing",       label: "Trim, Rubber & Glass Dressing",        price: 30,  desc: "UV-protective dressing on all exterior trim, rubber seals, and a streak-free glass polish. Brings tired plastics back to deep black." },
+  { id: "trim_dressing",       label: "Rubber, Plastics & Vinyl Dressing",    price: 30,  desc: "UV-protective dressing on all exterior trim, rubber seals, plastics, and vinyl — brings tired surfaces back to deep black. FREE when you stack 3 or more add-ons. (Glass polish is already included in every exterior package.)" },
   { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85,  desc: "The full-monty paint prep: clay bar + iron remover chemically dissolves embedded brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar." },
   { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on",  price: 85,  desc: "Add the Salt Season Recovery undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment to your exterior service. Cheaper than booking it standalone since the wash is already done." },
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
@@ -144,9 +144,30 @@ export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
 export const MAX_SAME_DAY_BOOKING_MINS = 600;
 /** Add-ons that extend service duration (additive) — id → minutes.
  *  Flat-duration add-ons live here; size-tiered add-ons (ceramic_3yr) are
- *  resolved inside getAddonExtraDurationMins. */
+ *  resolved inside getAddonExtraDurationMins. Per spec — these times are
+ *  STRICT for slot booking (not the display window). */
 const DURATION_EXTENDING_ADDONS: Record<string, number> = {
-  ultimate_interior: 180, // Ultimate Interior add-on adds 3 hrs to the appointment
+  ultimate_interior:    180, // Ultimate Interior add-on adds 3 hrs
+  // Interior add-ons (also apply to Full Detail bookings since Full = Interior + Exterior)
+  upholstery_shampoo:   60,  // Carpet & Upholstery Shampoo +1 hr
+  pet_hair:             30,  // Heavy Pet Hair Removal +30 min
+  odor_bomb:            60,  // Strong Odor Elimination +1 hr
+  headliner_clean:      30,  // Headliner Cleaning +30 min
+  salt_stain_removal:   30,  // Salt Stain Removal +30 min
+  seat_removal:         90,  // Seat Removal Deepest Clean +1.5 hrs
+  // Exterior add-ons
+  clay_bar:             30,  // Clay Bar +30 min
+  headlight_restore:    30,  // Headlight Restoration +30 min
+  salt_recovery_addon:  30,  // Salt Recovery Undercarriage +30 min
+  mech_chem_decon:      60,  // Mechanical & Chemical Decon +1 hr
+  // Ceramic coatings — flash + cure adds significant time
+  wheel_ceramic:        60,  // Wheel & Caliper Ceramic +1 hr
+  window_coat_windshield: 60, // Window coatings (any tier) +1 hr
+  window_coat_front:    60,
+  window_coat_all:      60,
+  // Body ceramic (ceramic_3yr) — uses size-tiered CERAMIC_3YR_DURATION_MINS
+  // already mapped in getAddonExtraDurationMins (90/90/120/150). Updating
+  // the small-size baseline to 90 min so display consistently shows 1.5 hrs.
 };
 
 /** 2-Year Pro Ceramic Sealant — application + flash time scales with surface area. */
@@ -1183,8 +1204,10 @@ export function BookingSection({
 
     const addonMins = getAddonExtraDurationMins(selectedAddons, sizeKey);
     const total = Math.min(MAX_SAME_DAY_BOOKING_MINS, primaryMins + addlMins + addonMins);
-    const margin = 30;
-    return { minMins: Math.max(30, total - margin), maxMins: total + margin };
+    // Customer-facing display window: "1 hour less to full" — e.g., 150 min
+    // total shows as "1.5–2.5 hrs". Booking system still uses strict total
+    // (totalBookingDurationMins) for slot calculation — this only affects copy.
+    return { minMins: Math.max(30, total - 60), maxMins: total };
   })();
 
   const formatDurationRange = (minMins: number, maxMins: number): string => {
@@ -1563,8 +1586,11 @@ export function BookingSection({
   // ── Restore from localStorage when form opens (after the reset effect) ────
   const [showResumeToast, setShowResumeToast] = useState(false);
   useEffect(() => {
-    // initialDraft takes priority (Stripe return / rebook); localStorage is the fallback
+    // initialDraft takes priority (Stripe return / rebook); localStorage is the fallback.
+    // SKIP all of this when the builder hands off — the builder is the source of truth
+    // and there's no draft to "restore" (avoids phantom "Draft restored" toast).
     if (initialDraft || !isVisible) return;
+    if (prefilledAddonIds !== null) return;
     let saved: DraftBooking | null = null;
     try {
       const raw = localStorage.getItem(PERSISTENT_DRAFT_KEY);
