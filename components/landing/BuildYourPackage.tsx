@@ -110,6 +110,78 @@ function computeBundleDiscountPerAddon(count: number): number {
   return 20;
 }
 
+// ─── Styled Autocomplete (matches the site's gold-on-zinc colorway) ──────
+function Autocomplete({
+  value, placeholder, suggestions, onChange,
+}: {
+  value: string;
+  placeholder: string;
+  suggestions: string[];
+  onChange: (v: string) => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const filtered = useMemo(() => {
+    if (!value.trim()) return suggestions.slice(0, 8);
+    const q = value.toLowerCase();
+    return suggestions
+      .filter(s => s.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const ai = a.toLowerCase().indexOf(q);
+        const bi = b.toLowerCase().indexOf(q);
+        return ai - bi;
+      })
+      .slice(0, 8);
+  }, [value, suggestions]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!focused) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setFocused(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [focused]);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        autoComplete="off"
+        className="w-full bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none transition-all text-center"
+      />
+      <AnimatePresence>
+        {focused && filtered.length > 0 && (
+          <motion.div
+            key="dropdown"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 left-0 right-0 mt-1 rounded-xl border border-[#D4AF37]/30 bg-zinc-950 shadow-[0_8px_24px_rgba(0,0,0,0.6)] overflow-hidden max-h-56 overflow-y-auto"
+          >
+            {filtered.map(s => (
+              <button
+                key={s}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onChange(s); setFocused(false); }}
+                className="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 export function BuildYourPackage({
   services,
@@ -456,66 +528,56 @@ export function BuildYourPackage({
                   placeholder="Year"
                   value={vehicleYear}
                   onChange={e => { setVehicleYear(e.target.value); setVehicleConfirmed(false); }}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#D4AF37]/40 transition-colors text-center"
+                  className="bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none transition-all text-center"
                   inputMode="numeric"
                   maxLength={4}
                 />
-                <input
-                  type="text"
-                  placeholder="Make"
+                <Autocomplete
                   value={vehicleMake}
-                  onChange={e => { setVehicleMake(e.target.value); setAutoDetected(false); setVehicleConfirmed(false); }}
-                  list="byp-make-suggestions"
-                  autoComplete="off"
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#D4AF37]/40 transition-colors text-center"
+                  placeholder="Make"
+                  suggestions={getAllMakeSuggestions()}
+                  onChange={v => {
+                    setVehicleMake(v);
+                    setVehicleModel("");
+                    setAutoDetected(false);
+                    setVehicleConfirmed(false);
+                  }}
                 />
-                <input
-                  type="text"
-                  placeholder="Model"
+                <Autocomplete
                   value={vehicleModel}
-                  onChange={e => { setVehicleModel(e.target.value); setAutoDetected(false); setVehicleConfirmed(false); }}
-                  list="byp-model-suggestions"
-                  autoComplete="off"
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#D4AF37]/40 transition-colors text-center"
+                  placeholder="Model"
+                  suggestions={getModelSuggestionsForMake(vehicleMake)}
+                  onChange={v => {
+                    setVehicleModel(v);
+                    setAutoDetected(false);
+                    setVehicleConfirmed(false);
+                  }}
                 />
-                {/* Native datalist suggestions — browser handles the dropdown UI */}
-                <datalist id="byp-make-suggestions">
-                  {getAllMakeSuggestions().map(m => <option key={m} value={m} />)}
-                </datalist>
-                <datalist id="byp-model-suggestions">
-                  {getModelSuggestionsForMake(vehicleMake).map(m => <option key={m} value={m} />)}
-                </datalist>
               </div>
 
-              {/* Auto-detected size preview */}
+              {/* Auto-detected size display (no manual override) */}
               {canConfirmVehicle && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-3 max-w-md mx-auto"
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                    {autoDetected ? "We detected your size — adjust if wrong" : "Pick your vehicle size"}
-                  </p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {(["compact", "sedan", "suv", "xl"] as VehicleSizeSlug[]).map(size => {
-                      const isSelected = vehicleSize === size;
-                      const label = ({ compact: "Small", sedan: "Mid", suv: "Large", xl: "XL/Van" } as const)[size];
-                      return (
-                        <button
-                          key={size}
-                          onClick={() => { setVehicleSize(size); setAutoDetected(false); }}
-                          className={`py-2 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
-                            isSelected
-                              ? "border-[#D4AF37] bg-[#D4AF37]/[0.10] text-[#D4AF37]"
-                              : "border-white/[0.08] bg-white/[0.02] text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {autoDetected ? (
+                    <div className="rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/[0.06] px-4 py-3 inline-flex items-center justify-center gap-2 w-full">
+                      <Zap size={12} className="text-[#D4AF37] fill-[#D4AF37]" />
+                      <p className="text-xs">
+                        <span className="text-zinc-400">Your vehicle size: </span>
+                        <span className="font-black text-[#D4AF37] uppercase tracking-wider">{({ compact: "Small", sedan: "Mid-Size", suv: "Large SUV/Truck", xl: "XL / Van" } as const)[vehicleSize]}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] px-4 py-3 inline-flex items-center justify-center gap-2 w-full">
+                      <Info size={12} className="text-amber-400" />
+                      <p className="text-[11px] text-amber-300">
+                        Vehicle not in our database — we'll confirm the size at booking
+                      </p>
+                    </div>
+                  )}
 
                   {/* Confirm button */}
                   {!vehicleConfirmed && (
