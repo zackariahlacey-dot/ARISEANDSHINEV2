@@ -526,7 +526,7 @@ export function BuildYourPackage({
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-8 text-center">
       {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-5">
         <div className="inline-flex items-center justify-center gap-1.5 mb-2">
           <Wrench size={14} className="text-[#D4AF37]" />
           <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/80">Build Your Package</p>
@@ -537,6 +537,26 @@ export function BuildYourPackage({
         <p className="text-zinc-400 mt-3 text-sm max-w-md mx-auto leading-relaxed">
           Pick your base, stack the extras you actually want. The more you add, the cheaper each one gets.
         </p>
+      </div>
+
+      {/* ── Trust strip ────────────────────────────────────────────────── */}
+      <div className="mb-8 mx-auto max-w-3xl">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-[10px] sm:text-[11px]">
+          {[
+            { icon: ShieldCheck, label: "Fully Insured" },
+            { icon: Star,        label: "500+ Vermont Details" },
+            { icon: Check,       label: "Satisfaction Guarantee" },
+            { icon: Sparkles,    label: "Free Reschedule" },
+          ].map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-[#D4AF37]/15 bg-zinc-900/40 text-zinc-400"
+            >
+              <Icon size={11} className="text-[#D4AF37] shrink-0" />
+              <span className="font-bold tracking-tight whitespace-nowrap">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Quick Picks ─────────────────────────────────────────────────── */}
