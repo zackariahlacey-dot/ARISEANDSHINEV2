@@ -840,6 +840,7 @@ export async function bookDetailing(
               selectedAddons: av.selectedAddons,
             }))
           : undefined,
+        durationMins: totalBookingDur,
       },
       totalPrice: bookingTotal,
     }).catch((err) =>

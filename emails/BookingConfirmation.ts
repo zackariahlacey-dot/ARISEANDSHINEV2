@@ -34,7 +34,116 @@ export type BookingConfirmationDetails = {
     selectedAddons?: { id: string; label: string; price: number }[];
   }>;
   addonsJson?: Array<{ id: string; label: string; price: number }>;
+  /** Total expected duration in minutes — used to build "Add to Calendar"
+   *  deep links. Defaults to 150 min if omitted. */
+  durationMins?: number;
 };
+
+// ── "Add to Calendar" helpers ─────────────────────────────────────────────────
+
+const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+
+/** Parses bookingTime strings like "9:00 AM", "10:30 PM", or "14:00". */
+function parseBookingTime(time: string): { h: number; m: number } {
+  const t = time.trim();
+  const ampm = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(t);
+  if (ampm) {
+    let h = Number(ampm[1]);
+    const m = Number(ampm[2]);
+    const pm = ampm[3].toUpperCase() === "PM";
+    if (h === 12) h = pm ? 12 : 0;
+    else if (pm) h += 12;
+    return { h, m };
+  }
+  const hm = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (hm) return { h: Number(hm[1]), m: Number(hm[2]) };
+  return { h: 9, m: 0 };
+}
+
+/** YYYYMMDDTHHMMSS (no Z) — local-time stamp for TZID-anchored calendar URLs. */
+function buildLocalTimestamp(dateStr: string, time: string, addMinutes = 0): string {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const { h, m } = parseBookingTime(time);
+  // Roll forward by addMinutes using a Date for normalization (date math only —
+  // the absolute UTC value doesn't matter since we're emitting local strings).
+  const base = new Date(y, mo - 1, d, h, m + addMinutes, 0);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return (
+    base.getFullYear().toString() +
+    p(base.getMonth() + 1) +
+    p(base.getDate()) +
+    "T" +
+    p(base.getHours()) +
+    p(base.getMinutes()) +
+    "00"
+  );
+}
+
+function buildCalendarUrls(d: BookingConfirmationDetails): { google: string; outlook: string; ics: string } {
+  const dur = d.durationMins && d.durationMins > 0 ? d.durationMins : 150;
+  const start = buildLocalTimestamp(d.bookingDate, d.bookingTime, 0);
+  const end   = buildLocalTimestamp(d.bookingDate, d.bookingTime, dur);
+  const title = `Arise & Shine VT — ${d.serviceName}`;
+  const vehicle = `${d.vehicleYear} ${d.vehicleMake} ${d.vehicleModel}`.trim();
+  const details = `${vehicle ? vehicle + "\n" : ""}Confirmation: ${PHONE} · ${BUSINESS_EMAIL}`;
+  const location = d.serviceAddress ?? "";
+
+  // Google: dates use local time stamps + ctz parameter
+  const google = "https://www.google.com/calendar/render?" + new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    dates: `${start}/${end}`,
+    details,
+    location,
+    ctz: "America/New_York",
+  }).toString();
+
+  // Outlook (web) requires ISO strings — anchor to America/New_York equivalent
+  // by appending the offset would be brittle across DST; the calendar service
+  // accepts local-time ISO strings without an offset and treats them as the
+  // user's local time, which matches the customer's actual location anyway.
+  const outIso = (s: string) => `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(9,11)}:${s.slice(11,13)}:00`;
+  const outlook = "https://outlook.live.com/calendar/0/deeplink/compose?" + new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: title,
+    startdt: outIso(start),
+    enddt: outIso(end),
+    body: details,
+    location,
+  }).toString();
+
+  // Apple / .ics download (stateless route in this app)
+  const ics = SITE_ORIGIN + "/api/calendar.ics?" + new URLSearchParams({
+    title,
+    start,
+    end,
+    location,
+    details,
+  }).toString();
+
+  return { google, outlook, ics };
+}
+
+function calendarBlock(d: BookingConfirmationDetails): string {
+  const { google, outlook, ics } = buildCalendarUrls(d);
+  const btn = (href: string, label: string) => `
+    <a href="${href}" target="_blank"
+       style="display:inline-block;background-color:#ffffff;border:1px solid #e2e2e2;color:#333333;
+              font-size:12px;font-weight:700;padding:9px 14px;border-radius:8px;
+              text-decoration:none;margin:2px 3px;">${label}</a>`;
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="background-color:#f8f8f8;border:1px solid #eeeeee;border-radius:12px;margin-bottom:24px;">
+      <tr><td style="padding:14px 18px;text-align:center;">
+        <p style="font-size:10px;font-weight:800;color:#aaaaaa;margin:0 0 8px;
+                  letter-spacing:0.15em;text-transform:uppercase;">&#128197; Add to Calendar</p>
+        ${btn(google,  "Google")}
+        ${btn(outlook, "Outlook")}
+        ${btn(ics,     "Apple / Other")}
+      </td></tr>
+    </table>`;
+}
 
 const esc = (s: string | number): string =>
   String(s)
@@ -316,6 +425,8 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
           ${totalCell("Total Due at Arrival", d.totalPrice, d.cashPrice)}
         </table>
 
+        ${calendarBlock(d)}
+
         <!-- Payment note -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:12px;margin-bottom:28px;">
@@ -457,6 +568,8 @@ function boatCustomerHtml(d: BookingConfirmationDetails, date: string): string {
           ${totalCell("Total Due at Arrival", d.totalPrice, d.cashPrice)}
         </table>
 
+        ${calendarBlock(d)}
+
         <!-- Waterline Up badge -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#0f0f11;border:1px solid #d4af3733;border-radius:12px;margin-bottom:28px;">
@@ -597,6 +710,8 @@ function rvCustomerHtml(d: BookingConfirmationDetails, date: string): string {
           </tr>` : ""}
           ${totalCell("Total Due at Arrival", d.totalPrice, d.cashPrice)}
         </table>
+
+        ${calendarBlock(d)}
 
         <!-- Mobile service badge -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
