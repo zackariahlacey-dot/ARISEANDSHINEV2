@@ -140,7 +140,7 @@ function Autocomplete({
   const [focused, setFocused] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const filtered = useMemo(() => {
-    if (!value.trim()) return suggestions.slice(0, 8);
+    if (!value.trim()) return suggestions.slice(0, 12);
     const q = value.toLowerCase();
     return suggestions
       .filter(s => s.toLowerCase().includes(q))
@@ -149,7 +149,7 @@ function Autocomplete({
         const bi = b.toLowerCase().indexOf(q);
         return ai - bi;
       })
-      .slice(0, 8);
+      .slice(0, 15);
   }, [value, suggestions]);
 
   // Close on outside click
@@ -181,14 +181,14 @@ function Autocomplete({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 left-0 right-0 mt-1 rounded-xl border border-[#D4AF37]/30 bg-zinc-950 shadow-[0_8px_24px_rgba(0,0,0,0.6)] overflow-hidden max-h-56 overflow-y-auto"
+            className="absolute z-50 left-0 right-auto mt-1 min-w-full w-max max-w-[260px] rounded-xl border border-[#D4AF37]/30 bg-zinc-950 shadow-[0_8px_24px_rgba(0,0,0,0.6)] overflow-y-auto max-h-72"
           >
             {filtered.map(s => (
               <button
                 key={s}
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); onChange(s); setFocused(false); }}
-                className="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] transition-colors"
+                className="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] transition-colors whitespace-nowrap"
               >
                 {s}
               </button>

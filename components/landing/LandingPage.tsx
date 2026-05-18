@@ -1635,9 +1635,11 @@ export function LandingPage({ services }: { services: Service[] }) {
       </footer>
 
       {/* ─── Sticky Mobile CTA (only after scrolling past hero) ──────── */}
+      {/* Hidden when the booking flow is open — the customer is already
+          in checkout and doesn't need a redundant "Book Now" button. */}
       <div
         className={`md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-2 transition-all duration-500 ${
-          isPastHero && !isBottomCtaVisible
+          isPastHero && !isBottomCtaVisible && expandedBookingId !== "services"
             ? "translate-y-0 opacity-100 ease-out"
             : "translate-y-full opacity-0 pointer-events-none ease-in"
         }`}
