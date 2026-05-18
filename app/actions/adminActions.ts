@@ -245,6 +245,9 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
         serviceName: av.serviceName,
         servicePrice: av.servicePrice,
         vehicleDbId: addlVehicleDbIds[i] ?? null,
+        // Per-vehicle add-ons (from admin multi-vehicle UI) — same shape as
+        // the customer-facing flow so admin schedule rendering reuses it.
+        selectedAddons: Array.isArray(av.selectedAddons) ? av.selectedAddons : [],
       }))
     : null;
 

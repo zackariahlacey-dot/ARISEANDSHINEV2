@@ -287,14 +287,21 @@ export function NewBookingForm({
   type AdminAddlVehicle = {
     vehicleYear: string; vehicleMake: string; vehicleModel: string;
     vehicleSize: string; serviceId: string; serviceName: string; servicePrice: number;
+    selectedAddons: string[];
   };
   const [additionalVehicles, setAdditionalVehicles] = useState<AdminAddlVehicle[]>([]);
   const addAdminVehicle = () =>
-    setAdditionalVehicles(prev => [...prev, { vehicleYear: "", vehicleMake: "", vehicleModel: "", vehicleSize: "sedan", serviceId: "", serviceName: "", servicePrice: 0 }]);
+    setAdditionalVehicles(prev => [...prev, { vehicleYear: "", vehicleMake: "", vehicleModel: "", vehicleSize: "sedan", serviceId: "", serviceName: "", servicePrice: 0, selectedAddons: [] }]);
   const removeAdminVehicle = (i: number) =>
     setAdditionalVehicles(prev => prev.filter((_, idx) => idx !== i));
   const updateAdminVehicle = (i: number, patch: Partial<AdminAddlVehicle>) =>
     setAdditionalVehicles(prev => prev.map((v, idx) => idx === i ? { ...v, ...patch } : v));
+  const toggleAdminVehicleAddon = (i: number, addonId: string) =>
+    setAdditionalVehicles(prev => prev.map((v, idx) => {
+      if (idx !== i) return v;
+      const has = v.selectedAddons.includes(addonId);
+      return { ...v, selectedAddons: has ? v.selectedAddons.filter(x => x !== addonId) : [...v.selectedAddons, addonId] };
+    }));
 
   // Step 4 — Time
   const [bookingDate,   setBookingDate]   = useState(defaultDate);
@@ -330,14 +337,11 @@ export function NewBookingForm({
   const selectedService = services.find((s: any) => s.id === serviceId);
   const supportsAdminMultiVehicle = ADMIN_MULTI_VEHICLE_SERVICES.includes(selectedService?.name ?? "");
 
-  const availableAddons = useMemo(() => {
-    if (!pathway) return [];
-    if (pathway === "boat")    return ADMIN_ADDONS.filter(a => BOAT_ADDON_IDS.includes(a.id));
-    if (pathway === "rv")      return ADMIN_ADDONS.filter(a => RV_ADDON_IDS.includes(a.id));
-    // vehicle: filter by service name
-    const n = (selectedService?.name ?? "").toLowerCase();
-    // Window coating eligibility: paint correction, exterior touching services, full detail.
-    // NOT interior-only or interior-maintenance (no exterior glass touched).
+  // Resolves the add-on list for a given vehicle-pathway service name —
+  // used for both the primary service and each additional vehicle in
+  // multi-vehicle bookings.
+  const vehicleAddonsForServiceName = (name: string) => {
+    const n = (name ?? "").toLowerCase();
     const isInteriorOnly = n.includes("interior") && !n.includes("exterior") && !n.includes("full");
     const isMaintenance  = n.includes("maintenance");
     const windowIds = (!isInteriorOnly && !isMaintenance) ? WINDOW_COATING_ADDON_IDS : [];
@@ -348,15 +352,20 @@ export function NewBookingForm({
       if (includesExterior) { ultimateIds.push("ceramic_3yr"); ultimateIds.push("wheel_ceramic"); }
       return ADMIN_ADDONS.filter(a => ultimateIds.includes(a.id));
     }
-    // Interior/Exterior/Full Detail = Build Your Package — surface the full
-    // builder add-on lineup so admin can recreate or override any custom build.
     if (n === "exterior detail") return ADMIN_ADDONS.filter(a => [...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
     if (n === "interior detail") return ADMIN_ADDONS.filter(a => BUILDER_INTERIOR_IDS.includes(a.id));
     if (n === "full detail")     return ADMIN_ADDONS.filter(a => [...BUILDER_INTERIOR_IDS, ...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
-    // Legacy/other vehicle services keep the broader pool
     if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
     if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
     return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...BUILDER_INTERIOR_IDS, ...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
+  };
+
+  const availableAddons = useMemo(() => {
+    if (!pathway) return [];
+    if (pathway === "boat") return ADMIN_ADDONS.filter(a => BOAT_ADDON_IDS.includes(a.id));
+    if (pathway === "rv")   return ADMIN_ADDONS.filter(a => RV_ADDON_IDS.includes(a.id));
+    return vehicleAddonsForServiceName(selectedService?.name ?? "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathway, selectedService]);
 
   // Base price (before addons)
@@ -374,7 +383,10 @@ export function NewBookingForm({
   }, [selectedService, pathway, footage, vehicleSize]);
 
   const addonTotal  = selectedAddons.reduce((sum, id) => sum + getAdminAddonPrice(id, vehicleSize), 0);
-  const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => sum + v.servicePrice, 0);
+  const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => {
+    const avAddonSum = v.selectedAddons.reduce((s, id) => s + getAdminAddonPrice(id, v.vehicleSize), 0);
+    return sum + v.servicePrice + avAddonSum;
+  }, 0);
   const adminVehiclesSubtotal = basePrice + addonTotal + additionalVehiclesTotal;
   const adminMultiVehicleDiscount = getAdminMultiVehicleDiscount(adminVehiclesSubtotal, 1 + additionalVehicles.length);
   const totalPrice  = priceOverride !== "" ? Number(priceOverride) : Math.max(0, adminVehiclesSubtotal - adminMultiVehicleDiscount);
@@ -471,6 +483,14 @@ export function NewBookingForm({
             serviceId: v.serviceId,
             serviceName: v.serviceName,
             servicePrice: v.servicePrice,
+            selectedAddons: v.selectedAddons.map(id => {
+              const a = ADMIN_ADDONS.find(x => x.id === id);
+              return {
+                id,
+                label: a?.label ?? id,
+                price: getAdminAddonPrice(id, v.vehicleSize),
+              };
+            }),
           })),
         } : {}),
       });
@@ -668,8 +688,8 @@ export function NewBookingForm({
               {supportsAdminMultiVehicle && (
                 <div className="pt-2 space-y-3">
                   <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
-                    <span className="text-emerald-400 text-xs font-bold">💰 Save $25</span>
-                    <span className="text-xs text-zinc-400">per additional vehicle — same visit</span>
+                    <span className="text-emerald-400 text-xs font-bold">💰 Save $25/$40</span>
+                    <span className="text-xs text-zinc-400">flat tier discount when 2+ vehicles · ≤ $500 = $25, &gt; $500 = $40</span>
                   </div>
                   {additionalVehicles.map((av, idx) => {
                     const multiVehicleServices = vehicleServices.filter((s: any) =>
@@ -718,6 +738,38 @@ export function NewBookingForm({
                             );
                           })}
                         </div>
+                        {/* Per-vehicle add-on chips — only show once a service is chosen */}
+                        {av.serviceId && av.serviceName && (() => {
+                          const avAddons = vehicleAddonsForServiceName(av.serviceName);
+                          if (avAddons.length === 0) return null;
+                          return (
+                            <div className="pt-2 mt-1 border-t border-white/[0.04]">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Add-ons</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {avAddons.map((a: any) => {
+                                  const selected = av.selectedAddons.includes(a.id);
+                                  const p = getAdminAddonPrice(a.id, av.vehicleSize);
+                                  return (
+                                    <button
+                                      key={a.id}
+                                      type="button"
+                                      onClick={() => toggleAdminVehicleAddon(idx, a.id)}
+                                      className={cn(
+                                        "inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all",
+                                        selected
+                                          ? "bg-amber-500/15 border-amber-500/50 text-amber-300"
+                                          : "border-white/[0.07] bg-white/[0.02] text-zinc-400 hover:border-amber-500/30"
+                                      )}
+                                    >
+                                      <span>{a.label}</span>
+                                      <span className="tabular-nums text-amber-400/80">${p}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
