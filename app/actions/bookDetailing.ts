@@ -89,6 +89,12 @@ export type BookingPayload = {
   /** Flat multi-vehicle discount applied once when 2+ vehicles are on the
    *  booking: $25 when combined vehicle subtotal ≤ $500, else $40. */
   multiVehicleDiscount?: number;
+  /** When set, this booking is redeeming a maintenance offer — bookDetailing
+   *  marks the offer as consumed and tags the booking row so emails/admin
+   *  surface it as a maintenance detail. */
+  maintenanceOfferId?: string;
+  /** Customer-reported condition tier for a maintenance booking. */
+  maintenanceCondition?: "showroom" | "lived_in" | "rough";
 };
 
 export type BookingResult =
@@ -715,6 +721,8 @@ export async function bookDetailing(
           ? payload.selectedAddons
           : null,
       additional_vehicles_json: additionalVehiclesForDb,
+      ...(payload.maintenanceOfferId ? { maintenance_offer_id: payload.maintenanceOfferId } : {}),
+      ...(payload.maintenanceCondition ? { maintenance_condition: payload.maintenanceCondition } : {}),
 ...(payload.couponId ? { coupon_id: payload.couponId } : {}),
       ...(payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0
         ? {
@@ -733,6 +741,59 @@ export async function bookDetailing(
       success: false,
       error: "Could not finalize your booking. Please try again.",
     };
+  }
+
+  // ── 3a-pre00. Maintenance offer lifecycle ───────────────────────────────
+  // (a) If this booking is REDEEMING a maintenance offer, mark the offer
+  //     consumed so it can't be used again.
+  // (b) Otherwise — if the source service qualifies for a future maintenance
+  //     window — open a new 3-month offer. Idempotent via unique
+  //     (source_booking_id) constraint; ignores duplicate-key errors.
+  try {
+    const { isMaintenanceEligibleService, maintenanceEligibleUntil } = await import("@/lib/maintenance");
+    if (payload.maintenanceOfferId) {
+      await adminSupabase
+        .from("maintenance_offers")
+        .update({ redeemed_booking_id: booking.id, redeemed_at: new Date().toISOString() })
+        .eq("id", payload.maintenanceOfferId)
+        .is("redeemed_booking_id", null);
+    } else if (isMaintenanceEligibleService(payload.serviceName)) {
+      // Look up the service's base price for the booking's vehicle size so
+      // the offer's discount math stays stable even if menu prices move.
+      const sizeKey = VEHICLE_SIZE_MAP[payload.vehicleSize] || "medium";
+      const priceCol = ({ small: "price_small", medium: "price_medium", large: "price_large", extra_large: "price_extra_large" } as const)[sizeKey as "small"|"medium"|"large"|"extra_large"] ?? "price_medium";
+      const { data: svcRow } = await adminSupabase
+        .from("services")
+        .select(`${priceCol}, price_small`)
+        .eq("id", payload.serviceId)
+        .maybeSingle();
+      const basePrice = Number((svcRow as any)?.[priceCol] ?? (svcRow as any)?.price_small ?? 0);
+      if (basePrice > 0) {
+        await adminSupabase
+          .from("maintenance_offers")
+          .insert({
+            user_id:              profileId,
+            vehicle_id:           vehicle.id,
+            source_booking_id:    booking.id,
+            source_service_name:  payload.serviceName,
+            source_vehicle_year:  payload.vehicleYear || null,
+            source_vehicle_make:  payload.vehicleMake || null,
+            source_vehicle_model: payload.vehicleModel || null,
+            source_vehicle_size:  VEHICLE_SIZE_MAP[payload.vehicleSize] || null,
+            base_price:           basePrice,
+            eligible_until:       maintenanceEligibleUntil(payload.bookingDate),
+          })
+          .then(({ error }) => {
+            // 23505 = unique_violation (duplicate source_booking_id) — OK.
+            if (error && (error as any).code !== "23505") {
+              console.error("[bookDetailing] maintenance offer insert:", error);
+            }
+          });
+      }
+    }
+  } catch (err) {
+    // Maintenance offers are a nice-to-have — never block the booking on them.
+    console.error("[bookDetailing] maintenance offer lifecycle:", err);
   }
 
   // ── 3a-pre0. Consume membership credit atomically ──────────────────────
