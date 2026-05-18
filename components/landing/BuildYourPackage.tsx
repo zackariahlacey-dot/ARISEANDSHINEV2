@@ -200,6 +200,33 @@ function Autocomplete({
   );
 }
 
+// Shape of an additional vehicle handed off to the booking modal. Each one
+// carries its own foundation service, size, and resolved add-on prices so
+// the modal can render the full multi-vehicle summary without re-doing
+// price math.
+export type BuilderAdditionalVehicle = {
+  serviceName: string;
+  vehicleSize: VehicleSizeSlug;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleYear: string;
+  addons: { id: string; label: string; price: number }[];
+};
+
+// Internal snapshot — same as BuilderAdditionalVehicle plus what the builder
+// needs to re-render the summary card and compute totals.
+type CompletedVehicle = BuilderAdditionalVehicle & {
+  foundationId: FoundationId;
+  vehicleSubtotal: number;
+};
+
+/** Flat multi-vehicle discount: $25 when combined subtotal ≤ $500, else $40.
+ *  Only kicks in once there are 2+ vehicles on the booking. */
+function getMultiVehicleDiscountAmount(subtotal: number, vehicleCount: number): number {
+  if (vehicleCount < 2) return 0;
+  return subtotal <= 500 ? 25 : 40;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────
 export function BuildYourPackage({
   services,
@@ -214,6 +241,8 @@ export function BuildYourPackage({
     vehicleMake: string;
     vehicleModel: string;
     vehicleYear: string;
+    /** Builds for vehicles 2+. Empty when single-vehicle booking. */
+    additionalVehicles?: BuilderAdditionalVehicle[];
   }) => void;
   /** Fires when the customer has actively engaged the builder (foundation
    * picked). Lets the parent hide a redundant global Book Now CTA. */
@@ -239,6 +268,9 @@ export function BuildYourPackage({
   const [vehicleConfirmed, setVehicleConfirmed] = useState<boolean>(initialState?.vehicleConfirmed ?? false);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(initialState?.selectedAddonIds ?? []);
   const [expandedAddon, setExpandedAddon] = useState<string | null>(null);
+  // Already-completed vehicles (when the customer adds a 2nd, 3rd, ... vehicle).
+  // The state vars above always describe the CURRENT vehicle being built.
+  const [completedVehicles, setCompletedVehicles] = useState<CompletedVehicle[]>(initialState?.completedVehicles ?? []);
 
   // Refs for smooth auto-scroll into each newly-unlocked step
   const vehicleStepRef = useRef<HTMLDivElement>(null);
@@ -284,10 +316,10 @@ export function BuildYourPackage({
       sessionStorage.setItem(BUILDER_STORAGE_KEY, JSON.stringify({
         foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize,
         autoDetected, vehicleConfirmed, selectedAddonIds,
-        foundationLocked, vehicleLocked,
+        foundationLocked, vehicleLocked, completedVehicles,
       }));
     } catch {}
-  }, [foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize, autoDetected, vehicleConfirmed, selectedAddonIds, foundationLocked, vehicleLocked]);
+  }, [foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize, autoDetected, vehicleConfirmed, selectedAddonIds, foundationLocked, vehicleLocked, completedVehicles]);
 
   const foundation = foundationId ? FOUNDATIONS.find(f => f.id === foundationId)! : null;
   const foundationService = useMemo(
@@ -387,15 +419,108 @@ export function BuildYourPackage({
     const base = getAddonEffectivePrice(a, vehicleSize);
     return s + (base - Math.max(20, base - discountPerAddon));
   }, 0);
-  const total = foundationPrice + addonsSubtotal - bundleDiscount;
+  const currentVehicleTotal = foundationPrice + addonsSubtotal - bundleDiscount;
+
+  // Multi-vehicle math: roll completed vehicles into the running total and
+  // apply the flat tier discount ($25 ≤ $500, $40 > $500) once 2+ vehicles
+  // are on the booking.
+  const completedSubtotal = completedVehicles.reduce((s, v) => s + v.vehicleSubtotal, 0);
+  const vehiclesSubtotal = completedSubtotal + currentVehicleTotal;
+  const vehicleCount = completedVehicles.length + 1;
+  const multiVehicleDiscount = getMultiVehicleDiscountAmount(vehiclesSubtotal, vehicleCount);
+  const total = Math.max(0, vehiclesSubtotal - multiVehicleDiscount);
 
   const canConfirmVehicle = !!vehicleMake.trim() && !!vehicleModel.trim() && !!vehicleYear.trim();
   const canContinue = !!foundationService && vehicleConfirmed;
   const nextDiscountAt = selectedAddonIds.length < 5 ? selectedAddonIds.length + 1 : null;
   const nextDiscountAmount = nextDiscountAt ? computeBundleDiscountPerAddon(nextDiscountAt) : null;
 
+  // Snapshot the currently-built vehicle into a portable CompletedVehicle shape.
+  const snapshotCurrentVehicle = (): CompletedVehicle | null => {
+    if (!foundationService || !foundation || !vehicleConfirmed) return null;
+    const resolvedAddons = selectedAddons.map(a => ({
+      id: a.id,
+      label: a.label,
+      // Free-unlock add-ons are zeroed at the threshold; everything else gets
+      // bundle pricing baked in so the modal/email see the exact $ shown.
+      price: isFreeUnlockId(a.id) && freeUnlocked
+        ? 0
+        : Math.max(20, getAddonEffectivePrice(a, vehicleSize) - discountPerAddon),
+    }));
+    return {
+      serviceName: foundationService.name,
+      foundationId: foundation.id,
+      vehicleSize,
+      vehicleMake: vehicleMake.trim(),
+      vehicleModel: vehicleModel.trim(),
+      vehicleYear: vehicleYear.trim(),
+      addons: resolvedAddons,
+      vehicleSubtotal: currentVehicleTotal,
+    };
+  };
+
+  // Reset the per-vehicle state so the customer can build vehicle N+1 fresh.
+  const resetForNewVehicle = () => {
+    setFoundationId(null);
+    setFoundationLocked(false);
+    setVehicleMake("");
+    setVehicleModel("");
+    setVehicleYear("");
+    setVehicleSize("sedan");
+    setAutoDetected(false);
+    setVehicleConfirmed(false);
+    setVehicleLocked(false);
+    setSelectedAddonIds([]);
+    setExpandedAddon(null);
+  };
+
+  const handleAddAnother = () => {
+    const snap = snapshotCurrentVehicle();
+    if (!snap) return;
+    setCompletedVehicles(prev => [...prev, snap]);
+    resetForNewVehicle();
+    // Scroll back to the foundation step so they can start fresh
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 80);
+  };
+
+  const removeCompletedVehicle = (idx: number) => {
+    setCompletedVehicles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const editCompletedVehicle = (idx: number) => {
+    const v = completedVehicles[idx];
+    if (!v) return;
+    // If current vehicle has progress, snapshot it first so we don't lose it
+    const currentSnap = snapshotCurrentVehicle();
+    setCompletedVehicles(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (currentSnap) return [...next, currentSnap];
+      return next;
+    });
+    // Load the picked vehicle back into the live builder state
+    setFoundationId(v.foundationId);
+    setFoundationLocked(true);
+    setVehicleMake(v.vehicleMake);
+    setVehicleModel(v.vehicleModel);
+    setVehicleYear(v.vehicleYear);
+    setVehicleSize(v.vehicleSize);
+    setAutoDetected(true);
+    setVehicleConfirmed(true);
+    setVehicleLocked(true);
+    setSelectedAddonIds(v.addons.map(a => a.id));
+    setExpandedAddon(null);
+  };
+
   const handleContinue = () => {
     if (!foundationService || !vehicleConfirmed) return;
+    const additionalVehicles: BuilderAdditionalVehicle[] = completedVehicles.map(v => ({
+      serviceName: v.serviceName,
+      vehicleSize: v.vehicleSize,
+      vehicleMake: v.vehicleMake,
+      vehicleModel: v.vehicleModel,
+      vehicleYear: v.vehicleYear,
+      addons: v.addons,
+    }));
     onContinueToBooking({
       serviceName: foundationService.name,
       addonIds: selectedAddonIds,
@@ -403,6 +528,7 @@ export function BuildYourPackage({
       vehicleMake: vehicleMake.trim(),
       vehicleModel: vehicleModel.trim(),
       vehicleYear: vehicleYear.trim(),
+      additionalVehicles: additionalVehicles.length > 0 ? additionalVehicles : undefined,
     });
   };
 
@@ -568,7 +694,7 @@ export function BuildYourPackage({
       </div>
 
       {/* ── Trust strip ────────────────────────────────────────────────── */}
-      <div className="mb-8 mx-auto max-w-3xl">
+      <div className="mb-6 mx-auto max-w-3xl">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-[10px] sm:text-[11px]">
           {[
             { icon: ShieldCheck, label: "Fully Insured" },
@@ -586,6 +712,71 @@ export function BuildYourPackage({
           ))}
         </div>
       </div>
+
+      {/* ── Completed-vehicles summary (multi-vehicle bookings) ─────────
+          Once the customer hits "Add Another Vehicle" the build for vehicle N
+          is collapsed into a card here so they can see the running total,
+          edit, or remove. Vehicle N+1 is built below using the same UI.
+      ──────────────────────────────────────────────────────────────── */}
+      {completedVehicles.length > 0 && (
+        <div className="mb-6 mx-auto max-w-3xl">
+          <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/[0.04] p-3">
+            <div className="flex items-center justify-between gap-2 mb-2 px-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37] inline-flex items-center gap-1.5">
+                <Car size={11} /> Vehicles on this booking ({vehicleCount})
+              </p>
+              {multiVehicleDiscount > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-[9px] font-black uppercase tracking-wider text-emerald-300">
+                  <Check size={9} strokeWidth={3} /> −${multiVehicleDiscount} multi-vehicle
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {completedVehicles.map((v, idx) => (
+                <div
+                  key={idx}
+                  className="relative rounded-xl border border-white/[0.08] bg-zinc-900/60 px-3 py-2.5 text-left"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Vehicle {idx + 1}</p>
+                      <p className="text-sm font-black text-white truncate leading-tight">
+                        {v.vehicleYear} {v.vehicleMake} {v.vehicleModel}
+                      </p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                        {v.serviceName.replace(" Detail", "")} {v.addons.length > 0 ? `· ${v.addons.length} add-on${v.addons.length === 1 ? "" : "s"}` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm font-black text-[#D4AF37] tabular-nums">${v.vehicleSubtotal}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => editCompletedVehicle(idx)}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-[#D4AF37] hover:text-[#F0D060] transition-colors"
+                    >
+                      <Edit3 size={9} strokeWidth={3} /> Edit
+                    </button>
+                    <span className="text-zinc-700">·</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCompletedVehicle(idx)}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-500 hover:text-rose-400 transition-colors"
+                    >
+                      <X size={9} strokeWidth={3} /> Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-500 text-center mt-3">
+              {foundationId
+                ? <>Customize <span className="text-[#D4AF37] font-bold">Vehicle {vehicleCount}</span> below — or finish your build.</>
+                : <>Pick a foundation below to start <span className="text-[#D4AF37] font-bold">Vehicle {vehicleCount}</span>.</>}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Quick Picks ─────────────────────────────────────────────────── */}
       <div className="mb-8 max-w-3xl mx-auto">
@@ -976,14 +1167,28 @@ export function BuildYourPackage({
           >
             <div className="rounded-2xl border border-[#D4AF37]/45 bg-zinc-950/80 overflow-hidden">
               <div className="px-5 py-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Your Total</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
+                  {vehicleCount > 1 ? `Total · ${vehicleCount} vehicles` : "Your Total"}
+                </p>
                 <p className="text-4xl font-black text-white tabular-nums leading-none">${total}</p>
-                {bundleDiscount > 0 && (
-                  <p className="text-[11px] text-violet-400 font-bold mt-1">Saved ${bundleDiscount} with bundle</p>
+                {(bundleDiscount > 0 || multiVehicleDiscount > 0) && (
+                  <p className="text-[11px] text-violet-400 font-bold mt-1">
+                    {bundleDiscount > 0 && <>Saved ${bundleDiscount} with bundle</>}
+                    {bundleDiscount > 0 && multiVehicleDiscount > 0 && " · "}
+                    {multiVehicleDiscount > 0 && <span className="text-emerald-400">−${multiVehicleDiscount} multi-vehicle</span>}
+                  </p>
                 )}
                 <button
+                  type="button"
+                  onClick={handleAddAnother}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider border border-[#D4AF37]/40 bg-[#D4AF37]/[0.06] text-[#D4AF37] hover:bg-[#D4AF37]/[0.12] active:scale-[0.97] transition-all"
+                >
+                  <Plus size={13} strokeWidth={3} /> Add Another Vehicle
+                  {vehicleCount === 1 && <span className="text-[9px] font-black text-emerald-400 ml-1">(−$25/$40)</span>}
+                </button>
+                <button
                   onClick={handleContinue}
-                  className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-black text-sm uppercase tracking-wider bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_4px_16px_rgba(212,175,55,0.3)] active:scale-[0.97] transition-all"
+                  className="mt-2 w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-black text-sm uppercase tracking-wider bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_4px_16px_rgba(212,175,55,0.3)] active:scale-[0.97] transition-all"
                 >
                   Pick Date & Time <ChevronRight size={16} />
                 </button>
@@ -1003,16 +1208,36 @@ export function BuildYourPackage({
       <aside className="hidden lg:block">
         <div className="sticky top-6 rounded-2xl border border-[#D4AF37]/30 bg-zinc-950/80 overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.06] text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Your Build</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
+              {vehicleCount > 1 ? `Total · ${vehicleCount} vehicles` : "Your Build"}
+            </p>
             <p className="text-4xl font-black text-white tabular-nums leading-none">${total}</p>
-            {bundleDiscount > 0 && (
-              <p className="text-[11px] text-violet-400 font-bold mt-1">Saved ${bundleDiscount}</p>
+            {(bundleDiscount > 0 || multiVehicleDiscount > 0) && (
+              <p className="text-[11px] font-bold mt-1">
+                {bundleDiscount > 0 && <span className="text-violet-400">Saved ${bundleDiscount}</span>}
+                {bundleDiscount > 0 && multiVehicleDiscount > 0 && <span className="text-zinc-600"> · </span>}
+                {multiVehicleDiscount > 0 && <span className="text-emerald-400">−${multiVehicleDiscount} multi-vehicle</span>}
+              </p>
             )}
           </div>
           <div className="px-4 py-3 space-y-1 text-left text-[11px] max-h-[40vh] overflow-y-auto">
+            {/* Already-completed vehicles (collapsed lines) */}
+            {completedVehicles.map((v, i) => (
+              <div key={`cv-${i}`} className="flex items-center justify-between">
+                <span className="text-zinc-400 truncate pr-2 font-bold">
+                  Vehicle {i + 1} · {v.vehicleMake} {v.vehicleModel}
+                </span>
+                <span className="text-zinc-300 tabular-nums shrink-0">${v.vehicleSubtotal}</span>
+              </div>
+            ))}
+            {completedVehicles.length > 0 && foundation && (
+              <div className="pt-1 mt-1 border-t border-white/[0.04]" />
+            )}
             {foundation && (
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400 truncate pr-2">{foundation.label}</span>
+                <span className="text-zinc-400 truncate pr-2 font-bold">
+                  {completedVehicles.length > 0 ? `Vehicle ${vehicleCount} · ${foundation.label}` : foundation.label}
+                </span>
                 <span className="text-zinc-300 tabular-nums shrink-0">${foundationPrice}</span>
               </div>
             )}
@@ -1035,8 +1260,24 @@ export function BuildYourPackage({
                 <span className="tabular-nums">−${bundleDiscount}</span>
               </div>
             )}
+            {multiVehicleDiscount > 0 && (
+              <div className="flex items-center justify-between text-emerald-400 font-bold">
+                <span>🚗 Multi-vehicle</span>
+                <span className="tabular-nums">−${multiVehicleDiscount}</span>
+              </div>
+            )}
           </div>
-          <div className="px-4 py-3 border-t border-white/[0.06]">
+          <div className="px-4 py-3 border-t border-white/[0.06] space-y-2">
+            {canContinue && (
+              <button
+                type="button"
+                onClick={handleAddAnother}
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider border border-[#D4AF37]/40 bg-[#D4AF37]/[0.06] text-[#D4AF37] hover:bg-[#D4AF37]/[0.12] active:scale-[0.97] transition-all"
+              >
+                <Plus size={11} strokeWidth={3} /> Add Another Vehicle
+                {vehicleCount === 1 && <span className="text-[9px] font-black text-emerald-400 ml-1">(−$25/$40)</span>}
+              </button>
+            )}
             <button
               onClick={handleContinue}
               disabled={!canContinue}
@@ -1076,12 +1317,16 @@ export function BuildYourPackage({
           >
             <div className="rounded-2xl border border-[#D4AF37]/40 bg-black/85 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.55)] px-3.5 py-2.5 flex items-center gap-3">
               <div className="min-w-0 flex-1 text-left">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 leading-none">Your Build</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 leading-none">
+                  {vehicleCount > 1 ? `${vehicleCount} Vehicles` : "Your Build"}
+                </p>
                 <div className="flex items-baseline gap-1.5 mt-0.5">
                   <span className="text-xl font-black text-white tabular-nums leading-none">${total}</span>
-                  {bundleDiscount > 0 && (
+                  {multiVehicleDiscount > 0 ? (
+                    <span className="text-[10px] text-emerald-400 font-bold whitespace-nowrap">−${multiVehicleDiscount}</span>
+                  ) : bundleDiscount > 0 ? (
                     <span className="text-[10px] text-violet-400 font-bold whitespace-nowrap">−${bundleDiscount} bundle</span>
-                  )}
+                  ) : null}
                 </div>
               </div>
               <button

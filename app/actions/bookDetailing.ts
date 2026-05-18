@@ -86,6 +86,9 @@ export type BookingPayload = {
    *  when the customer stacked 2+. Snapshotted to notes for audit. */
   bundleDiscount?: number;
   bundleAddonCount?: number;
+  /** Flat multi-vehicle discount applied once when 2+ vehicles are on the
+   *  booking: $25 when combined vehicle subtotal ≤ $500, else $40. */
+  multiVehicleDiscount?: number;
 };
 
 export type BookingResult =
@@ -499,6 +502,9 @@ export async function bookDetailing(
       payload.bundleDiscount != null && payload.bundleDiscount > 0
         ? `🎁 Bundle discount (${payload.bundleAddonCount ?? 0} add-ons): $${payload.bundleDiscount.toFixed(2)} off`
         : null,
+      payload.multiVehicleDiscount != null && payload.multiVehicleDiscount > 0
+        ? `🚗 Multi-vehicle discount (${1 + (payload.additionalVehicles?.length ?? 0)} vehicles): $${payload.multiVehicleDiscount.toFixed(2)} off`
+        : null,
       payload.membershipId && payload.membershipCreditApplied && payload.membershipCreditApplied > 0
         ? `👑 Membership credit applied: $${payload.membershipCreditApplied.toFixed(2)}`
         : null,
@@ -506,9 +512,12 @@ export async function bookDetailing(
         ? `🎁 Gift card (${payload.giftCardCode}): $${payload.giftCardDiscount.toFixed(2)} off`
         : null,
       (payload.additionalVehicles ?? []).length > 0
-        ? `🚗 Additional vehicles (${payload.additionalVehicles!.length}):\n${payload.additionalVehicles!.map((av, i) =>
-            `  ${i + 2}. ${av.vehicleYear} ${av.vehicleMake} ${av.vehicleModel} — ${av.serviceName} ($${av.servicePrice}, $25 off applied)`
-          ).join("\n")}`
+        ? `🚗 Additional vehicles (${payload.additionalVehicles!.length}):\n${payload.additionalVehicles!.map((av, i) => {
+            const addons = av.selectedAddons?.length
+              ? "\n     Add-ons: " + av.selectedAddons.map(a => `${a.label} ($${a.price})`).join(", ")
+              : "";
+            return `  ${i + 2}. ${av.vehicleYear} ${av.vehicleMake} ${av.vehicleModel} — ${av.serviceName} ($${av.servicePrice})${addons}`;
+          }).join("\n")}`
         : null,
       payload.notes || null,
     ]

@@ -167,6 +167,14 @@ export function DetailingPage({ services }: { services: Service[] }) {
     vehicleYear: string;
     vehicleSize: VehicleSizeSlug;
     addonIds: string[];
+    additionalVehicles?: Array<{
+      serviceName: string;
+      vehicleSize: VehicleSizeSlug;
+      vehicleMake: string;
+      vehicleModel: string;
+      vehicleYear: string;
+      addons: { id: string; label: string; price: number }[];
+    }>;
   } | null>(initialHandoff?.builderPrefill ?? null);
 
   // Save handoff state to sessionStorage on every change
@@ -273,10 +281,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
       >
         <BuildYourPackage
           services={services}
-          onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear }) => {
+          onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear, additionalVehicles }) => {
             const svc = services.find(s => s.name === serviceName) ?? null;
             setSelectedService(svc);
-            setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds });
+            setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds, additionalVehicles });
             setBookingOpen(true);
             setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
           }}
@@ -602,6 +610,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
                 year: builderPrefill.vehicleYear,
               } : null}
               prefilledAddonIds={builderPrefill?.addonIds ?? null}
+              prefilledAdditionalVehicles={builderPrefill?.additionalVehicles ?? null}
             />
           )}
         </div>

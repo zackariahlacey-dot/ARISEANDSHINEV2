@@ -609,8 +609,12 @@ async function getAvailableSlots(
   return results.filter((s): s is { time: string; period: string } => s !== null);
 }
 
-/** $25 off per additional vehicle added to the same appointment */
-const MULTI_VEHICLE_DISCOUNT = 25;
+/** Flat multi-vehicle discount: $25 when combined vehicle subtotal ≤ $500,
+ *  $40 when above $500. Only applies when 2+ vehicles are on the booking. */
+function getMultiVehicleDiscountAmount(vehiclesSubtotal: number, vehicleCount: number): number {
+  if (vehicleCount < 2) return 0;
+  return vehiclesSubtotal <= 500 ? 25 : 40;
+}
 
 /** Services that support multi-vehicle bookings */
 const MULTI_VEHICLE_SERVICE_NAMES = [
@@ -944,6 +948,17 @@ export interface BookingSectionProps {
   /** Add-on IDs to pre-select when the modal opens — used by the Build Your
    *  Package flow to carry the customer's choices into the booking modal. */
   prefilledAddonIds?: string[] | null;
+  /** Pre-seeded additional vehicles from the Build Your Package multi-vehicle
+   *  builder. Each vehicle carries its own foundation service, size, year,
+   *  make, model, and resolved add-on prices. */
+  prefilledAdditionalVehicles?: Array<{
+    serviceName: string;
+    vehicleSize: VehicleSizeSlug;
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleYear: string;
+    addons: { id: string; label: string; price: number }[];
+  }> | null;
   /** Called whenever booking step/progress changes so parent can show a summary bar */
   onProgress?: (data: BookingProgressData | null) => void;
 }
@@ -962,6 +977,7 @@ export function BookingSection({
   initialCategory,
   prefilledVehicle = null,
   prefilledAddonIds = null,
+  prefilledAdditionalVehicles = null,
   onProgress,
 }: BookingSectionProps) {
   const router = useRouter();
@@ -1179,11 +1195,17 @@ export function BookingSection({
       ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
       : Math.min(appliedCoupon.discountAmount ?? 0, servicePrice)
     : 0;
-  // Additional vehicles: each gets $25 off + their own add-ons included in their servicePrice
+  // Additional vehicles: full price for each (their add-ons too). The multi-
+  // vehicle discount is applied ONCE at the booking-total level as a flat
+  // $25 / $40 tier, not per-vehicle (see multiVehicleDiscount below).
   const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => {
     const addonSum = v.selectedAddons.reduce((s, a) => s + a.price, 0);
-    return sum + Math.max(0, v.servicePrice - MULTI_VEHICLE_DISCOUNT) + addonSum;
+    return sum + v.servicePrice + addonSum;
   }, 0);
+  // Combined vehicle subtotal (before tier discount) → drives the $25/$40 split.
+  const vehiclesSubtotalForMulti = servicePrice + addonsTotal + additionalVehiclesTotal;
+  const totalVehicleCount = 1 + additionalVehicles.filter(v => v.serviceName).length;
+  const multiVehicleDiscount = getMultiVehicleDiscountAmount(vehiclesSubtotalForMulti, totalVehicleCount);
   // ── Estimated duration ───────────────────────────────────────────────────
   const estimatedDuration = (() => {
     if (!selectedService) return null;
@@ -1232,7 +1254,7 @@ export function BookingSection({
     ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
     : 0;
   const totalWithTravel =
-    servicePrice - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal;
+    servicePrice - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal - multiVehicleDiscount;
 
   // Loyalty discount: auto-applies for qualifying vehicle detail services
   const isLoyaltyEligible = loyaltyDiscountPct > 0 && !couponDiscount && (
@@ -1455,7 +1477,31 @@ export function BookingSection({
       // Builder handoff: skip Step 1 (vehicle + add-ons) since everything was
       // configured upstream. Drop them straight onto the schedule step.
       setStep(hasBuilderHandoff ? 2 : 1);
-      setAdditionalVehicles([]);
+      // Seed additional vehicles from the builder if present. Each carries
+      // its own service + size + resolved add-on prices; we resolve the
+      // serviceId by looking up the named service in the loaded services list.
+      if (prefilledAdditionalVehicles && prefilledAdditionalVehicles.length > 0) {
+        const seeded: AdditionalVehicleForm[] = prefilledAdditionalVehicles.map(av => {
+          const svc = services.find(s => s.name === av.serviceName);
+          const sizeKey = (av.vehicleSize ?? "sedan") as VehicleSizeSlug;
+          const basePrice = svc
+            ? Number((svc as any)[({ compact: "price_small", sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[sizeKey]] ?? svc.price_small ?? 0)
+            : 0;
+          return {
+            vehicleSize: sizeKey,
+            vehicleYear: av.vehicleYear,
+            vehicleMake: av.vehicleMake,
+            vehicleModel: av.vehicleModel,
+            serviceId: svc?.id ?? "",
+            serviceName: av.serviceName,
+            servicePrice: basePrice,
+            selectedAddons: av.addons.map(a => ({ id: a.id, label: a.label, price: a.price })),
+          };
+        });
+        setAdditionalVehicles(seeded);
+      } else {
+        setAdditionalVehicles([]);
+      }
       setSelectedDate("");
       setSelectedTime("");
       setExistingBookingsForDate(null);
@@ -1982,7 +2028,7 @@ export function BookingSection({
         vehicleModel: av.vehicleModel,
         serviceId: av.serviceId,
         serviceName: av.serviceName,
-        servicePrice: Math.max(0, av.servicePrice - MULTI_VEHICLE_DISCOUNT),
+        servicePrice: av.servicePrice,
         selectedAddons: av.selectedAddons,
       }));
 
@@ -2029,6 +2075,7 @@ export function BookingSection({
         bundleDiscount,
         bundleAddonCount: selectedAddons.length,
       }),
+      ...(multiVehicleDiscount > 0 && { multiVehicleDiscount }),
     };
   };
 
@@ -3619,8 +3666,8 @@ export function BookingSection({
                                     <Car size={14} className="text-[#D4AF37]" />
                                     <span className="text-sm font-bold text-white">Vehicle {idx + 2}</span>
                                     {avBasePrice > 0 && (
-                                      <span className="text-xs text-emerald-400 font-semibold">
-                                        ${Math.max(0, avBasePrice - MULTI_VEHICLE_DISCOUNT)} <span className="line-through text-zinc-500">${avBasePrice}</span> (–${MULTI_VEHICLE_DISCOUNT} off)
+                                      <span className="text-xs text-zinc-300 font-semibold tabular-nums">
+                                        ${avBasePrice}
                                       </span>
                                     )}
                                   </div>
@@ -3711,7 +3758,7 @@ export function BookingSection({
                                                       >
                                                         <span className={`text-sm font-semibold ${selected ? "text-[#D4AF37]" : "text-zinc-300"}`}>{svc.name}</span>
                                                         <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
-                                                          ${Math.max(0, price - MULTI_VEHICLE_DISCOUNT)}
+                                                          ${price}
                                                         </span>
                                                       </button>
                                                     );
@@ -3750,7 +3797,7 @@ export function BookingSection({
                                                         </div>
                                                         <div className="shrink-0 flex flex-col items-end gap-0.5 ml-2">
                                                           <span className={`text-sm font-black tabular-nums ${selected ? "text-white" : "text-[#D4AF37]"}`}>
-                                                            ${Math.max(0, price - MULTI_VEHICLE_DISCOUNT)}
+                                                            ${price}
                                                           </span>
                                                           <Crown size={10} className={selected ? "text-[#D4AF37]" : "text-[#D4AF37]/40"} />
                                                         </div>
@@ -4204,30 +4251,33 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                             </div>
                           ))}
                           {/* Additional vehicle line items */}
-                          {additionalVehicles.filter(av => av.serviceId).map((av, i) => {
-                            const addonSum = av.selectedAddons.reduce((s, a) => s + a.price, 0);
-                            const discountedPrice = Math.max(0, av.servicePrice - MULTI_VEHICLE_DISCOUNT);
-                            return (
-                              <div key={i}>
-                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
-                                  <span className="text-zinc-400">
-                                    {av.vehicleYear} {av.vehicleMake} {av.vehicleModel} — {av.serviceName}
-                                  </span>
-                                  <span className="font-semibold text-white">${discountedPrice.toFixed(2)}</span>
-                                </div>
-                                <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-[11px] text-emerald-400 pl-2 min-w-0">
-                                  <span>Multi-vehicle discount</span>
-                                  <span>−${MULTI_VEHICLE_DISCOUNT.toFixed(2)}</span>
-                                </div>
-                                {av.selectedAddons.map(a => (
-                                  <div key={a.id} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0 pl-2">
-                                    <span className="text-zinc-400 text-xs">{a.label}</span>
-                                    <span className="font-semibold text-white text-xs">${a.price.toFixed(2)}</span>
-                                  </div>
-                                ))}
+                          {additionalVehicles.filter(av => av.serviceId).map((av, i) => (
+                            <div key={i}>
+                              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0">
+                                <span className="text-zinc-400">
+                                  {av.vehicleYear} {av.vehicleMake} {av.vehicleModel} — {av.serviceName}
+                                </span>
+                                <span className="font-semibold text-white">${av.servicePrice.toFixed(2)}</span>
                               </div>
-                            );
-                          })}
+                              {av.selectedAddons.map(a => (
+                                <div key={a.id} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center min-w-0 pl-2">
+                                  <span className="text-zinc-400 text-xs">{a.label}</span>
+                                  <span className="font-semibold text-white text-xs">${a.price.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                          {multiVehicleDiscount > 0 && (
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
+                              <span className="flex items-center gap-1.5">
+                                🚗 Multi-vehicle discount
+                                <span className="text-[10px] text-emerald-500/70">
+                                  ({totalVehicleCount} vehicles)
+                                </span>
+                              </span>
+                              <span>−${multiVehicleDiscount.toFixed(2)}</span>
+                            </div>
+                          )}
                           {couponDiscount > 0 && (
                             <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
                               <span className="flex items-center gap-1.5">
