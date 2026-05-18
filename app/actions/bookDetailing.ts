@@ -850,6 +850,7 @@ export async function bookDetailing(
             }))
           : undefined,
         durationMins: totalBookingDur,
+        multiVehicleDiscount: payload.multiVehicleDiscount,
       },
       totalPrice: bookingTotal,
     }).catch((err) =>
@@ -898,6 +899,7 @@ export async function bookDetailing(
             selectedAddons: av.selectedAddons,
           }))
         : undefined,
+      multiVehicleDiscount: payload.multiVehicleDiscount,
     },
     { skipCustomerEmail: true }
   ).catch((err) => console.error("[bookDetailing] admin email error:", err));

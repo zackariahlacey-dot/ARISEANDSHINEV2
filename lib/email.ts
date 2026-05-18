@@ -53,6 +53,8 @@ export type BookingEmailData = {
     selectedAddons?: { id: string; label: string; price: number }[];
   }>;
   addonsJson?: { id: string; label: string; price: number }[];
+  /** Flat multi-vehicle discount ($25/$40) shown as its own line. */
+  multiVehicleDiscount?: number;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1513,6 +1515,7 @@ export async function sendBookingEmails(
         notes: data.notes,
         addonsJson: data.addonsJson,
         additionalVehicles: data.additionalVehicles,
+        multiVehicleDiscount: data.multiVehicleDiscount,
       }),
     }),
   ]);

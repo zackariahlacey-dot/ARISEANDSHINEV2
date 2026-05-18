@@ -37,6 +37,9 @@ export type AdminBookingAlertOptions = {
     servicePrice: number;
     selectedAddons?: { id: string; label: string; price: number }[];
   }>;
+  /** Flat multi-vehicle discount applied at the booking-total level when
+   *  there are 2+ vehicles ($25 ≤ $500 subtotal, $40 otherwise). */
+  multiVehicleDiscount?: number;
 };
 
 const esc = (s: string | number): string =>
@@ -136,9 +139,9 @@ const logoBlock = `
 
 // ── Shared: additional vehicles rows ──────────────────────────────────────────
 
-function additionalVehicleRows(vehicles: AdminBookingAlertOptions["additionalVehicles"]): string {
+function additionalVehicleRows(vehicles: AdminBookingAlertOptions["additionalVehicles"], multiVehicleDiscount?: number): string {
   if (!vehicles?.length) return "";
-  return vehicles.map((av, i) => {
+  const vehiclesHtml = vehicles.map((av, i) => {
     const avAddons = av.selectedAddons?.length
       ? `<ul style="margin:4px 0 0;padding-left:16px;">${av.selectedAddons.map(a =>
           `<li style="font-size:11px;color:#555;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`
@@ -148,10 +151,18 @@ function additionalVehicleRows(vehicles: AdminBookingAlertOptions["additionalVeh
       `Vehicle ${i + 2}`,
       `<strong>${esc(av.vehicleYear)} ${esc(av.vehicleMake)} ${esc(av.vehicleModel)}</strong>` +
       `<br/><span style="font-size:12px;color:#888;">${esc(av.serviceName)} — ` +
-      `<span style="color:#16a34a;">$${esc(av.servicePrice)} (−$25 multi-vehicle)</span></span>` +
+      `<span style="color:#111;font-weight:700;">$${esc(av.servicePrice)}</span></span>` +
       avAddons
     );
   }).join("");
+  const discountHtml = (multiVehicleDiscount && multiVehicleDiscount > 0)
+    ? row(
+        "Multi-vehicle discount",
+        `<span style="color:#16a34a;font-weight:800;">−$${esc(multiVehicleDiscount)}</span> ` +
+        `<span style="font-size:11px;color:#888;">(${vehicles.length + 1} vehicles)</span>`
+      )
+    : "";
+  return vehiclesHtml + discountHtml;
 }
 
 // ── Vehicle admin email ────────────────────────────────────────────────────────
@@ -221,7 +232,7 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
           ${row("Service", isCustomPackage ? `<strong>${esc("Custom Package (" + foundationLabel + ")")}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>` : esc(o.serviceName))}
           ${row("Vehicle 1", esc(vehicleLabel) + (o.vehicleSize ? `<span style="color:#999;font-size:11px;"> — ${esc(o.vehicleSize)}</span>` : ""))}
-          ${additionalVehicleRows(o.additionalVehicles)}
+          ${additionalVehicleRows(o.additionalVehicles, o.multiVehicleDiscount)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
           ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cashPrice))}
@@ -322,7 +333,7 @@ function boatAdminHtml(o: AdminBookingAlertOptions): string {
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
           ${row("Package", `<strong>${esc(pkgDisplay)}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>`)}
           ${row("Boat 1", esc(boatLabel))}
-          ${additionalVehicleRows(o.additionalVehicles)}
+          ${additionalVehicleRows(o.additionalVehicles, o.multiVehicleDiscount)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
           ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cashPrice))}
@@ -440,7 +451,7 @@ function rvAdminHtml(o: AdminBookingAlertOptions): string {
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
           ${row("Package", `<strong>${esc(pkgDisplay)}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>`)}
           ${row("Rig 1", esc(rigLabel))}
-          ${additionalVehicleRows(o.additionalVehicles)}
+          ${additionalVehicleRows(o.additionalVehicles, o.multiVehicleDiscount)}
           ${row("Date", esc(o.bookingDate))}
           ${row("Time", esc(o.bookingTime))}
           ${row("Payment", paymentLabel(o.paymentMethod, o.totalPrice, o.cashPrice))}

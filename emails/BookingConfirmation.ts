@@ -37,6 +37,9 @@ export type BookingConfirmationDetails = {
   /** Total expected duration in minutes — used to build "Add to Calendar"
    *  deep links. Defaults to 150 min if omitted. */
   durationMins?: number;
+  /** Flat multi-vehicle discount applied at the booking-total level
+   *  ($25 ≤ $500 subtotal, $40 otherwise). Shown as its own savings row. */
+  multiVehicleDiscount?: number;
 };
 
 // ── "Add to Calendar" helpers ─────────────────────────────────────────────────
@@ -321,9 +324,12 @@ const emailFooter = `
 
 // ── Vehicle customer email ─────────────────────────────────────────────────────
 
-function additionalVehicleRows(vehicles: BookingConfirmationDetails["additionalVehicles"]): string {
+function additionalVehicleRows(
+  vehicles: BookingConfirmationDetails["additionalVehicles"],
+  multiVehicleDiscount?: number,
+): string {
   if (!vehicles?.length) return "";
-  return vehicles.map((v, i) => {
+  const vehiclesHtml = vehicles.map((v, i) => {
     const addonsHtml = v.selectedAddons?.length
       ? `<ul style="margin:4px 0 0;padding-left:14px;">${v.selectedAddons.map(a =>
           `<li style="font-size:11px;color:#888888;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`
@@ -340,6 +346,19 @@ function additionalVehicleRows(vehicles: BookingConfirmationDetails["additionalV
     </td>
   </tr>`;
   }).join("");
+  const discountHtml = (multiVehicleDiscount && multiVehicleDiscount > 0)
+    ? `
+  <tr>
+    <td style="padding:10px 22px;border-top:1px solid #e8e8e8;background-color:#f0fdf4;">
+      <p style="font-size:13px;font-weight:700;color:#16a34a;margin:0;">
+        &#128663; Multi-vehicle discount
+        <span style="float:right;">−$${esc(multiVehicleDiscount)}</span>
+      </p>
+      <p style="font-size:11px;color:#15803d;margin:2px 0 0;">${vehicles.length + 1} vehicles on one booking — saved you ${multiVehicleDiscount === 25 ? "$25" : "$40"}.</p>
+    </td>
+  </tr>`
+    : "";
+  return vehiclesHtml + discountHtml;
 }
 
 function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): string {
@@ -404,7 +423,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
                       border:1px solid #eeeeee;">
           ${detailRow("Service", esc(isCustomPackage ? (hasAddons ? `Custom Package (${foundationLabel})` : d.serviceName) : d.serviceName))}
           ${detailRow("Vehicle 1", vehicleLabel)}
-          ${additionalVehicleRows(d.additionalVehicles)}
+          ${additionalVehicleRows(d.additionalVehicles, d.multiVehicleDiscount)}
           ${detailRow("Date", esc(date))}
           ${detailRow("Time", esc(d.bookingTime))}
           ${d.serviceAddress ? detailRow("Location", "&#128205;&nbsp;" + esc(d.serviceAddress)) : ""}
