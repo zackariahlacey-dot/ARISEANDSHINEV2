@@ -1918,9 +1918,31 @@ export function BookingSection({
       ? totalBookingDurationMins
       : undefined;
 
+  // Whole-day reservations (8+ hrs total) collapse the slot picker to a
+  // single fixed slot at the day's open time so the booking always starts
+  // when shop hours begin, and the rest of the day is implicitly blocked.
+  const isWholeDayReservation = totalBookingDurationMins >= 480;
+
   useEffect(() => {
     async function updateAvailable() {
       if (selectedService && selectedDate) {
+        // Whole-day path: existing bookings on this day disqualify it
+        // entirely (no room for another job), and the open-hours window
+        // must be at least 8 hrs. If both pass, surface ONE slot — the
+        // open time — so the customer can confirm.
+        if (isWholeDayReservation) {
+          const hasAnyBooking = (existingBookingsForDate?.length ?? 0) > 0;
+          const openMins = slotsForSelectedDate[0]
+            ? await timeToMinutes(slotsForSelectedDate[0].time)
+            : null;
+          const fitsDay = openMins != null && closingMinutesForSelectedDate - openMins >= 480;
+          if (!hasAnyBooking && fitsDay && slotsForSelectedDate.length > 0) {
+            setAvailableSlots([slotsForSelectedDate[0]]);
+          } else {
+            setAvailableSlots([]);
+          }
+          return;
+        }
         const slots = await getAvailableSlots(
           selectedService.name,
           isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : (vehicleSize || "compact"),
@@ -1935,7 +1957,7 @@ export function BookingSection({
       }
     }
     updateAvailable();
-  }, [selectedService, selectedDate, vehicleSize, boatLength, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon, effectiveDurationOverride]);
+  }, [selectedService, selectedDate, vehicleSize, boatLength, existingBookingsForDate, slotsForSelectedDate, closingMinutesForSelectedDate, hasFullDayAddon, effectiveDurationOverride, isWholeDayReservation]);
 
   // Remove past times for today so they don't render at all (pass full slot so regex can read .time or .label)
   const displaySlots = selectedDate
@@ -3988,8 +4010,14 @@ export function BookingSection({
                         </p>
                       ) : displaySlots.length === 0 ? (
                         <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 px-4 py-4 space-y-2">
-                          <p className="text-sm font-semibold text-zinc-300">No openings on this day</p>
-                          <p className="text-xs text-zinc-500">This date is fully booked. Tap one of the &ldquo;Next Available&rdquo; days above for instant booking.</p>
+                          <p className="text-sm font-semibold text-zinc-300">
+                            {isWholeDayReservation ? "This day can't host a whole-day reservation" : "No openings on this day"}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {isWholeDayReservation
+                              ? "Your build is 8+ hours so we lock the entire day. Pick a day with no other appointments and at least 8 hours of operating time."
+                              : "This date is fully booked. Tap one of the “Next Available” days above for instant booking."}
+                          </p>
                           {nextAvailDays.length > 0 && (
                             <div className="flex gap-2 pt-1">
                               {nextAvailDays.map(day => (
@@ -4005,6 +4033,35 @@ export function BookingSection({
                             </div>
                           )}
                         </div>
+                      ) : isWholeDayReservation ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTime(displaySlots[0].time)}
+                          className={`w-full rounded-2xl border-2 px-5 py-4 text-left transition-all ${
+                            selectedTime === displaySlots[0].time
+                              ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/15 to-[#D4AF37]/5 shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+                              : "border-[#D4AF37]/30 bg-zinc-900/40 hover:border-[#D4AF37]/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37] mb-0.5">
+                                Whole Day · Reserved
+                              </p>
+                              <p className="text-base font-black text-white">Starts at {displaySlots[0].time} <span className="text-zinc-500 font-bold text-xs">({displaySlots[0].period})</span></p>
+                              <p className="text-[11px] text-zinc-500 mt-1 leading-snug">
+                                Your build runs 8+ hours, so this day is yours alone — no other appointments will be booked.
+                              </p>
+                            </div>
+                            <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                              selectedTime === displaySlots[0].time
+                                ? "bg-[#D4AF37] text-black"
+                                : "bg-zinc-800 border border-zinc-700"
+                            }`}>
+                              {selectedTime === displaySlots[0].time ? <Check size={13} strokeWidth={3} /> : <Plus size={12} className="text-zinc-500" />}
+                            </span>
+                          </div>
+                        </button>
                       ) : (
                         <div className="grid grid-cols-2 gap-2">
                           {displaySlots.map((slot) => (

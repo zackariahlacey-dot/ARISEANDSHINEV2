@@ -7,7 +7,7 @@ import { sendBookingEmail, sendBookerAccountInviteEmail } from "@/app/actions/se
 import { profileHasAuthUser } from "@/lib/auth/profileHasAuthUser";
 import Stripe from "stripe";
 import { SERVICE_DURATIONS, VEHICLE_SIZE_MAP } from "@/lib/constants";
-import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
+import { getDurationMins, getAdditionalVehiclesDuration, isWholeDayBooking } from "@/lib/availability";
 import { logError } from "@/app/actions/logError";
 import { cashPriceFor } from "@/lib/cashPricing";
 
@@ -150,11 +150,15 @@ export async function checkAvailability(
     .neq("status", "cancelled")
     .neq("status", "no-show");
 
-  if (!existing || existing.length === 0) return true;
-
   const newStart = await timeToMinutes(time);
   const newDur = customDurationMins ?? getDurationMins(serviceName, size);
   const newEnd = newStart + newDur;
+  const customerIsWholeDay = isWholeDayBooking(newDur);
+
+  // Whole-day reservations require the day to be entirely empty — any
+  // existing booking blocks them.
+  if (customerIsWholeDay && existing && existing.length > 0) return false;
+  if (!existing || existing.length === 0) return true;
 
   for (const b of existing) {
     const bStart = await timeToMinutes(b.booking_time);
@@ -164,6 +168,9 @@ export async function checkAvailability(
     const bDur = bOverride != null
       ? bOverride
       : getDurationMins(bName, bSize) + getAdditionalVehiclesDuration((b as any).additional_vehicles_json);
+    // A pre-existing whole-day booking on this day blocks all new slots
+    // even if they don't directly overlap by the minute.
+    if (isWholeDayBooking(bDur)) return false;
     const bEnd = bStart + bDur;
     if (newStart < bEnd && newEnd > bStart) return false;
   }

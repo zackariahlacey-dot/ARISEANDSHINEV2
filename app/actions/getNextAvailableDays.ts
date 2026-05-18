@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getDurationMins, getAdditionalVehiclesDuration, checkSlotConflict, timeToMins, to12h, type BookingSlot } from "@/lib/availability";
+import { getDurationMins, getAdditionalVehiclesDuration, checkSlotConflict, timeToMins, to12h, isWholeDayBooking, WHOLE_DAY_THRESHOLD_MINS, type BookingSlot } from "@/lib/availability";
 
 export type AvailableDay = {
   date: string;         // YYYY-MM-DD
@@ -149,7 +149,29 @@ export async function getNextAvailableDays(
       ? now.getHours() * 60 + now.getMinutes()
       : null;
 
-    const slots = openSlotsForDay(existingBookings, duration, dayStart, dayEnd, skipBefore);
+    // Whole-day booking blocks the entire day — any existing booking on a
+    // day disqualifies it, and the day's open hours must fit 8+ hours.
+    const customerIsWholeDay = isWholeDayBooking(duration);
+    // Drop days that already host a whole-day reservation, regardless of
+    // the customer's own duration — those days are fully blocked.
+    const dayHasWholeDayBooking = existingBookings.some(b => isWholeDayBooking(b.total_duration_mins));
+    if (dayHasWholeDayBooking) continue;
+
+    let slots: string[];
+    if (customerIsWholeDay) {
+      // Whole-day bookings start at open time, and only on days with
+      // enough operating hours to fit. If anything else is on the day
+      // already, skip — no room left for a whole-day reservation.
+      if (existingBookings.length > 0) continue;
+      if (dayEnd - dayStart < WHOLE_DAY_THRESHOLD_MINS) continue;
+      const startsBeforeNow = skipBefore !== null && dayStart <= skipBefore;
+      if (startsBeforeNow) continue;
+      const h = Math.floor(dayStart / 60);
+      const mn = dayStart % 60;
+      slots = [`${String(h).padStart(2, "0")}:${String(mn).padStart(2, "0")}`];
+    } else {
+      slots = openSlotsForDay(existingBookings, duration, dayStart, dayEnd, skipBefore);
+    }
     if (slots.length === 0) continue;
 
     // Build human-readable label.

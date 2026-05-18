@@ -14,6 +14,24 @@ export interface BookingSlot {
   total_duration_mins?: number | null;
 }
 
+/** Bookings of this duration or longer reserve the entire operating day —
+ *  no other appointments can be scheduled before, during, or after them.
+ *  Customer-facing UI shows "Whole Day · Reserved" instead of slot picker. */
+export const WHOLE_DAY_THRESHOLD_MINS = 480;
+
+/** True if a booking's combined duration triggers whole-day reservation. */
+export function isWholeDayBooking(durationMins: number | null | undefined): boolean {
+  return (durationMins ?? 0) >= WHOLE_DAY_THRESHOLD_MINS;
+}
+
+/** Effective total duration for a stored booking (uses pre-computed total
+ *  when present, else recomputes from service + additional vehicles). */
+export function getBookingDuration(b: BookingSlot, additionalVehiclesJson?: unknown): number {
+  if (b.total_duration_mins != null) return b.total_duration_mins;
+  return getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan")
+    + getAdditionalVehiclesDuration(additionalVehiclesJson);
+}
+
 /**
  * Compute extra minutes added by additional vehicles stored in additional_vehicles_json.
  * Each vehicle adds (baseDuration - 30), minimum 30 min — 30-min efficiency discount per extra vehicle.
