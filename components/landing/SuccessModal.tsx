@@ -492,6 +492,49 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                   </motion.div>
                 )}
 
+                {/* Maintenance Detail teaser — fires for qualifying car bookings.
+                    The 3-month window starts when the booking is created, so we
+                    surface it on the success screen so the customer knows it's
+                    waiting for them. Copy + CTA shift based on auth state. */}
+                {data && isCustomPackageService(data.serviceName) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.36, duration: 0.3 }}
+                  >
+                    <div className="px-4 py-3.5 rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-500/[0.01]">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-base leading-none">🔁</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-white mb-0.5">Maintenance Detail unlocked for 3 months</p>
+                          <p className="text-[11px] text-zinc-400 leading-snug">
+                            On <span className="text-zinc-200 font-bold">this vehicle</span> only — touch-up details start at
+                            <span className="text-emerald-400 font-bold"> 45% of base</span>, takes as little as
+                            <span className="text-emerald-400 font-bold"> 1 hour</span>. Perfect for keeping it fresh between deep cleans.
+                          </p>
+                          {data?.isGuest ? (
+                            <a
+                              href={`/auth/sign-up${data?.email ? `?email=${encodeURIComponent(data.email)}` : ""}`}
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 transition-colors text-[11px] font-black uppercase tracking-wider"
+                            >
+                              Sign up to claim it →
+                            </a>
+                          ) : (
+                            <a
+                              href="/protected"
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 transition-colors text-[11px] font-black uppercase tracking-wider"
+                            >
+                              See it on my dashboard →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Guest sign-up nudge — strengthened messaging about loyalty credit */}
                 {data?.isGuest && (
                   <motion.div
@@ -509,7 +552,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
                       <div>
                         <p className="text-sm font-black text-white mb-1">Sign up & this detail counts toward loyalty</p>
                         <p className="text-[11px] text-zinc-400 leading-snug">
-                          We&apos;ll tie this booking to your account by email. <span className="text-[#d4af37] font-bold">Up to 20% off forever</span> at 10 details.
+                          We&apos;ll tie this booking to your account by email. <span className="text-[#d4af37] font-bold">Up to 20% off forever</span> at 10 details — plus that maintenance offer above lands in your dashboard.
                         </p>
                       </div>
                     </a>

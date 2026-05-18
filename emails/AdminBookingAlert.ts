@@ -40,6 +40,9 @@ export type AdminBookingAlertOptions = {
   /** Flat multi-vehicle discount applied at the booking-total level when
    *  there are 2+ vehicles ($25 ≤ $500 subtotal, $40 otherwise). */
   multiVehicleDiscount?: number;
+  /** True when this is a Maintenance Detail (offer redemption). */
+  isMaintenance?: boolean;
+  maintenanceCondition?: "showroom" | "lived_in" | "rough";
 };
 
 const esc = (s: string | number): string =>
@@ -183,7 +186,14 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
   const foundationLabel = svcLower === "interior detail" ? "Interior"
     : svcLower === "exterior detail" ? "Exterior"
     : "Full";
-  const alertTitle = isCustomPackage ? "🛠️ New Custom Package Booking" : "🚗 New Vehicle Booking";
+  const conditionShort = o.maintenanceCondition === "showroom" ? "Showroom"
+    : o.maintenanceCondition === "lived_in" ? "Lived-in"
+    : o.maintenanceCondition === "rough" ? "Rough"
+    : null;
+  const alertTitle = o.isMaintenance
+    ? `🔁 Maintenance Detail${conditionShort ? ` · ${conditionShort}` : ""}`
+    : isCustomPackage ? "🛠️ New Custom Package Booking"
+    : "🚗 New Vehicle Booking";
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">

@@ -55,6 +55,9 @@ export type BookingEmailData = {
   addonsJson?: { id: string; label: string; price: number }[];
   /** Flat multi-vehicle discount ($25/$40) shown as its own line. */
   multiVehicleDiscount?: number;
+  /** Marks this booking as a Maintenance Detail redemption. */
+  isMaintenance?: boolean;
+  maintenanceCondition?: "showroom" | "lived_in" | "rough";
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1516,6 +1519,8 @@ export async function sendBookingEmails(
         addonsJson: data.addonsJson,
         additionalVehicles: data.additionalVehicles,
         multiVehicleDiscount: data.multiVehicleDiscount,
+        isMaintenance: data.isMaintenance,
+        maintenanceCondition: data.maintenanceCondition,
       }),
     }),
   ]);

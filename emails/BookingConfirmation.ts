@@ -40,6 +40,10 @@ export type BookingConfirmationDetails = {
   /** Flat multi-vehicle discount applied at the booking-total level
    *  ($25 ≤ $500 subtotal, $40 otherwise). Shown as its own savings row. */
   multiVehicleDiscount?: number;
+  /** When set, this is a Maintenance Detail redemption — copy + headline
+   *  shift to reflect the lower-priced rebook program. */
+  isMaintenance?: boolean;
+  maintenanceCondition?: "showroom" | "lived_in" | "rough";
 };
 
 // ── "Add to Calendar" helpers ─────────────────────────────────────────────────
@@ -374,9 +378,15 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
   const foundationLabel = svcLower === "interior detail" ? "Interior"
     : svcLower === "exterior detail" ? "Exterior"
     : "Full";
-  const headline = isCustomPackage
-    ? "Your Custom Package is Scheduled!"
-    : "Your Detail is Confirmed!";
+  const headline = d.isMaintenance
+    ? "Your Maintenance Detail is Booked!"
+    : isCustomPackage
+      ? "Your Custom Package is Scheduled!"
+      : "Your Detail is Confirmed!";
+  const conditionLabel = d.maintenanceCondition === "showroom" ? "Showroom (light cleanup)"
+    : d.maintenanceCondition === "lived_in" ? "Lived-in (daily-driver wear)"
+    : d.maintenanceCondition === "rough" ? "Rough (heavy reset)"
+    : null;
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -398,7 +408,9 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
         <h1 style="color:#ffffff;font-size:26px;font-weight:900;margin:0 0 8px;letter-spacing:-0.4px;">
           ${headline}
         </h1>
-        ${isCustomPackage && hasAddons ? `
+        ${d.isMaintenance ? `
+        <p style="display:inline-block;color:#10b981;font-size:10px;font-weight:800;background:rgba(16,185,129,0.10);border:1px solid rgba(16,185,129,0.35);border-radius:999px;padding:4px 10px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px;">Maintenance Detail${conditionLabel ? ` · ${conditionLabel.split(" ")[0]}` : ""}</p>
+        ` : isCustomPackage && hasAddons ? `
         <p style="display:inline-block;color:#D4AF37;font-size:10px;font-weight:800;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.35);border-radius:999px;padding:4px 10px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px;">Build Your Package</p>
         ` : ""}
         <p style="color:#aaaaaa;font-size:14px;margin:0;">
@@ -421,7 +433,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:14px;overflow:hidden;margin-bottom:28px;
                       border:1px solid #eeeeee;">
-          ${detailRow("Service", esc(isCustomPackage ? (hasAddons ? `Custom Package (${foundationLabel})` : d.serviceName) : d.serviceName))}
+          ${detailRow("Service", esc(d.isMaintenance ? `Maintenance · ${foundationLabel}${conditionLabel ? ` (${conditionLabel.split(" ")[0]})` : ""}` : isCustomPackage ? (hasAddons ? `Custom Package (${foundationLabel})` : d.serviceName) : d.serviceName))}
           ${detailRow("Vehicle 1", vehicleLabel)}
           ${additionalVehicleRows(d.additionalVehicles, d.multiVehicleDiscount)}
           ${detailRow("Date", esc(date))}

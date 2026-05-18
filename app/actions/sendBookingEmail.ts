@@ -44,7 +44,9 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
     // Package builder — surface that in the subject so customers recognize
     // their custom-built order.
     const isBuilderPackage = sn === "interior detail" || sn === "exterior detail" || sn === "full detail";
-    const subjectPrefix = sn.includes("boat")
+    const subjectPrefix = bookingDetails.isMaintenance
+      ? "Your Maintenance Detail is Booked"
+      : sn.includes("boat")
       ? "Your Boat Detail is Confirmed — Waterline Up"
       : sn.includes("rv") || sn.includes("motorhome")
       ? "Your RV Detail is Confirmed"

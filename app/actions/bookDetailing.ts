@@ -919,6 +919,8 @@ export async function bookDetailing(
           : undefined,
         durationMins: totalBookingDur,
         multiVehicleDiscount: payload.multiVehicleDiscount,
+        isMaintenance: !!payload.maintenanceOfferId,
+        maintenanceCondition: payload.maintenanceCondition,
       },
       totalPrice: bookingTotal,
     }).catch((err) =>
@@ -968,6 +970,8 @@ export async function bookDetailing(
           }))
         : undefined,
       multiVehicleDiscount: payload.multiVehicleDiscount,
+      isMaintenance: !!payload.maintenanceOfferId,
+      maintenanceCondition: payload.maintenanceCondition,
     },
     { skipCustomerEmail: true }
   ).catch((err) => console.error("[bookDetailing] admin email error:", err));
