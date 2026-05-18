@@ -274,12 +274,16 @@ export function NewBookingForm({
   // Step 3 — Add-ons
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  // Multi-vehicle (vehicle pathway only)
-  const ADMIN_MULTI_VEHICLE_DISCOUNT = 25;
+  // Multi-vehicle (vehicle pathway only). Flat tier: $25 ≤ $500 subtotal,
+  // $40 otherwise. Only kicks in with 2+ vehicles.
   const ADMIN_MULTI_VEHICLE_SERVICES = [
     "Interior Detail", "Exterior Detail", "Full Detail",
     "Ultimate Interior Reset", "Ultimate Interior + Exterior Reset",
   ];
+  const getAdminMultiVehicleDiscount = (subtotal: number, vehicleCount: number): number => {
+    if (vehicleCount < 2) return 0;
+    return subtotal <= 500 ? 25 : 40;
+  };
   type AdminAddlVehicle = {
     vehicleYear: string; vehicleMake: string; vehicleModel: string;
     vehicleSize: string; serviceId: string; serviceName: string; servicePrice: number;
@@ -370,8 +374,10 @@ export function NewBookingForm({
   }, [selectedService, pathway, footage, vehicleSize]);
 
   const addonTotal  = selectedAddons.reduce((sum, id) => sum + getAdminAddonPrice(id, vehicleSize), 0);
-  const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => sum + Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT), 0);
-  const totalPrice  = priceOverride !== "" ? Number(priceOverride) : basePrice + addonTotal + additionalVehiclesTotal;
+  const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => sum + v.servicePrice, 0);
+  const adminVehiclesSubtotal = basePrice + addonTotal + additionalVehiclesTotal;
+  const adminMultiVehicleDiscount = getAdminMultiVehicleDiscount(adminVehiclesSubtotal, 1 + additionalVehicles.length);
+  const totalPrice  = priceOverride !== "" ? Number(priceOverride) : Math.max(0, adminVehiclesSubtotal - adminMultiVehicleDiscount);
 
   useEffect(() => {
     if (step !== 4 || !bookingDate) return;
@@ -440,8 +446,8 @@ export function NewBookingForm({
       const footageNote = (pathway === "boat" || pathway === "rv") && footage ? `\n${pathway === "boat" ? "Boat" : "RV"} length: ${footage} ft` : "";
       const addlVehicleNote = additionalVehicles.length
         ? `\nAdditional vehicles (${additionalVehicles.length}): ${additionalVehicles.map((v, i) =>
-            `${i + 2}. ${v.vehicleYear} ${v.vehicleMake} ${v.vehicleModel} — ${v.serviceName} ($${Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT)}, $${ADMIN_MULTI_VEHICLE_DISCOUNT} off)`
-          ).join("; ")}`
+            `${i + 2}. ${v.vehicleYear} ${v.vehicleMake} ${v.vehicleModel} — ${v.serviceName} ($${v.servicePrice})`
+          ).join("; ")}${adminMultiVehicleDiscount > 0 ? `\n🚗 Multi-vehicle discount (${1 + additionalVehicles.length} vehicles): $${adminMultiVehicleDiscount.toFixed(2)} off` : ""}`
         : "";
       const durationMins = durationOverride ? parseInt(durationOverride, 10) : undefined;
       const res = await adminQuickBookAction({
@@ -464,7 +470,7 @@ export function NewBookingForm({
             vehicleModel: v.vehicleModel,
             serviceId: v.serviceId,
             serviceName: v.serviceName,
-            servicePrice: Math.max(0, v.servicePrice - ADMIN_MULTI_VEHICLE_DISCOUNT),
+            servicePrice: v.servicePrice,
           })),
         } : {}),
       });
@@ -701,14 +707,13 @@ export function NewBookingForm({
                           {multiVehicleServices.map((svc: any) => {
                             const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === av.vehicleSize) ?? VEHICLE_SIZES_ADMIN[1];
                             const price = Number(svc[sizeEntry.key] ?? svc.price_small ?? 0);
-                            const discounted = Math.max(0, price - ADMIN_MULTI_VEHICLE_DISCOUNT);
                             return (
                               <button key={svc.id} onClick={() => updateAdminVehicle(idx, { serviceId: svc.id, serviceName: svc.name, servicePrice: price })}
                                 className={cn("w-full text-left px-3 py-2 rounded-xl border transition-all flex items-center justify-between text-xs",
                                   av.serviceId === svc.id ? "bg-amber-500/10 border-amber-500/50 text-amber-400" : "border-white/[0.07] text-zinc-400"
                                 )}>
                                 <span className="font-bold">{svc.name}</span>
-                                <span className="font-black">${discounted} <span className="line-through text-zinc-600">${price}</span></span>
+                                <span className="font-black">${price}</span>
                               </button>
                             );
                           })}
@@ -718,8 +723,14 @@ export function NewBookingForm({
                   })}
                   <button onClick={addAdminVehicle}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-amber-500/30 text-amber-400 text-xs font-bold hover:bg-amber-500/5 transition-all">
-                    <Plus size={13} /> Add Another Vehicle — Save ${ADMIN_MULTI_VEHICLE_DISCOUNT}
+                    <Plus size={13} /> Add Another Vehicle — Save $25/$40
                   </button>
+                  {adminMultiVehicleDiscount > 0 && (
+                    <div className="flex items-center justify-between px-3 py-2 mt-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-bold text-emerald-300">
+                      <span>🚗 Multi-vehicle discount ({1 + additionalVehicles.length} vehicles)</span>
+                      <span className="tabular-nums">−${adminMultiVehicleDiscount}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -2217,7 +2228,6 @@ export default function SchedulePage() {
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-sm font-black text-zinc-200 tabular-nums">${sp.toFixed(0)}</p>
-                              <p className="text-[10px] text-emerald-400">−$25 multi</p>
                             </div>
                           </div>
                           {avAddons.length > 0 && (
@@ -2262,6 +2272,8 @@ export default function SchedulePage() {
                 const loyaltyAmt    = matchAmount(/⭐ Loyalty discount[^$]+\$(\d+(?:\.\d+)?)\s+off/);
                 const bundleAddons  = matchAmount(/🎁 Bundle discount \((\d+) add-ons\)/);
                 const bundleAmt     = matchAmount(/🎁 Bundle discount[^$]+\$(\d+(?:\.\d+)?)\s+off/);
+                const multiCount    = matchAmount(/🚗 Multi-vehicle discount \((\d+) vehicles\)/);
+                const multiAmt      = matchAmount(/🚗 Multi-vehicle discount[^$]+\$(\d+(?:\.\d+)?)\s+off/);
                 // Coupon from joined coupons table (admin client fetched it)
                 const couponObj     = Array.isArray(b.coupons) ? b.coupons[0] : b.coupons;
                 const couponCode    = promoCode ?? couponObj?.code ?? null;
@@ -2283,7 +2295,7 @@ export default function SchedulePage() {
                 const memberCredit = memberCreditCents / 100;
                 // Computed subtotal
                 const subtotal = servicePrice + primaryAddonsTotal + addlVehiclesTotal + (travelFee ?? 0) + (setupFee ?? 0);
-                const knownDiscounts = (promoAmt ?? 0) + (giftAmt ?? 0) + (pointsAmt ?? 0) + (loyaltyAmt ?? 0) + (bundleAmt ?? 0) + memberCredit;
+                const knownDiscounts = (promoAmt ?? 0) + (giftAmt ?? 0) + (pointsAmt ?? 0) + (loyaltyAmt ?? 0) + (bundleAmt ?? 0) + (multiAmt ?? 0) + memberCredit;
                 const totalPrice = Number(b.total_price ?? 0);
                 // Implied additional discount (cash discount or admin price edit)
                 const impliedExtra = Math.max(0, Math.round((subtotal - knownDiscounts - totalPrice) * 100) / 100);
@@ -2325,6 +2337,9 @@ export default function SchedulePage() {
                       )}
                       {bundleAmt != null && bundleAmt > 0 && (
                         <Row label={`🎁 Bundle (${bundleAddons ?? "?"} add-ons stacked)`} amount={`$${bundleAmt.toFixed(2)}`} negative accent="text-violet-400" />
+                      )}
+                      {multiAmt != null && multiAmt > 0 && (
+                        <Row label={`🚗 Multi-vehicle (${multiCount ?? "?"} vehicles)`} amount={`$${multiAmt.toFixed(2)}`} negative accent="text-emerald-400" />
                       )}
                       {promoAmt != null && promoAmt > 0 && (
                         <Row label={`🏷️ Promo${couponCode ? ` ${couponCode}` : ""}`} amount={`$${promoAmt.toFixed(2)}`} negative />
