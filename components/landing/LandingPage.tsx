@@ -239,6 +239,10 @@ export function LandingPage({ services }: { services: Service[] }) {
   const bottomCtaRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
+  // True once the customer has picked a foundation in BuildYourPackage —
+  // the builder shows its own sticky mobile bar, so the global Book Now
+  // CTA hides to avoid two competing buttons stacked at the bottom.
+  const [builderActive, setBuilderActive] = useState(false);
 
 
   useEffect(() => {
@@ -769,6 +773,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* ── Build Your Package (replaces basic detail cards) ──── */}
           <BuildYourPackage
             services={services}
+            onBuilderActiveChange={setBuilderActive}
             onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear }) => {
               const svc = services.find(s => s.name === serviceName) ?? null;
               setSelectedService(svc);
@@ -1639,7 +1644,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           in checkout and doesn't need a redundant "Book Now" button. */}
       <div
         className={`md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-2 transition-all duration-500 ${
-          isPastHero && !isBottomCtaVisible && expandedBookingId !== "services"
+          isPastHero && !isBottomCtaVisible && expandedBookingId !== "services" && !builderActive
             ? "translate-y-0 opacity-100 ease-out"
             : "translate-y-full opacity-0 pointer-events-none ease-in"
         }`}

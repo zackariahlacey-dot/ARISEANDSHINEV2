@@ -204,6 +204,7 @@ function Autocomplete({
 export function BuildYourPackage({
   services,
   onContinueToBooking,
+  onBuilderActiveChange,
 }: {
   services: Service[];
   onContinueToBooking: (args: {
@@ -214,6 +215,9 @@ export function BuildYourPackage({
     vehicleModel: string;
     vehicleYear: string;
   }) => void;
+  /** Fires when the customer has actively engaged the builder (foundation
+   * picked). Lets the parent hide a redundant global Book Now CTA. */
+  onBuilderActiveChange?: (active: boolean) => void;
 }) {
   // Persist builder state across reloads so customers don't restart on refresh.
   // Read sync on first render to avoid a flash of empty state.
@@ -248,6 +252,30 @@ export function BuildYourPackage({
   // Auto-lock as the customer progresses
   useEffect(() => { if (foundationId) setFoundationLocked(true); }, [foundationId]);
   useEffect(() => { if (vehicleConfirmed) setVehicleLocked(true); }, [vehicleConfirmed]);
+
+  // Signal active/inactive so the parent can hide the global Book Now CTA
+  // (the mobile sticky bar below replaces it once the customer has engaged).
+  useEffect(() => {
+    onBuilderActiveChange?.(!!foundationId);
+  }, [foundationId, onBuilderActiveChange]);
+  useEffect(() => {
+    return () => onBuilderActiveChange?.(false);
+  }, [onBuilderActiveChange]);
+
+  // Hide the mobile sticky bar when the in-flow Continue card is visible —
+  // otherwise both stack and the customer sees the same button twice.
+  const inFlowContinueRef = useRef<HTMLDivElement>(null);
+  const [inFlowVisible, setInFlowVisible] = useState(false);
+  useEffect(() => {
+    const node = inFlowContinueRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setInFlowVisible(entry.isIntersecting),
+      { rootMargin: "0px 0px -80px 0px", threshold: 0 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [foundationId, vehicleConfirmed]);
 
   // Save builder state on every change so refresh preserves progress
   useEffect(() => {
@@ -938,6 +966,7 @@ export function BuildYourPackage({
       <AnimatePresence initial={false}>
         {canContinue && (
           <motion.div
+            ref={inFlowContinueRef}
             key="continue"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1027,6 +1056,59 @@ export function BuildYourPackage({
       </aside>
 
       </div>{/* close 2-column grid */}
+
+      {/* ── Mobile sticky price + Continue bar ────────────────────────────
+          Once the customer picks a foundation, a running price + Continue
+          button sticks to the bottom of the viewport on mobile so they can
+          commit from anywhere in the page. Hides while the in-flow
+          Continue card is on-screen to avoid showing the same button twice.
+      ───────────────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {foundationId && !inFlowVisible && (
+          <motion.div
+            key="sticky-builder"
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "tween", duration: 0.25 }}
+            className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-3"
+            style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", paddingTop: "0.5rem" }}
+          >
+            <div className="rounded-2xl border border-[#D4AF37]/40 bg-black/85 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.55)] px-3.5 py-2.5 flex items-center gap-3">
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 leading-none">Your Build</p>
+                <div className="flex items-baseline gap-1.5 mt-0.5">
+                  <span className="text-xl font-black text-white tabular-nums leading-none">${total}</span>
+                  {bundleDiscount > 0 && (
+                    <span className="text-[10px] text-violet-400 font-bold whitespace-nowrap">−${bundleDiscount} bundle</span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (canContinue) { handleContinue(); return; }
+                  // Jump to the next incomplete step
+                  if (!vehicleConfirmed) {
+                    vehicleStepRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  } else {
+                    addonsStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all active:scale-[0.96] ${
+                  canContinue
+                    ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_4px_14px_rgba(212,175,55,0.35)]"
+                    : "bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#D4AF37]"
+                }`}
+              >
+                {canContinue ? <>Pick Date & Time <ChevronRight size={14} /></>
+                  : !vehicleConfirmed ? <>Add Vehicle <ChevronRight size={14} /></>
+                  : <>Continue <ChevronRight size={14} /></>}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
