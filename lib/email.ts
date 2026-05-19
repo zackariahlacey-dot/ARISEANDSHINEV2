@@ -1868,42 +1868,100 @@ function paymentOwnerHtml(data: PaymentReceivedData, formattedDate: string, shor
 </html>`;
 }
 
-export async function sendPaymentReceivedEmails(data: PaymentReceivedData): Promise<void> {
+/**
+ * Sends the customer thank-you + owner payment-received emails.
+ *
+ * Returns a structured result so the caller (e.g. the Stripe webhook) can
+ * persist success/failure state on the booking row. Retries each send up
+ * to 3 times with linear backoff (1s, 2s) before giving up — covers the
+ * transient Resend / Vercel network blip that was occasionally dropping
+ * the owner notification with no retry path.
+ */
+export async function sendPaymentReceivedEmails(data: PaymentReceivedData): Promise<{
+  ok: boolean;
+  ownerSent: boolean;
+  customerSent: boolean;
+  error?: string;
+}> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY is not set — skipping payment emails.");
-    return;
+    return { ok: false, ownerSent: false, customerSent: false, error: "RESEND_API_KEY missing" };
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const formattedDate = formatDate(data.bookingDate);
   const shortRef = data.bookingId.slice(0, 8).toUpperCase();
 
-  const sends = await Promise.allSettled([
+  // Send with retry — up to MAX_ATTEMPTS, with linear backoff. Returns the
+  // first successful result or the last error. Resend's idempotency-key
+  // header would let us safely retry without dupes, but for now we just
+  // accept the (very small) chance of a duplicate if the network drops
+  // between Resend accepting + our seeing the 2xx.
+  const MAX_ATTEMPTS = 3;
+  const sendWithRetry = async (
+    params: Parameters<typeof resend.emails.send>[0],
+    label: string,
+  ): Promise<{ ok: true } | { ok: false; error: string }> => {
+    let lastError = "unknown error";
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const res = await resend.emails.send(params);
+        if (res && (res as any).error) {
+          lastError = JSON.stringify((res as any).error);
+        } else {
+          if (attempt > 1) {
+            console.log(`[email] ${label} succeeded on attempt ${attempt}`);
+          }
+          return { ok: true };
+        }
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+      }
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+    console.error(`[email] ${label} permanently failed after ${MAX_ATTEMPTS} attempts:`, lastError);
+    return { ok: false, error: lastError };
+  };
+
+  const ownerSubject = `💰 Payment Received: ${data.customerName} — $${fmtMoney(data.totalPaid)}${data.tipAmount > 0 ? ` (+$${fmtMoney(data.tipAmount)} tip)` : ""}`;
+
+  const [customerResult, ownerResult] = await Promise.all([
     data.customerEmail
-      ? resend.emails.send({
+      ? sendWithRetry({
           from: FROM_ADDRESS,
           to: data.customerEmail,
           replyTo: REPLY_TO,
           subject: `Thank You! Payment Received — $${fmtMoney(data.totalPaid)}`,
           html: paymentThankYouHtml(data, formattedDate, shortRef),
-        })
-      : Promise.resolve(null),
-
-    resend.emails.send({
+        }, "customer-thankyou")
+      : Promise.resolve({ ok: true } as const),
+    sendWithRetry({
       from: FROM_ADDRESS,
       to: OWNER_EMAIL,
-      subject: `💰 Payment Received: ${data.customerName} — $${fmtMoney(data.totalPaid)}${data.tipAmount > 0 ? ` (+$${fmtMoney(data.tipAmount)} tip)` : ""}`,
+      subject: ownerSubject,
       html: paymentOwnerHtml(data, formattedDate, shortRef),
-    }),
+    }, "owner-payment"),
   ]);
 
-  for (const [label, result] of [["customer-thankyou", sends[0]], ["owner-payment", sends[1]]] as const) {
-    if (result.status === "rejected") {
-      console.error(`[email] ${label} send failed:`, result.reason);
-    } else if (result.value && "error" in result.value && result.value.error) {
-      console.error(`[email] ${label} resend error:`, result.value.error);
-    }
-  }
+  const ownerSent = ownerResult.ok;
+  const customerSent = customerResult.ok;
+  const error = !ownerResult.ok
+    ? `owner: ${("error" in ownerResult && ownerResult.error) || ""}`
+    : !customerResult.ok
+      ? `customer: ${("error" in customerResult && customerResult.error) || ""}`
+      : undefined;
+
+  // Owner email is the critical path. If owner fails we report ok:false even
+  // if the customer thank-you succeeded so the webhook will retry and the
+  // shop owner doesn't go blind on revenue.
+  return {
+    ok: ownerSent,
+    ownerSent,
+    customerSent,
+    error,
+  };
 }
 
 // ─── Price Updated Notification ───────────────────────────────────────────────

@@ -200,60 +200,121 @@ export async function POST(req: NextRequest) {
     // Checked FIRST — these sessions only carry booking_id and won't pass
     // the full-metadata guard below.
     if (m?.booking_id) {
-      // Idempotency: skip if already confirmed via this session
-      const { data: alreadyDone } = await supabase
+      // Look up the booking once; we'll use it for both idempotency and email.
+      const { data: existing } = await supabase
         .from("bookings")
-        .select("id")
-        .eq("stripe_checkout_session_id", session.id)
-        .maybeSingle();
-      if (alreadyDone) return NextResponse.json({ received: true });
-
-      const tipAmount = m.tip_amount ? parseFloat(m.tip_amount) || 0 : 0;
-      const updatePayload: Record<string, unknown> = {
-        status: "confirmed",
-        stripe_checkout_session_id: session.id,
-      };
-      // payment_method and tip_amount columns are added via migration — omit if not yet present
-      // if (tipAmount > 0) updatePayload.tip_amount = tipAmount;
-
-      const { error: updateErr } = await supabase
-        .from("bookings")
-        .update(updatePayload)
+        .select("id, status, stripe_checkout_session_id, payment_received_email_sent_at, customer_name, customer_email, customer_phone, service_name, vehicle_size, vehicle_make, vehicle_model, vehicle_year, booking_date, booking_time, total_price, service_address")
         .eq("id", m.booking_id)
-        .in("status", ["pending_payment", "confirmed"]); // allow both — pay page can be sent to confirmed bookings too
+        .maybeSingle();
 
-      if (updateErr) {
-        console.error("[webhooks/stripe] Admin booking update failed:", updateErr);
-        return NextResponse.json({ error: "Admin booking update failed" }, { status: 500 });
+      if (!existing) {
+        // Booking was deleted between session creation and webhook? Acknowledge
+        // so Stripe stops retrying; nothing we can do.
+        console.error("[webhooks/stripe] booking_id not found:", m.booking_id);
+        return NextResponse.json({ received: true });
       }
 
-      // Fetch full booking so we can send confirmation emails
-      const { data: adminBooking } = await supabase
-        .from("bookings")
-        .select("id, customer_name, customer_email, customer_phone, service_name, vehicle_size, vehicle_make, vehicle_model, vehicle_year, booking_date, booking_time, total_price, service_address, notes")
-        .eq("id", m.booking_id)
-        .single();
+      // True idempotency: only short-circuit if the booking is already tagged
+      // with THIS session AND the email has been sent. If the email never
+      // sent (transient Resend failure on a prior webhook attempt), fall
+      // through and try again — Stripe retries are our friend here.
+      const alreadyEmailed =
+        (existing as any).stripe_checkout_session_id === session.id &&
+        !!(existing as any).payment_received_email_sent_at;
+      if (alreadyEmailed) {
+        return NextResponse.json({ received: true });
+      }
 
-      if (adminBooking) {
-        const baseAmount = Number((adminBooking as any).total_price) || 0;
-        const totalPaid  = baseAmount + tipAmount;
-        sendPaymentReceivedEmails({
-          bookingId:      adminBooking.id,
-          customerName:   (adminBooking as any).customer_name  ?? "",
-          customerEmail:  (adminBooking as any).customer_email ?? "",
-          customerPhone:  (adminBooking as any).customer_phone ?? undefined,
-          serviceName:    (adminBooking as any).service_name   ?? "Detailing Service",
-          baseAmount,
-          tipAmount,
-          totalPaid,
-          vehicleYear:    (adminBooking as any).vehicle_year   ?? undefined,
-          vehicleMake:    (adminBooking as any).vehicle_make   ?? undefined,
-          vehicleModel:   (adminBooking as any).vehicle_model  ?? undefined,
-          vehicleSize:    (adminBooking as any).vehicle_size   ?? undefined,
-          bookingDate:    (adminBooking as any).booking_date   ?? "",
-          bookingTime:    (adminBooking as any).booking_time   ?? "",
-          serviceAddress: (adminBooking as any).service_address || undefined,
-        }).catch((err) => console.error("[webhooks/stripe] Payment received email error:", err));
+      const tipAmount = m.tip_amount ? parseFloat(m.tip_amount) || 0 : 0;
+
+      // Mark the booking as confirmed + tagged with this session, but ONLY
+      // if it's not already tagged (avoid touching a different session id).
+      if ((existing as any).stripe_checkout_session_id !== session.id) {
+        const { error: updateErr } = await supabase
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            stripe_checkout_session_id: session.id,
+          })
+          .eq("id", m.booking_id)
+          .in("status", ["pending_payment", "confirmed"]);
+        if (updateErr) {
+          console.error("[webhooks/stripe] Admin booking update failed:", updateErr);
+          return NextResponse.json({ error: "Admin booking update failed" }, { status: 500 });
+        }
+      }
+
+      const baseAmount = Number((existing as any).total_price) || 0;
+      const totalPaid  = baseAmount + tipAmount;
+
+      // Synchronous send with retry. We await so the booking row can record
+      // success/failure state — Stripe will retry the webhook if we 5xx,
+      // which is exactly the safety net we want when Resend is flaking.
+      const emailResult = await sendPaymentReceivedEmails({
+        bookingId:      (existing as any).id,
+        customerName:   (existing as any).customer_name  ?? "",
+        customerEmail:  (existing as any).customer_email ?? "",
+        customerPhone:  (existing as any).customer_phone ?? undefined,
+        serviceName:    (existing as any).service_name   ?? "Detailing Service",
+        baseAmount,
+        tipAmount,
+        totalPaid,
+        vehicleYear:    (existing as any).vehicle_year   ?? undefined,
+        vehicleMake:    (existing as any).vehicle_make   ?? undefined,
+        vehicleModel:   (existing as any).vehicle_model  ?? undefined,
+        vehicleSize:    (existing as any).vehicle_size   ?? undefined,
+        bookingDate:    (existing as any).booking_date   ?? "",
+        bookingTime:    (existing as any).booking_time   ?? "",
+        serviceAddress: (existing as any).service_address || undefined,
+      }).catch((err) => ({
+        ok: false as const,
+        ownerSent: false,
+        customerSent: false,
+        error: err instanceof Error ? err.message : String(err),
+      }));
+
+      // Persist email state so future webhook retries know whether to
+      // re-attempt. ownerSent is the source of truth for "did the owner get
+      // their alert" — that's the bug the user is hitting.
+      try {
+        if (emailResult.ownerSent) {
+          await supabase
+            .from("bookings")
+            .update({
+              payment_received_email_sent_at: new Date().toISOString(),
+              payment_received_email_last_error: null,
+            })
+            .eq("id", m.booking_id);
+        } else {
+          await supabase
+            .from("bookings")
+            .update({
+              payment_received_email_failed_at: new Date().toISOString(),
+              payment_received_email_last_error: emailResult.error ?? "owner email failed",
+            })
+            .eq("id", m.booking_id);
+          // Also log to error_logs so admin Today shows it
+          try {
+            await supabase.from("error_logs").insert({
+              type: "payment_email_failed",
+              source: "webhooks/stripe",
+              message: emailResult.error ?? "Owner payment email failed after 3 attempts",
+              details: { bookingId: m.booking_id, sessionId: session.id, tipAmount },
+            });
+          } catch {}
+        }
+      } catch (trackErr) {
+        console.error("[webhooks/stripe] payment email tracking write failed:", trackErr);
+      }
+
+      // If the owner email failed, return a 500 so Stripe retries the webhook.
+      // Stripe will keep retrying for ~3 days at exponential backoff, giving
+      // Resend lots of chances to recover from a transient outage.
+      if (!emailResult.ownerSent) {
+        return NextResponse.json(
+          { error: "Owner email failed; webhook will retry" },
+          { status: 500 }
+        );
       }
 
       return NextResponse.json({ received: true });
