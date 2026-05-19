@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight, Sparkles, CalendarDays, Clock, Crown, Trophy, Zap, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getClientBookings } from "@/app/actions/getClientBookings";
 import { getMaintenanceOffers, getSavedVehicles } from "@/app/actions/getMaintenanceOffers";
@@ -27,6 +28,29 @@ async function Dashboard() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth/login?redirect=/protected");
+
+  // Role-aware routing: contractors land on the onboarding screen (or, in a
+  // future commit, the contractor dashboard once onboarding is complete).
+  // Customers and admins continue to the dashboard below. Wrapped in
+  // try/catch so a missing `role` column (pre-migration deploys) never
+  // blocks the customer experience.
+  try {
+    const adminSb = createAdminClient();
+    const { data: roleRow } = await adminSb
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const role = (roleRow as { role?: string } | null)?.role;
+    if (role === "contractor") {
+      redirect("/protected/onboarding");
+    }
+  } catch (err) {
+    // role column doesn't exist yet (pre-migration) — fall through to
+    // existing customer dashboard. Real auth errors are caught above by
+    // the supabase.auth.getUser() check.
+    if ((err as { digest?: string } | null)?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+  }
 
   // Email-merge any guest bookings made before this user signed up — this
   // retroactively credits past detail visits to their loyalty count.
