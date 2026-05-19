@@ -18,6 +18,7 @@ import {
 } from "@/app/actions/adminActions";
 import { createCoupon } from "@/app/actions/createCoupon";
 import { useToast } from "@/components/admin/Toast";
+import { SubNav, BUSINESS_SUBNAV } from "@/components/admin/SubNav";
 import {
   Clock, CalendarOff, Mail, Server, Activity, Check,
   AlertTriangle, CheckCircle2, Loader2, ChevronDown, ChevronUp,
@@ -175,7 +176,11 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-2xl mx-auto space-y-4">
-      <h1 className="text-xl font-black">Settings</h1>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-600 mb-1">Business</p>
+        <h1 className="text-xl font-black mb-3">Setup</h1>
+        <SubNav items={BUSINESS_SUBNAV} />
+      </div>
 
       {/* ── Site Health ──────────────────────────────────────────────────── */}
       <Section id="health" title="Site Health" icon={<Activity size={16} />}>

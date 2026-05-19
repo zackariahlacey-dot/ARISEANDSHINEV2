@@ -27,6 +27,7 @@ import { to12h } from "@/lib/availability";
 import { MileageTab } from "./_tax-mileage";
 import { ExpensesTab } from "./_tax-expenses";
 import { TaxReportTab } from "./_tax-report";
+import { SubNav, BUSINESS_SUBNAV } from "@/components/admin/SubNav";
 
 type RevExtras = {
   monthUpcomingCount?: number;
@@ -226,7 +227,14 @@ export default function MoneyPage() {
   return (
     <div className="px-4 pt-4 pb-10 max-w-2xl mx-auto space-y-5">
 
-      {/* Section toggle */}
+      {/* Parent tab indicator + business sub-nav */}
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-600 mb-1">Business</p>
+        <h1 className="text-xl font-black mb-3">Revenue</h1>
+        <SubNav items={BUSINESS_SUBNAV} />
+      </div>
+
+      {/* Section toggle (Revenue vs Tax inside this page) */}
       <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1">
         <button
           type="button"
@@ -280,8 +288,7 @@ export default function MoneyPage() {
       )}
 
       {section === "revenue" && <>
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="text-xl font-black">Money</h1>
+      <div className="flex items-start justify-end gap-3">
         {atLoading ? (
           <Loader2 className="animate-spin text-amber-500 shrink-0" size={20} />
         ) : allTime ? (

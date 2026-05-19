@@ -21,6 +21,7 @@ import { useServices } from "@/hooks/use-admin-data";
 import { NewBookingForm, type ClientPrefillForBooking } from "@/app/admin/schedule/page";
 import { cn } from "@/lib/utils";
 import { to12h } from "@/lib/availability";
+import { SubNav, PEOPLE_SUBNAV } from "@/components/admin/SubNav";
 
 // ── Email templates ─────────────────────────────────────────────────────────
 const EMAIL_TEMPLATES = [
@@ -351,14 +352,18 @@ export default function ClientsPage() {
   return (
     <div className="px-4 pt-4 pb-6 max-w-2xl mx-auto space-y-4">
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-black">Clients</h1>
-        <button
-          onClick={() => setView("email")}
-          className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-white/[0.07] transition-all active:scale-95"
-        >
-          <Mail size={13} /> Email
-        </button>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-600 mb-1">People</p>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-black">Clients</h1>
+          <button
+            onClick={() => setView("email")}
+            className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-white/[0.07] transition-all active:scale-95"
+          >
+            <Mail size={13} /> Email
+          </button>
+        </div>
+        <SubNav items={PEOPLE_SUBNAV} />
       </div>
 
       {/* Search + sort */}

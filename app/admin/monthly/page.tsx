@@ -28,6 +28,7 @@ import {
   Clock, FileText, ChevronDown, History, Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SubNav, PEOPLE_SUBNAV } from "@/components/admin/SubNav";
 import { MONTHLY_PLANS } from "@/lib/monthlyPlans";
 import type { ScheduleDay } from "@/app/actions/monthlySubscriptions";
 
@@ -254,18 +255,24 @@ export default function MonthlySubscribersPage() {
     <div className="px-4 pt-4 pb-6 max-w-2xl mx-auto space-y-4">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Crown size={18} className="text-[#D4AF37]" />
-          <h1 className="text-xl font-black">Monthly Plans</h1>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-600 mb-1">People</p>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <Crown size={18} className="text-[#D4AF37]" />
+            <h1 className="text-xl font-black">Monthly Plans</h1>
+          </div>
+          <button
+            onClick={() => setShowNewSub(true)}
+            className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-[#D4AF37]/20 transition-all active:scale-95"
+          >
+            <UserPlus size={13} />
+            Add Subscriber
+          </button>
         </div>
-        <button
-          onClick={() => setShowNewSub(true)}
-          className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-[#D4AF37]/20 transition-all active:scale-95"
-        >
-          <UserPlus size={13} />
-          Add Subscriber
-        </button>
+        <SubNav items={PEOPLE_SUBNAV.map(item =>
+          item.href === "/admin/monthly" ? { ...item, count: pendingCount } : item
+        )} />
       </div>
 
       {/* Tab switcher */}

@@ -8,6 +8,7 @@ import { sendTestMonthlyEmail, type TestEmailType } from "@/app/actions/sendTest
 import { useToast } from "@/components/admin/Toast";
 import { Mail, Search, Check, Send, Sparkles, Star, Tag, RefreshCcw, Car, Zap, Loader2, Navigation, Crown, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SubNav, BUSINESS_SUBNAV } from "@/components/admin/SubNav";
 
 const TEMPLATES = [
   {
@@ -164,9 +165,13 @@ export default function EmailPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#050505] relative">
-      <div className="shrink-0 p-3 md:p-6 border-b border-white/[0.03]">
-        <h1 className="text-xl font-black uppercase tracking-tighter">Email HQ</h1>
-        <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em]">Comms Center</p>
+      <div className="shrink-0 p-3 md:p-6 border-b border-white/[0.03] space-y-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-600 mb-1">Business</p>
+          <h1 className="text-xl font-black uppercase tracking-tighter">Email HQ</h1>
+          <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em]">Comms Center</p>
+        </div>
+        <SubNav items={BUSINESS_SUBNAV} />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 space-y-6 max-w-3xl mx-auto w-full">

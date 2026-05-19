@@ -12,6 +12,7 @@ import {
   MessageSquare, Loader2, ChevronDown, CalendarDays, DollarSign, MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SubNav, SCHEDULE_SUBNAV } from "@/components/admin/SubNav";
 
 // DB status values stay the same ("pending" | "contacted" | "booked" | "dismissed")
 // but the admin-facing labels use clearer language: New / Contacted / Scheduled / Dismissed.
@@ -349,7 +350,8 @@ export default function SqueezePage() {
   return (
     <div className="flex flex-col h-full bg-[#050505]">
       <div className="shrink-0 p-3 md:p-6 border-b border-white/[0.03]">
-        <div className="flex items-center gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-600 mb-1">Schedule</p>
+        <div className="flex items-center gap-3 mb-3">
           <h1 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
             <Zap size={18} className="text-[#D4AF37]" />
             Squeeze Me In
@@ -360,7 +362,9 @@ export default function SqueezePage() {
             </span>
           )}
         </div>
-        <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] mt-0.5">Urgent Booking Requests</p>
+        <SubNav items={SCHEDULE_SUBNAV.map(item =>
+          item.href === "/admin/squeeze" ? { ...item, count: pendingCount } : item
+        )} />
       </div>
 
       {/* Filter tabs */}
