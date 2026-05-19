@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Calendar, Users, Briefcase } from "lucide-react";
+import { Home, Calendar, Users, Briefcase, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/admin/Toast";
+import { GlobalSearch } from "@/components/admin/GlobalSearch";
 
 /**
  * Top-level admin nav, reorganised from 8 tabs into 4 conceptual groups:
@@ -25,6 +27,24 @@ const TABS = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsMac(/Mac|iPhone|iPad/.test(navigator.userAgent));
+    }
+  }, []);
+
+  // Dispatch a global keyboard shortcut hint by simulating ⌘/Ctrl+K from
+  // the sidebar button — the GlobalSearch component listens for it.
+  const triggerSearch = () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      ctrlKey: !isMac,
+      metaKey: isMac,
+      bubbles: true,
+    });
+    window.dispatchEvent(event);
+  };
 
   function isActive(tab: typeof TABS[0]) {
     if (tab.href === "/admin") return pathname === "/admin";
@@ -34,6 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
+      <GlobalSearch />
       <div className="flex h-[100dvh] bg-[#050505] text-white overflow-hidden selection:bg-amber-500/30">
 
         {/* ── DESKTOP SIDEBAR ──────────────────────────────────────────── */}
@@ -44,7 +65,23 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </h1>
             <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-600 mt-1">Command Center</p>
           </div>
-          <nav className="flex-1 p-3 space-y-0.5">
+          {/* Search trigger */}
+          <div className="px-3 pt-3 pb-1">
+            <button
+              type="button"
+              onClick={triggerSearch}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02] text-zinc-500 hover:text-zinc-200 hover:border-white/[0.12] transition-colors"
+            >
+              <span className="inline-flex items-center gap-2 text-[11px] font-semibold">
+                <Search size={13} /> Search
+              </span>
+              <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-white/[0.04] text-zinc-500">
+                {isMac ? "⌘K" : "Ctrl K"}
+              </kbd>
+            </button>
+          </div>
+
+          <nav className="flex-1 p-3 pt-2 space-y-0.5">
             {TABS.map(tab => {
               const active = isActive(tab);
               return (
