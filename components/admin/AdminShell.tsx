@@ -106,24 +106,37 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto relative bg-[#050505] pb-20 md:pb-0">
+        <main
+          className="flex-1 overflow-y-auto relative bg-[#050505] md:pb-0"
+          style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+        >
           {/* Mobile Header */}
-          <div className="md:hidden sticky top-0 left-0 right-0 h-11 bg-[#050505]/90 backdrop-blur-xl flex items-center justify-between px-4 z-50 border-b border-white/[0.03]">
+          <div
+            className="md:hidden sticky top-0 left-0 right-0 bg-[#050505]/90 backdrop-blur-xl flex items-center justify-between px-4 z-50 border-b border-white/[0.03]"
+            style={{ paddingTop: "max(0.25rem, env(safe-area-inset-top))", paddingBottom: "0.25rem", minHeight: "2.75rem" }}
+          >
             <span className="text-[10px] font-black uppercase tracking-[0.2em]">
               A<span className="text-amber-500">&</span>S
             </span>
             <span className="text-xs font-black uppercase tracking-widest text-zinc-500">
               {TABS.find(t => isActive(t))?.label ?? "Admin"}
             </span>
-            <div className="w-7 h-7" />
+            <button
+              type="button"
+              onClick={triggerSearch}
+              className="w-9 h-9 -mr-1.5 rounded-xl flex items-center justify-center text-zinc-400 hover:text-amber-400 hover:bg-white/[0.05] active:bg-amber-500/15 transition-colors"
+              aria-label="Search"
+            >
+              <Search size={16} />
+            </button>
           </div>
           {children}
         </main>
 
         {/* ── MOBILE BOTTOM NAV ────────────────────────────────────────── */}
         <nav
-          className="md:hidden fixed bottom-0 left-0 right-0 bg-[#080808]/95 backdrop-blur-xl border-t border-white/[0.06] flex items-center justify-around z-[100]"
-          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)" }}
+          className="md:hidden fixed bottom-0 left-0 right-0 bg-[#080808]/95 backdrop-blur-xl border-t border-white/[0.06] flex items-stretch justify-around z-[100]"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)", paddingTop: "4px" }}
         >
           {TABS.map(tab => {
             const active = isActive(tab);
@@ -132,17 +145,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 py-2 px-2 transition-all active:scale-90 relative flex-1",
-                  active ? "text-amber-500" : "text-zinc-600"
+                  // Apple HIG touch target: ≥44pt — using min-h-[52px] for the
+                  // visible area + top/bottom padding from the nav itself.
+                  "flex flex-col items-center justify-center gap-0.5 px-2 transition-all active:scale-95 relative flex-1 min-h-[52px]",
+                  active ? "text-amber-500" : "text-zinc-500"
                 )}
               >
                 {active && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-amber-500 rounded-full" />
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-0.5 bg-amber-500 rounded-full" />
                 )}
-                <div className={cn("p-1 rounded-lg transition-colors", active && "bg-amber-500/10")}>
-                  <tab.icon size={19} strokeWidth={active ? 2.5 : 1.5} />
+                <div className={cn("p-1.5 rounded-lg transition-colors", active && "bg-amber-500/10")}>
+                  <tab.icon size={20} strokeWidth={active ? 2.5 : 1.75} />
                 </div>
-                <span className="text-[8px] font-black uppercase tracking-wider">{tab.label}</span>
+                <span className="text-[9px] font-black uppercase tracking-wider">{tab.label}</span>
               </Link>
             );
           })}

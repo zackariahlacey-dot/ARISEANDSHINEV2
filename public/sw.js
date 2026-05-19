@@ -1,4 +1,6 @@
-const CACHE_NAME = 'aas-vt-v2';
+// Bump the version when changing the SW so old caches get evicted on activate.
+// v3 — authenticated routes excluded from caching (privacy fix).
+const CACHE_NAME = 'aas-vt-v3';
 
 const PRECACHE_URLS = [
   '/',
@@ -13,6 +15,24 @@ const PRECACHE_URLS = [
   '/aasbanner.png',
   '/favicon.ico',
 ];
+
+// Paths whose responses must never be cached — they're either user-specific
+// (auth dashboards, admin) or POST-only / fast-changing.
+// Privacy: a cached /protected from User A must not be served to User B.
+const NEVER_CACHE_PREFIXES = [
+  '/admin',
+  '/protected',
+  '/auth',
+  '/pay/',
+  '/onboard',
+  '/schedule/monthly',
+  '/my-detail',
+  '/membership',
+];
+
+function shouldSkipCache(pathname) {
+  return NEVER_CACHE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p));
+}
 
 // Install: precache shell pages
 self.addEventListener('install', (event) => {
@@ -34,6 +54,16 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Listen for explicit cache-purge messages (e.g. on sign-out so the next
+// visitor doesn't see the previous user's cached HTML).
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'PURGE_CACHE') {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+    );
+  }
+});
+
 // Fetch: network-first for navigation & API, cache-first for static assets
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
@@ -45,6 +75,13 @@ self.addEventListener('fetch', (event) => {
 
   // Skip API routes and Next.js internals
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/')) return;
+
+  // Never cache authenticated / user-specific routes — always go straight to
+  // the network so each visitor gets a fresh, role-correct response.
+  if (shouldSkipCache(url.pathname)) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   // Static assets (images, fonts, manifest) → cache-first
   if (
@@ -62,7 +99,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests → network-first, fallback to cache, then offline page
+  // Public navigation requests → network-first, fallback to cache, then to /
   event.respondWith(
     fetch(event.request)
       .then((res) => {

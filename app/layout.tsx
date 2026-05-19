@@ -10,7 +10,15 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
-  themeColor: "#D4AF37",
+  maximumScale: 5,
+  userScalable: true,
+  // viewport-fit=cover lets the page draw under iOS notches + home indicator
+  // so we can use env(safe-area-inset-*) padding where it matters.
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)",  color: "#050505" },
+    { media: "(prefers-color-scheme: light)", color: "#D4AF37" },
+  ],
 };
 
 export const metadata: Metadata = {
