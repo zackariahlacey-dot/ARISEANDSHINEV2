@@ -210,9 +210,17 @@ export async function completeJob(bookingId: string): Promise<{ ok: boolean; err
   // Schedule the customer rating: creates the rating row with a token now,
   // but the email isn't sent until the 2-hour delay window has passed via
   // the /api/cron/customer-rating-emails route.
+  //
+  // Gated behind ENABLE_CONTRACTOR_CUSTOMER_EMAILS — until that env flag
+  // is true, no rating row is created so no email ever goes out. Lets the
+  // operator test the full contractor execution flow end-to-end without
+  // surprising actual customers with new emails.
   try {
-    const { createRatingForBooking } = await import("@/app/actions/customerRating");
-    await createRatingForBooking(bookingId);
+    const { contractorCustomerEmailsEnabled } = await import("@/lib/contractorFeatureFlag");
+    if (contractorCustomerEmailsEnabled()) {
+      const { createRatingForBooking } = await import("@/app/actions/customerRating");
+      await createRatingForBooking(bookingId);
+    }
   } catch (err) {
     console.error("[completeJob] createRatingForBooking:", err);
   }

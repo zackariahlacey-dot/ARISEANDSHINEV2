@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendRatingEmail } from "@/app/actions/customerRating";
+import { contractorCustomerEmailsEnabled } from "@/lib/contractorFeatureFlag";
 
 const DELAY_HOURS = 2;
 
@@ -21,6 +22,12 @@ export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Belt-and-suspenders gate: even if a rating row exists from a past test
+  // run, this cron won't send anything until the feature flag is flipped.
+  if (!contractorCustomerEmailsEnabled()) {
+    return NextResponse.json({ sent: 0, gated: true });
   }
 
   const admin = createAdminClient();

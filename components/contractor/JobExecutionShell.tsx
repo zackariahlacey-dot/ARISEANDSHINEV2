@@ -438,11 +438,16 @@ function PreExistingDamageUploader({
         "block w-full text-center py-2 rounded-lg border border-dashed cursor-pointer text-[11px] font-bold uppercase tracking-wider",
         busy ? "opacity-50 cursor-wait" : uploaded ? "border-emerald-500/40 text-emerald-400" : "border-amber-500/40 text-amber-400"
       )}>
-        {busy ? <Loader2 size={12} className="animate-spin inline" /> : uploaded ? "Replace photo" : "Take photo"}
+        {busy ? <Loader2 size={12} className="animate-spin inline" /> : uploaded ? "Replace photo" : "Take or upload photo"}
+        {/*
+          No `capture` attribute — on mobile this lets iOS/Android show
+          a chooser between Camera and Photo Library (more flexible than
+          forcing the camera). On desktop it opens a normal file picker
+          so the operator can test the flow from a laptop.
+        */}
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           disabled={busy}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ""; }}
@@ -475,8 +480,13 @@ function PhotoTile({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [optimisticUrl, setOptimisticUrl] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setError("Pick an image file.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -506,13 +516,31 @@ function PhotoTile({
   const displayUrl = optimisticUrl ?? existing?.fileUrl ?? null;
   const isStage = slot.startsWith("before_") ? "Before" : slot.startsWith("after_") ? "After" : null;
 
+  // Desktop drag-and-drop support — mobile users still tap to open the
+  // native camera / library chooser. On disabled tiles (e.g. job already
+  // approved) drop events are ignored so old photos can't be overwritten.
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    if (disabled || busy) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
   return (
-    <label className={cn(
-      "relative aspect-square rounded-xl border overflow-hidden block",
-      disabled ? "border-white/[0.04] opacity-50 cursor-not-allowed"
-        : existing ? "border-emerald-500/30 cursor-pointer"
-        : "border-amber-500/30 cursor-pointer"
-    )}>
+    <label
+      onDragOver={(e) => { e.preventDefault(); if (!disabled && !busy) setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onDrop}
+      className={cn(
+        "relative aspect-square rounded-xl border overflow-hidden block",
+        disabled ? "border-white/[0.04] opacity-50 cursor-not-allowed"
+          : existing ? "border-emerald-500/30 cursor-pointer"
+          : "border-amber-500/30 cursor-pointer",
+        dragOver && !disabled && "ring-2 ring-amber-400"
+      )}
+    >
       {displayUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={displayUrl} alt={label} className="absolute inset-0 w-full h-full object-cover" />
@@ -546,10 +574,14 @@ function PhotoTile({
           <p className="text-[9px] font-bold text-white truncate">{error}</p>
         </div>
       )}
+      {/*
+        No `capture` attribute → mobile shows a chooser between Camera
+        and Photo Library; desktop opens a regular file picker. Drag-drop
+        also works on desktop via the wrapping label's drop handler above.
+      */}
       <input
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         disabled={busy || !!disabled}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ""; }}
