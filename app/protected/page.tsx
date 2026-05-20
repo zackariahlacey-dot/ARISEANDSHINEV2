@@ -5,6 +5,8 @@ import { ChevronRight, Sparkles, CalendarDays, Clock, Crown, Trophy, Zap, Shield
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
+import { getContractorDashboard } from "@/app/actions/contractorDashboard";
+import { ContractorDashboard } from "@/components/contractor/ContractorDashboard";
 import { getClientBookings } from "@/app/actions/getClientBookings";
 import { getMaintenanceOffers, getSavedVehicles } from "@/app/actions/getMaintenanceOffers";
 import { BookingCard } from "@/components/dashboard/BookingCard";
@@ -29,21 +31,30 @@ async function Dashboard() {
 
   if (!user) redirect("/auth/login?redirect=/protected");
 
-  // Role-aware routing: contractors land on the onboarding screen (or, in a
-  // future commit, the contractor dashboard once onboarding is complete).
-  // Customers and admins continue to the dashboard below. Wrapped in
-  // try/catch so a missing `role` column (pre-migration deploys) never
-  // blocks the customer experience.
+  // Role-aware routing:
+  //   - Contractor + onboarding incomplete → /protected/onboarding
+  //   - Contractor + fully onboarded + active → contractor dashboard inline
+  //   - Customer / admin → existing customer dashboard below
+  // Wrapped in try/catch so a missing role column (pre-migration deploys)
+  // never blocks the customer experience.
   try {
     const adminSb = createAdminClient();
     const { data: roleRow } = await adminSb
       .from("profiles")
-      .select("role")
+      .select("role, employment_status")
       .eq("id", user.id)
       .maybeSingle();
-    const role = (roleRow as { role?: string } | null)?.role;
+    const role = (roleRow as { role?: string; employment_status?: string } | null)?.role;
+    const empStatus = (roleRow as { role?: string; employment_status?: string } | null)?.employment_status;
     if (role === "contractor") {
-      redirect("/protected/onboarding");
+      const dashData = await getContractorDashboard();
+      const fullyOnboarded = !!dashData && empStatus !== "pending";
+      if (!fullyOnboarded) {
+        redirect("/protected/onboarding");
+      }
+      if (dashData) {
+        return <ContractorDashboard data={dashData} />;
+      }
     }
   } catch (err) {
     // role column doesn't exist yet (pre-migration) — fall through to
