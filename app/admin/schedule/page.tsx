@@ -31,6 +31,7 @@ import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
 import { SubNav, SCHEDULE_SUBNAV } from "@/components/admin/SubNav";
+import { PhotoReviewPanel } from "@/components/admin/PhotoReviewPanel";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, MapPin,
   Phone, MessageSquare, Navigation, Check, X, Trash2,
@@ -2303,6 +2304,11 @@ export default function SchedulePage() {
                   </div>
                 );
               })()}
+
+              {/* ── Photo Review (only when contractor has marked complete) ── */}
+              {activeBooking?.job_completed_at && (
+                <PhotoReviewPanel bookingId={activeBooking.id} />
+              )}
 
               {/* ── Pricing Breakdown ───────────────────────────────────── */}
               {(() => {
