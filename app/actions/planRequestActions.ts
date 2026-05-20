@@ -45,7 +45,7 @@ export interface PlanRequest {
 }
 
 const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const ADMIN_EMAIL  = "zackariahlacey04@gmail.com";
+const ADMIN_EMAIL  = "zackariahlacey@gmail.com";
 const SITE_URL     = "https://www.ariseandshinevt.com";
 
 const PLAN_LABELS: Record<PlanType, string> = {

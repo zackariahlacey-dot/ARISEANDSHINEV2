@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const FROM_ADDRESS =
   process.env.EMAIL_FROM ?? "Arise & Shine VT <notifications@ariseandshinevt.com>";
 const REPLY_TO = "contact@ariseandshinevt.com";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
 
 /** Recipient with email + profile data for personalization */
 export type BlastRecipient = {

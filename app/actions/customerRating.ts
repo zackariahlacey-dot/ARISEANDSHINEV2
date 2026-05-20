@@ -314,7 +314,7 @@ async function sendLowRatingAlert(args: { ratingId: string; overall: number; att
 
   const b = bookingRes.data as any;
   const c = contractorRes.data as any;
-  const ownerEmail = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com").split(",")[0].trim();
+  const ownerEmail = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com").split(",")[0].trim();
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   const contractorName = c ? `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() : "Unassigned";

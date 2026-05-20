@@ -180,7 +180,7 @@ create index if not exists idx_bookings_lifecycle        on bookings (job_comple
 --
 --  1. Create the Storage bucket 'contractor-docs' (private) in the Supabase UI.
 --  2. Set your own profile's role to 'admin':
---       update profiles set role = 'admin' where email = 'zackariahlacey04@gmail.com';
+--       update profiles set role = 'admin' where email = 'zackariahlacey@gmail.com';
 --  3. Verify the admin auth gate in app/admin/layout.tsx now reads from the
 --     new role column (it already does — graceful fallback existed in case of
 --     missing column).

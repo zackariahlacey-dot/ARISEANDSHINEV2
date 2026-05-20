@@ -32,7 +32,7 @@ export async function resendPaymentConfirmation(bookingId: string): Promise<{
     .maybeSingle();
   const isAdminEmail =
     !!user.email &&
-    (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com")
+    (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com")
       .toLowerCase()
       .split(",")
       .map(s => s.trim())

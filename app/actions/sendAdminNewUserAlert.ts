@@ -7,7 +7,7 @@ import { getAdminNewUserAlertHtml } from "@/emails/AdminNewUserAlert";
 const FROM_ADDRESS =
   process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
 
 /**
  * Sends an admin notification when a new user signs up.

@@ -20,7 +20,7 @@ async function requireAdmin(): Promise<{ ok: true; userId: string; ip: string | 
     .eq("id", user.id)
     .maybeSingle();
   const isAdminRole = ((row as { role?: string } | null)?.role ?? "").toLowerCase() === "admin";
-  const allowlist = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com")
+  const allowlist = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com")
     .toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
   const emailMatch = !!user.email && allowlist.includes(user.email.toLowerCase());
   if (!isAdminRole && !emailMatch) return { ok: false, error: "Admin only." };

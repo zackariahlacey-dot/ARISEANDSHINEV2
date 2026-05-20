@@ -391,7 +391,7 @@ export async function getAllBookings() {
 
 export async function getAllClients() {
   const supabase = createAdminClient();
-  const adminEmail = (process.env.ADMIN_EMAIL || "zackariahlacey04@gmail.com").toLowerCase();
+  const adminEmail = (process.env.ADMIN_EMAIL || "zackariahlacey@gmail.com").toLowerCase();
 
   // 1. All profiles with vehicles + bookings (including snapshot columns)
   const { data: profiles, error } = await supabase
@@ -836,7 +836,7 @@ export async function toggleBlockedDateAction(date: string, isBlocked: boolean, 
 }
 
 export async function triggerTestEmail(type: string, targetEmail: string) {
-  const adminEmail = process.env.ADMIN_EMAIL || "zackariahlacey04@gmail.com";
+  const adminEmail = process.env.ADMIN_EMAIL || "zackariahlacey@gmail.com";
   const email = targetEmail || adminEmail;
   
   const sampleData = {
@@ -910,7 +910,7 @@ export async function getDiagnostics() {
       resendKey: !!process.env.RESEND_API_KEY,
       stripeKey: !!process.env.STRIPE_SECRET_KEY,
       stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET,
-      adminEmail: process.env.ADMIN_EMAIL || "zackariahlacey04@gmail.com",
+      adminEmail: process.env.ADMIN_EMAIL || "zackariahlacey@gmail.com",
     },
     timestamp: new Date().toISOString(),
   };

@@ -11,7 +11,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 function adminAllowlist(): string[] {
   const multi = process.env.ADMIN_EMAILS;
   if (multi) return multi.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-  const single = process.env.ADMIN_EMAIL ?? "zackariahlacey04@gmail.com";
+  const single = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
   return [single.trim().toLowerCase()];
 }
 
