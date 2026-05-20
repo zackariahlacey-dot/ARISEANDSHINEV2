@@ -15,6 +15,7 @@ import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
+import { NeedsAttentionWidget } from "@/components/admin/NeedsAttentionWidget";
 import {
   Navigation, Phone, MessageSquare, Check, DollarSign,
   Car, Clock, MapPin, ChevronRight, CalendarDays, Loader2,
@@ -312,6 +313,9 @@ export default function TodayPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Needs attention (auto-refreshes every 60s) ────────────────────── */}
+      <NeedsAttentionWidget />
 
       {/* ── Next job hero ────────────────────────────────────────────────── */}
       {nextJob ? (
