@@ -145,7 +145,13 @@ export function ContractorDashboard({ data }: { data: ContractorDashboardData })
           </div>
         </details>
 
-        <div className="mt-8 pt-6 border-t border-white/[0.04] flex flex-col items-center gap-2">
+        <div className="mt-8 pt-6 border-t border-white/[0.04] flex flex-col items-center gap-3">
+          <Link
+            href="/protected/earnings"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.05] text-amber-400 text-[11px] font-black uppercase tracking-wider hover:bg-amber-500/[0.10] transition-colors"
+          >
+            <DollarSign size={12} /> My earnings history
+          </Link>
           <Link href="/protected/onboarding" className="text-[11px] text-zinc-500 hover:text-amber-500 transition-colors inline-flex items-center gap-1">
             <Sparkles size={11} /> View my signed documents
           </Link>

@@ -142,6 +142,115 @@ export async function getContractorPayroll(
   };
 }
 
+/**
+ * Self-service version — the signed-in contractor's own pay-period summary.
+ * Same shape as the admin view, but with per-adjustment reasons attached
+ * (the signed Payment & Tax Terms agreement promises transparency on every
+ * reduction or bonus, so the contractor sees the exact reason).
+ */
+export type ContractorPayrollJob = PayrollJob & {
+  adjustments: Array<{ adjustmentCents: number; reason: string; createdAt: string }>;
+};
+
+export type ContractorPayrollSummary = Omit<PayrollSummary, "jobs"> & {
+  jobs: ContractorPayrollJob[];
+};
+
+export async function getMyPayroll(
+  startDate: string,
+  endDate: string,
+): Promise<ContractorPayrollSummary | null> {
+  const sb = await createClient();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, role, first_name, last_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile || (profile as any).role !== "contractor") return null;
+
+  const { data: bookings } = await admin
+    .from("bookings")
+    .select("id, booking_date, customer_name, service_name, base_commission_cents, final_commission_cents, tip_cents, photo_review_status, job_completed_at, status")
+    .eq("assigned_to", user.id)
+    .not("job_completed_at", "is", null)
+    .neq("status", "cancelled")
+    .gte("booking_date", startDate)
+    .lte("booking_date", endDate)
+    .order("booking_date", { ascending: false });
+
+  const bookingIds = (bookings ?? []).map((b: any) => b.id);
+  const adjsByBooking = new Map<string, Array<{ adjustmentCents: number; reason: string; createdAt: string }>>();
+  if (bookingIds.length > 0) {
+    const { data: adjs } = await admin
+      .from("commission_adjustments")
+      .select("booking_id, adjustment_cents, reason, created_at")
+      .in("booking_id", bookingIds)
+      .order("created_at", { ascending: false });
+    for (const a of (adjs ?? []) as any[]) {
+      const k = a.booking_id as string;
+      if (!adjsByBooking.has(k)) adjsByBooking.set(k, []);
+      adjsByBooking.get(k)!.push({
+        adjustmentCents: Number(a.adjustment_cents ?? 0),
+        reason: a.reason as string,
+        createdAt: a.created_at as string,
+      });
+    }
+  }
+
+  const jobs: ContractorPayrollJob[] = ((bookings ?? []) as any[]).map(b => {
+    const base = Number(b.base_commission_cents ?? 0);
+    const tip  = Number(b.tip_cents ?? 0);
+    const adjList = adjsByBooking.get(b.id) ?? [];
+    const adj  = adjList.reduce((s, a) => s + a.adjustmentCents, 0);
+    const approved = b.photo_review_status === "approved";
+    const final = approved && b.final_commission_cents != null
+      ? Number(b.final_commission_cents) + tip
+      : base + adj + tip;
+    return {
+      bookingId: b.id,
+      date: b.booking_date,
+      customerName: b.customer_name ?? "—",
+      serviceName: b.service_name ?? "—",
+      baseCommissionCents: base,
+      tipCents: tip,
+      adjustmentCents: adj,
+      finalCommissionCents: final,
+      photoReviewStatus: b.photo_review_status ?? "pending",
+      approved,
+      adjustments: adjList,
+    };
+  });
+
+  const totals = jobs.reduce(
+    (acc, j) => ({
+      base: acc.base + j.baseCommissionCents,
+      tips: acc.tips + j.tipCents,
+      adj:  acc.adj + j.adjustmentCents,
+      owed: acc.owed + j.finalCommissionCents,
+    }),
+    { base: 0, tips: 0, adj: 0, owed: 0 },
+  );
+
+  return {
+    contractorId: user.id,
+    contractorName: `${(profile as any).first_name ?? ""} ${(profile as any).last_name ?? ""}`.trim() || "Contractor",
+    periodStart: startDate,
+    periodEnd: endDate,
+    jobsCount: jobs.length,
+    approvedJobsCount: jobs.filter(j => j.approved).length,
+    pendingJobsCount: jobs.filter(j => !j.approved).length,
+    totalBaseCents: totals.base,
+    totalTipsCents: totals.tips,
+    totalAdjustmentsCents: totals.adj,
+    totalOwedCents: totals.owed,
+    jobs,
+  };
+}
+
 /** Returns rows ready to be a CSV file the owner can hand to an accountant. */
 export async function buildPayrollCsv(args: {
   contractorIds?: string[];          // omit → all active contractors
