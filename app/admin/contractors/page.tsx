@@ -16,6 +16,7 @@ import { DEFAULT_TIER_LADDER } from "@/lib/contractorAgreement";
 import { useToast } from "@/components/admin/Toast";
 import { Modal } from "@/components/admin/Modal";
 import { SubNav, PEOPLE_SUBNAV } from "@/components/admin/SubNav";
+import { PayrollPanel } from "@/components/admin/PayrollPanel";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "all" | "pending" | "active" | "paused" | "terminated";
@@ -364,6 +365,9 @@ function ContractorDrawer({
 
           {/* Status + tier */}
           <StatusBlock detail={d} onChange={refresh} />
+
+          {/* Payroll / pay-period report */}
+          <PayrollPanel contractorId={d.id} />
 
           {/* Documents */}
           <section>

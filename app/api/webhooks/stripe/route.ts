@@ -226,15 +226,20 @@ export async function POST(req: NextRequest) {
       }
 
       const tipAmount = m.tip_amount ? parseFloat(m.tip_amount) || 0 : 0;
+      const tipCents  = Math.round(tipAmount * 100);
 
       // Mark the booking as confirmed + tagged with this session, but ONLY
       // if it's not already tagged (avoid touching a different session id).
+      // Also capture the tip in tip_cents so it shows up on contractor
+      // dashboards + admin payroll reports. tip is 100% the contractor's
+      // per the signed Payment & Tax Terms agreement.
       if ((existing as any).stripe_checkout_session_id !== session.id) {
         const { error: updateErr } = await supabase
           .from("bookings")
           .update({
             status: "confirmed",
             stripe_checkout_session_id: session.id,
+            ...(tipCents > 0 ? { tip_cents: tipCents } : {}),
           })
           .eq("id", m.booking_id)
           .in("status", ["pending_payment", "confirmed"]);
@@ -242,6 +247,13 @@ export async function POST(req: NextRequest) {
           console.error("[webhooks/stripe] Admin booking update failed:", updateErr);
           return NextResponse.json({ error: "Admin booking update failed" }, { status: 500 });
         }
+      } else if (tipCents > 0) {
+        // Same session re-fired (retry after email failure): make sure tip
+        // is still captured even if we're not re-updating status.
+        await supabase
+          .from("bookings")
+          .update({ tip_cents: tipCents })
+          .eq("id", m.booking_id);
       }
 
       const baseAmount = Number((existing as any).total_price) || 0;
