@@ -976,6 +976,14 @@ export async function bookDetailing(
     { skipCustomerEmail: true }
   ).catch((err) => console.error("[bookDetailing] admin email error:", err));
 
+  // ── Auto-assign to a contractor (fire-and-forget) ────────────────────────
+  // Best-effort: never block the booking on assignment. If no eligible
+  // contractor exists today (caps, no onboarded contractors yet), the
+  // booking stays unassigned for admin to manually pick.
+  import("@/app/actions/autoAssignBooking")
+    .then(m => m.autoAssignBooking(booking.id))
+    .catch(err => console.error("[bookDetailing] autoAssign error:", err));
+
   // ── Loyalty: increment count for logged-in users booking a qualifying service ──
   let loyaltyNewCount: number | undefined;
   let loyaltyNewDiscountPct: number | undefined;
