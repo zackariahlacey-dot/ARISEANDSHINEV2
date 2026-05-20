@@ -395,12 +395,23 @@ function ContractorDrawer({
                       )}
                     </div>
                     {signed && (
-                      <button
-                        onClick={() => setViewingAgreementId(signed.agreementId)}
-                        className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-white/[0.08] text-[10px] font-bold text-zinc-300 hover:bg-white/[0.04]"
-                      >
-                        <Eye size={11} /> View
-                      </button>
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <button
+                          onClick={() => setViewingAgreementId(signed.agreementId)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-white/[0.08] text-[10px] font-bold text-zinc-300 hover:bg-white/[0.04]"
+                        >
+                          <Eye size={11} /> View
+                        </button>
+                        <a
+                          href={`/admin/contractor-agreement/${signed.agreementId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-amber-500/30 bg-amber-500/[0.05] text-[10px] font-bold text-amber-400 hover:bg-amber-500/[0.10]"
+                          title="Open in a new tab to print or save as PDF"
+                        >
+                          <FileText size={11} /> PDF
+                        </a>
+                      </div>
                     )}
                   </div>
                 );
