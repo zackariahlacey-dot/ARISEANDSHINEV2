@@ -207,8 +207,15 @@ export async function completeJob(bookingId: string): Promise<{ ok: boolean; err
 
   await audit(auth.userId, "contractor_complete_job", bookingId, { baseCents });
 
-  // TODO (separate commit): schedule the customer rating email + coupon
-  // for 2 hours after this timestamp.
+  // Schedule the customer rating: creates the rating row with a token now,
+  // but the email isn't sent until the 2-hour delay window has passed via
+  // the /api/cron/customer-rating-emails route.
+  try {
+    const { createRatingForBooking } = await import("@/app/actions/customerRating");
+    await createRatingForBooking(bookingId);
+  } catch (err) {
+    console.error("[completeJob] createRatingForBooking:", err);
+  }
 
   return { ok: true };
 }

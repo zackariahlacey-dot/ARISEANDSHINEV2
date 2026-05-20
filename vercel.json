@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/winback",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/customer-rating-emails",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
