@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   HardHat, UserPlus, Search, X, Mail, Phone, Star, ChevronRight, Loader2,
   ShieldCheck, AlertTriangle, PauseCircle, PlayCircle, FileText, ClipboardList,
-  TrendingUp, Save, Eye,
+  TrendingUp, Save, Eye, Sparkles, Check,
 } from "lucide-react";
 import {
   listContractors, inviteContractor, getContractorDetail, getSignedAgreementHtml,
@@ -54,6 +54,16 @@ export default function ContractorsPage() {
     };
   }, [contractors]);
 
+  // Contractors who finished onboarding (all 3 docs signed) but admin hasn't
+  // flipped them to Active yet. Surfaced as a one-tap banner so they don't
+  // get stuck in pending limbo after doing their part.
+  const readyToActivate = useMemo(
+    () => (contractors as ContractorSummary[]).filter(
+      c => c.employmentStatus === "pending" && c.fullyOnboarded,
+    ),
+    [contractors],
+  );
+
   return (
     <div className="px-4 pt-4 pb-6 max-w-3xl mx-auto space-y-4">
 
@@ -74,6 +84,14 @@ export default function ContractorsPage() {
         </div>
         <SubNav items={PEOPLE_SUBNAV} />
       </div>
+
+      {/* Ready-to-activate banner */}
+      {readyToActivate.length > 0 && (
+        <ActivationBanner
+          contractors={readyToActivate}
+          onActivated={() => qc.invalidateQueries({ queryKey: ["contractors"] })}
+        />
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -628,5 +646,75 @@ function Input({ value, onChange, placeholder, type = "text" }: { value: string;
       placeholder={placeholder}
       className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
     />
+  );
+}
+
+// ─── Activation banner ────────────────────────────────────────────────────────
+
+function ActivationBanner({
+  contractors,
+  onActivated,
+}: {
+  contractors: ContractorSummary[];
+  onActivated: () => void;
+}) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const handleActivate = async (id: string, name: string) => {
+    setBusy(id);
+    const r = await setContractorStatus(id, "active");
+    setBusy(null);
+    if (!r.ok) { toast(r.error ?? "Failed"); return; }
+    toast(`${name} activated 🎉`);
+    onActivated();
+  };
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+          <Sparkles size={13} className="text-emerald-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[12px] font-black text-emerald-300">
+            {contractors.length === 1
+              ? "1 contractor finished onboarding"
+              : `${contractors.length} contractors finished onboarding`}
+          </p>
+          <p className="text-[10px] text-emerald-200/70">
+            All 3 documents signed — flip them to active to start receiving job assignments.
+          </p>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        {contractors.map(c => {
+          const name = `${c.firstName} ${c.lastName}`.trim() || "(no name)";
+          const isBusy = busy === c.id;
+          return (
+            <div
+              key={c.id}
+              className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-zinc-900/40 border border-white/[0.04]"
+            >
+              <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">
+                {(c.firstName[0] ?? "").toUpperCase()}{(c.lastName[0] ?? "").toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-bold text-zinc-200 truncate">{name}</p>
+                <p className="text-[10px] text-zinc-500 truncate">{c.email}</p>
+              </div>
+              <button
+                onClick={() => handleActivate(c.id, name)}
+                disabled={isBusy}
+                className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider disabled:opacity-60 active:scale-95 transition-transform"
+              >
+                {isBusy ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} strokeWidth={3} />}
+                Activate
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
