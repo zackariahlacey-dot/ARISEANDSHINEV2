@@ -182,6 +182,24 @@ export default function SettingsPage() {
         <SubNav items={BUSINESS_SUBNAV} />
       </div>
 
+      {/* ── Quick links ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2">
+        <a
+          href="/admin/audit"
+          className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 hover:border-amber-500/30 px-4 py-3 transition-colors active:scale-[0.99]"
+        >
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Audit log →</p>
+          <p className="text-[11px] text-zinc-500 mt-0.5">Every admin action, timestamped + IP.</p>
+        </a>
+        <a
+          href="/admin/contractors"
+          className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 hover:border-amber-500/30 px-4 py-3 transition-colors active:scale-[0.99]"
+        >
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Contractors →</p>
+          <p className="text-[11px] text-zinc-500 mt-0.5">Invite, promote, deactivate.</p>
+        </a>
+      </div>
+
       {/* ── Site Health ──────────────────────────────────────────────────── */}
       <Section id="health" title="Site Health" icon={<Activity size={16} />}>
         {dLoading ? (
