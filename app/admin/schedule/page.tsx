@@ -32,6 +32,8 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
 import { SubNav, SCHEDULE_SUBNAV } from "@/components/admin/SubNav";
 import { PhotoReviewPanel } from "@/components/admin/PhotoReviewPanel";
+import { listContractors, type ContractorSummary } from "@/app/actions/contractorAdminActions";
+import { manuallyAssignBooking } from "@/app/actions/autoAssignBooking";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, MapPin,
   Phone, MessageSquare, Navigation, Check, X, Trash2,
@@ -1259,6 +1261,18 @@ export default function SchedulePage() {
     queryFn:  () => getSqueezeRequests(),
     refetchInterval: 60000,
   });
+
+  // ── Contractor roster (for avatars on booking cards + reassign UI) ──────
+  const { data: contractorRoster = [] } = useQuery({
+    queryKey: ["contractors"],
+    queryFn:  () => listContractors(),
+    staleTime: 60000,
+  });
+  const contractorsById = useMemo(() => {
+    const m = new Map<string, ContractorSummary>();
+    for (const c of contractorRoster as ContractorSummary[]) m.set(c.id, c);
+    return m;
+  }, [contractorRoster]);
   const pendingSqueezes = (squeezeData as SqueezeRequest[]).filter(
     r => r.status === "pending" || r.status === "contacted"
   );
@@ -1958,6 +1972,26 @@ export default function SchedulePage() {
                             <span className="inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20">Paid</span>
                           ) : null}
                           <StatusBadge status={b.status} />
+                          {/* Assignee avatar / unassigned chip */}
+                          {(() => {
+                            const c = b.assigned_to ? contractorsById.get(b.assigned_to as string) : null;
+                            if (!c) {
+                              return (
+                                <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/25">
+                                  Unassigned
+                                </span>
+                              );
+                            }
+                            const initials = `${(c.firstName[0] ?? "").toUpperCase()}${(c.lastName[0] ?? "").toUpperCase()}`;
+                            return (
+                              <span
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/15 border border-amber-500/30 text-[9px] font-black text-amber-400"
+                                title={`${c.firstName} ${c.lastName}`.trim()}
+                              >
+                                {initials || "·"}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
@@ -2304,6 +2338,15 @@ export default function SchedulePage() {
                   </div>
                 );
               })()}
+
+              {/* ── Contractor assignment ───────────────────────────────── */}
+              {!activeBooking.service_name?.includes("Personal Block") && (
+                <AssignmentBlock
+                  booking={activeBooking}
+                  contractors={contractorRoster as ContractorSummary[]}
+                  onChange={() => refetch()}
+                />
+              )}
 
               {/* ── Photo Review (only when contractor has marked complete) ── */}
               {activeBooking?.job_completed_at && (
@@ -2726,6 +2769,102 @@ function DetailRow({ icon, value }: { icon: React.ReactNode; value: string }) {
     <div className="flex items-center gap-2 text-zinc-300 text-sm">
       <span className="text-zinc-600 shrink-0">{icon}</span>
       <span className="truncate">{value}</span>
+    </div>
+  );
+}
+
+function AssignmentBlock({
+  booking,
+  contractors,
+  onChange,
+}: {
+  booking: any;
+  contractors: ContractorSummary[];
+  onChange: () => void;
+}) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const assignedId = booking.assigned_to as string | null;
+  const current = assignedId ? contractors.find(c => c.id === assignedId) : null;
+  const eligible = contractors.filter(c => c.employmentStatus === "active" && c.fullyOnboarded);
+
+  const handleAssign = async (contractorId: string | null) => {
+    setBusy(true);
+    const r = await manuallyAssignBooking(booking.id, contractorId);
+    setBusy(false);
+    if (!r.ok) { toast(r.error ?? "Failed"); return; }
+    toast(contractorId ? "Assigned" : "Unassigned");
+    setOpen(false);
+    onChange();
+  };
+
+  return (
+    <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Assigned contractor</span>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="text-[10px] font-bold text-amber-400 uppercase tracking-wider"
+        >
+          {open ? "Cancel" : current ? "Reassign" : "Assign"}
+        </button>
+      </div>
+      <div className="px-4 py-3">
+        {current ? (
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[11px] font-black text-amber-400">
+              {(current.firstName[0] ?? "").toUpperCase()}{(current.lastName[0] ?? "").toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-zinc-100 truncate">{current.firstName} {current.lastName}</p>
+              <p className="text-[10px] text-zinc-500">Tier {current.commissionTier} · {current.commissionPct}%</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-[12px] text-rose-400 font-bold">Unassigned</p>
+        )}
+
+        {open && (
+          <div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
+            {eligible.length === 0 ? (
+              <p className="text-[11px] text-zinc-600 text-center py-3">No active onboarded contractors yet.</p>
+            ) : (
+              eligible.map(c => (
+                <button
+                  key={c.id}
+                  disabled={busy || c.id === assignedId}
+                  onClick={() => handleAssign(c.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-2 py-2 rounded-xl border transition-all text-left",
+                    c.id === assignedId
+                      ? "border-amber-500/40 bg-amber-500/[0.08] opacity-50 cursor-not-allowed"
+                      : "border-white/[0.06] hover:border-amber-500/30 hover:bg-amber-500/[0.04]"
+                  )}
+                >
+                  <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-white/[0.04] flex items-center justify-center text-[10px] font-black text-amber-400 shrink-0">
+                    {(c.firstName[0] ?? "").toUpperCase()}{(c.lastName[0] ?? "").toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold text-zinc-200 truncate">{c.firstName} {c.lastName}</p>
+                    <p className="text-[10px] text-zinc-500">T{c.commissionTier} · {c.commissionPct}% · {c.dailyJobCap}/day cap</p>
+                  </div>
+                  {c.id === assignedId && <Check size={11} className="text-amber-400 shrink-0" />}
+                </button>
+              ))
+            )}
+            {assignedId && (
+              <button
+                disabled={busy}
+                onClick={() => handleAssign(null)}
+                className="w-full mt-1 py-2 rounded-xl border border-rose-500/30 text-rose-300 text-[10px] font-black uppercase tracking-wider hover:bg-rose-500/[0.06]"
+              >
+                Clear assignment
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
