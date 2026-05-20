@@ -12,6 +12,7 @@ import {
   startOnMyWay, markArrived, startJob, completeJob, reportIssue, acceptJob,
 } from "@/app/actions/jobLifecycle";
 import { uploadJobPhoto } from "@/app/actions/jobPhotoActions";
+import { sendContractorPaymentLink, type PaymentLinkChannel } from "@/app/actions/contractorPaymentLink";
 import { slotLabel, type PhotoRequirement, type PhotoChecklist } from "@/lib/jobPhotos";
 import type { JobPhoto } from "@/app/actions/jobPhotoActions";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ type Booking = {
   service_name: string | null;
   customer_name: string | null;
   customer_phone: string | null;
+  customer_email?: string | null;
   service_address: string | null;
   vehicle_year: string | null;
   vehicle_make: string | null;
@@ -41,6 +43,8 @@ type Booking = {
   base_commission_cents: number | null;
   tip_cents: number | null;
   notes: string | null;
+  payment_link_sent_at?: string | null;
+  payment_link_method?: string | null;
 };
 
 function to12h(t: string | null): string {
@@ -210,18 +214,22 @@ export function JobExecutionShell({
             )}
 
             {stage === "complete" && (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3.5 text-center">
-                <ShieldCheck size={20} className="mx-auto text-emerald-400 mb-1.5" />
-                <p className="text-sm font-black text-emerald-300">Job marked complete</p>
-                <p className="text-[11px] text-emerald-200/80 mt-0.5">
-                  Status: <strong>{booking.photo_review_status === "approved" ? "Approved — commission locked" : booking.photo_review_status === "rejected" ? "Photos rejected — see notes" : "Awaiting Arise & Shine review"}</strong>
-                </p>
-                {booking.base_commission_cents != null && (
-                  <p className="text-[11px] text-zinc-400 mt-1.5">
-                    Estimated commission: <strong className="text-amber-400">${(booking.base_commission_cents / 100).toFixed(0)}</strong>
+              <>
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3.5 text-center">
+                  <ShieldCheck size={20} className="mx-auto text-emerald-400 mb-1.5" />
+                  <p className="text-sm font-black text-emerald-300">Job marked complete</p>
+                  <p className="text-[11px] text-emerald-200/80 mt-0.5">
+                    Status: <strong>{booking.photo_review_status === "approved" ? "Approved — commission locked" : booking.photo_review_status === "rejected" ? "Photos rejected — see notes" : "Awaiting Arise & Shine review"}</strong>
                   </p>
-                )}
-              </div>
+                  {booking.base_commission_cents != null && (
+                    <p className="text-[11px] text-zinc-400 mt-1.5">
+                      Estimated commission: <strong className="text-amber-400">${(booking.base_commission_cents / 100).toFixed(0)}</strong>
+                    </p>
+                  )}
+                </div>
+
+                <PaymentLinkPanel booking={booking} />
+              </>
             )}
 
             {/* Report issue — available at any time */}
@@ -643,4 +651,118 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error("read failed"));
     reader.readAsDataURL(file);
   });
+}
+
+// ─── Payment link panel (post-Complete) ──────────────────────────────────────
+
+function PaymentLinkPanel({ booking }: { booking: Booking }) {
+  const [busy, setBusy] = useState<PaymentLinkChannel | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [smsHref, setSmsHref] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [lastUrl, setLastUrl] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handle = async (channel: PaymentLinkChannel) => {
+    setBusy(channel);
+    setError(null);
+    const r = await sendContractorPaymentLink(booking.id, channel);
+    setBusy(null);
+    if (!r.ok) { setError(r.error); return; }
+    setLastUrl(r.url);
+    if (channel === "sms") {
+      setSmsHref(r.smsHref);
+      // Auto-open the contractor's Messages app if a phone is on file
+      if (r.smsHref && r.smsHref !== "sms:") {
+        window.location.href = r.smsHref;
+      }
+    }
+    router.refresh();
+  };
+
+  const wasSent = !!booking.payment_link_sent_at;
+
+  return (
+    <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.04] px-4 py-3.5">
+      <div className="flex items-start gap-2 mb-3">
+        <DollarSign size={14} className="text-amber-400 mt-0.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-[12px] font-black text-zinc-200">
+            {wasSent ? "Payment link sent" : "Send payment link to customer"}
+          </p>
+          <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">
+            {wasSent
+              ? `Last sent via ${booking.payment_link_method} ${booking.payment_link_sent_at ? new Date(booking.payment_link_sent_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}. You can resend.`
+              : "Customer pays online (card) and can add an optional tip. 100% of any tip is yours."}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => handle("email")}
+          disabled={busy !== null}
+          className={cn(
+            "py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all",
+            busy === "email" ? "bg-zinc-800 text-zinc-600"
+              : "bg-amber-500/15 border border-amber-500/40 text-amber-300 hover:bg-amber-500/25 active:scale-95"
+          )}
+        >
+          {busy === "email" ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />}
+          {wasSent ? "Resend email" : "Send via email"}
+        </button>
+        <button
+          type="button"
+          onClick={() => handle("sms")}
+          disabled={busy !== null}
+          className={cn(
+            "py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all",
+            busy === "sms" ? "bg-zinc-800 text-zinc-600"
+              : "bg-amber-500/15 border border-amber-500/40 text-amber-300 hover:bg-amber-500/25 active:scale-95"
+          )}
+        >
+          {busy === "sms" ? <Loader2 size={12} className="animate-spin" /> : <Phone size={12} />}
+          {wasSent ? "Resend text" : "Send via text"}
+        </button>
+      </div>
+
+      {smsHref && (
+        <div className="mt-2 rounded-lg border border-white/[0.08] bg-zinc-900/40 px-3 py-2.5">
+          <p className="text-[10px] text-zinc-500 mb-1">Messages didn&apos;t open?</p>
+          <a
+            href={smsHref}
+            className="text-[11px] font-bold text-amber-400 underline break-all"
+          >
+            Tap to open in Messages
+          </a>
+        </div>
+      )}
+
+      {lastUrl && (
+        <div className="mt-2 rounded-lg border border-white/[0.06] bg-zinc-900/40 px-3 py-2 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-zinc-500 truncate">{lastUrl}</p>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(lastUrl);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded border border-white/[0.08] text-[10px] font-bold text-zinc-300"
+          >
+            {copied ? <><Check size={10} /> Copied</> : <>Copy</>}
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p className="text-[11px] text-rose-300 mt-2">{error}</p>
+      )}
+
+      <p className="text-[10px] text-zinc-600 mt-3 leading-relaxed">
+        💰 Tips go 100% to you (Stripe fee deducted). Customer can pick a preset or enter any amount on the payment page.
+      </p>
+    </div>
+  );
 }

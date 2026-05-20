@@ -24,7 +24,7 @@ async function ContractorJobPage({ id }: { id: string }) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, booking_date, booking_time, service_name, customer_name, customer_phone, service_address, vehicle_year, vehicle_make, vehicle_model, vehicle_size, total_price, addons_json, additional_vehicles_json, status, assigned_to, accepted_at, on_my_way_at, arrived_at, started_at, job_completed_at, photo_review_status, base_commission_cents, tip_cents, notes")
+    .select("id, booking_date, booking_time, service_name, customer_name, customer_phone, customer_email, service_address, vehicle_year, vehicle_make, vehicle_model, vehicle_size, total_price, addons_json, additional_vehicles_json, status, assigned_to, accepted_at, on_my_way_at, arrived_at, started_at, job_completed_at, photo_review_status, base_commission_cents, tip_cents, notes, payment_link_sent_at, payment_link_method")
     .eq("id", id)
     .maybeSingle();
 
