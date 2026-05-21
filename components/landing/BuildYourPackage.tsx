@@ -72,7 +72,7 @@ type AddonDef = {
 };
 
 const INTERIOR_ADDONS: AddonDefExt[] = [
-  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. XL adds $20.", side: "interior", popular: true },
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. 3-row SUVs add $30 (extra row + cargo area).", side: "interior", popular: true },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      price: 50, desc: "Deep extraction of embedded pet hair from seats, carpet, and cargo. Only charged if heavy accumulation present.", side: "interior", popular: true },
   { id: "leather_condition",  label: "Leather Conditioning",        price: 45, desc: "Deep-clean and condition all leather surfaces. Restores softness, prevents cracking, matte finish.", side: "interior", popular: true },
   { id: "uv_interior",        label: "UV / Trim & Plastic Restoration & Protection", price: 35, desc: "Deep clean and restore matte color on all interior plastics, vinyl, and trim — brings tired, sun-faded surfaces back to life — then seal with a UV-protective coating to prevent future fading and cracking.", side: "interior" },
@@ -151,7 +151,7 @@ function getFoundationPrice(service: Service | null, size: VehicleSizeSlug): num
 
 function getAddonEffectivePrice(addon: AddonDefExt, size: VehicleSizeSlug): number {
   if (addon.sizedPrice) return addon.sizedPrice[size] ?? addon.price;
-  if (addon.id === "upholstery_shampoo" && size === "xl") return addon.price + 20;
+  if (addon.id === "upholstery_shampoo" && size === "xl") return addon.price + 30;
   return addon.price;
 }
 

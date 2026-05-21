@@ -68,7 +68,7 @@ const ALL_ADD_ONS = [
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
   { id: "headlight_restore",   label: "Headlight Restoration",               price: 60,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
   { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 75,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. XL/3rd-row vehicles are automatically $95." },
+  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. 3-row SUVs / work vans are automatically $105 (extra row + cargo area)." },
   { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
   { id: "leather_condition",   label: "Leather Conditioning",                 price: 45, desc: "Deep-clean and condition all leather surfaces with premium conditioner — restores softness, prevents cracking, and leaves a clean matte finish." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
@@ -150,25 +150,31 @@ export const MAX_SAME_DAY_BOOKING_MINS = 600;
 const DURATION_EXTENDING_ADDONS: Record<string, number> = {
   ultimate_interior:    180, // Ultimate Interior add-on adds 3 hrs
   // Interior add-ons (also apply to Full Detail bookings since Full = Interior + Exterior)
-  upholstery_shampoo:   60,  // Carpet & Upholstery Shampoo +1 hr
+  // upholstery_shampoo is size-tiered — see UPHOLSTERY_SHAMPOO_DURATION_MINS
   pet_hair:             30,  // Heavy Pet Hair Removal +30 min
   odor_bomb:            60,  // Strong Odor Elimination +1 hr
   headliner_clean:      30,  // Headliner Cleaning +30 min
   salt_stain_removal:   30,  // Salt Stain Removal +30 min
   seat_removal:         90,  // Seat Removal Deepest Clean +1.5 hrs
   // Exterior add-ons
-  clay_bar:             30,  // Clay Bar +30 min
+  // clay_bar — no extra time (works in parallel with hand wash drying)
   headlight_restore:    30,  // Headlight Restoration +30 min
   salt_recovery_addon:  30,  // Salt Recovery Undercarriage +30 min
-  mech_chem_decon:      60,  // Mechanical & Chemical Decon +1 hr
+  mech_chem_decon:      30,  // Mechanical & Chemical Decon +30 min
   // Ceramic coatings — flash + cure adds significant time
   wheel_ceramic:        60,  // Wheel & Caliper Ceramic +1 hr
   window_coat_windshield: 60, // Window coatings (any tier) +1 hr
   window_coat_front:    60,
   window_coat_all:      60,
   // Body ceramic (ceramic_3yr) — uses size-tiered CERAMIC_3YR_DURATION_MINS
-  // already mapped in getAddonExtraDurationMins (90/90/120/150). Updating
-  // the small-size baseline to 90 min so display consistently shows 1.5 hrs.
+  // already mapped in getAddonExtraDurationMins (90/90/120/150).
+};
+
+/** Carpet & Upholstery Shampoo — only the 3rd row in xl adds real labor.
+ *  Sedan / regular SUV: 30 min. 3-row SUV / work van (xl): 60 min. */
+const UPHOLSTERY_SHAMPOO_DURATION_MINS: Record<string, number> = {
+  compact: 30, sedan: 30, suv: 30, xl: 60,
+  small: 30, medium: 30, large: 30, extra_large: 60,
 };
 
 /** 2-Year Pro Ceramic Sealant — application + flash time scales with surface area. */
@@ -194,7 +200,7 @@ const WINDOW_COAT_FRONT_PRICE      = 150;
 const WINDOW_COAT_ALL_PRICE        = 250;
 
 function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
-  if (addon.id === "upholstery_shampoo" && vehicleSize === "xl") return addon.price + 20;
+  if (addon.id === "upholstery_shampoo" && (vehicleSize === "xl" || vehicleSize === "extra_large")) return addon.price + 30;
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICE;
@@ -215,6 +221,7 @@ function isPaintCorrectionService(name?: string): boolean {
 function getAddonExtraDurationMins(selectedAddons: { id: string }[], vehicleSize: string = "sedan"): number {
   return selectedAddons.reduce((sum, a) => {
     if (a.id === "ceramic_3yr") return sum + (CERAMIC_3YR_DURATION_MINS[vehicleSize] ?? 90);
+    if (a.id === "upholstery_shampoo") return sum + (UPHOLSTERY_SHAMPOO_DURATION_MINS[vehicleSize] ?? 30);
     return sum + (DURATION_EXTENDING_ADDONS[a.id] ?? 0);
   }, 0);
 }
@@ -1018,7 +1025,7 @@ export function BookingSection({
         const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
         updated.selectedAddons = updated.selectedAddons.map(a =>
           a.id === "upholstery_shampoo"
-            ? { ...a, price: updated.vehicleSize === "xl" ? base + 20 : base }
+            ? { ...a, price: updated.vehicleSize === "xl" ? base + 30 : base }
             : a
         );
       }
@@ -1801,7 +1808,7 @@ export function BookingSection({
     const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
     setSelectedAddons(prev => prev.map(a =>
       a.id === "upholstery_shampoo"
-        ? { ...a, price: vehicleSize === "xl" ? base + 20 : base }
+        ? { ...a, price: vehicleSize === "xl" ? base + 30 : base }
         : a
     ));
   }, [vehicleSize]);
