@@ -136,8 +136,8 @@ const QUICK_PICKS = [
     subtitle: "Ultimate Showroom",
     tagline: "Get top dollar at sale",
     foundation: "full" as FoundationId,
-    // 5 paid add-ons → 35% bundle + free unlocks (ceramic caps at $50 off)
-    addonIds: ["upholstery_shampoo", "headlight_restore", "mech_chem_decon", "leather_condition", "ceramic_3yr"],
+    // 7 paid add-ons → 35% bundle + free unlocks
+    addonIds: ["upholstery_shampoo", "leather_condition", "uv_interior", "headliner_clean", "salt_stain_removal", "headlight_restore", "mech_chem_decon"],
     icon: Crown,
   },
 ];
@@ -279,28 +279,24 @@ export function BuildYourPackage({
   onBuilderActiveChange?: (active: boolean) => void;
 }) {
   // Persist builder state across reloads so customers don't restart on refresh.
-  // Read sync on first render to avoid a flash of empty state.
+  // IMPORTANT: don't read sessionStorage during first render — that runs on
+  // the server too (where window is undefined) and on the client first paint,
+  // and a divergent client-only read creates a hydration mismatch. Read it
+  // post-mount in a useEffect and bulk-apply via setters instead.
   const BUILDER_STORAGE_KEY = "buildYourPackageDraft";
-  const initialState = (() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = sessionStorage.getItem(BUILDER_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-  })();
 
-  const [foundationId, setFoundationId] = useState<FoundationId | null>(initialState?.foundationId ?? null);
-  const [vehicleMake, setVehicleMake] = useState<string>(initialState?.vehicleMake ?? "");
-  const [vehicleModel, setVehicleModel] = useState<string>(initialState?.vehicleModel ?? "");
-  const [vehicleYear, setVehicleYear] = useState<string>(initialState?.vehicleYear ?? "");
-  const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug>(initialState?.vehicleSize ?? "sedan");
-  const [autoDetected, setAutoDetected] = useState<boolean>(initialState?.autoDetected ?? false);
-  const [vehicleConfirmed, setVehicleConfirmed] = useState<boolean>(initialState?.vehicleConfirmed ?? false);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(initialState?.selectedAddonIds ?? []);
+  const [foundationId, setFoundationId] = useState<FoundationId | null>(null);
+  const [vehicleMake, setVehicleMake] = useState<string>("");
+  const [vehicleModel, setVehicleModel] = useState<string>("");
+  const [vehicleYear, setVehicleYear] = useState<string>("");
+  const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug>("sedan");
+  const [autoDetected, setAutoDetected] = useState<boolean>(false);
+  const [vehicleConfirmed, setVehicleConfirmed] = useState<boolean>(false);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [expandedAddon, setExpandedAddon] = useState<string | null>(null);
   // Already-completed vehicles (when the customer adds a 2nd, 3rd, ... vehicle).
   // The state vars above always describe the CURRENT vehicle being built.
-  const [completedVehicles, setCompletedVehicles] = useState<CompletedVehicle[]>(initialState?.completedVehicles ?? []);
+  const [completedVehicles, setCompletedVehicles] = useState<CompletedVehicle[]>([]);
 
   // Refs for smooth auto-scroll into each newly-unlocked step
   const vehicleStepRef = useRef<HTMLDivElement>(null);
@@ -308,8 +304,36 @@ export function BuildYourPackage({
 
   // Step lock state — once a step is completed it visually blurs + locks;
   // customer taps the "Edit" pill to unlock and change. Restored from session.
-  const [foundationLocked, setFoundationLocked] = useState<boolean>(initialState?.foundationLocked ?? !!initialState?.foundationId);
-  const [vehicleLocked, setVehicleLocked] = useState<boolean>(initialState?.vehicleLocked ?? !!initialState?.vehicleConfirmed);
+  const [foundationLocked, setFoundationLocked] = useState<boolean>(false);
+  const [vehicleLocked, setVehicleLocked] = useState<boolean>(false);
+
+  // Track whether we've finished hydrating from sessionStorage. Until then,
+  // skip the save-back effect so we don't blow away the persisted draft with
+  // the empty defaults rendered on first paint.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(BUILDER_STORAGE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.foundationId !== undefined) setFoundationId(s.foundationId);
+        if (s.vehicleMake !== undefined) setVehicleMake(s.vehicleMake);
+        if (s.vehicleModel !== undefined) setVehicleModel(s.vehicleModel);
+        if (s.vehicleYear !== undefined) setVehicleYear(s.vehicleYear);
+        if (s.vehicleSize !== undefined) setVehicleSize(s.vehicleSize);
+        if (s.autoDetected !== undefined) setAutoDetected(s.autoDetected);
+        if (s.vehicleConfirmed !== undefined) setVehicleConfirmed(s.vehicleConfirmed);
+        if (Array.isArray(s.selectedAddonIds)) setSelectedAddonIds(s.selectedAddonIds);
+        if (Array.isArray(s.completedVehicles)) setCompletedVehicles(s.completedVehicles);
+        if (s.foundationLocked !== undefined) setFoundationLocked(s.foundationLocked);
+        else if (s.foundationId) setFoundationLocked(true);
+        if (s.vehicleLocked !== undefined) setVehicleLocked(s.vehicleLocked);
+        else if (s.vehicleConfirmed) setVehicleLocked(true);
+      }
+    } catch {}
+    setHydrated(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-lock as the customer progresses
   useEffect(() => { if (foundationId) setFoundationLocked(true); }, [foundationId]);
@@ -339,8 +363,11 @@ export function BuildYourPackage({
     return () => io.disconnect();
   }, [foundationId, vehicleConfirmed]);
 
-  // Save builder state on every change so refresh preserves progress
+  // Save builder state on every change so refresh preserves progress. Gated
+  // on `hydrated` so the empty pre-hydration render doesn't overwrite a
+  // legitimately-persisted draft with defaults.
   useEffect(() => {
+    if (!hydrated) return;
     if (typeof window === "undefined") return;
     try {
       sessionStorage.setItem(BUILDER_STORAGE_KEY, JSON.stringify({
@@ -349,7 +376,7 @@ export function BuildYourPackage({
         foundationLocked, vehicleLocked, completedVehicles,
       }));
     } catch {}
-  }, [foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize, autoDetected, vehicleConfirmed, selectedAddonIds, foundationLocked, vehicleLocked, completedVehicles]);
+  }, [hydrated, foundationId, vehicleMake, vehicleModel, vehicleYear, vehicleSize, autoDetected, vehicleConfirmed, selectedAddonIds, foundationLocked, vehicleLocked, completedVehicles]);
 
   const foundation = foundationId ? FOUNDATIONS.find(f => f.id === foundationId)! : null;
   const foundationService = useMemo(
@@ -622,11 +649,20 @@ export function BuildYourPackage({
                   : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
         }`}
       >
-        <button
-          onClick={handleClick}
-          disabled={isLocked}
-          className={`w-full p-2.5 transition-transform text-left ${isLocked ? "cursor-not-allowed" : "active:scale-[0.98]"}`}
+        <div
+          role="button"
+          tabIndex={isLocked ? -1 : 0}
           aria-pressed={isSelected}
+          aria-disabled={isLocked}
+          onClick={handleClick}
+          onKeyDown={(e) => {
+            if (isLocked) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
+          className={`w-full p-2.5 transition-transform text-left outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60 ${isLocked ? "cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"}`}
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
@@ -696,7 +732,7 @@ export function BuildYourPackage({
               <Info size={10} />
             </button>
           </div>
-        </button>
+        </div>
         <AnimatePresence initial={false}>
           {isExpanded && (
             <motion.div

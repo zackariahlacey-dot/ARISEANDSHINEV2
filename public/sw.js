@@ -1,6 +1,8 @@
 // Bump the version when changing the SW so old caches get evicted on activate.
-// v3 — authenticated routes excluded from caching (privacy fix).
-const CACHE_NAME = 'aas-vt-v3';
+// v4 — evict stale /manifest.webmanifest (could have cached HTML on first SSR
+// miss in dev), and skip caching .webmanifest entirely since it's tiny + can
+// change shape between deploys.
+const CACHE_NAME = 'aas-vt-v4';
 
 const PRECACHE_URLS = [
   '/',
@@ -83,9 +85,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (images, fonts, manifest) → cache-first
+  // Manifest is generated server-side and lightweight — always go to network
+  // so we never serve a stale or accidentally-cached HTML body in its place.
+  if (url.pathname.endsWith('.webmanifest') || url.pathname === '/manifest.webmanifest') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Static assets (images, fonts) → cache-first
   if (
-    url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf|json|webmanifest)$/)
+    url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf|json)$/)
   ) {
     event.respondWith(
       caches.match(event.request).then(
