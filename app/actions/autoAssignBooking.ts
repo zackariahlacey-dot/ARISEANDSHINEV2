@@ -97,13 +97,25 @@ export async function autoAssignBooking(bookingId: string): Promise<AutoAssignRe
     loadById.set(a, (loadById.get(a) ?? 0) + 1);
   }
 
-  // 5. Drop those at or over their daily cap
-  const undercappedContractors = onboardedContractors.filter((c: any) => {
+  // 5a. Drop those at or over their daily cap
+  const undercapped = onboardedContractors.filter((c: any) => {
     const load = loadById.get(c.id as string) ?? 0;
     return load < Number(c.daily_job_cap ?? 3);
   });
-  if (undercappedContractors.length === 0) {
+  if (undercapped.length === 0) {
     return { ok: false, reason: "all eligible contractors at daily cap" };
+  }
+
+  // 5b. Drop contractors who marked themselves unavailable this date
+  const { data: unavailable } = await admin
+    .from("contractor_unavailable_days")
+    .select("contractor_id")
+    .eq("unavailable_date", bookingDate)
+    .in("contractor_id", undercapped.map((c: any) => c.id as string));
+  const unavailableIds = new Set((unavailable ?? []).map((r: any) => r.contractor_id as string));
+  const undercappedContractors = undercapped.filter((c: any) => !unavailableIds.has(c.id as string));
+  if (undercappedContractors.length === 0) {
+    return { ok: false, reason: "all eligible contractors are marked off this day" };
   }
 
   // 6. Returning-customer preference — does any candidate have prior

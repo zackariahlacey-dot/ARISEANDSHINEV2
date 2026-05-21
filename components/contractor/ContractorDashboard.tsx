@@ -146,12 +146,20 @@ export function ContractorDashboard({ data }: { data: ContractorDashboardData })
         </details>
 
         <div className="mt-8 pt-6 border-t border-white/[0.04] flex flex-col items-center gap-3">
-          <Link
-            href="/protected/earnings"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.05] text-amber-400 text-[11px] font-black uppercase tracking-wider hover:bg-amber-500/[0.10] transition-colors"
-          >
-            <DollarSign size={12} /> My earnings history
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Link
+              href="/protected/earnings"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.05] text-amber-400 text-[11px] font-black uppercase tracking-wider hover:bg-amber-500/[0.10] transition-colors"
+            >
+              <DollarSign size={12} /> Earnings history
+            </Link>
+            <Link
+              href="/protected/availability"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/[0.08] text-zinc-300 text-[11px] font-black uppercase tracking-wider hover:bg-white/[0.04] transition-colors"
+            >
+              <Calendar size={12} /> Days off
+            </Link>
+          </div>
           <Link href="/protected/onboarding" className="text-[11px] text-zinc-500 hover:text-amber-500 transition-colors inline-flex items-center gap-1">
             <Sparkles size={11} /> View my signed documents
           </Link>
