@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   HardHat, UserPlus, Search, X, Mail, Phone, Star, ChevronRight, Loader2,
   ShieldCheck, AlertTriangle, PauseCircle, PlayCircle, FileText, ClipboardList,
-  TrendingUp, Save, Eye, Sparkles, Check,
+  TrendingUp, Save, Eye, Sparkles, Check, Send,
 } from "lucide-react";
+import { broadcastToContractors, previewBroadcastRecipients, type BroadcastTarget } from "@/app/actions/broadcastContractors";
 import {
   listContractors, inviteContractor, getContractorDetail, getSignedAgreementHtml,
   setContractorTier, setContractorStatus, setContractorDailyCap, setContractorNotes,
@@ -28,6 +29,7 @@ export default function ContractorsPage() {
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
 
   const { data: contractors = [], isLoading } = useQuery({
     queryKey: ["contractors"],
@@ -76,12 +78,20 @@ export default function ContractorsPage() {
             <HardHat size={18} className="text-amber-500" />
             <h1 className="text-xl font-black">Contractors</h1>
           </div>
-          <button
-            onClick={() => setShowInvite(true)}
-            className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-amber-500/20 transition-all active:scale-95"
-          >
-            <UserPlus size={13} /> Invite
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowBroadcast(true)}
+              className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-white/[0.07] transition-all active:scale-95"
+            >
+              <Send size={12} /> Email
+            </button>
+            <button
+              onClick={() => setShowInvite(true)}
+              className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl hover:bg-amber-500/20 transition-all active:scale-95"
+            >
+              <UserPlus size={13} /> Invite
+            </button>
+          </div>
         </div>
         <SubNav items={PEOPLE_SUBNAV} />
       </div>
@@ -161,6 +171,9 @@ export default function ContractorsPage() {
           onClose={() => setShowInvite(false)}
           onInvited={() => { qc.invalidateQueries({ queryKey: ["contractors"] }); setShowInvite(false); }}
         />
+      )}
+      {showBroadcast && (
+        <BroadcastModal onClose={() => setShowBroadcast(false)} />
       )}
       {activeId && (
         <ContractorDrawer
@@ -661,6 +674,119 @@ function Input({ value, onChange, placeholder, type = "text" }: { value: string;
       placeholder={placeholder}
       className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
     />
+  );
+}
+
+// ─── Broadcast modal ──────────────────────────────────────────────────────────
+
+function BroadcastModal({ onClose }: { onClose: () => void }) {
+  const { toast } = useToast();
+  const [target, setTarget] = useState<BroadcastTarget>("active");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
+
+  const { data: preview } = useQuery({
+    queryKey: ["broadcast-preview", target],
+    queryFn:  () => previewBroadcastRecipients(target),
+  });
+
+  const handleSend = async () => {
+    if (!subject.trim() || !body.trim()) return;
+    if (!confirm(`Send to ${preview?.count ?? 0} contractor${preview?.count === 1 ? "" : "s"}? This can't be undone.`)) return;
+    setBusy(true);
+    setError(null);
+    const r = await broadcastToContractors({ target, subject, body });
+    setBusy(false);
+    if (!r.ok) { setError(r.error ?? "Send failed."); return; }
+    setResult({ sent: r.sent, failed: r.failed });
+    toast(`Sent ${r.sent}${r.failed > 0 ? ` · ${r.failed} failed` : ""}`);
+  };
+
+  return (
+    <Modal open onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-black flex items-center gap-2"><Send size={15} className="text-amber-500" /> Email contractors</h2>
+          <p className="text-[11px] text-zinc-500 mt-1">One personalized email to every contractor in the chosen group. Use <code className="text-amber-300">{`{{first_name}}`}</code> in the body to swap in their name.</p>
+        </div>
+
+        {result ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 text-center">
+            <Check size={22} className="mx-auto text-emerald-400 mb-1" strokeWidth={3} />
+            <p className="text-sm font-black text-emerald-300">{result.sent} email{result.sent === 1 ? "" : "s"} sent</p>
+            {result.failed > 0 && (
+              <p className="text-[11px] text-amber-400 mt-1">{result.failed} failed — check the audit log for details.</p>
+            )}
+            <button onClick={onClose} className="mt-3 px-4 py-2 rounded-lg bg-zinc-800 text-zinc-200 text-xs font-bold">Close</button>
+          </div>
+        ) : (
+          <>
+            <div>
+              <FieldLabel>Send to</FieldLabel>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { id: "active" as const,            label: "Active only" },
+                  { id: "active_and_paused" as const, label: "Active + paused" },
+                  { id: "all" as const,               label: "Everyone" },
+                ]).map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTarget(t.id)}
+                    className={cn("py-2 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all",
+                      target === t.id ? "border-amber-500/50 bg-amber-500/15 text-amber-300" : "border-white/[0.08] text-zinc-500"
+                    )}
+                  >{t.label}</button>
+                ))}
+              </div>
+              <p className="text-[10px] text-zinc-600 mt-1.5">
+                {preview ? `${preview.count} contractor${preview.count === 1 ? "" : "s"} will receive this email.` : "Loading recipients…"}
+              </p>
+            </div>
+
+            <div>
+              <FieldLabel>Subject</FieldLabel>
+              <Input value={subject} onChange={setSubject} placeholder="Weather cancellation — Friday Mar 8" />
+            </div>
+
+            <div>
+              <FieldLabel>Message</FieldLabel>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={6}
+                placeholder={"Hi {{first_name}},\n\nDue to weather, all Friday jobs are being rescheduled. We'll be in touch about your specific assignments by tomorrow morning. Stay safe."}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50 resize-none"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2.5">
+                <p className="text-[11px] text-rose-300">{error}</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-zinc-400 text-xs font-black uppercase tracking-wider">Cancel</button>
+              <button
+                onClick={handleSend}
+                disabled={busy || !subject.trim() || !body.trim() || (preview?.count ?? 0) === 0}
+                className={cn("flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5",
+                  busy || !subject.trim() || !body.trim() || (preview?.count ?? 0) === 0
+                    ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                    : "bg-amber-500 text-black active:scale-95"
+                )}
+              >
+                {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                Send to {preview?.count ?? 0}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
   );
 }
 
