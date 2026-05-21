@@ -42,9 +42,7 @@ import { validateGiftCard } from "@/app/actions/validateGiftCard";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
-import {
-  bundlePctFor, addonDiscountAmount, foundationBundleDiscount,
-} from "@/lib/bundleDiscount";
+import { bundlePctFor, addonDiscountAmount } from "@/lib/bundleDiscount";
 import {
   filterMakesByQuery,
   filterModelsByQuery,
@@ -1176,13 +1174,7 @@ export function BookingSection({
   // Price/points derived values (declared early so useEffect below can reference maxRedeemablePoints)
   const isMonthlyPlan = selectedService?.name.toLowerCase().includes("monthly maintenance");
   const setupFee = isMonthlyPlan ? getMaintenanceSetupFee(selectedService?.name ?? "") : 0;
-  // The 5+ add-on milestone gives an extra $25 off the foundation service.
-  // Compute it here, then subtract before establishing `servicePrice` so
-  // every downstream calculation (coupon %, loyalty, totals) sees the
-  // already-discounted foundation price.
-  const _paidAddonsCount = selectedAddons.filter(a => a.price > 0).length;
-  const foundationMilestoneDiscount = foundationBundleDiscount(_paidAddonsCount);
-  const servicePrice = Math.max(0, (computedPrice ?? selectedService?.price_small ?? 0) - foundationMilestoneDiscount);
+  const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
   // ── Bundle discount (Build Your Package) ────────────────────────────────
   // Pure percentage per add-on: 0 / 15% / 22% / 28% / 35% at counts
   // 1 / 2 / 3 / 4 / 5+. Body ceramic caps at $50 off max (handled in the
@@ -1197,10 +1189,7 @@ export function BookingSection({
     (sum, a) => sum + addonDiscountAmount(a.id, a.price, bundlePct),
     0,
   );
-  // foundationMilestoneDiscount was already applied to servicePrice above;
-  // we include it in the customer-visible "bundle savings" line so the UI
-  // can show the full $X saved from the bundle (addons + milestone).
-  const bundleDiscount = addonsBundleSavings + foundationMilestoneDiscount;
+  const bundleDiscount = addonsBundleSavings;
   const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0) - addonsBundleSavings;
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discountPercentage != null

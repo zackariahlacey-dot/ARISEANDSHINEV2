@@ -11,8 +11,8 @@ import type { Service } from "@/app/page";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { detectVehicleSize, getAllMakeSuggestions, getModelSuggestionsForMake } from "@/lib/detectVehicleSize";
 import {
-  bundlePctFor, addonDiscountAmount, addonDiscountedPrice, foundationBundleDiscount,
-  bundlePctLabel, FOUNDATION_DISCOUNT_AT_5_PLUS,
+  bundlePctFor, addonDiscountAmount, addonDiscountedPrice,
+  bundlePctLabel,
 } from "@/lib/bundleDiscount";
 
 // ─── Foundation services ──────────────────────────────────────────────────
@@ -105,10 +105,37 @@ const EXTERIOR_ADDONS: AddonDefExt[] = [
   { id: "window_coat_all",        label: "Graphene Window — All Windows",     price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 2 full years.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
 ];
 
+// Three Quick Picks designed to hit three distinct pain points at three
+// distinct price tiers — and each one lands on the next-up bundle tier
+// (3 / 4 / 5+ paid add-ons) so the customer hits a real discount tier.
 const QUICK_PICKS = [
-  { id: "family",  label: "Family Ride",   tagline: "Pets, kids, the works",      foundation: "full" as FoundationId, addonIds: ["pet_hair", "upholstery_shampoo", "uv_interior"], icon: Star },
-  { id: "presale", label: "Pre-Sale Prep", tagline: "Make it shine for listing",  foundation: "full" as FoundationId, addonIds: ["upholstery_shampoo", "headlight_restore", "clay_bar", "trim_dressing"], icon: Sparkles },
-  { id: "deep",    label: "Deep Reset",    tagline: "Top-to-bottom restoration",  foundation: "full" as FoundationId, addonIds: ["upholstery_shampoo", "steam_sanitation", "leather_condition", "mech_chem_decon", "trim_dressing", "salt_recovery_addon"], icon: Crown },
+  {
+    id: "daily-driver",
+    label: "Daily Driver Refresh",
+    tagline: "Pets, kids, lived-in mess",
+    foundation: "interior" as FoundationId,
+    // 3 paid add-ons → 22% bundle + unlocks free Steam Sanitation + free Trim Dressing
+    addonIds: ["pet_hair", "upholstery_shampoo", "uv_interior"],
+    icon: Star,
+  },
+  {
+    id: "winter-recovery",
+    label: "Vermont Winter Recovery",
+    tagline: "Undo what salt season did",
+    foundation: "full" as FoundationId,
+    // 4 paid add-ons → 28% bundle + free unlocks
+    addonIds: ["salt_stain_removal", "salt_recovery_addon", "upholstery_shampoo", "clay_bar"],
+    icon: Sparkles,
+  },
+  {
+    id: "presale-showroom",
+    label: "Pre-Sale Showroom Prep",
+    tagline: "Get top dollar at sale",
+    foundation: "full" as FoundationId,
+    // 5 paid add-ons → 35% bundle + free unlocks (ceramic caps at $50 off)
+    addonIds: ["upholstery_shampoo", "headlight_restore", "mech_chem_decon", "leather_condition", "ceramic_3yr"],
+    icon: Crown,
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -390,14 +417,12 @@ export function BuildYourPackage({
   const FREE_UNLOCK_IDS = ["steam_sanitation", "trim_dressing"] as const;
   const FREE_UNLOCK_THRESHOLD = 3;
   const isFreeUnlockId = (id: string) => (FREE_UNLOCK_IDS as readonly string[]).includes(id);
-  const rawFoundationPrice = getFoundationPrice(foundationService, vehicleSize);
+  const foundationPrice = getFoundationPrice(foundationService, vehicleSize);
   const selectedAddons = allAvailable.filter(a => selectedAddonIds.includes(a.id));
   const qualifyingAddons = selectedAddons.filter(a => !isFreeUnlockId(a.id));
   const qualifyingCount = qualifyingAddons.length;
   const bundlePct      = bundlePctFor(qualifyingCount);
   const nextTierPct    = bundlePctFor(qualifyingCount + 1);
-  const foundationDiscount = foundationBundleDiscount(qualifyingCount);  // $25 off foundation at 5+
-  const foundationPrice    = Math.max(0, rawFoundationPrice - foundationDiscount);
   const freeUnlocked = qualifyingCount >= FREE_UNLOCK_THRESHOLD;
 
   // Auto-add ALL available free-unlock add-ons when threshold is met,
@@ -420,8 +445,8 @@ export function BuildYourPackage({
     (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize), bundlePct),
     0,
   );
-  // Total customer-facing savings = add-on % discounts + foundation milestone.
-  const bundleDiscount = addonsBundleSavings + foundationDiscount;
+  // Total customer-facing savings = sum of per-add-on percentage discounts.
+  const bundleDiscount = addonsBundleSavings;
   const currentVehicleTotal = foundationPrice + addonsSubtotal - addonsBundleSavings;
 
   // Multi-vehicle math: roll completed vehicles into the running total and
@@ -436,24 +461,6 @@ export function BuildYourPackage({
   const canConfirmVehicle = !!vehicleMake.trim() && !!vehicleModel.trim() && !!vehicleYear.trim();
   const canContinue = !!foundationService && vehicleConfirmed;
 
-  // Preview the savings the customer would unlock by adding one more
-  // qualifying add-on — the "Add 1 more →" coaching copy uses this.
-  const nextTierUnlocksFoundationDiscount = qualifyingCount + 1 === 5;
-  const previewSavingsIfOneMore = (() => {
-    if (qualifyingCount >= 5) return 0;
-    // Pretend each currently-selected add-on gets the next tier's pct.
-    const sumNext = qualifyingAddons.reduce(
-      (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize), nextTierPct),
-      0,
-    );
-    // Plus the (count+1)th add-on's average expected discount — guesstimate
-    // using the median paid-add-on price ($50) since we don't know what
-    // they'll pick. Conservative.
-    const guessedAvgAddon = 50;
-    const oneMoreAddonDiscount = Math.round(guessedAvgAddon * nextTierPct);
-    const foundationBonus = nextTierUnlocksFoundationDiscount ? FOUNDATION_DISCOUNT_AT_5_PLUS : 0;
-    return sumNext + oneMoreAddonDiscount + foundationBonus;
-  })();
 
   // Snapshot the currently-built vehicle into a portable CompletedVehicle shape.
   const snapshotCurrentVehicle = (): CompletedVehicle | null => {
@@ -1036,9 +1043,8 @@ export function BuildYourPackage({
               </p>
 
               {/* Bundle progress hint — spells out the actual unlock value
-                  so a customer with 4 add-ons sees the 5th add-on's
-                  irresistible math (bigger %, ceramic cap, $25 off the
-                  foundation). */}
+                  so a customer with 2 add-ons sees the 3rd add-on's
+                  irresistible math (bigger %, free Steam + Trim, etc). */}
               {selectedAddonIds.length > 0 && (
                 <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.06] px-3 py-2.5 mb-3 flex items-start justify-center gap-2 max-w-md mx-auto text-left">
                   <Sparkles size={13} className="text-violet-400 shrink-0 mt-0.5" />
@@ -1051,12 +1057,11 @@ export function BuildYourPackage({
                         {qualifyingCount < 5 ? (
                           <p className="mt-0.5 text-violet-300/90">
                             <strong>Add 1 more →</strong> {bundlePctLabel(qualifyingCount + 1)} on every add-on
-                            {qualifyingCount + 1 === 3 && <> + unlock free Steam Sanitation + free Trim Dressing</>}
-                            {qualifyingCount + 1 === 5 && <> + ${FOUNDATION_DISCOUNT_AT_5_PLUS} off your detail</>}.
+                            {qualifyingCount + 1 === 3 && <> + unlock free Steam Sanitation + free Trim Dressing</>}.
                           </p>
                         ) : (
                           <p className="mt-0.5 text-emerald-300/90">
-                            🏆 Max bundle unlocked — biggest discount + ${FOUNDATION_DISCOUNT_AT_5_PLUS} off your detail.
+                            🏆 Max bundle unlocked — biggest discount on every add-on.
                           </p>
                         )}
                       </>
@@ -1303,12 +1308,6 @@ export function BuildYourPackage({
                 </div>
               );
             })}
-            {foundationDiscount > 0 && (
-              <div className="flex items-center justify-between text-amber-400 font-bold">
-                <span>🏆 5+ bundle reward</span>
-                <span className="tabular-nums">−${foundationDiscount} foundation</span>
-              </div>
-            )}
             {bundleDiscount > 0 && (
               <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-white/[0.04] text-violet-400 font-bold">
                 <span>🎁 Bundle ({bundlePctLabel(qualifyingCount)})</span>

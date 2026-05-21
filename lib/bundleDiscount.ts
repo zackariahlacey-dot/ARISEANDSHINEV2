@@ -1,12 +1,11 @@
 /**
- * Bundle discount system — pure percentage per add-on with a
- * milestone foundation discount at 5+ items.
+ * Bundle discount system — pure percentage per add-on.
  *
  *   1 add-on    → no discount
  *   2 add-ons   → 15% off each
  *   3 add-ons   → 22% off each (+ free Steam Sanitation + Trim Dressing)
  *   4 add-ons   → 28% off each
- *   5+ add-ons  → 35% off each + $25 off the foundation service
+ *   5+ add-ons  → 35% off each
  *
  * The body ceramic (`ceramic_3yr`) caps at $50 off max — even at the 35%
  * tier its absolute discount can't exceed that. Protects margin on the
@@ -16,8 +15,6 @@
  * All displayed dollar amounts are rounded to the nearest whole dollar so
  * the customer never sees $19.50.
  */
-
-export const FOUNDATION_DISCOUNT_AT_5_PLUS = 25;          // $ off foundation at 5+ add-ons
 
 /** The body ceramic capped at $50 off max regardless of tier. */
 export const CAPPED_ADDON_DISCOUNTS: Record<string, number> = {
@@ -46,11 +43,6 @@ export function addonDiscountAmount(addonId: string, basePrice: number, pct: num
 /** Final price for one add-on after the bundle discount, rounded to a whole dollar. */
 export function addonDiscountedPrice(addonId: string, basePrice: number, pct: number): number {
   return Math.max(0, basePrice - addonDiscountAmount(addonId, basePrice, pct));
-}
-
-/** $ off the foundation when the bundle hits the 5+ milestone. */
-export function foundationBundleDiscount(qualifyingAddonCount: number): number {
-  return qualifyingAddonCount >= 5 ? FOUNDATION_DISCOUNT_AT_5_PLUS : 0;
 }
 
 /** Total $ savings across an add-on list at the current tier (rounded). */
