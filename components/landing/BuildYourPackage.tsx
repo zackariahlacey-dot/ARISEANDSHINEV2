@@ -14,6 +14,7 @@ import {
   bundlePctFor, addonDiscountAmount, addonDiscountedPrice,
   bundlePctLabel,
 } from "@/lib/bundleDiscount";
+import { BuildForMeQuiz } from "./BuildForMeQuiz";
 
 // ─── Foundation services ──────────────────────────────────────────────────
 type FoundationId = "interior" | "exterior" | "full";
@@ -112,6 +113,7 @@ const QUICK_PICKS = [
   {
     id: "daily-driver",
     label: "Daily Driver Refresh",
+    subtitle: "Ultimate Interior",
     tagline: "Pets, kids, lived-in mess",
     foundation: "interior" as FoundationId,
     // 3 paid add-ons → 22% bundle + unlocks free Steam Sanitation + free Trim Dressing
@@ -121,6 +123,7 @@ const QUICK_PICKS = [
   {
     id: "winter-recovery",
     label: "Vermont Winter Recovery",
+    subtitle: "Ultimate Interior + Exterior",
     tagline: "Undo what salt season did",
     foundation: "full" as FoundationId,
     // 4 paid add-ons → 28% bundle + free unlocks
@@ -130,6 +133,7 @@ const QUICK_PICKS = [
   {
     id: "presale-showroom",
     label: "Pre-Sale Showroom Prep",
+    subtitle: "Ultimate Showroom",
     tagline: "Get top dollar at sale",
     foundation: "full" as FoundationId,
     // 5 paid add-ons → 35% bundle + free unlocks (ceramic caps at $50 off)
@@ -407,6 +411,23 @@ export function BuildYourPackage({
     setFoundationId(qp.foundation);
     setSelectedAddonIds(qp.addonIds);
     // Don't auto-confirm vehicle — they still need to fill in make/model
+  };
+
+  // Live "From $X" price for a Quick Pick card. Uses sedan baseline (matches
+  // the BuildForMeQuiz preview) and applies the same bundle math the builder
+  // will apply once the customer continues, so what they see here is real.
+  const quickPickPriceFor = (qp: typeof QUICK_PICKS[number]): number => {
+    const foundationDef = FOUNDATIONS.find(f => f.id === qp.foundation);
+    const svc = foundationDef ? services.find(s => s.name === foundationDef.serviceName) : null;
+    const fPrice = svc ? getFoundationPrice(svc, "sedan") : 0;
+    const pct = bundlePctFor(qp.addonIds.length);
+    const allAddons = [...INTERIOR_ADDONS, ...EXTERIOR_ADDONS];
+    return qp.addonIds.reduce((sum, id) => {
+      const addon = allAddons.find(a => a.id === id);
+      if (!addon) return sum;
+      const base = getAddonEffectivePrice(addon, "sedan");
+      return sum + addonDiscountedPrice(id, base, pct);
+    }, fPrice);
   };
 
   // ─── Price math ─────────────────────────────────────────────────────────
@@ -809,23 +830,43 @@ export function BuildYourPackage({
         </div>
       )}
 
+      {/* ── Build-For-Me Quiz (above Quick Picks) ───────────────────────── */}
+      <div className="max-w-3xl mx-auto">
+        <BuildForMeQuiz
+          services={services}
+          onUseBuild={({ foundation, addonIds }) => {
+            setFoundationId(foundation);
+            setSelectedAddonIds(addonIds);
+          }}
+        />
+      </div>
+
       {/* ── Quick Picks ─────────────────────────────────────────────────── */}
       <div className="mb-8 max-w-3xl mx-auto">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 mb-3 text-center">Or Start with a Quick Pick</p>
-        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {QUICK_PICKS.map(qp => {
             const Icon = qp.icon;
+            const price = quickPickPriceFor(qp);
             return (
               <button
                 key={qp.id}
                 onClick={() => applyQuickPick(qp)}
-                className="group rounded-xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.04] to-zinc-900/40 px-2 py-2.5 sm:px-4 sm:py-3 text-center hover:border-[#D4AF37]/45 hover:from-[#D4AF37]/[0.08] transition-all active:scale-[0.98]"
+                className="group relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.10] via-zinc-900/60 to-zinc-950 px-4 py-3.5 text-left hover:border-[#D4AF37]/60 hover:from-[#D4AF37]/[0.16] transition-all active:scale-[0.98] shadow-[0_4px_18px_rgba(0,0,0,0.35)]"
               >
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-                  <Icon size={11} className="text-[#D4AF37]" />
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">{qp.label}</span>
+                <span aria-hidden="true" className="pointer-events-none absolute -top-14 left-1/2 -translate-x-1/2 w-44 h-24 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.22)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-center gap-2 mb-1.5">
+                  <div className="shrink-0 w-7 h-7 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center">
+                    <Icon size={13} className="text-[#D4AF37]" />
+                  </div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400 truncate">{qp.subtitle}</p>
                 </div>
-                <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-snug hidden sm:block">{qp.tagline}</p>
+                <p className="relative text-[14px] font-black text-white leading-tight mb-0.5">{qp.label}</p>
+                <p className="relative text-[10px] text-zinc-500 leading-snug mb-2.5">{qp.tagline}</p>
+                <div className="relative flex items-baseline justify-between border-t border-white/[0.05] pt-2">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">From</span>
+                  <span className="text-base font-black text-[#D4AF37] tabular-nums">${price}</span>
+                </div>
               </button>
             );
           })}
