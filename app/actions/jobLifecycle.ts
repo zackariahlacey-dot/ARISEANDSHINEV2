@@ -190,20 +190,31 @@ export async function completeJob(bookingId: string): Promise<{ ok: boolean; err
     .eq("id", bookingId);
   if (error) return { ok: false, error: error.message };
 
-  // Increment contractor's completed_jobs_count (best-effort, racy but
-  // acceptable here — the count is informational, not load-bearing).
+  // Atomic increment via Postgres RPC — two concurrent completeJob calls
+  // can no longer race and lose a count. Falls back to the old fetch-and-
+  // update pattern only if the RPC isn't deployed yet (migration not
+  // applied), so this commit is safe to ship before the SQL is run.
   try {
-    const { data: pp } = await admin
-      .from("profiles")
-      .select("completed_jobs_count")
-      .eq("id", auth.userId)
-      .maybeSingle();
-    const cur = Number((pp as any)?.completed_jobs_count ?? 0);
-    await admin
-      .from("profiles")
-      .update({ completed_jobs_count: cur + 1 })
-      .eq("id", auth.userId);
-  } catch {}
+    const { error: rpcErr } = await admin.rpc("increment_completed_jobs_count", {
+      p_contractor_id: auth.userId,
+    });
+    if (rpcErr) {
+      // RPC missing — degrade gracefully so a fresh deploy without the
+      // migration still increments (with the old racy semantics).
+      const { data: pp } = await admin
+        .from("profiles")
+        .select("completed_jobs_count")
+        .eq("id", auth.userId)
+        .maybeSingle();
+      const cur = Number((pp as any)?.completed_jobs_count ?? 0);
+      await admin
+        .from("profiles")
+        .update({ completed_jobs_count: cur + 1 })
+        .eq("id", auth.userId);
+    }
+  } catch (err) {
+    console.error("[completeJob] increment_completed_jobs_count:", err);
+  }
 
   await audit(auth.userId, "contractor_complete_job", bookingId, { baseCents });
 
