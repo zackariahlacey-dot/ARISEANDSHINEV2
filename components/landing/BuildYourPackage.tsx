@@ -10,6 +10,10 @@ import {
 import type { Service } from "@/app/page";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { detectVehicleSize, getAllMakeSuggestions, getModelSuggestionsForMake } from "@/lib/detectVehicleSize";
+import {
+  bundlePctFor, addonDiscountAmount, addonDiscountedPrice, foundationBundleDiscount,
+  bundlePctLabel, FOUNDATION_DISCOUNT_AT_5_PLUS,
+} from "@/lib/bundleDiscount";
 
 // ─── Foundation services ──────────────────────────────────────────────────
 type FoundationId = "interior" | "exterior" | "full";
@@ -70,10 +74,10 @@ const INTERIOR_ADDONS: AddonDefExt[] = [
   { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. XL adds $20.", side: "interior", popular: true },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      price: 50, desc: "Deep extraction of embedded pet hair from seats, carpet, and cargo. Only charged if heavy accumulation present.", side: "interior", popular: true },
   { id: "leather_condition",  label: "Leather Conditioning",        price: 45, desc: "Deep-clean and condition all leather surfaces. Restores softness, prevents cracking, matte finish.", side: "interior", popular: true },
-  { id: "uv_interior",        label: "UV Protection",               price: 35, desc: "UV-protective coating on all interior plastics, vinyl, and trim. Prevents fading, cracking, and sun damage.", side: "interior" },
-  { id: "odor_bomb",          label: "Strong Odor Elimination",     price: 75, desc: "Heavy-duty neutralizer treatment kills embedded smoke, food, and pet odors throughout the cabin.", side: "interior", premium: true },
+  { id: "uv_interior",        label: "UV / Trim & Plastic Restoration & Protection", price: 35, desc: "Deep clean and restore matte color on all interior plastics, vinyl, and trim — brings tired, sun-faded surfaces back to life — then seal with a UV-protective coating to prevent future fading and cracking.", side: "interior" },
+  { id: "odor_bomb",          label: "Strong Odor Elimination",     price: 60, desc: "Heavy-duty neutralizer treatment kills embedded smoke, food, and pet odors throughout the cabin.", side: "interior", premium: true },
   { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "FREE BONUS — unlocks automatically when you add 3 or more other add-ons. High-pressure steam sanitizes vents, cup holders, and seat tracks. Kills bacteria nothing else can reach.", side: "interior", freeUnlock: true },
-  { id: "headliner_clean",    label: "Headliner Cleaning",          price: 40, desc: "Gentle dry-foam cleaning of the fabric headliner. Lifts stains and smoke residue without saturating adhesive.", side: "interior" },
+  { id: "headliner_clean",    label: "Headliner Cleaning",          price: 35, desc: "Gentle dry-foam cleaning of the fabric headliner. Lifts stains and smoke residue without saturating adhesive.", side: "interior" },
   { id: "salt_stain_removal", label: "Salt Stain Removal & Prevention", price: 50, desc: "Vermont winter survival: neutralize dried salt stains from carpets and door sills, then apply a salt repellent.", side: "interior" },
   { id: "seat_removal",       label: "Seat Removal — Deepest Clean", price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface.", side: "interior", premium: true },
 ];
@@ -88,9 +92,9 @@ type AddonDefExt = AddonDef & {
 const EXTERIOR_ADDONS: AddonDefExt[] = [
   { id: "clay_bar",            label: "Clay Bar Treatment",         price: 50, desc: "Smooths paint by lifting embedded contaminants. Upgrades your 3-month ceramic spray to 6-month protection.", side: "exterior", exclusiveGroup: "decon", popular: true },
   { id: "headlight_restore",   label: "Headlight Restoration",      price: 60, desc: "Restore cloudy or yellowed lenses to like-new clarity. UV sealed to prevent re-hazing.", side: "exterior", popular: true },
-  { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85, desc: "Clay bar + iron remover chemically dissolves brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar.", side: "exterior", exclusiveGroup: "decon", premium: true },
+  { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 70, desc: "Clay bar + iron remover chemically dissolves brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar.", side: "exterior", exclusiveGroup: "decon", premium: true },
   { id: "trim_dressing",       label: "Rubber, Plastics & Vinyl Dressing", price: 30, desc: "UV-protective dressing on all exterior trim, rubber seals, plastics, and vinyl. Brings tired surfaces back to deep black. Glass polish is already included free with every exterior package.", side: "exterior", freeUnlock: true },
-  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage", price: 85, desc: "Add the full Salt Season Recovery: undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment. Cheaper than booking standalone.", side: "exterior", premium: true },
+  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage", price: 75, desc: "Add the full Salt Season Recovery: undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment. Cheaper than booking standalone.", side: "exterior", premium: true },
   // ── Ceramic Coatings (premium) ──────────────────────────────────────────
   { id: "ceramic_3yr",         label: "2-Year Pro Ceramic Sealant (Body)", price: 250, desc: "Pro-grade 2-year ceramic sealant bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. Pricing scales by vehicle size.", side: "exterior", premium: true,
     sizedPrice: { compact: 250, sedan: 300, suv: 350, xl: 400 } },
@@ -120,13 +124,8 @@ function getAddonEffectivePrice(addon: AddonDefExt, size: VehicleSizeSlug): numb
   return addon.price;
 }
 
-function computeBundleDiscountPerAddon(count: number): number {
-  if (count <= 1) return 0;
-  if (count === 2) return 5;
-  if (count === 3) return 10;
-  if (count === 4) return 15;
-  return 20;
-}
+// Bundle discount math lives in lib/bundleDiscount.ts so the builder and the
+// downstream BookingModal apply the exact same percentage/cap/milestone logic.
 
 // ─── Styled Autocomplete (matches the site's gold-on-zinc colorway) ──────
 function Autocomplete({
@@ -391,12 +390,14 @@ export function BuildYourPackage({
   const FREE_UNLOCK_IDS = ["steam_sanitation", "trim_dressing"] as const;
   const FREE_UNLOCK_THRESHOLD = 3;
   const isFreeUnlockId = (id: string) => (FREE_UNLOCK_IDS as readonly string[]).includes(id);
-  const foundationPrice = getFoundationPrice(foundationService, vehicleSize);
+  const rawFoundationPrice = getFoundationPrice(foundationService, vehicleSize);
   const selectedAddons = allAvailable.filter(a => selectedAddonIds.includes(a.id));
   const qualifyingAddons = selectedAddons.filter(a => !isFreeUnlockId(a.id));
   const qualifyingCount = qualifyingAddons.length;
-  const discountPerAddon = computeBundleDiscountPerAddon(qualifyingCount);
-  const nextTierDiscount = computeBundleDiscountPerAddon(qualifyingCount + 1);
+  const bundlePct      = bundlePctFor(qualifyingCount);
+  const nextTierPct    = bundlePctFor(qualifyingCount + 1);
+  const foundationDiscount = foundationBundleDiscount(qualifyingCount);  // $25 off foundation at 5+
+  const foundationPrice    = Math.max(0, rawFoundationPrice - foundationDiscount);
   const freeUnlocked = qualifyingCount >= FREE_UNLOCK_THRESHOLD;
 
   // Auto-add ALL available free-unlock add-ons when threshold is met,
@@ -415,11 +416,13 @@ export function BuildYourPackage({
   }, [freeUnlocked, foundationId]);
 
   const addonsSubtotal = qualifyingAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize), 0);
-  const bundleDiscount = qualifyingAddons.reduce((s, a) => {
-    const base = getAddonEffectivePrice(a, vehicleSize);
-    return s + (base - Math.max(20, base - discountPerAddon));
-  }, 0);
-  const currentVehicleTotal = foundationPrice + addonsSubtotal - bundleDiscount;
+  const addonsBundleSavings = qualifyingAddons.reduce(
+    (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize), bundlePct),
+    0,
+  );
+  // Total customer-facing savings = add-on % discounts + foundation milestone.
+  const bundleDiscount = addonsBundleSavings + foundationDiscount;
+  const currentVehicleTotal = foundationPrice + addonsSubtotal - addonsBundleSavings;
 
   // Multi-vehicle math: roll completed vehicles into the running total and
   // apply the flat tier discount ($25 ≤ $500, $40 > $500) once 2+ vehicles
@@ -432,8 +435,25 @@ export function BuildYourPackage({
 
   const canConfirmVehicle = !!vehicleMake.trim() && !!vehicleModel.trim() && !!vehicleYear.trim();
   const canContinue = !!foundationService && vehicleConfirmed;
-  const nextDiscountAt = selectedAddonIds.length < 5 ? selectedAddonIds.length + 1 : null;
-  const nextDiscountAmount = nextDiscountAt ? computeBundleDiscountPerAddon(nextDiscountAt) : null;
+
+  // Preview the savings the customer would unlock by adding one more
+  // qualifying add-on — the "Add 1 more →" coaching copy uses this.
+  const nextTierUnlocksFoundationDiscount = qualifyingCount + 1 === 5;
+  const previewSavingsIfOneMore = (() => {
+    if (qualifyingCount >= 5) return 0;
+    // Pretend each currently-selected add-on gets the next tier's pct.
+    const sumNext = qualifyingAddons.reduce(
+      (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize), nextTierPct),
+      0,
+    );
+    // Plus the (count+1)th add-on's average expected discount — guesstimate
+    // using the median paid-add-on price ($50) since we don't know what
+    // they'll pick. Conservative.
+    const guessedAvgAddon = 50;
+    const oneMoreAddonDiscount = Math.round(guessedAvgAddon * nextTierPct);
+    const foundationBonus = nextTierUnlocksFoundationDiscount ? FOUNDATION_DISCOUNT_AT_5_PLUS : 0;
+    return sumNext + oneMoreAddonDiscount + foundationBonus;
+  })();
 
   // Snapshot the currently-built vehicle into a portable CompletedVehicle shape.
   const snapshotCurrentVehicle = (): CompletedVehicle | null => {
@@ -442,10 +462,11 @@ export function BuildYourPackage({
       id: a.id,
       label: a.label,
       // Free-unlock add-ons are zeroed at the threshold; everything else gets
-      // bundle pricing baked in so the modal/email see the exact $ shown.
+      // the percentage bundle discount (with ceramic body cap) baked in so
+      // the modal + email see the exact $ shown to the customer.
       price: isFreeUnlockId(a.id) && freeUnlocked
         ? 0
-        : Math.max(20, getAddonEffectivePrice(a, vehicleSize) - discountPerAddon),
+        : addonDiscountedPrice(a.id, getAddonEffectivePrice(a, vehicleSize), bundlePct),
     }));
     return {
       serviceName: foundationService.name,
@@ -540,11 +561,14 @@ export function BuildYourPackage({
     const isLocked = isFreeUnlock && !freeUnlocked;
     const isPremium = !!addon.premium;
     const base = getAddonEffectivePrice(addon, vehicleSize);
+    // When selected, show the customer their current-tier price.
+    // When NOT selected, show a preview of what they'd pay if they added
+    // this and bumped to the next tier — that's the upsell incentive.
     const effective = isSelected
-      ? Math.max(20, base - discountPerAddon)
-      : Math.max(20, base - nextTierDiscount);
-    const showSelectedDiscount = isSelected && discountPerAddon > 0 && effective < base;
-    const showPreviewDiscount = !isSelected && !isFreeUnlock && nextTierDiscount > 0 && effective < base;
+      ? addonDiscountedPrice(addon.id, base, bundlePct)
+      : addonDiscountedPrice(addon.id, base, nextTierPct);
+    const showSelectedDiscount = isSelected && bundlePct > 0 && effective < base;
+    const showPreviewDiscount = !isSelected && !isFreeUnlock && nextTierPct > 0 && effective < base;
 
     const handleClick = () => {
       if (isLocked) return;
@@ -1011,17 +1035,37 @@ export function BuildYourPackage({
                 <Info size={9} /> Tap any card for details · the more you add, the cheaper each gets
               </p>
 
-              {/* Bundle progress hint */}
+              {/* Bundle progress hint — spells out the actual unlock value
+                  so a customer with 4 add-ons sees the 5th add-on's
+                  irresistible math (bigger %, ceramic cap, $25 off the
+                  foundation). */}
               {selectedAddonIds.length > 0 && (
-                <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.06] px-3 py-2.5 mb-3 flex items-center justify-center gap-2 max-w-md mx-auto">
-                  <Sparkles size={13} className="text-violet-400 shrink-0" />
-                  <p className="text-[11px] text-violet-300 leading-snug">
-                    {discountPerAddon > 0 ? (
-                      <><span className="font-black">Bundle active:</span> Each add-on −${discountPerAddon}. {nextDiscountAt && nextDiscountAmount && nextDiscountAmount > discountPerAddon ? `Add 1 more for −$${nextDiscountAmount} each.` : "Max discount unlocked."}</>
+                <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.06] px-3 py-2.5 mb-3 flex items-start justify-center gap-2 max-w-md mx-auto text-left">
+                  <Sparkles size={13} className="text-violet-400 shrink-0 mt-0.5" />
+                  <div className="text-[11px] text-violet-300 leading-snug">
+                    {bundlePct > 0 ? (
+                      <>
+                        <p className="font-black">
+                          You&rsquo;re saving ${bundleDiscount} right now with the {bundlePctLabel(qualifyingCount)} bundle.
+                        </p>
+                        {qualifyingCount < 5 ? (
+                          <p className="mt-0.5 text-violet-300/90">
+                            <strong>Add 1 more →</strong> {bundlePctLabel(qualifyingCount + 1)} on every add-on
+                            {qualifyingCount + 1 === 3 && <> + unlock free Steam Sanitation + free Trim Dressing</>}
+                            {qualifyingCount + 1 === 5 && <> + ${FOUNDATION_DISCOUNT_AT_5_PLUS} off your detail</>}.
+                          </p>
+                        ) : (
+                          <p className="mt-0.5 text-emerald-300/90">
+                            🏆 Max bundle unlocked — biggest discount + ${FOUNDATION_DISCOUNT_AT_5_PLUS} off your detail.
+                          </p>
+                        )}
+                      </>
                     ) : (
-                      <>Add <span className="font-black">1 more</span> for <span className="font-black">−$5 off each</span>.</>
+                      <p>
+                        Add <span className="font-black">1 more</span> for <span className="font-black">15% off each</span> add-on.
+                      </p>
                     )}
-                  </p>
+                  </div>
                 </div>
               )}
 
@@ -1246,17 +1290,28 @@ export function BuildYourPackage({
             )}
             {selectedAddons.map(a => {
               const base = getAddonEffectivePrice(a, vehicleSize);
-              const eff = Math.max(20, base - discountPerAddon);
+              const isFreeUnlock = isFreeUnlockId(a.id);
+              const eff = isFreeUnlock && freeUnlocked
+                ? 0
+                : addonDiscountedPrice(a.id, base, bundlePct);
               return (
                 <div key={a.id} className="flex items-center justify-between">
                   <span className="text-zinc-500 truncate pr-2">+ {a.label}</span>
-                  <span className="text-zinc-300 tabular-nums shrink-0">${eff}</span>
+                  <span className="text-zinc-300 tabular-nums shrink-0">
+                    {isFreeUnlock && freeUnlocked ? <span className="text-emerald-400">FREE</span> : `$${eff}`}
+                  </span>
                 </div>
               );
             })}
+            {foundationDiscount > 0 && (
+              <div className="flex items-center justify-between text-amber-400 font-bold">
+                <span>🏆 5+ bundle reward</span>
+                <span className="tabular-nums">−${foundationDiscount} foundation</span>
+              </div>
+            )}
             {bundleDiscount > 0 && (
               <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-white/[0.04] text-violet-400 font-bold">
-                <span>🎁 Bundle</span>
+                <span>🎁 Bundle ({bundlePctLabel(qualifyingCount)})</span>
                 <span className="tabular-nums">−${bundleDiscount}</span>
               </div>
             )}

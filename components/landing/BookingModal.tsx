@@ -43,6 +43,9 @@ import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBooking
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import {
+  bundlePctFor, addonDiscountAmount, foundationBundleDiscount,
+} from "@/lib/bundleDiscount";
+import {
   filterMakesByQuery,
   filterModelsByQuery,
   sizeTierToSlug,
@@ -1173,23 +1176,32 @@ export function BookingSection({
   // Price/points derived values (declared early so useEffect below can reference maxRedeemablePoints)
   const isMonthlyPlan = selectedService?.name.toLowerCase().includes("monthly maintenance");
   const setupFee = isMonthlyPlan ? getMaintenanceSetupFee(selectedService?.name ?? "") : 0;
-  const servicePrice = computedPrice ?? selectedService?.price_small ?? 0;
+  // The 5+ add-on milestone gives an extra $25 off the foundation service.
+  // Compute it here, then subtract before establishing `servicePrice` so
+  // every downstream calculation (coupon %, loyalty, totals) sees the
+  // already-discounted foundation price.
+  const _paidAddonsCount = selectedAddons.filter(a => a.price > 0).length;
+  const foundationMilestoneDiscount = foundationBundleDiscount(_paidAddonsCount);
+  const servicePrice = Math.max(0, (computedPrice ?? selectedService?.price_small ?? 0) - foundationMilestoneDiscount);
   // ── Bundle discount (Build Your Package) ────────────────────────────────
-  // Each add-on gets cheaper as more are stacked: 0/$5/$10/$15/$20 off per
-  // add-on for 1/2/3/4/5+ items. Floor of $20 per add-on so cheap ones don't
-  // go below a reasonable amount. Free-unlock add-ons (price 0) don't count
-  // toward the bundle tier and don't get discounted further.
+  // Pure percentage per add-on: 0 / 15% / 22% / 28% / 35% at counts
+  // 1 / 2 / 3 / 4 / 5+. Body ceramic caps at $50 off max (handled in the
+  // shared lib). At 5+, the foundation gets an extra $25 off as a
+  // milestone reward. Free-unlock add-ons (price 0) don't count toward
+  // the bundle tier and aren't discounted further. Lib lives at
+  // lib/bundleDiscount.ts and is shared with BuildYourPackage so both
+  // surfaces show identical numbers.
   const qualifyingAddons = selectedAddons.filter(a => a.price > 0);
-  const bundleDiscountPerAddon = qualifyingAddons.length <= 1 ? 0
-    : qualifyingAddons.length === 2 ? 5
-    : qualifyingAddons.length === 3 ? 10
-    : qualifyingAddons.length === 4 ? 15
-    : 20;
-  const bundleDiscount = qualifyingAddons.reduce((sum, a) => {
-    const effective = Math.max(20, a.price - bundleDiscountPerAddon);
-    return sum + (a.price - effective);
-  }, 0);
-  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0) - bundleDiscount;
+  const bundlePct = bundlePctFor(qualifyingAddons.length);
+  const addonsBundleSavings = qualifyingAddons.reduce(
+    (sum, a) => sum + addonDiscountAmount(a.id, a.price, bundlePct),
+    0,
+  );
+  // foundationMilestoneDiscount was already applied to servicePrice above;
+  // we include it in the customer-visible "bundle savings" line so the UI
+  // can show the full $X saved from the bundle (addons + milestone).
+  const bundleDiscount = addonsBundleSavings + foundationMilestoneDiscount;
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0) - addonsBundleSavings;
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discountPercentage != null
       ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
