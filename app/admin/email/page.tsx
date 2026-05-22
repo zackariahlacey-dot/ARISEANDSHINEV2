@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { getAllClients, getClientEmail, sendCustomEmailAction } from "@/app/actions/adminActions";
+import { getAllClients, getClientEmail, sendCustomEmailAction, getEmailEventStats } from "@/app/actions/adminActions";
 import { sendTestMonthlyEmail, type TestEmailType } from "@/app/actions/sendTestMonthlyEmail";
 import { useToast } from "@/components/admin/Toast";
 import { Mail, Search, Check, Send, Sparkles, Star, Tag, RefreshCcw, Car, Zap, Loader2, Navigation, Crown, FlaskConical } from "lucide-react";
@@ -75,6 +75,12 @@ export default function EmailPage() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ["admin", "clients"],
     queryFn: async () => await getAllClients(),
+  });
+
+  const { data: emailStats } = useQuery({
+    queryKey: ["admin", "email-stats", 7],
+    queryFn: async () => await getEmailEventStats(7),
+    staleTime: 60_000,
   });
 
   const [search, setSearch] = useState("");
@@ -175,6 +181,44 @@ export default function EmailPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 space-y-6 max-w-3xl mx-auto w-full">
+
+        {/* ── DELIVERABILITY STATS (last 7 days) ───────────────────────────── */}
+        {emailStats && emailStats.total > 0 && (
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <Mail size={13} className="text-zinc-400" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Deliverability — 7d</span>
+              </div>
+              {emailStats.lastEventAt && (
+                <span className="text-[9px] text-zinc-600 tabular-nums">
+                  Last event {new Date(emailStats.lastEventAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {[
+                { label: "Sent",      val: emailStats.sent,       color: "text-zinc-300" },
+                { label: "Delivered", val: emailStats.delivered,  color: "text-emerald-400" },
+                { label: "Opened",    val: emailStats.opened,     color: "text-sky-400" },
+                { label: "Clicked",   val: emailStats.clicked,    color: "text-violet-400" },
+                { label: "Bounced",   val: emailStats.bounced,    color: "text-rose-400" },
+                { label: "Complaint", val: emailStats.complained, color: "text-amber-400" },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl bg-white/[0.02] border border-white/[0.04] px-2 py-2">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-zinc-600">{s.label}</p>
+                  <p className={`text-base font-black tabular-nums ${s.color}`}>{s.val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {emailStats && emailStats.total === 0 && (
+          <div className="rounded-2xl border border-amber-500/15 bg-amber-500/[0.04] p-3 text-[11px] text-amber-300/80 leading-snug">
+            <span className="font-black">No Resend webhook events yet.</span> Once the webhook fires you&apos;ll see deliverability stats here.
+            Configure the endpoint in Resend → <code className="text-amber-300">/api/webhooks/resend</code> and set <code className="text-amber-300">RESEND_WEBHOOK_SECRET</code>.
+          </div>
+        )}
 
         {/* ── MONTHLY EMAIL TEST PANEL ─────────────────────────────────────── */}
         <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-4 space-y-3">

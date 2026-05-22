@@ -869,6 +869,46 @@ export async function bulkBlockDateRangeAction(
   return { success: true, inserted: rows.length };
 }
 
+/** Aggregate email_events for the past N days. Returns total counts per
+ *  event type (sent, delivered, opened, clicked, bounced, complained). */
+export async function getEmailEventStats(daysBack: number = 7): Promise<{
+  total: number;
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  bounced: number;
+  complained: number;
+  delayed: number;
+  windowDays: number;
+  lastEventAt: string | null;
+}> {
+  const supabase = createAdminClient();
+  const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("email_events")
+    .select("event_type, occurred_at")
+    .gte("occurred_at", since)
+    .order("occurred_at", { ascending: false });
+
+  const rows = (data ?? []) as Array<{ event_type: string; occurred_at: string }>;
+  const counts: Record<string, number> = {};
+  for (const r of rows) counts[r.event_type] = (counts[r.event_type] ?? 0) + 1;
+
+  return {
+    total: rows.length,
+    sent:       counts["email.sent"]            ?? 0,
+    delivered:  counts["email.delivered"]       ?? 0,
+    opened:     counts["email.opened"]          ?? 0,
+    clicked:    counts["email.clicked"]         ?? 0,
+    bounced:    counts["email.bounced"]         ?? 0,
+    complained: counts["email.complained"]      ?? 0,
+    delayed:    counts["email.delivery_delayed"]?? 0,
+    windowDays: daysBack,
+    lastEventAt: rows[0]?.occurred_at ?? null,
+  };
+}
+
 export async function triggerTestEmail(type: string, targetEmail: string) {
   const adminEmail = process.env.ADMIN_EMAIL || "zackariahlacey@gmail.com";
   const email = targetEmail || adminEmail;
