@@ -1465,7 +1465,7 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<void> 
  */
 export async function sendBookingEmails(
   data: BookingEmailData,
-  options?: { skipCustomerEmail?: boolean }
+  options?: { skipCustomerEmail?: boolean; ownerEmailOverride?: string }
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY is not set — skipping emails.");
@@ -1476,6 +1476,7 @@ export async function sendBookingEmails(
   const formattedDate = formatDate(data.bookingDate);
   const shortRef = data.bookingId.slice(0, 8).toUpperCase();
   const skipCustomer = options?.skipCustomerEmail === true;
+  const ownerTo = options?.ownerEmailOverride?.trim() || OWNER_EMAIL;
 
   const sends = await Promise.allSettled([
     // Customer confirmation (skipped when premium template is sent via sendBookingEmail)
@@ -1492,7 +1493,7 @@ export async function sendBookingEmails(
     // Owner notification: full booking details
     resend.emails.send({
       from: FROM_ADDRESS,
-      to: OWNER_EMAIL,
+      to: ownerTo,
       subject: (() => {
         const sn = (data.serviceName ?? "").toLowerCase();
         const isBuilder = sn === "interior detail" || sn === "exterior detail" || sn === "full detail";

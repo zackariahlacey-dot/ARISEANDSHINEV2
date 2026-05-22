@@ -892,7 +892,9 @@ export async function triggerTestEmail(type: string, targetEmail: string) {
   try {
     switch (type) {
       case 'confirmation':
-        await sendBookingEmails(sampleData);
+        // Route BOTH the customer copy and the owner-alert copy to the test
+        // address so the previewer sees both in one inbox.
+        await sendBookingEmails(sampleData, { ownerEmailOverride: email });
         break;
       case 'on-my-way':
         await sendOnMyWayEmailNotification({ customerName: sampleData.customerName, customerEmail: email });
@@ -1438,8 +1440,10 @@ export async function runTestBookingAction(adminEmail: string): Promise<{ succes
   };
 
   try {
-    await sendBookingEmails(sampleData);
-    log.push("✅ Customer confirmation email sent");
+    // In test mode, the owner-alert copy also lands at the chosen test
+    // address so nothing reaches the live admin inbox.
+    await sendBookingEmails(sampleData, { ownerEmailOverride: adminEmail });
+    log.push("✅ Customer confirmation + owner alert sent");
   } catch (e: any) { log.push("❌ Customer confirmation: " + e.message); }
 
   try {

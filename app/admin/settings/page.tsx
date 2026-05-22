@@ -263,6 +263,7 @@ export default function SettingsPage() {
               placeholder={diagnostics?.env?.adminEmail ?? "your@email.com"}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
             />
+            <p className="text-[10px] text-zinc-600 mt-1.5">Both the customer template and the owner-alert copy route here — nothing reaches the live admin inbox during testing.</p>
           </div>
 
           <div className="space-y-2">
