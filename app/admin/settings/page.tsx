@@ -8,6 +8,7 @@ import {
   useUpdateOperatingHours,
   useBlockedDates,
   useToggleBlockedDate,
+  useBulkBlockDateRange,
   useMonthlyGoal,
   useSetMonthlyGoal,
 } from "@/hooks/use-admin-data";
@@ -54,9 +55,11 @@ export default function SettingsPage() {
 
   const updateHours = useUpdateOperatingHours();
   const toggleBlock = useToggleBlockedDate();
+  const bulkBlock = useBulkBlockDateRange();
 
   const [hoursState, setHoursState]     = useState<any[]>([]);
   const [newBlockDate, setNewBlockDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+  const [newBlockEndDate, setNewBlockEndDate] = useState("");
   const [newBlockReason, setNewBlockReason] = useState("");
 
   // Settings sections expand/collapse
@@ -102,9 +105,20 @@ export default function SettingsPage() {
   async function handleAddBlock() {
     if (!newBlockDate) return;
     try {
-      await toggleBlock.mutateAsync({ date: newBlockDate, isBlocked: true, reason: newBlockReason || undefined });
-      toast("Date blocked!");
+      if (newBlockEndDate && newBlockEndDate !== newBlockDate) {
+        const res = await bulkBlock.mutateAsync({
+          startDate: newBlockDate,
+          endDate: newBlockEndDate,
+          reason: newBlockReason || undefined,
+        });
+        if (!res.success) { toast(res.error ?? "Failed", "error"); return; }
+        toast(`Blocked ${res.inserted} day${res.inserted === 1 ? "" : "s"}!`);
+      } else {
+        await toggleBlock.mutateAsync({ date: newBlockDate, isBlocked: true, reason: newBlockReason || undefined });
+        toast("Date blocked!");
+      }
       setNewBlockDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+      setNewBlockEndDate("");
       setNewBlockReason("");
     } catch { toast("Failed", "error"); }
   }
@@ -366,27 +380,44 @@ export default function SettingsPage() {
       {/* ── Blocked Dates ─────────────────────────────────────────────────── */}
       <Section id="blocked" title="Blocked Dates" icon={<CalendarOff size={16} />}>
         <div className="space-y-3">
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={newBlockDate}
-              onChange={e => setNewBlockDate(e.target.value)}
-              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
-            />
-            <button
-              onClick={handleAddBlock}
-              disabled={toggleBlock.isPending}
-              className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-black uppercase tracking-wider px-3 py-2.5 rounded-xl hover:bg-red-500/20 transition-all active:scale-95"
-            >
-              Block
-            </button>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">From</p>
+              <input
+                type="date"
+                value={newBlockDate}
+                onChange={e => setNewBlockDate(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">To (optional)</p>
+              <input
+                type="date"
+                value={newBlockEndDate}
+                onChange={e => setNewBlockEndDate(e.target.value)}
+                min={newBlockDate || undefined}
+                placeholder="Leave blank for single day"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
           </div>
           <input
             value={newBlockReason}
             onChange={e => setNewBlockReason(e.target.value)}
-            placeholder="Reason (optional)"
+            placeholder="Reason (optional) — e.g. Holiday closure, vacation"
             className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
           />
+          <button
+            onClick={handleAddBlock}
+            disabled={toggleBlock.isPending || bulkBlock.isPending}
+            className="w-full inline-flex items-center justify-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-black uppercase tracking-wider px-3 py-2.5 rounded-xl hover:bg-red-500/20 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {bulkBlock.isPending || toggleBlock.isPending
+              ? <Loader2 size={13} className="animate-spin" />
+              : <CalendarOff size={13} />}
+            {newBlockEndDate && newBlockEndDate !== newBlockDate ? "Block Date Range" : "Block Date"}
+          </button>
 
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {bdLoading ? (

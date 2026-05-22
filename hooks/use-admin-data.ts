@@ -13,6 +13,7 @@ import {
   updateOperatingHoursAction,
   getBlockedDates,
   toggleBlockedDateAction,
+  bulkBlockDateRangeAction,
   getRevenueBreakdown,
   getAllTimeStats,
   getSettingAction,
@@ -107,8 +108,17 @@ export function useBlockedDates() {
 export function useToggleBlockedDate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ date, isBlocked, reason }: { date: string; isBlocked: boolean; reason?: string }) => 
+    mutationFn: async ({ date, isBlocked, reason }: { date: string; isBlocked: boolean; reason?: string }) =>
       await toggleBlockedDateAction(date, isBlocked, reason),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "blocked-dates"] }),
+  });
+}
+
+export function useBulkBlockDateRange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ startDate, endDate, reason }: { startDate: string; endDate: string; reason?: string }) =>
+      await bulkBlockDateRangeAction(startDate, endDate, reason),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "blocked-dates"] }),
   });
 }

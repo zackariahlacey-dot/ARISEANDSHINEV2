@@ -835,6 +835,40 @@ export async function toggleBlockedDateAction(date: string, isBlocked: boolean, 
   return { success: true };
 }
 
+/** Block every date in [startDate, endDate] inclusive (YYYY-MM-DD strings).
+ *  Pre-deletes any existing blocks in the range so the reason stays consistent
+ *  across the span. Returns the count actually inserted. */
+export async function bulkBlockDateRangeAction(
+  startDate: string,
+  endDate: string,
+  reason?: string,
+): Promise<{ success: boolean; inserted: number; error?: string }> {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return { success: false, inserted: 0, error: "Invalid date." };
+  }
+  if (end < start) {
+    return { success: false, inserted: 0, error: "End date is before start date." };
+  }
+  // Safety cap so a typo can't lock the calendar for a year.
+  const MAX_RANGE_DAYS = 90;
+  const days: string[] = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(d.toISOString().slice(0, 10));
+    if (days.length > MAX_RANGE_DAYS) {
+      return { success: false, inserted: 0, error: `Range too large (max ${MAX_RANGE_DAYS} days).` };
+    }
+  }
+  const supabase = createAdminClient();
+  // Clear any existing blocks in the span so the new reason is authoritative.
+  await supabase.from("blocked_dates").delete().in("blocked_date", days);
+  const rows = days.map(d => ({ blocked_date: d, reason: reason?.trim() || null }));
+  const { error } = await supabase.from("blocked_dates").insert(rows);
+  if (error) return { success: false, inserted: 0, error: error.message };
+  return { success: true, inserted: rows.length };
+}
+
 export async function triggerTestEmail(type: string, targetEmail: string) {
   const adminEmail = process.env.ADMIN_EMAIL || "zackariahlacey@gmail.com";
   const email = targetEmail || adminEmail;
