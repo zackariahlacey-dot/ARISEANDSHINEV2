@@ -87,9 +87,10 @@ export async function bookMaintenance(args: BookMaintenanceArgs): Promise<Bookin
   const price = maintenancePrice(Number(offerRow.base_price ?? 0), args.condition);
 
   // Map stored "small/medium/large/extra_large" back to the customer-facing
-  // slug bookDetailing expects (compact/sedan/suv/xl).
+  // slug bookDetailing expects (sedan/suv/xl). "small" is legacy — fold it
+  // into sedan since compact is gone.
   const sizeMapBack: Record<string, VehicleSizeSlug> = {
-    small: "compact", medium: "sedan", large: "suv", extra_large: "xl",
+    small: "sedan", medium: "sedan", large: "suv", extra_large: "xl",
   };
   const vehicleSize: VehicleSizeSlug =
     sizeMapBack[offerRow.source_vehicle_size ?? ""] ?? "sedan";

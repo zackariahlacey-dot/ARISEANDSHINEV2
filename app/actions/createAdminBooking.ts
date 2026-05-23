@@ -8,8 +8,10 @@ import Stripe from "stripe";
 import { getTravelFee } from "@/lib/travelFee";
 import { to24h } from "./bookDetailing";
 
+// compact is gone from the customer-facing slug set; any legacy admin row
+// with it folds into "medium" (sedan tier).
 const VEHICLE_SIZE_MAP = {
-  compact: "small",
+  compact: "medium",
   sedan: "medium",
   suv: "large",
   xl: "extra_large",

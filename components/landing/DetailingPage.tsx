@@ -89,12 +89,11 @@ const ULTIMATE_CARDS = [
 ] as const;
 
 // ── Paint Correction (Ultimate Exterior + 1-Step / 2-Step) ──────────────────
-// Maps to DB services & SERVICE_DURATIONS in lib/constants.ts
+// 3-tier pricing — matches the global customer-facing size picker.
 const PAINT_CORRECTION_SIZES = [
-  { id: "compact" as const, label: "Small Car",          desc: "Compacts, sedans, coupes" },
-  { id: "sedan"   as const, label: "Mid Size",           desc: "Mid sedans, 2-row SUVs" },
-  { id: "suv"     as const, label: "Large SUV / Truck",  desc: "3-row SUVs, trucks, passenger vans" },
-  { id: "xl"      as const, label: "Sprinter / Work Van",desc: "Sprinter, Transit, ProMaster, Express" },
+  { id: "sedan" as const, label: "Sedan / Coupe",       desc: "Cars, coupes, 2-row crossovers" },
+  { id: "suv"   as const, label: "SUV / Truck",         desc: "2-row SUVs, midsize trucks" },
+  { id: "xl"    as const, label: "3-Row / Work Van",    desc: "3-row SUVs, Yukon, Sprinter, Transit" },
 ];
 
 type PaintSizeId = typeof PAINT_CORRECTION_SIZES[number]["id"];
@@ -107,9 +106,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Layers,
     tagline: "Removes 60–75% of light defects — swirls, oxidation, water spots.",
     isFlagship: false,
-    prices:    { compact: 350, sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { compact: 3.5, sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { compact: 4.5, sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
+    prices:    { sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
   },
   {
     serviceName: "Ultimate Exterior + 2-Step Paint Correction",
@@ -117,9 +116,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Gem,
     tagline: "Removes 85–95% of correctable defects — deeper scratches, heavy swirls.",
     isFlagship: true,
-    prices:    { compact: 550, sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { compact: 6.5, sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { compact: 8.0, sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
+    prices:    { sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
   },
 ] as const;
 
@@ -133,7 +132,7 @@ const ULTIMATE_EXTERIOR_INCLUDES = [
 ];
 
 const CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  compact: 250, sedan: 300, suv: 350, xl: 400,
+  sedan: 300, suv: 350, xl: 400,
 };
 
 const sv = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } };
@@ -658,7 +657,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
 // Add-on info strip below the cards summarises the 2-yr ceramic upgrade and
 // the Ultimate Interior add-on (configured & priced inside the booking flow).
 function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: string) => void }) {
-  const [size, setSize] = useState<PaintSizeId>("compact");
+  const [size, setSize] = useState<PaintSizeId>("sedan");
   const fmtHours = (h: number) => (Number.isInteger(h) ? `${h} hrs` : `${h} hrs`);
 
   return (

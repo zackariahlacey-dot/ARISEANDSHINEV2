@@ -165,7 +165,7 @@ const WINDOW_COAT_ALL_PRICE        = 250;
 
 /** 2-Year Pro Ceramic Sealant — size-tier pricing (must match BookingModal). */
 const CERAMIC_3YR_PRICES_ADMIN: Record<string, number> = {
-  compact: 250, sedan: 300, suv: 350, xl: 400,
+  sedan: 300, suv: 350, xl: 400,
 };
 
 function getAdminAddonPrice(id: string, vehicleSize: string): number {
@@ -180,10 +180,9 @@ function getAdminAddonPrice(id: string, vehicleSize: string): number {
 }
 
 const VEHICLE_SIZES_ADMIN = [
-  { value: "compact", label: "Compact / Small",  key: "price_small"       },
-  { value: "sedan",   label: "Sedan / Midsize",  key: "price_medium"      },
-  { value: "suv",     label: "SUV / Truck",       key: "price_large"       },
-  { value: "xl",      label: "XL / Van",          key: "price_extra_large" },
+  { value: "sedan", label: "Sedan / Coupe",      key: "price_medium"      },
+  { value: "suv",   label: "SUV / Truck",        key: "price_large"       },
+  { value: "xl",    label: "3-Row / Work Van",   key: "price_extra_large" },
 ];
 
 const FOOTAGE_RATES: Record<string, number> = {
@@ -228,8 +227,8 @@ export type ClientPrefillForBooking = {
 
 function dbSizeToSlug(size: string | null | undefined): string {
   const s = (size || "").toLowerCase();
-  if (s === "small" || s === "compact") return "compact";
-  if (s === "medium" || s === "sedan") return "sedan";
+  // Legacy "small" / "compact" values fold into sedan (compact is gone).
+  if (s === "small" || s === "compact" || s === "medium" || s === "sedan") return "sedan";
   if (s === "large" || s === "suv") return "suv";
   if (s === "extra_large" || s === "xl" || s === "xl_truck" || s === "large_suv") return "xl";
   return "sedan";

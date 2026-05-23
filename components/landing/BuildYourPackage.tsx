@@ -96,7 +96,7 @@ const EXTERIOR_ADDONS: AddonDefExt[] = [
   // individual rows). Kept in this list so price math + booking handoff
   // still finds them. See CERAMIC_PACKAGE_IDS below.
   { id: "ceramic_3yr",         label: "2-Year Ceramic — Body",      price: 250, desc: "Pro-grade 2-year ceramic sealant bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. Pricing scales by vehicle size.", side: "exterior", premium: true,
-    sizedPrice: { compact: 250, sedan: 300, suv: 350, xl: 400 } },
+    sizedPrice: { sedan: 300, suv: 350, xl: 400 } },
   { id: "wheel_ceramic",       label: "2-Year Ceramic — Wheels",    price: 125, desc: "Ceramic-coat all 4 wheels and brake calipers. Brake dust wipes off, salt and grime can't grip, gloss lasts 1-2 years.", side: "exterior", premium: true },
   { id: "window_coat_all",     label: "2-Year Ceramic — Windows",   price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 2 full years.", side: "exterior", premium: true },
 ];
@@ -134,8 +134,8 @@ const POPULAR_DETAILS: Array<{
 // ─── Helpers ──────────────────────────────────────────────────────────────
 function getFoundationPrice(service: Service | null, size: VehicleSizeSlug): number {
   if (!service) return 0;
-  const key = ({ compact: "price_small", sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[size];
-  return Number(service[key] ?? service.price_small ?? 0);
+  const key = ({ sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[size];
+  return Number(service[key] ?? service.price_medium ?? 0);
 }
 
 function getAddonEffectivePrice(
@@ -1024,7 +1024,7 @@ export function BuildYourPackage({
                       <Zap size={12} className="text-[#D4AF37] fill-[#D4AF37]" />
                       <p className="text-xs">
                         <span className="text-zinc-400">Your vehicle size: </span>
-                        <span className="font-black text-[#D4AF37] uppercase tracking-wider">{({ compact: "Small", sedan: "Mid-Size", suv: "Large SUV/Truck", xl: "XL / Van" } as const)[vehicleSize]}</span>
+                        <span className="font-black text-[#D4AF37] uppercase tracking-wider">{({ sedan: "Sedan / Coupe", suv: "SUV / Truck", xl: "3-Row / Work Van" } as const)[vehicleSize]}</span>
                       </p>
                     </div>
                   ) : (

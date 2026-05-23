@@ -71,11 +71,11 @@ function painToAddons(painIds: string[], severity: Severity): string[] {
   return Array.from(set);
 }
 
-function getFoundationPriceFor(services: Service[], scope: Scope, size: "compact"|"sedan"|"suv"|"xl" = "sedan"): number {
+function getFoundationPriceFor(services: Service[], scope: Scope, size: "sedan"|"suv"|"xl" = "sedan"): number {
   const svc = services.find(s => s.name === FOUNDATION_SERVICE_NAME[scope]);
   if (!svc) return 0;
-  const key = ({ compact: "price_small", sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[size];
-  return Number((svc as any)[key] ?? (svc as any).price_small ?? 0);
+  const key = ({ sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[size];
+  return Number((svc as any)[key] ?? (svc as any).price_medium ?? 0);
 }
 
 // Hard-coded addon prices for the quiz preview (mirror BuildYourPackage's

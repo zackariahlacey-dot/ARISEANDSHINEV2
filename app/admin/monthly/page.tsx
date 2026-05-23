@@ -542,7 +542,7 @@ export default function MonthlySubscribersPage() {
                     <label className="text-[9px] font-black uppercase tracking-widest text-zinc-600 block mb-1">Size</label>
                     <select value={editSize} onChange={e => setEditSize(e.target.value)}
                       className="w-full bg-zinc-900 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50">
-                      {["compact", "sedan", "medium", "large_suv", "xl_truck"].map(sz => (
+                      {["sedan", "medium", "large_suv", "xl_truck"].map(sz => (
                         <option key={sz} value={sz}>{sz.replace(/_/g, " ")}</option>
                       ))}
                     </select>
@@ -1002,7 +1002,6 @@ const PLAN_ACCENT: Record<string, { border: string; bg: string; text: string; do
 };
 
 const VEHICLE_SIZE_LABELS: Record<string, string> = {
-  compact:  "Compact",
   sedan:    "Sedan / Coupe",
   medium:   "Mid-size SUV / Minivan",
   large_suv:"Large SUV / Full-size Truck",

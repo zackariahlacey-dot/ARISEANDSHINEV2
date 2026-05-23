@@ -48,7 +48,6 @@ const FREQS: { id: PlanFrequency; label: string; sublabel: string }[] = [
 ];
 
 const SIZES = [
-  { value: "compact",   label: "Compact" },
   { value: "sedan",     label: "Sedan / Coupe" },
   { value: "medium",    label: "Mid-size SUV / Minivan" },
   { value: "large_suv", label: "Large SUV / Full-size Truck" },

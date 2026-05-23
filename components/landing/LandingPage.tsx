@@ -2088,12 +2088,11 @@ const ULTIMATE_CARDS = [
 ] as const;
 
 // ─── Ultimate Paint Correction (Ultimate Exterior + 1-Step / 2-Step) ─────────
-// Same 4-tier pricing model used on /detailing and /paint-correction.
+// 3-tier pricing model — matches the global customer-facing size picker.
 const PAINT_CORRECTION_SIZES = [
-  { id: "compact" as const, label: "Small Car",          desc: "Compacts, sedans, coupes" },
-  { id: "sedan"   as const, label: "Mid Size",           desc: "Mid sedans, 2-row SUVs" },
-  { id: "suv"     as const, label: "Large SUV / Truck",  desc: "3-row SUVs, trucks, passenger vans" },
-  { id: "xl"      as const, label: "Sprinter / Work Van",desc: "Sprinter, Transit, ProMaster, Express" },
+  { id: "sedan" as const, label: "Sedan / Coupe",       desc: "Cars, coupes, 2-row crossovers" },
+  { id: "suv"   as const, label: "SUV / Truck",         desc: "2-row SUVs, midsize trucks" },
+  { id: "xl"    as const, label: "3-Row / Work Van",    desc: "3-row SUVs, Yukon, Sprinter, Transit" },
 ];
 
 type PaintSizeId = typeof PAINT_CORRECTION_SIZES[number]["id"];
@@ -2106,9 +2105,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Layers,
     tagline: "Removes 60–75% of light defects.",
     isFlagship: false,
-    prices:    { compact: 350, sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { compact: 3.5, sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { compact: 4.5, sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
+    prices:    { sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
   },
   {
     serviceName: "Ultimate Exterior + 2-Step Paint Correction",
@@ -2117,9 +2116,9 @@ const PAINT_CORRECTION_CARDS = [
     badgeIcon: Gem,
     tagline: "Removes 85–95% of correctable defects.",
     isFlagship: true,
-    prices:    { compact: 550, sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { compact: 6.5, sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { compact: 8.0, sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
+    prices:    { sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
   },
 ] as const;
 
@@ -2133,7 +2132,7 @@ const ULTIMATE_EXTERIOR_INCLUDES_LANDING = [
 ];
 
 const PAINT_CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  compact: 250, sedan: 300, suv: 350, xl: 400,
+  sedan: 300, suv: 350, xl: 400,
 };
 
 // ─── Ultimate Service Card ─────────────────────────────────────────────────────
@@ -2323,7 +2322,7 @@ function LandingPaintCorrectionBlock({
     return () => clearTimeout(t);
   }, [vehicleMake, vehicleModel]);
 
-  const activeSize: PaintSizeId = size ?? "compact";
+  const activeSize: PaintSizeId = size ?? "sedan";
   const hasTypedVehicle = vehicleMake.trim().length > 0 && vehicleModel.trim().length >= 2;
   const handleBook = (serviceName: string) => {
     // Always pass make/model when the customer typed them — even if our DB didn't
@@ -2432,7 +2431,7 @@ function LandingPaintCorrectionBlock({
                         transition={{ duration: 0.18 }}
                         className={`text-2xl font-black tabular-nums ${card.isFlagship ? "text-[#D4AF37]" : "text-white"}`}
                       >
-                        ${size ? price : card.prices.compact}
+                        ${size ? price : card.prices.sedan}
                       </motion.div>
                     </div>
                     <div className="text-right">
@@ -2446,7 +2445,7 @@ function LandingPaintCorrectionBlock({
                         transition={{ duration: 0.18 }}
                         className="text-base font-black tabular-nums text-zinc-200"
                       >
-                        {size ? `${hoursLow}–${hoursHigh} hrs` : `${card.hoursLow.compact}–${card.hoursHigh.xl} hrs`}
+                        {size ? `${hoursLow}–${hoursHigh} hrs` : `${card.hoursLow.sedan}–${card.hoursHigh.xl} hrs`}
                       </motion.div>
                     </div>
                   </div>
@@ -2505,7 +2504,7 @@ function LandingPaintCorrectionBlock({
             <span><strong className="text-zinc-200">2-yr Ceramic</strong>{" "}
               {size
                 ? `+$${PAINT_CERAMIC_3YR_PRICES[activeSize]}`
-                : `+$${PAINT_CERAMIC_3YR_PRICES.compact}–$${PAINT_CERAMIC_3YR_PRICES.xl}`}
+                : `+$${PAINT_CERAMIC_3YR_PRICES.sedan}–$${PAINT_CERAMIC_3YR_PRICES.xl}`}
             </span>
           </div>
           <div className="hidden sm:block w-px h-3.5 bg-white/[0.08]" />

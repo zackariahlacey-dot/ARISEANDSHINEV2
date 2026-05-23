@@ -187,25 +187,25 @@ const DURATION_EXTENDING_ADDONS: Record<string, number> = {
 /** Carpet & Upholstery Shampoo — only the 3rd row in xl adds real labor.
  *  Sedan / regular SUV: 30 min. 3-row SUV / work van (xl): 60 min. */
 const UPHOLSTERY_SHAMPOO_DURATION_MINS: Record<string, number> = {
-  compact: 30, sedan: 30, suv: 30, xl: 60,
-  small: 30, medium: 30, large: 30, extra_large: 60,
+  sedan: 30, suv: 30, xl: 60,
+  medium: 30, large: 30, extra_large: 60,
 };
 
 /** 2-Year Pro Ceramic Sealant — application + flash time scales with surface area. */
 const CERAMIC_3YR_DURATION_MINS: Record<string, number> = {
-  compact: 90, sedan: 90, suv: 120, xl: 150,
-  small: 90, medium: 90, large: 120, extra_large: 150,
+  sedan: 90, suv: 120, xl: 150,
+  medium: 90, large: 120, extra_large: 150,
 };
 
 const CERAMIC_PRICES: Record<string, number> = {
-  compact: 350, sedan: 350, suv: 500, xl: 650,
-  small: 350, medium: 350, large: 500, extra_large: 650,
+  sedan: 350, suv: 500, xl: 650,
+  medium: 350, large: 500, extra_large: 650,
 };
 
-/** 2-Year Professional Ceramic Sealant — 4-tier pricing for paint-correction & Ultimate packages. */
+/** 2-Year Professional Ceramic Sealant — 3-tier pricing for paint-correction & Ultimate packages. */
 const CERAMIC_3YR_PRICES: Record<string, number> = {
-  compact: 250, sedan: 300, suv: 350, xl: 400,
-  small: 250, medium: 300, large: 350, extra_large: 400,
+  sedan: 300, suv: 350, xl: 400,
+  medium: 300, large: 350, extra_large: 400,
 };
 
 /** 2-Year Graphene Window Coating — flat pricing across all vehicle sizes. */
@@ -350,11 +350,10 @@ function isBoatService(name: string): boolean {
 
 /** Maps boat/RV footage to a size tier for duration lookups. */
 function boatLengthToSize(feet: number | ""): VehicleSizeSlug {
-  if (typeof feet !== "number") return "compact";
+  if (typeof feet !== "number") return "sedan";
   if (feet >= 46) return "xl";
   if (feet >= 31) return "suv";
-  if (feet >= 21) return "sedan";
-  return "compact";
+  return "sedan";
 }
 
 /**
@@ -434,72 +433,46 @@ type VehicleSizeOption = {
   sizeKey: SizeKey;
 };
 
-/** 3-tier picker shown for all standard services (Interior, Exterior, Full, Ultimate, etc.).
- *  Compact and Sedan auto-detected sizes both display under "Small / Med". */
+/** 3-tier picker shown for ALL services — standard + paint correction. */
 const VEHICLE_SIZES: VehicleSizeOption[] = [
   {
-    id: "compact",
-    label: "Small / Med",
-    desc: "Sedans, Coupes, 2-Row SUVs",
-    sizeKey: "price_small",
-  },
-  {
-    id: "suv",
-    label: "Large / 3-Row / Passenger Van",
-    desc: "3-Row SUVs, Trucks, Sienna, Odyssey, Pacifica",
-    sizeKey: "price_large",
-  },
-  {
-    id: "xl",
-    label: "Work Van",
-    desc: "Sprinter, Transit, ProMaster, Express, Savana",
-    sizeKey: "price_extra_large",
-  },
-];
-
-/** 4-tier picker shown only for Ultimate Exterior + Paint Correction packages. */
-const PAINT_CORRECTION_SIZES: VehicleSizeOption[] = [
-  {
-    id: "compact",
-    label: "Small Car",
-    desc: "Compacts, Sedans, Coupes",
-    sizeKey: "price_small",
-  },
-  {
     id: "sedan",
-    label: "Mid Size",
-    desc: "Mid-size sedans & 2-Row SUVs",
+    label: "Sedan / Coupe",
+    desc: "Cars, coupes, compacts, 2-row crossovers",
     sizeKey: "price_medium",
   },
   {
     id: "suv",
-    label: "Large SUV / Truck",
-    desc: "3-Row SUVs, Trucks, Passenger Vans",
+    label: "SUV / Truck",
+    desc: "2-row SUVs, midsize trucks, Sienna, Odyssey",
     sizeKey: "price_large",
   },
   {
     id: "xl",
-    label: "Sprinter / Work Van",
-    desc: "Sprinter, Transit, ProMaster, Express",
+    label: "3-Row / Work Van",
+    desc: "Yukon, Suburban, 3-row SUVs, Sprinter, Transit",
     sizeKey: "price_extra_large",
   },
 ];
 
-/** Granular size → price column mapping. Always returns the most precise DB price.
- *  For services where price_small === price_medium and price_large === price_extra_large
- *  (the standard non-paint-correction case), the result naturally collapses to the right tier. */
+/** Same 3-tier picker for paint correction — kept as a separate constant so
+ *  future re-introduction of a size-tier difference is one edit away. */
+const PAINT_CORRECTION_SIZES: VehicleSizeOption[] = VEHICLE_SIZES;
+
+/** Size → DB price column. With compact gone, sedan now points at the
+ *  legacy price_medium column. price_small still exists in the DB but no
+ *  customer-facing slug maps to it (the price migration keeps it pinned to
+ *  price_medium for safety). */
 const SIZE_TO_PRICE_KEY: Record<VehicleSizeSlug, SizeKey> = {
-  compact: "price_small",
   sedan:   "price_medium",
   suv:     "price_large",
   xl:      "price_extra_large",
 };
 
-/** When the 3-tier picker is active, sedan-sized vehicles visually collapse into the compact tier. */
-function getActiveTier(vehicleSize: VehicleSizeSlug | "" , isPaintCorrection: boolean): VehicleSizeSlug | "" {
-  if (!vehicleSize) return "";
-  if (isPaintCorrection) return vehicleSize;
-  return vehicleSize === "sedan" ? "compact" : vehicleSize;
+/** Identity now — every customer-facing slug has its own price tier. */
+function getActiveTier(vehicleSize: VehicleSizeSlug | "" , _isPaintCorrection: boolean): VehicleSizeSlug | "" {
+  void _isPaintCorrection;
+  return vehicleSize;
 }
 
 const WORKDAY_START = "1:00 PM";
@@ -594,7 +567,7 @@ async function buildSlotsFromHours(
 
 async function getWORKDAY_END_MIN() { return await timeToMinutes("6:00 PM"); }
 
-function getDurationForService(serviceName: string, vehicleSize: VehicleSizeSlug = "compact"): number {
+function getDurationForService(serviceName: string, vehicleSize: VehicleSizeSlug = "sedan"): number {
   if (!serviceName) return 180;
   // Personal admin blocks store their duration (minutes) in the vehicle_size field
   if (serviceName === "Personal Block") {
@@ -630,7 +603,7 @@ async function getAvailableSlots(
   const bookedBlocks = await Promise.all((existingBookings ?? []).map(async (b) => {
     const start = await timeToMinutes(b.booking_time);
     const dur = b.total_duration_mins
-      ?? getDurationForService(b.service_name ?? "", (b.vehicle_size as VehicleSizeSlug) ?? "compact");
+      ?? getDurationForService(b.service_name ?? "", (b.vehicle_size as VehicleSizeSlug) ?? "sedan");
     return { start, end: start + dur };
   }));
 
@@ -1473,7 +1446,7 @@ export function BookingSection({
         selectedService.name,
         (isFootageService(selectedService.name)
           ? boatLengthToSize(boatLength)
-          : (vehicleSize || "compact")) as VehicleSizeSlug
+          : (vehicleSize || "sedan")) as VehicleSizeSlug
       ) + addonExtraDurationMins
     : 120;
   const additionalDurationMins = additionalVehicles.reduce((sum, v) => {
@@ -1537,7 +1510,7 @@ export function BookingSection({
           const svc = services.find(s => s.name === av.serviceName);
           const sizeKey = (av.vehicleSize ?? "sedan") as VehicleSizeSlug;
           const basePrice = svc
-            ? Number((svc as any)[({ compact: "price_small", sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[sizeKey]] ?? svc.price_small ?? 0)
+            ? Number((svc as any)[({ sedan: "price_medium", suv: "price_large", xl: "price_extra_large" } as const)[sizeKey]] ?? svc.price_medium ?? 0)
             : 0;
           return {
             vehicleSize: sizeKey,
@@ -1997,7 +1970,7 @@ export function BookingSection({
         }
         const slots = await getAvailableSlots(
           selectedService.name,
-          isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : (vehicleSize || "compact"),
+          isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : (vehicleSize || "sedan"),
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate,
@@ -2028,7 +2001,7 @@ export function BookingSection({
         // Also check if it's still available in the new slots
         const available = await getAvailableSlots(
           selectedService?.name ?? "",
-          (selectedService && isFootageService(selectedService.name)) ? boatLengthToSize(boatLength) : (vehicleSize || "compact"),
+          (selectedService && isFootageService(selectedService.name)) ? boatLengthToSize(boatLength) : (vehicleSize || "sedan"),
           existingBookingsForDate,
           slotsForSelectedDate,
           closingMinutesForSelectedDate,
@@ -2096,7 +2069,7 @@ export function BookingSection({
     const addlVehicles: AdditionalVehicle[] = additionalVehicles
       .filter(av => av.serviceId && av.vehicleYear && av.vehicleMake && av.vehicleModel)
       .map(av => ({
-        vehicleSize: (av.vehicleSize || "compact") as VehicleSizeSlug,
+        vehicleSize: (av.vehicleSize || "sedan") as VehicleSizeSlug,
         vehicleYear: av.vehicleYear,
         vehicleMake: av.vehicleMake,
         vehicleModel: av.vehicleModel,
@@ -3267,10 +3240,8 @@ export function BookingSection({
                             </div>
                           ) : (
                             /* ── Size chosen: show only the selected card ──
-                             * Paint correction services use the 4-tier picker (PAINT_CORRECTION_SIZES);
-                             * everything else uses the 3-tier picker (VEHICLE_SIZES). When the 3-tier
-                             * picker is active and the auto-detected size is "sedan", we collapse it
-                             * visually to the "compact" tier card via getActiveTier. */
+                             * Both pickers now use the same 3-tier ladder
+                             * (sedan / suv / xl) — getActiveTier is identity. */
                             <>
                               {(() => {
                                 const isPC = isPaintCorrectionService(selectedService?.name);
@@ -3984,7 +3955,7 @@ export function BookingSection({
                                                     // Ultimate is now size-tiered. If the additional vehicle already
                                                     // has a size from auto-detect, use it; otherwise default to compact
                                                     // (smallest price — customer can adjust if needed).
-                                                    const avSize = (av.vehicleSize || "compact") as VehicleSizeSlug;
+                                                    const avSize = (av.vehicleSize || "sedan") as VehicleSizeSlug;
                                                     const price = getPriceForSize(svc, avSize);
                                                     return (
                                                       <button

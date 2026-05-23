@@ -347,15 +347,14 @@ export function filterModelsByQuery(
 }
 
 /** Map database size tier to booking modal VehicleSizeSlug (compact | sedan | suv | xl).
- *  Granular by design — the booking flow uses this for both the 3-tier picker (where
- *  compact/sedan visually collapse into "Small / Med") and the 4-tier paint-correction
- *  picker (where each tier renders separately). */
-export function sizeTierToSlug(tier: SizeTier): "compact" | "sedan" | "suv" | "xl" {
-  const map: Record<SizeTier, "compact" | "sedan" | "suv" | "xl"> = {
-    small: "compact",
+ *  Three-tier flow: small + medium both map to sedan; large to suv;
+ *  extra_large to xl. compact is gone from the customer-facing slug set. */
+export function sizeTierToSlug(tier: SizeTier): "sedan" | "suv" | "xl" {
+  const map: Record<SizeTier, "sedan" | "suv" | "xl"> = {
+    small: "sedan",
     medium: "sedan",
     large: "suv",
     extra_large: "xl",
   };
-  return map[tier] ?? "compact";
+  return map[tier] ?? "sedan";
 }

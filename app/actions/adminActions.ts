@@ -14,9 +14,11 @@ import {
 } from "@/lib/email";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 
-// Maps our UI vehicle size slugs to the DB enum values
+// Maps our UI vehicle size slugs to the DB enum values. compact is gone
+// from the customer-facing slug set; if an admin/legacy row still has it,
+// fold it into "medium" (sedan tier) instead of the orphaned "small".
 const VEHICLE_SIZE_MAP = {
-  compact: "small",
+  compact: "medium",
   sedan: "medium",
   suv: "large",
   xl: "extra_large",

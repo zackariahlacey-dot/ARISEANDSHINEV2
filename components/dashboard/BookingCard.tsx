@@ -75,10 +75,12 @@ function isCancellable(b: ClientBooking): boolean {
 }
 
 const VEHICLE_SIZE_LABELS: Record<string, string> = {
-  compact: "Compact / Hatchback",
   sedan: "Sedan / Coupe",
   suv: "SUV / Crossover",
-  truck: "Truck / Van",
+  xl: "3-Row / Work Van",
+  // Legacy mappings for old bookings that may still have these values
+  compact: "Sedan / Coupe",
+  truck: "3-Row / Work Van",
 };
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {

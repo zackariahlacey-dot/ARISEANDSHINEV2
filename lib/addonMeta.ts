@@ -7,7 +7,7 @@
 // auto-discover new add-ons — they need an entry here to show up in the
 // pricing admin).
 
-export type AddonSize = "compact" | "sedan" | "suv" | "xl";
+export type AddonSize = "sedan" | "suv" | "xl";
 
 export type AddonMeta = {
   id: string;
@@ -23,8 +23,8 @@ export type AddonMeta = {
 export const ADDON_META: AddonMeta[] = [
   // ── Interior ───────────────────────────────────────────────────────────
   { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", side: "interior",
-    basePrice:   { compact: 75,  sedan: 75,  suv: 75,  xl: 105 },
-    baseDuration:{ compact: 30,  sedan: 30,  suv: 30,  xl: 60  } },
+    basePrice:   { sedan: 75,  suv: 75,  xl: 105 },
+    baseDuration:{ sedan: 30,  suv: 30,  xl: 60  } },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      side: "interior",
     basePrice: 50, baseDuration: 30 },
   { id: "leather_condition",  label: "Leather Conditioning",        side: "interior",
@@ -51,8 +51,8 @@ export const ADDON_META: AddonMeta[] = [
   { id: "wheel_ceramic",      label: "Wheel & Caliper Ceramic Coating", side: "exterior",
     basePrice: 125, baseDuration: 60 },
   { id: "ceramic_3yr",        label: "2-Year Pro Ceramic Sealant (Body)", side: "exterior",
-    basePrice:   { compact: 250, sedan: 300, suv: 350, xl: 400 },
-    baseDuration:{ compact: 90,  sedan: 90,  suv: 120, xl: 150 } },
+    basePrice:   { sedan: 300, suv: 350, xl: 400 },
+    baseDuration:{ sedan: 90,  suv: 120, xl: 150 } },
   { id: "window_coat_windshield", label: "Graphene Window — Windshield Only", side: "exterior",
     basePrice: 100, baseDuration: 60 },
   { id: "window_coat_front",      label: "Graphene Window — Front 3 Windows", side: "exterior",
@@ -61,13 +61,12 @@ export const ADDON_META: AddonMeta[] = [
     basePrice: 250, baseDuration: 60 },
 ];
 
-export const ADDON_SIZES: AddonSize[] = ["compact", "sedan", "suv", "xl"];
+export const ADDON_SIZES: AddonSize[] = ["sedan", "suv", "xl"];
 
 export const SIZE_LABEL: Record<AddonSize, string> = {
-  compact: "Compact",
-  sedan:   "Sedan",
-  suv:     "SUV",
-  xl:      "XL / 3-row",
+  sedan: "Sedan / Coupe",
+  suv:   "SUV / Truck",
+  xl:    "3-Row / Work Van",
 };
 
 export function getBasePriceForSize(meta: AddonMeta, size: AddonSize): number {

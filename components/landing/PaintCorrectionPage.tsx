@@ -20,10 +20,9 @@ const SuccessModal = dynamic(() => import("./SuccessModal").then((m) => ({ defau
 
 // Paint Correction (Ultimate Exterior + 1-Step / 2-Step) — synced with DB & lib/constants.ts
 const PAINT_CORRECTION_SIZES = [
-  { id: "compact" as const, label: "Small Car",          desc: "Compacts, sedans, coupes" },
-  { id: "sedan"   as const, label: "Mid Size",           desc: "Mid sedans, 2-row SUVs" },
-  { id: "suv"     as const, label: "Large SUV / Truck",  desc: "3-row SUVs, trucks, passenger vans" },
-  { id: "xl"      as const, label: "Sprinter / Work Van",desc: "Sprinter, Transit, ProMaster, Express" },
+  { id: "sedan" as const, label: "Sedan / Coupe",       desc: "Cars, coupes, 2-row crossovers" },
+  { id: "suv"   as const, label: "SUV / Truck",         desc: "2-row SUVs, midsize trucks" },
+  { id: "xl"    as const, label: "3-Row / Work Van",    desc: "3-row SUVs, Yukon, Sprinter, Transit" },
 ];
 
 type PaintSizeId = typeof PAINT_CORRECTION_SIZES[number]["id"];
@@ -37,9 +36,9 @@ const PAINT_CORRECTION_CARDS = [
     tagline: "Removes 60–75% of light defects — swirls, oxidation, water spots.",
     bestFor: "Newer cars or well-maintained paint",
     isFlagship: false,
-    prices:    { compact: 350, sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { compact: 3.5, sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { compact: 4.5, sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
+    prices:    { sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
     process: [
       "Full hand wash & dry decontamination",
       "Clay bar & iron removal prep",
@@ -55,9 +54,9 @@ const PAINT_CORRECTION_CARDS = [
     tagline: "Removes 85–95% of correctable defects — deeper scratches, heavy swirls.",
     bestFor: "Dark colors or older paint with swirls & scratches",
     isFlagship: true,
-    prices:    { compact: 550, sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { compact: 6.5, sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { compact: 8.0, sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
+    prices:    { sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
+    hoursLow:  { sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
+    hoursHigh: { sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
     process: [
       "Full hand wash & dry decontamination",
       "Clay bar & iron removal prep",
@@ -77,7 +76,7 @@ const ULTIMATE_EXTERIOR_INCLUDES = [
 ];
 
 const CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  compact: 250, sedan: 300, suv: 350, xl: 400,
+  sedan: 300, suv: 350, xl: 400,
 };
 
 const FAQ_ITEMS = [
@@ -96,7 +95,7 @@ export function PaintCorrectionPage({ services }: { services: Service[] }) {
   const [mounted, setMounted] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [size, setSize] = useState<PaintSizeId>("compact");
+  const [size, setSize] = useState<PaintSizeId>("sedan");
   const [authLoyaltyDiscountPct] = useState<number | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null);
