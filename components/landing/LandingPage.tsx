@@ -52,7 +52,6 @@ import {
 } from "@/lib/vehicleDatabase";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { SiteHeader } from "./SiteHeader";
-import { BuildYourPackage } from "./BuildYourPackage";
 import { SqueezeMeInModal } from "./SqueezeMeInModal";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 
@@ -249,10 +248,10 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
   const bottomCtaRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isBottomCtaVisible, setIsBottomCtaVisible] = useState(false);
-  // True once the customer has picked a foundation in BuildYourPackage —
-  // the builder shows its own sticky mobile bar, so the global Book Now
-  // CTA hides to avoid two competing buttons stacked at the bottom.
-  const [builderActive, setBuilderActive] = useState(false);
+  // (legacy) Previously hid the global Book Now CTA while the builder was
+  // active. The builder is no longer rendered, but we keep this state so the
+  // ref `builderActive` below stays valid until cleanup.
+  const [builderActive] = useState(false);
 
 
   useEffect(() => {
@@ -396,12 +395,12 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
   }, []);
 
   const openBooking = (service?: Service) => {
-    // The old direct BookingSection is preserved ONLY for the builder handoff
-    // (services category, requires builderPrefill) and the Ultimate flow.
-    // All "Book Now" buttons now route to the builder by scrolling to the
-    // services section — customers must build their package first.
-    void service; // ignored — selection happens in the builder
-    document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
+    setSelectedService(service ?? null);
+    if (!service) {
+      setExpandedBookingId("hero");
+    } else {
+      setExpandedBookingId("services");
+    }
   };
 
   const scrollToServices = useCallback(() => {
@@ -650,11 +649,8 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
             </button>
           </div>
 
-          {/* Hero inline-booking dropdown — disabled. The old BookingSection
-              no longer auto-opens from the hero; all CTAs route to the Build
-              Your Package section below via openBooking(). The component is
-              preserved for the builder handoff + Ultimate paths only. */}
-          {false && mounted && (
+          {/* Hero inline-booking dropdown — opens from any "Book Now" CTA. */}
+          {mounted && (
             <div className="w-full max-w-3xl mx-auto mt-2">
               <BookingSection
                 isVisible={expandedBookingId === "hero"}
@@ -777,40 +773,16 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
       >
         <div className="w-full max-w-7xl mx-auto">
 
-          {/* Section header HIDDEN — the BuildYourPackage component below has its
-              own hero ("Pay For What You Need") which works as the section title.
-              The old "Our Services" / "What We Offer" copy was redundant. */}
+          {/* Section header */}
+          <div className="text-center mb-8 md:mb-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Our Services</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">Pick the detail that fits.</h2>
+            <p className="text-zinc-500 text-sm mt-2">Three foundations, four sizes, fully transparent pricing.</p>
+          </div>
 
-          {/* ── Build Your Package (replaces basic detail cards) ──── */}
-          <BuildYourPackage
-            services={services}
-            addonOverrides={addonOverrides}
-            onBuilderActiveChange={setBuilderActive}
-            onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear, additionalVehicles }) => {
-              const svc = services.find(s => s.name === serviceName) ?? null;
-              setSelectedService(svc);
-              setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds, additionalVehicles });
-              setExpandedBookingId("services");
-            }}
-            onSelectPopularService={(serviceName) => {
-              // Popular Detail card: skip the builder entirely and open the
-              // booking section with that service already selected.
-              const svc = services.find(s => s.name === serviceName) ?? null;
-              if (!svc) return;
-              setSelectedService(svc);
-              setBuilderPrefill(null);
-              setExpandedBookingId("services");
-              // Scroll to the booking section
-              setTimeout(() => {
-                const el = document.getElementById("services") ?? document.getElementById("booking");
-                el?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }, 100);
-            }}
-          />
-
-          {/* ── Legacy basic-services carousel (HIDDEN — superseded by builder) */}
-          {false && mounted && <div className="hidden">
-            <div className="flex flex-col items-center w-full">
+          {/* ── Basic services carousel (mobile) + grid (desktop) ──── */}
+          {mounted && (
+            <div className="flex flex-col items-center w-full lg:hidden">
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
@@ -834,28 +806,20 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
               </div>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
             </div>
-          </div>}
+          )}
 
-          {/* Legacy desktop grid (HIDDEN) */}
-          {false && carouselServices.length > 0 && (
-            <div className="hidden">
+          {/* Desktop: 3-up grid of basic service cards */}
+          {carouselServices.length > 0 && (
+            <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
               {carouselServices.map((service) => (
                 <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
               ))}
             </div>
           )}
 
-          {/* ── Inline booking — ONLY opens when builder hands off (builderPrefill set) ── */}
-          {mounted && expandedBookingId === "services" && builderPrefill && (
+          {/* ── Inline booking — opens when a basic service card is clicked ── */}
+          {mounted && expandedBookingId === "services" && (
             <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="text-center mb-5">
-                <div className="inline-flex items-center justify-center gap-2 mb-2">
-                  <span className="w-6 h-6 rounded-full bg-[#D4AF37] text-black flex items-center justify-center text-[10px] font-black">4</span>
-                  <p className="text-xs font-black uppercase tracking-widest text-zinc-300">Schedule & Pay</p>
-                </div>
-                <h3 className="text-xl md:text-2xl font-black text-white">Pick a date, time, and how you want to pay.</h3>
-                <p className="text-[11px] text-zinc-500 mt-1">Your build is locked in — Pay at Arrival or Pay Now after you choose a slot.</p>
-              </div>
               <BookingSection
                 isVisible={true}
                 onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
@@ -880,9 +844,9 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
             </div>
           )}
 
-          {/* ── Ultimate Series (HIDDEN — superseded by Build Your Package) ── */}
-          {false && (
-          <div className="hidden mt-14 md:mt-20">
+          {/* ── Ultimate Series — premium deep-reset cards ── */}
+          {(
+          <div className="mt-14 md:mt-20">
             {/* Ultimate Series intro */}
             <div className="mb-8 md:mb-10">
               <div className="flex items-center gap-3 mb-6">
@@ -935,11 +899,6 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
             <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
           </div>
           )}
-
-          {/* ── Ultimate Paint Correction (kept visible — premium offering) ── */}
-          <div className="mt-14 md:mt-20">
-            <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
-          </div>
 
           {/* View More Services */}
           <div className="mt-10 text-center">
