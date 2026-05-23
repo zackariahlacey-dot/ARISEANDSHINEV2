@@ -42,6 +42,7 @@ import { validateGiftCard } from "@/app/actions/validateGiftCard";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
+import { todayInBusinessTz } from "@/lib/dates";
 import { bundlePctFor, addonDiscountAmount } from "@/lib/bundleDiscount";
 import {
   filterMakesByQuery,
@@ -1314,9 +1315,11 @@ export function BookingSection({
   const cashTotal = cashEligible ? cashPriceFor(totalAfterDiscount) : totalAfterDiscount;
   const showDualPrice = cashEligible && cashTotal < totalAfterDiscount;
 
-  // Initialise today string client-side (avoids Next.js Cache Components error)
+  // Initialise today string client-side (avoids Next.js Cache Components error).
+  // Use business-tz so the date picker aligns with the server's blocked-date
+  // cutoff (the business is in Vermont — Eastern).
   useEffect(() => {
-    setTodayStr(new Date().toISOString().split("T")[0]);
+    setTodayStr(todayInBusinessTz());
   }, []);
 
   // Fetch operating_hours and blocked_dates when booking section is visible

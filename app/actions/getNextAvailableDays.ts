@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDurationMins, getAdditionalVehiclesDuration, checkSlotConflict, timeToMins, to12h, isWholeDayBooking, WHOLE_DAY_THRESHOLD_MINS, type BookingSlot } from "@/lib/availability";
+import { ymdInBusinessTz, todayInBusinessTz } from "@/lib/dates";
 
 export type AvailableDay = {
   date: string;         // YYYY-MM-DD
@@ -24,7 +25,10 @@ const SLOT_INTERVAL = 30;
 async function fetchBookings(supabase: any, date: string): Promise<BookingSlot[]> {
   const { data } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, status, services(name)")
+    // duration_override is the admin's manual length-of-job override — when
+    // present it must beat the service default so availability checks see
+    // the real time the job will occupy on the calendar.
+    .select("booking_time, service_name, vehicle_size, additional_vehicles_json, duration_override, status, services(name)")
     .eq("booking_date", date)
     .neq("status", "cancelled");
 
@@ -37,6 +41,7 @@ async function fetchBookings(supabase: any, date: string): Promise<BookingSlot[]
       : (s as any).name ?? null;
     const serviceName = direct ?? joined;
     const vehicleSize = r.vehicle_size ?? null;
+    const override    = r.duration_override;
     const primaryDur  = getDurationMins(serviceName ?? "", vehicleSize ?? "sedan");
     const addlDur     = getAdditionalVehiclesDuration(r.additional_vehicles_json);
     return {
@@ -44,7 +49,8 @@ async function fetchBookings(supabase: any, date: string): Promise<BookingSlot[]
       service_name:        serviceName,
       vehicle_size:        vehicleSize,
       status:              r.status ?? "confirmed",
-      total_duration_mins: primaryDur + addlDur,
+      // Admin override wins when set; otherwise sum the per-vehicle defaults.
+      total_duration_mins: override != null ? override : primaryDur + addlDur,
     };
   });
 }
@@ -105,22 +111,24 @@ export async function getNextAvailableDays(
   const duration = customDurationMins ?? getDurationMins(serviceName, vehicleSize);
   const now = new Date();
 
-  // Use the local (Eastern) date string so it matches what customers see.
-  const todayStr = now.toLocaleDateString("en-CA"); // en-CA gives YYYY-MM-DD in local time
+  // Business-tz today — toLocaleDateString without a timeZone falls back to
+  // server-local (UTC on Vercel) which silently shifts the date after 7 PM ET.
+  const todayStr = todayInBusinessTz();
 
   const results: AvailableDay[] = [];
 
   for (let i = 0; i < lookahead && results.length < count; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
-    const dateStr = d.toLocaleDateString("en-CA");
+    const dateStr = ymdInBusinessTz(d);
 
     if (blockedDates.has(dateStr)) continue;
 
-    const dow = d.getDay(); // 0 = Sun … 6 = Sat
-
-    // Resolve operating hours: month-specific override takes priority over generic row.
-    const month = d.getMonth() + 1;
+    // Build a noon-local Date from the YYYY-MM-DD string so getDay / getMonth
+    // line up with the business calendar (not the server's UTC clock).
+    const localNoon = new Date(`${dateStr}T12:00:00`);
+    const dow = localNoon.getDay(); // 0 = Sun … 6 = Sat
+    const month = localNoon.getMonth() + 1;
     const row =
       operatingHours.find((h: any) => h.month === month && h.day_of_week === dow) ??
       operatingHours.find((h: any) => (h.month == null) && h.day_of_week === dow);

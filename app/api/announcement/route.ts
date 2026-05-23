@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAvailableSlots, timeToMins } from "@/lib/availability";
+import { ymdInBusinessTz, todayInBusinessTz } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -53,10 +54,12 @@ async function getWeather() {
 async function getNextAvailableSlot() {
   const supabase = createAdminClient();
   const today    = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  // Business-local date string — UTC would shift to tomorrow after ~7 PM ET
+  // and silently skip today's blocked-date entry.
+  const todayStr = todayInBusinessTz();
   const endDate  = new Date(today);
   endDate.setDate(endDate.getDate() + 30);
-  const endDateStr = endDate.toISOString().split("T")[0];
+  const endDateStr = ymdInBusinessTz(endDate);
 
   // Fetch all needed data in parallel — one round-trip
   const [opRes, blockedRes, bookingsRes] = await Promise.all([
@@ -86,11 +89,17 @@ async function getNextAvailableSlot() {
   for (let offset = 0; offset < 30; offset++) {
     const d = new Date(today);
     d.setDate(d.getDate() + offset);
-    const dateStr = d.toISOString().split("T")[0];
-    const dow     = d.getDay();
-    const month   = d.getMonth() + 1;
+    // Day-of-week + month also need to be in business time (the Date getters
+    // return server-local values — on Vercel that's UTC).
+    const dateStr = ymdInBusinessTz(d);
+    const [yyyy, mm, dd] = dateStr.split("-").map(n => parseInt(n, 10));
+    // Build a noon-local Date so getDay/getMonth match the business calendar.
+    const localNoon = new Date(`${dateStr}T12:00:00`);
+    const dow       = localNoon.getDay();
+    const month     = mm;
 
     if (blockedSet.has(dateStr)) continue;
+    void yyyy; void dd;
 
     const opHours =
       allOpHours.find((h: any) => h.day_of_week === dow && h.month === month) ??

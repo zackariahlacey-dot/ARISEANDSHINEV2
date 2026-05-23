@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { todayInBusinessTz } from "@/lib/dates";
 
 export type OperatingHour = {
   day_of_week: number;
@@ -21,7 +22,9 @@ export type AvailabilityData = {
  */
 export async function getAvailability(): Promise<AvailabilityData> {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  // Business-tz today — UTC would shift the cutoff to tomorrow after 7 PM ET
+  // and silently drop today's blocked-date entry from the list.
+  const today = todayInBusinessTz();
 
   const [
     { data: hoursData },
