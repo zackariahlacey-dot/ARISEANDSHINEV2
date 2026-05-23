@@ -133,6 +133,20 @@ const DECON_ADDON_IDS    = ["clay_bar", "mech_chem_decon"];
  *  Surfaced only on services that touch the exterior glass: Exterior, Full,
  *  Ultimate Interior + Exterior, and Paint Correction packages. */
 const WINDOW_COATING_ADDON_IDS = ["window_coat_windshield", "window_coat_front", "window_coat_all"];
+
+// ── 2-Year Ceramic Package ────────────────────────────────────────────────
+// Body / Wheels / Windows multi-pick. Customer gets 10% off per item they
+// add — capped at 30% for all three. Excluded from the regular bundle
+// discount math so they don't double-dip.
+const CERAMIC_PACKAGE_IDS = ["ceramic_3yr", "wheel_ceramic", "window_coat_all"] as const;
+const isCeramicPackageId = (id: string): boolean =>
+  (CERAMIC_PACKAGE_IDS as readonly string[]).includes(id);
+function ceramicPackagePct(count: number): number {
+  if (count <= 0) return 0;
+  if (count === 1) return 0.10;
+  if (count === 2) return 0.20;
+  return 0.30;
+}
 /** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
 const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
 /** Add-ons that require a full-day appointment */
@@ -1211,14 +1225,23 @@ export function BookingSection({
   // the bundle tier and aren't discounted further. Lib lives at
   // lib/bundleDiscount.ts and is shared with BuildYourPackage so both
   // surfaces show identical numbers.
-  const qualifyingAddons = selectedAddons.filter(a => a.price > 0);
+  // Ceramic Package members get their OWN tiered discount (10/20/30%) and
+  // are excluded from the regular bundle math so they can't double-dip.
+  const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicPackageId(a.id));
+  const ceramicAddons    = selectedAddons.filter(a => isCeramicPackageId(a.id));
   const bundlePct = bundlePctFor(qualifyingAddons.length);
   const addonsBundleSavings = qualifyingAddons.reduce(
     (sum, a) => sum + addonDiscountAmount(a.id, a.price, bundlePct),
     0,
   );
   const bundleDiscount = addonsBundleSavings;
-  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0) - addonsBundleSavings;
+  const ceramicSubtotalRaw = ceramicAddons.reduce((s, a) => s + a.price, 0);
+  const ceramicPct = ceramicPackagePct(ceramicAddons.length);
+  const ceramicSavings = Math.round(ceramicSubtotalRaw * ceramicPct);
+  const addonsTotal =
+    selectedAddons.reduce((sum, a) => sum + a.price, 0)
+    - addonsBundleSavings
+    - ceramicSavings;
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discountPercentage != null
       ? Math.round(servicePrice * (appliedCoupon.discountPercentage / 100) * 100) / 100
@@ -2976,6 +2999,9 @@ export function BookingSection({
                           {bundleDiscount > 0 && (
                             <> · <span className="text-violet-400 font-bold">−${bundleDiscount} bundle</span></>
                           )}
+                          {ceramicSavings > 0 && (
+                            <> · <span className="text-cyan-400 font-bold">−${ceramicSavings} ceramic</span></>
+                          )}
                         </p>
                       )}
                     </>
@@ -3281,14 +3307,29 @@ export function BookingSection({
                       {/* Enhance Your Detail (Smart per-service Add-ons) */}
                       {(() => {
                         const available = getAddonsForService(selectedService?.name ?? "", vehicleSize as string);
-                        const standAlone = available.filter(a => !FLOOR_ADDON_IDS.includes(a.id) && !WINDOW_COATING_ADDON_IDS.includes(a.id));
+                        // Ceramic items (Body, Wheels, all-glass Windows) get
+                        // consolidated into a single multi-pick card with a
+                        // tiered 10/20/30% discount — exclude them from the
+                        // regular standalone grid AND the window-coat tier
+                        // selector so they only render once.
+                        const standAlone = available.filter(a =>
+                          !FLOOR_ADDON_IDS.includes(a.id)
+                          && !WINDOW_COATING_ADDON_IDS.includes(a.id)
+                          && !isCeramicPackageId(a.id),
+                        );
                         const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
-                        const windowCoatOpts = available.filter(a => WINDOW_COATING_ADDON_IDS.includes(a.id));
+                        // Keep the original tier selector for windshield-only
+                        // + front-3 (cheaper entry points). The all-glass tier
+                        // now lives in the ceramic package card.
+                        const windowCoatOpts = available.filter(a =>
+                          WINDOW_COATING_ADDON_IDS.includes(a.id) && !isCeramicPackageId(a.id),
+                        );
+                        const ceramicOpts = available.filter(a => isCeramicPackageId(a.id));
                         const note       = getIncludedNote(selectedService?.name ?? "");
                         const isMarine   = !!(selectedService && BOAT_DISPLAY_NAMES[selectedService.name]);
                         const isRV       = !!(selectedService && isRVService(selectedService.name));
                         const isUltimate = !!(selectedService?.name.toLowerCase().includes("ultimate"));
-                        if (!standAlone.length && !floorOpts.length && !windowCoatOpts.length) return null;
+                        if (!standAlone.length && !floorOpts.length && !windowCoatOpts.length && !ceramicOpts.length) return null;
                         return (
                           <div>
                             <div className="flex items-center justify-center gap-2 mb-3">
@@ -3583,6 +3624,120 @@ export function BookingSection({
                                       })}
                                     </div>
                                   </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* ── 2-Year Ceramic Package — multi-pick with tiered discount ── */}
+                              {ceramicOpts.length > 0 && (() => {
+                                const sizeKey = (vehicleSize as string) || "sedan";
+                                const ceramicCount = ceramicOpts.filter(o => selectedAddons.some(a => a.id === o.id)).length;
+                                const nextPct = ceramicPackagePct(ceramicCount + 1);
+                                return (
+                                  <div className={`relative rounded-2xl border overflow-hidden transition-all ${
+                                    ceramicCount > 0
+                                      ? "border-cyan-400/60 bg-gradient-to-br from-cyan-500/[0.08] via-zinc-950/40 to-zinc-950/40 shadow-[0_0_18px_rgba(34,211,238,0.14)]"
+                                      : "border-[#D4AF37]/30 bg-gradient-to-br from-cyan-500/[0.02] via-zinc-900/40 to-zinc-900/40 hover:border-cyan-400/50"
+                                  }`}>
+                                    {/* Header + tier ladder */}
+                                    <div className={`px-4 pt-3.5 pb-3 border-b border-white/[0.06] ${
+                                      ceramicCount > 0 ? "bg-cyan-500/[0.05]" : "bg-zinc-950/30"
+                                    }`}>
+                                      <div className="flex items-center gap-2 mb-1.5">
+                                        <Sparkles size={13} className="text-cyan-400 shrink-0" />
+                                        <p className="text-sm font-bold text-zinc-100 leading-tight">2-Year Ceramic Package</p>
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
+                                          <Crown size={8} fill="currentColor" />Premium
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-zinc-500 leading-snug mb-2">
+                                        Pro-grade 2-year ceramic coating. Mix &amp; match Body, Wheels, and Windows — the more you pick, the more you save.
+                                      </p>
+                                      <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                                        {[1, 2, 3].map(tier => {
+                                          const reached = ceramicCount >= tier;
+                                          const pct = tier * 10;
+                                          return (
+                                            <div key={tier} className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md border transition-all ${
+                                              reached
+                                                ? "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
+                                                : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
+                                            }`}>
+                                              {reached && <Check size={9} strokeWidth={3} />}
+                                              {tier} pick{tier > 1 ? "s" : ""} = {pct}% off
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    {/* 3 multi-pick sub-buttons */}
+                                    <div className="grid grid-cols-3 gap-2 p-2 bg-zinc-950/40">
+                                      {ceramicOpts.map(opt => {
+                                        const isSelected = selectedAddons.some(a => a.id === opt.id);
+                                        const shortLabel = opt.id === "ceramic_3yr" ? "Body"
+                                          : opt.id === "wheel_ceramic" ? "Wheels"
+                                          : "Windows";
+                                        const subLabel = opt.id === "ceramic_3yr" ? "Paint coating"
+                                          : opt.id === "wheel_ceramic" ? "Wheels + calipers"
+                                          : "All glass";
+                                        const price = getEffectiveAddonPrice(opt, sizeKey, addonOverrides);
+                                        return (
+                                          <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => toggleAddon(opt)}
+                                            className={`relative px-2 py-3 rounded-xl border-2 text-center transition-all active:scale-[0.97] ${
+                                              isSelected
+                                                ? "bg-gradient-to-b from-cyan-500/30 to-cyan-500/10 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.3)] -translate-y-0.5"
+                                                : "bg-zinc-900/60 border-white/10 hover:border-cyan-400/50 hover:bg-zinc-900"
+                                            }`}
+                                            aria-pressed={isSelected}
+                                          >
+                                            <div className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
+                                              isSelected ? "bg-cyan-400" : "bg-zinc-800 border border-zinc-700"
+                                            }`}>
+                                              {isSelected ? <Check size={9} className="text-black" strokeWidth={3} /> : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
+                                            </div>
+                                            <div className={`text-[10px] font-black uppercase tracking-wider mt-1 ${isSelected ? "text-cyan-300" : "text-zinc-200"}`}>
+                                              {shortLabel}
+                                            </div>
+                                            <div className={`text-[9px] font-medium mt-0.5 ${isSelected ? "text-cyan-300/80" : "text-zinc-500"}`}>
+                                              {subLabel}
+                                            </div>
+                                            <div className={`text-sm font-black mt-1.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                              ${price}
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Live discount strip */}
+                                    {ceramicCount > 0 ? (
+                                      <div className="px-4 py-2.5 border-t border-white/[0.06] bg-cyan-500/[0.04] flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-cyan-300">
+                                          {ceramicCount}/3 picked · {Math.round(ceramicPct * 100)}% off ceramic
+                                        </span>
+                                        <span className="text-[11px] font-black tabular-nums text-white">
+                                          <span className="text-zinc-500 line-through mr-1">${ceramicSubtotalRaw}</span>
+                                          ${ceramicSubtotalRaw - ceramicSavings}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="px-4 py-2 border-t border-white/[0.06] bg-cyan-500/[0.02]">
+                                        <p className="text-[10px] text-zinc-500 text-center">
+                                          Pick any one to start at <span className="text-cyan-300 font-bold">10% off</span> · pick all 3 for <span className="text-cyan-300 font-bold">30% off</span>
+                                        </p>
+                                      </div>
+                                    )}
+                                    {ceramicCount > 0 && ceramicCount < 3 && nextPct > ceramicPct && (
+                                      <div className="px-4 py-1.5 border-t border-white/[0.04] bg-zinc-950/40">
+                                        <p className="text-[10px] text-zinc-500 text-center">
+                                          Add 1 more → <span className="text-cyan-300 font-bold">{Math.round(nextPct * 100)}% off</span> instead of {Math.round(ceramicPct * 100)}%
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })()}
