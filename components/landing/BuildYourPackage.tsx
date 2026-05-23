@@ -72,16 +72,14 @@ type AddonDef = {
   popular?: boolean;
 };
 
+// Slimmed builder add-on lists — only what we actively promote to the
+// customer. Other add-ons (leather conditioning, odor bomb, etc.) still
+// exist downstream in BookingModal.tsx for paint-correction / work-van /
+// RV / boat flows; they just don't surface in this builder anymore.
 const INTERIOR_ADDONS: AddonDefExt[] = [
   { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. 3-row SUVs add $30 (extra row + cargo area).", side: "interior", popular: true },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      price: 50, desc: "Deep extraction of embedded pet hair from seats, carpet, and cargo. Only charged if heavy accumulation present.", side: "interior", popular: true },
-  { id: "leather_condition",  label: "Leather Conditioning",        price: 45, desc: "Deep-clean and condition all leather surfaces. Restores softness, prevents cracking, matte finish.", side: "interior", popular: true },
-  { id: "uv_interior",        label: "UV / Trim & Plastic Restoration & Protection", price: 35, desc: "Deep clean and restore matte color on all interior plastics, vinyl, and trim — brings tired, sun-faded surfaces back to life — then seal with a UV-protective coating to prevent future fading and cracking.", side: "interior" },
-  { id: "odor_bomb",          label: "Strong Odor Elimination",     price: 60, desc: "Heavy-duty neutralizer treatment kills embedded smoke, food, and pet odors throughout the cabin.", side: "interior", premium: true },
-  { id: "steam_sanitation",   label: "Steam Sanitation",            price: 45, desc: "FREE BONUS — unlocks automatically when you add 3 or more other add-ons. High-pressure steam sanitizes vents, cup holders, and seat tracks. Kills bacteria nothing else can reach.", side: "interior", freeUnlock: true },
-  { id: "headliner_clean",    label: "Headliner Cleaning",          price: 35, desc: "Gentle dry-foam cleaning of the fabric headliner. Lifts stains and smoke residue without saturating adhesive.", side: "interior" },
   { id: "salt_stain_removal", label: "Salt Stain Removal & Prevention", price: 50, desc: "Vermont winter survival: neutralize dried salt stains from carpets and door sills, then apply a salt repellent.", side: "interior" },
-  { id: "seat_removal",       label: "Seat Removal — Deepest Clean", price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface.", side: "interior", premium: true },
 ];
 
 type AddonDefExt = AddonDef & {
@@ -92,55 +90,45 @@ type AddonDefExt = AddonDef & {
 };
 
 const EXTERIOR_ADDONS: AddonDefExt[] = [
-  { id: "clay_bar",            label: "Clay Bar Treatment",         price: 50, desc: "Smooths paint by lifting embedded contaminants. Upgrades your 3-month ceramic spray to 6-month protection.", side: "exterior", exclusiveGroup: "decon", popular: true },
+  { id: "clay_bar",            label: "Clay Bar Treatment",         price: 50, desc: "Smooths paint by lifting embedded contaminants. Upgrades your 3-month ceramic spray to 6-month protection.", side: "exterior", popular: true },
   { id: "headlight_restore",   label: "Headlight Restoration",      price: 60, desc: "Restore cloudy or yellowed lenses to like-new clarity. UV sealed to prevent re-hazing.", side: "exterior", popular: true },
-  { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 70, desc: "Clay bar + iron remover chemically dissolves brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar.", side: "exterior", exclusiveGroup: "decon", premium: true },
-  { id: "trim_dressing",       label: "Rubber, Plastics & Vinyl Dressing", price: 30, desc: "UV-protective dressing on all exterior trim, rubber seals, plastics, and vinyl. Brings tired surfaces back to deep black. Glass polish is already included free with every exterior package.", side: "exterior", freeUnlock: true },
-  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage", price: 75, desc: "Add the full Salt Season Recovery: undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment. Cheaper than booking standalone.", side: "exterior", premium: true },
-  // ── Ceramic Coatings (premium) ──────────────────────────────────────────
-  { id: "ceramic_3yr",         label: "2-Year Pro Ceramic Sealant (Body)", price: 250, desc: "Pro-grade 2-year ceramic sealant bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. Pricing scales by vehicle size.", side: "exterior", premium: true,
+  // ── 2-Year Ceramic Package members (rendered separately, not as
+  // individual rows). Kept in this list so price math + booking handoff
+  // still finds them. See CERAMIC_PACKAGE_IDS below.
+  { id: "ceramic_3yr",         label: "2-Year Ceramic — Body",      price: 250, desc: "Pro-grade 2-year ceramic sealant bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. Pricing scales by vehicle size.", side: "exterior", premium: true,
     sizedPrice: { compact: 250, sedan: 300, suv: 350, xl: 400 } },
-  { id: "wheel_ceramic",       label: "Wheel & Caliper Ceramic Coating", price: 125, desc: "Ceramic-coat all 4 wheels and brake calipers. Brake dust wipes off, salt and grime can't grip, gloss lasts 1-2 years.", side: "exterior", premium: true },
-  // Window coatings — mutually exclusive tier set
-  { id: "window_coat_windshield", label: "Graphene Window — Windshield Only", price: 100, desc: "Hydrophobic graphene coating bonded to the windshield. Rain beads off at speed, bugs wipe clean. Lasts 2 full years.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
-  { id: "window_coat_front",      label: "Graphene Window — Front 3 Windows", price: 150, desc: "Windshield + both front side windows for full driver-zone coverage. Side mirrors stay clear in the rain.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
-  { id: "window_coat_all",        label: "Graphene Window — All Windows",     price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 2 full years.", side: "exterior", exclusiveGroup: "windowcoat", premium: true },
+  { id: "wheel_ceramic",       label: "2-Year Ceramic — Wheels",    price: 125, desc: "Ceramic-coat all 4 wheels and brake calipers. Brake dust wipes off, salt and grime can't grip, gloss lasts 1-2 years.", side: "exterior", premium: true },
+  { id: "window_coat_all",     label: "2-Year Ceramic — Windows",   price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 2 full years.", side: "exterior", premium: true },
 ];
 
-// Three Quick Picks designed to hit three distinct pain points at three
-// distinct price tiers — and each one lands on the next-up bundle tier
-// (3 / 4 / 5+ paid add-ons) so the customer hits a real discount tier.
-const QUICK_PICKS = [
-  {
-    id: "daily-driver",
-    label: "Daily Driver Refresh",
-    subtitle: "Ultimate Interior",
-    tagline: "Pets, kids, lived-in mess",
-    foundation: "interior" as FoundationId,
-    // 3 paid add-ons → 22% bundle + unlocks free Steam Sanitation + free Trim Dressing
-    addonIds: ["pet_hair", "upholstery_shampoo", "uv_interior"],
-    icon: Star,
-  },
-  {
-    id: "winter-recovery",
-    label: "Vermont Winter Recovery",
-    subtitle: "Ultimate Interior + Exterior",
-    tagline: "Undo what salt season did",
-    foundation: "full" as FoundationId,
-    // 4 paid add-ons → 28% bundle + free unlocks
-    addonIds: ["salt_stain_removal", "salt_recovery_addon", "upholstery_shampoo", "clay_bar"],
-    icon: Sparkles,
-  },
-  {
-    id: "presale-showroom",
-    label: "Pre-Sale Showroom Prep",
-    subtitle: "Ultimate Showroom",
-    tagline: "Get top dollar at sale",
-    foundation: "full" as FoundationId,
-    // 7 paid add-ons → 35% bundle + free unlocks
-    addonIds: ["upholstery_shampoo", "leather_condition", "uv_interior", "headliner_clean", "salt_stain_removal", "headlight_restore", "mech_chem_decon"],
-    icon: Crown,
-  },
+// ── 2-Year Ceramic Package ────────────────────────────────────────────────
+// Customer multi-picks Body / Wheels / Windows. Discount on the ceramic
+// subtotal scales linearly: 1 pick = 10%, 2 = 20%, 3 = 30%. Ceramic items
+// are excluded from the regular bundle discount math (they get THIS
+// discount instead of being double-counted).
+const CERAMIC_PACKAGE_IDS = ["ceramic_3yr", "wheel_ceramic", "window_coat_all"] as const;
+const isCeramicPackageId = (id: string): boolean =>
+  (CERAMIC_PACKAGE_IDS as readonly string[]).includes(id);
+function ceramicPackagePct(count: number): number {
+  if (count <= 0) return 0;
+  if (count === 1) return 0.10;
+  if (count === 2) return 0.20;
+  return 0.30;
+}
+
+// Three customer-facing popular details. Clicking one bypasses the builder
+// and opens the booking section with that service pre-selected (the parent
+// handles the handoff via onSelectPopularService).
+const POPULAR_DETAILS: Array<{
+  id: string;
+  serviceName: string;
+  label: string;
+  tagline: string;
+  icon: typeof Sofa;
+}> = [
+  { id: "basic-interior",          serviceName: "Interior Detail",                       label: "Basic Interior",            tagline: "Vacuum, wipe-down, refresh", icon: Sofa },
+  { id: "ultimate-interior",       serviceName: "Ultimate Interior Reset",               label: "Ultimate Interior",         tagline: "Deep reset, everything inside", icon: Star },
+  { id: "ultimate-interior-ext",   serviceName: "Ultimate Interior + Exterior Reset",    label: "Ultimate Interior + Exterior", tagline: "The full top-to-bottom reset", icon: Crown },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -273,6 +261,7 @@ export function BuildYourPackage({
   addonOverrides = {},
   onContinueToBooking,
   onBuilderActiveChange,
+  onSelectPopularService,
 }: {
   services: Service[];
   /** Admin-set per-size price/duration overrides (server-fetched). When a
@@ -291,6 +280,9 @@ export function BuildYourPackage({
   /** Fires when the customer has actively engaged the builder (foundation
    * picked). Lets the parent hide a redundant global Book Now CTA. */
   onBuilderActiveChange?: (active: boolean) => void;
+  /** Bubble up when the customer taps a Popular Detail card — parent opens
+   *  the booking section with that service name pre-selected. */
+  onSelectPopularService?: (serviceName: string) => void;
 }) {
   // Persist builder state across reloads so customers don't restart on refresh.
   // IMPORTANT: don't read sessionStorage during first render — that runs on
@@ -448,68 +440,49 @@ export function BuildYourPackage({
 
   const removeAddon = (id: string) => setSelectedAddonIds(prev => prev.filter(x => x !== id));
 
-  const applyQuickPick = (qp: typeof QUICK_PICKS[number]) => {
-    setFoundationId(qp.foundation);
-    setSelectedAddonIds(qp.addonIds);
-    // Don't auto-confirm vehicle — they still need to fill in make/model
+  // Click handler for a Popular Detail card — bubble to the parent so it
+  // can open the booking section with the chosen service pre-selected.
+  // The builder is bypassed entirely.
+  const applyPopularDetail = (pd: typeof POPULAR_DETAILS[number]) => {
+    onSelectPopularService?.(pd.serviceName);
   };
 
-  // Live "From $X" price for a Quick Pick card. Uses sedan baseline (matches
-  // the BuildForMeQuiz preview) and applies the same bundle math the builder
-  // will apply once the customer continues, so what they see here is real.
-  const quickPickPriceFor = (qp: typeof QUICK_PICKS[number]): number => {
-    const foundationDef = FOUNDATIONS.find(f => f.id === qp.foundation);
-    const svc = foundationDef ? services.find(s => s.name === foundationDef.serviceName) : null;
-    const fPrice = svc ? getFoundationPrice(svc, "sedan") : 0;
-    const pct = bundlePctFor(qp.addonIds.length);
-    const allAddons = [...INTERIOR_ADDONS, ...EXTERIOR_ADDONS];
-    return qp.addonIds.reduce((sum, id) => {
-      const addon = allAddons.find(a => a.id === id);
-      if (!addon) return sum;
-      const base = getAddonEffectivePrice(addon, "sedan", addonOverrides);
-      return sum + addonDiscountedPrice(id, base, pct);
-    }, fPrice);
+  // Live "From $X" for a Popular Detail card (sedan baseline). Reads from
+  // the actual services table so admin price changes flow through.
+  const popularDetailPriceFor = (pd: typeof POPULAR_DETAILS[number]): number => {
+    const svc = services.find(s => s.name === pd.serviceName);
+    return svc ? getFoundationPrice(svc, "sedan") : 0;
   };
 
   // ─── Price math ─────────────────────────────────────────────────────────
-  // Free-unlock add-ons (steam_sanitation, trim_dressing) become FREE when
-  // 3+ qualifying add-ons are stacked. They don't contribute to subtotal,
-  // don't get the per-addon bundle discount, and don't count toward the
-  // bundle-tier threshold themselves.
-  const FREE_UNLOCK_IDS = ["steam_sanitation", "trim_dressing"] as const;
-  const FREE_UNLOCK_THRESHOLD = 3;
-  const isFreeUnlockId = (id: string) => (FREE_UNLOCK_IDS as readonly string[]).includes(id);
+  // Ceramic items (Body / Wheels / Windows) are excluded from the regular
+  // bundle math — they get their own tiered discount (10/20/30% based on
+  // how many of the 3 are picked). Everything else is "qualifying" for the
+  // standard bundle tiers.
   const foundationPrice = getFoundationPrice(foundationService, vehicleSize);
   const selectedAddons = allAvailable.filter(a => selectedAddonIds.includes(a.id));
-  const qualifyingAddons = selectedAddons.filter(a => !isFreeUnlockId(a.id));
+  const qualifyingAddons = selectedAddons.filter(a => !isCeramicPackageId(a.id));
+  const ceramicAddons    = selectedAddons.filter(a =>  isCeramicPackageId(a.id));
   const qualifyingCount = qualifyingAddons.length;
   const bundlePct      = bundlePctFor(qualifyingCount);
   const nextTierPct    = bundlePctFor(qualifyingCount + 1);
-  const freeUnlocked = qualifyingCount >= FREE_UNLOCK_THRESHOLD;
-
-  // Auto-add ALL available free-unlock add-ons when threshold is met,
-  // remove them when count drops below.
-  useEffect(() => {
-    const availableFreeIds = allAvailable.filter(a => isFreeUnlockId(a.id)).map(a => a.id);
-    if (freeUnlocked) {
-      setSelectedAddonIds(prev => {
-        const missing = availableFreeIds.filter(id => !prev.includes(id));
-        return missing.length > 0 ? [...prev, ...missing] : prev;
-      });
-    } else {
-      setSelectedAddonIds(prev => prev.filter(id => !isFreeUnlockId(id)));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [freeUnlocked, foundationId]);
 
   const addonsSubtotal = qualifyingAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize, addonOverrides), 0);
   const addonsBundleSavings = qualifyingAddons.reduce(
     (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize, addonOverrides), bundlePct),
     0,
   );
-  // Total customer-facing savings = sum of per-add-on percentage discounts.
   const bundleDiscount = addonsBundleSavings;
-  const currentVehicleTotal = foundationPrice + addonsSubtotal - addonsBundleSavings;
+
+  // Ceramic Package math
+  const ceramicSubtotal = ceramicAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize, addonOverrides), 0);
+  const ceramicPct = ceramicPackagePct(ceramicAddons.length);
+  const ceramicSavings = Math.round(ceramicSubtotal * ceramicPct);
+
+  const currentVehicleTotal =
+    foundationPrice
+    + (addonsSubtotal - addonsBundleSavings)
+    + (ceramicSubtotal - ceramicSavings);
 
   // Multi-vehicle math: roll completed vehicles into the running total and
   // apply the flat tier discount ($25 ≤ $500, $40 > $500) once 2+ vehicles
@@ -530,11 +503,11 @@ export function BuildYourPackage({
     const resolvedAddons = selectedAddons.map(a => ({
       id: a.id,
       label: a.label,
-      // Free-unlock add-ons are zeroed at the threshold; everything else gets
-      // the percentage bundle discount (with ceramic body cap) baked in so
-      // the modal + email see the exact $ shown to the customer.
-      price: isFreeUnlockId(a.id) && freeUnlocked
-        ? 0
+      // Ceramic items get the tiered ceramic-package discount; everything
+      // else gets the percentage bundle discount so the modal + email see
+      // the exact $ shown to the customer.
+      price: isCeramicPackageId(a.id)
+        ? Math.round(getAddonEffectivePrice(a, vehicleSize, addonOverrides) * (1 - ceramicPct))
         : addonDiscountedPrice(a.id, getAddonEffectivePrice(a, vehicleSize, addonOverrides), bundlePct),
     }));
     return {
@@ -626,8 +599,6 @@ export function BuildYourPackage({
   const renderAddonCard = (addon: AddonDefExt) => {
     const isSelected = selectedAddonIds.includes(addon.id);
     const isExpanded = expandedAddon === addon.id;
-    const isFreeUnlock = isFreeUnlockId(addon.id);
-    const isLocked = isFreeUnlock && !freeUnlocked;
     const isPremium = !!addon.premium;
     const base = getAddonEffectivePrice(addon, vehicleSize, addonOverrides);
     // When selected, show the customer their current-tier price.
@@ -637,10 +608,9 @@ export function BuildYourPackage({
       ? addonDiscountedPrice(addon.id, base, bundlePct)
       : addonDiscountedPrice(addon.id, base, nextTierPct);
     const showSelectedDiscount = isSelected && bundlePct > 0 && effective < base;
-    const showPreviewDiscount = !isSelected && !isFreeUnlock && nextTierPct > 0 && effective < base;
+    const showPreviewDiscount = !isSelected && nextTierPct > 0 && effective < base;
 
     const handleClick = () => {
-      if (isLocked) return;
       toggleAddon(addon);
     };
 
@@ -649,40 +619,30 @@ export function BuildYourPackage({
         key={addon.id}
         className={`relative rounded-xl border transition-all overflow-hidden ${
           isSelected
-            ? isFreeUnlock
-              ? "border-emerald-500 bg-gradient-to-br from-emerald-500/[0.10] to-emerald-500/[0.02] shadow-[0_0_14px_rgba(16,185,129,0.18)]"
-              : isPremium
-                ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.15] via-[#F0D060]/[0.06] to-[#D4AF37]/[0.02] shadow-[0_0_20px_rgba(212,175,55,0.22)]"
-                : "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] shadow-[0_0_14px_rgba(212,175,55,0.12)]"
-            : isFreeUnlock && freeUnlocked
-              ? "border-emerald-500/60 bg-emerald-500/[0.05] hover:border-emerald-500"
-              : isLocked
-                ? "border-white/[0.05] bg-zinc-900/20 opacity-60"
-                : isPremium
-                  ? "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.04] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/65 hover:from-[#D4AF37]/[0.07]"
-                  : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
+            ? isPremium
+              ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.15] via-[#F0D060]/[0.06] to-[#D4AF37]/[0.02] shadow-[0_0_20px_rgba(212,175,55,0.22)]"
+              : "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] shadow-[0_0_14px_rgba(212,175,55,0.12)]"
+            : isPremium
+              ? "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.04] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/65 hover:from-[#D4AF37]/[0.07]"
+              : "border-white/[0.07] bg-zinc-900/40 hover:border-[#D4AF37]/25"
         }`}
       >
         <div
           role="button"
-          tabIndex={isLocked ? -1 : 0}
+          tabIndex={0}
           aria-pressed={isSelected}
-          aria-disabled={isLocked}
           onClick={handleClick}
           onKeyDown={(e) => {
-            if (isLocked) return;
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               handleClick();
             }
           }}
-          className={`w-full p-2.5 transition-transform text-left outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60 ${isLocked ? "cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"}`}
+          className="w-full p-2.5 transition-transform text-left outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60 cursor-pointer active:scale-[0.98]"
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
-              isSelected
-                ? isFreeUnlock ? "bg-emerald-500" : "bg-[#D4AF37]"
-                : "bg-zinc-800 border border-zinc-700"
+              isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
             }`}>
               {isSelected
                 ? <Check size={9} className="text-black" strokeWidth={3} />
@@ -690,33 +650,21 @@ export function BuildYourPackage({
             </span>
 
             <div className="flex-1 min-w-0 flex items-center gap-1.5">
-              <span className={`text-[11.5px] font-bold leading-tight truncate ${isSelected ? "text-white" : isLocked ? "text-zinc-500" : "text-zinc-200"}`}>
+              <span className={`text-[11.5px] font-bold leading-tight truncate ${isSelected ? "text-white" : "text-zinc-200"}`}>
                 {addon.label}
               </span>
-              {isPremium && !isSelected && !isLocked && (
+              {isPremium && !isSelected && (
                 <span className="inline-flex items-center gap-0.5 px-1 py-px rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[7px] font-black uppercase tracking-wider shrink-0">
                   <Crown size={7} fill="currentColor" />Premium
                 </span>
               )}
-              {addon.popular && !isSelected && !isLocked && !isPremium && (
+              {addon.popular && !isSelected && !isPremium && (
                 <Flame size={10} className="text-amber-400 shrink-0" fill="currentColor" />
               )}
             </div>
 
             <div className="shrink-0 text-right">
-              {isFreeUnlock ? (
-                isSelected ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    <Check size={9} strokeWidth={3} /> Free
-                  </span>
-                ) : freeUnlocked ? (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">Free · tap</span>
-                ) : (
-                  <span className="text-[9px] font-bold text-zinc-500 leading-tight inline-block text-right">
-                    FREE at<br/>{FREE_UNLOCK_THRESHOLD} add-ons
-                  </span>
-                )
-              ) : showSelectedDiscount ? (
+              {showSelectedDiscount ? (
                 <div className="flex items-baseline gap-1 justify-end">
                   <span className="text-xs font-black text-[#D4AF37] tabular-nums">${effective}</span>
                   <span className="text-[9px] text-zinc-600 line-through tabular-nums">${base}</span>
@@ -891,17 +839,17 @@ export function BuildYourPackage({
         />
       </div>
 
-      {/* ── Quick Picks ─────────────────────────────────────────────────── */}
+      {/* ── Popular Details ─────────────────────────────────────────────── */}
       <div className="mb-8 max-w-3xl mx-auto">
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 mb-3 text-center">Or Start with a Quick Pick</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 mb-3 text-center">Popular Details</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {QUICK_PICKS.map(qp => {
-            const Icon = qp.icon;
-            const price = quickPickPriceFor(qp);
+          {POPULAR_DETAILS.map(pd => {
+            const Icon = pd.icon;
+            const price = popularDetailPriceFor(pd);
             return (
               <button
-                key={qp.id}
-                onClick={() => applyQuickPick(qp)}
+                key={pd.id}
+                onClick={() => applyPopularDetail(pd)}
                 className="group relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.10] via-zinc-900/60 to-zinc-950 px-4 py-3.5 text-left hover:border-[#D4AF37]/60 hover:from-[#D4AF37]/[0.16] transition-all active:scale-[0.98] shadow-[0_4px_18px_rgba(0,0,0,0.35)]"
               >
                 <span aria-hidden="true" className="pointer-events-none absolute -top-14 left-1/2 -translate-x-1/2 w-44 h-24 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.22)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -909,10 +857,10 @@ export function BuildYourPackage({
                   <div className="shrink-0 w-7 h-7 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center">
                     <Icon size={13} className="text-[#D4AF37]" />
                   </div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400 truncate">{qp.subtitle}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400 truncate">Direct booking</p>
                 </div>
-                <p className="relative text-[14px] font-black text-white leading-tight mb-0.5">{qp.label}</p>
-                <p className="relative text-[10px] text-zinc-500 leading-snug mb-2.5">{qp.tagline}</p>
+                <p className="relative text-[14px] font-black text-white leading-tight mb-0.5">{pd.label}</p>
+                <p className="relative text-[10px] text-zinc-500 leading-snug mb-2.5">{pd.tagline}</p>
                 <div className="relative flex items-baseline justify-between border-t border-white/[0.05] pt-2">
                   <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">From</span>
                   <span className="text-base font-black text-[#D4AF37] tabular-nums">${price}</span>
@@ -1210,49 +1158,71 @@ export function BuildYourPackage({
                 </div>
               )}
               {exteriorAvailable.length > 0 && (() => {
-                // Window coatings render as ONE wide card with 3 sub-tier buttons,
-                // not 3 separate cards in the grid. Filter them out here.
-                const windowIds = ["window_coat_windshield", "window_coat_front", "window_coat_all"];
-                const regularExt = exteriorAvailable.filter(a => !windowIds.includes(a.id));
-                const windowOpts = exteriorAvailable.filter(a => windowIds.includes(a.id));
-                const selectedWindow = windowOpts.find(a => selectedAddonIds.includes(a.id));
+                // Ceramic items render as ONE card with 3 multi-pick options
+                // (Body / Wheels / Windows) and a tiered discount. Filter them
+                // out of the regular addon grid so they only appear once.
+                const regularExt = exteriorAvailable.filter(a => !isCeramicPackageId(a.id));
+                const ceramicOpts = exteriorAvailable.filter(a => isCeramicPackageId(a.id));
+                const ceramicCount = ceramicOpts.filter(o => selectedAddonIds.includes(o.id)).length;
+                const ceramicNextPct = ceramicPackagePct(ceramicCount + 1);
                 return (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 text-left max-w-3xl mx-auto">
                       {regularExt.map(renderAddonCard)}
                     </div>
-                    {/* ── Graphene Window Coating — consolidated card ────────── */}
-                    {windowOpts.length > 0 && (
+
+                    {/* ── 2-Year Ceramic Package — multi-pick with tiered discount ── */}
+                    {ceramicOpts.length > 0 && (
                       <div className="mt-3 max-w-3xl mx-auto">
                         <div className={`relative rounded-2xl border overflow-hidden transition-all ${
-                          selectedWindow
-                            ? "border-[#D4AF37] bg-gradient-to-br from-[#D4AF37]/[0.15] via-[#F0D060]/[0.06] to-[#D4AF37]/[0.02] shadow-[0_0_20px_rgba(212,175,55,0.22)]"
-                            : "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.04] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/65 hover:from-[#D4AF37]/[0.07]"
+                          ceramicCount > 0
+                            ? "border-cyan-400 bg-gradient-to-br from-cyan-500/[0.10] via-[#D4AF37]/[0.04] to-zinc-950 shadow-[0_0_20px_rgba(34,211,238,0.18)]"
+                            : "border-[#D4AF37]/40 bg-gradient-to-br from-cyan-500/[0.03] via-zinc-900/40 to-zinc-900/40 hover:border-cyan-400/60 hover:from-cyan-500/[0.06]"
                         }`}>
                           {/* Header */}
                           <div className="px-4 pt-3.5 pb-3 border-b border-white/[0.06] text-left">
-                            <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm font-black text-white leading-tight">2-Year Graphene Window Coating</span>
+                                <Sparkles size={13} className="text-cyan-400 shrink-0" />
+                                <span className="text-sm font-black text-white leading-tight">2-Year Ceramic Package</span>
                                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-wider shrink-0">
                                   <Crown size={8} fill="currentColor" />Premium
                                 </span>
                               </div>
                             </div>
-                            <p className="text-[11px] text-zinc-400 leading-snug">
-                              Hydrophobic graphene ceramic on your glass — water beads + rolls off at speed, bugs and salt wipe clean. Lasts 2 full years.
+                            <p className="text-[11px] text-zinc-400 leading-snug mb-2">
+                              Pro-grade 2-year ceramic coating. Mix &amp; match Body, Wheels, and Windows — the more you pick, the more you save.
                             </p>
+                            {/* Tier ladder */}
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                              {[1, 2, 3].map(tier => {
+                                const reached = ceramicCount >= tier;
+                                const pct = tier === 1 ? 10 : tier === 2 ? 20 : 30;
+                                return (
+                                  <div key={tier} className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md border transition-all ${
+                                    reached
+                                      ? "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
+                                      : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
+                                  }`}>
+                                    {reached && <Check size={9} strokeWidth={3} />}
+                                    {tier} pick{tier > 1 ? "s" : ""} = {pct}% off
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          {/* 3-tier sub-buttons */}
+
+                          {/* 3-option multi-pick */}
                           <div className="grid grid-cols-3 gap-2 p-2 bg-zinc-950/40">
-                            {windowOpts.map(opt => {
+                            {ceramicOpts.map(opt => {
                               const isSelected = selectedAddonIds.includes(opt.id);
-                              const shortLabel = opt.id === "window_coat_windshield" ? "Windshield"
-                                : opt.id === "window_coat_front" ? "Front 3"
-                                : "All Glass";
-                              const subLabel = opt.id === "window_coat_windshield" ? "Front glass only"
-                                : opt.id === "window_coat_front" ? "+ 2 side windows"
-                                : "Every window + rear";
+                              const shortLabel = opt.id === "ceramic_3yr" ? "Body"
+                                : opt.id === "wheel_ceramic" ? "Wheels"
+                                : "Windows";
+                              const subLabel = opt.id === "ceramic_3yr" ? "Paint coating"
+                                : opt.id === "wheel_ceramic" ? "Wheels + calipers"
+                                : "All glass";
+                              const price = getAddonEffectivePrice(opt, vehicleSize, addonOverrides);
                               return (
                                 <button
                                   key={opt.id}
@@ -1260,28 +1230,54 @@ export function BuildYourPackage({
                                   onClick={() => toggleAddon(opt)}
                                   className={`relative px-2 py-3 rounded-xl border-2 text-center transition-all active:scale-[0.97] ${
                                     isSelected
-                                      ? "bg-gradient-to-b from-[#D4AF37]/30 to-[#D4AF37]/10 border-[#D4AF37] shadow-[0_0_12px_rgba(212,175,55,0.3)] -translate-y-0.5"
-                                      : "bg-zinc-900/60 border-white/10 hover:border-[#D4AF37]/50 hover:bg-zinc-900"
+                                      ? "bg-gradient-to-b from-cyan-500/30 to-cyan-500/10 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.3)] -translate-y-0.5"
+                                      : "bg-zinc-900/60 border-white/10 hover:border-cyan-400/50 hover:bg-zinc-900"
                                   }`}
                                 >
                                   <div className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
-                                    isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
+                                    isSelected ? "bg-cyan-400" : "bg-zinc-800 border border-zinc-700"
                                   }`}>
                                     {isSelected ? <Check size={9} className="text-black" strokeWidth={3} /> : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
                                   </div>
-                                  <div className={`text-[10px] font-black uppercase tracking-wider mt-1 ${isSelected ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                  <div className={`text-[10px] font-black uppercase tracking-wider mt-1 ${isSelected ? "text-cyan-300" : "text-zinc-200"}`}>
                                     {shortLabel}
                                   </div>
-                                  <div className={`text-[9px] font-medium mt-0.5 ${isSelected ? "text-[#D4AF37]/80" : "text-zinc-500"}`}>
+                                  <div className={`text-[9px] font-medium mt-0.5 ${isSelected ? "text-cyan-300/80" : "text-zinc-500"}`}>
                                     {subLabel}
                                   </div>
-                                  <div className={`text-base font-black mt-1.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                    +${opt.price}
+                                  <div className={`text-sm font-black mt-1.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                    ${price}
                                   </div>
                                 </button>
                               );
                             })}
                           </div>
+
+                          {/* Live discount strip */}
+                          {ceramicCount > 0 ? (
+                            <div className="px-4 py-2.5 border-t border-white/[0.06] bg-cyan-500/[0.04] flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-cyan-300">
+                                {ceramicCount}/3 picked · {Math.round(ceramicPct * 100)}% off ceramic
+                              </span>
+                              <span className="text-[11px] font-black tabular-nums text-white">
+                                <span className="text-zinc-500 line-through mr-1">${ceramicSubtotal}</span>
+                                ${ceramicSubtotal - ceramicSavings}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="px-4 py-2 border-t border-white/[0.06] bg-cyan-500/[0.02]">
+                              <p className="text-[10px] text-zinc-500 text-center">
+                                Pick any one to start at <span className="text-cyan-300 font-bold">10% off</span> · pick all 3 for <span className="text-cyan-300 font-bold">30% off</span>
+                              </p>
+                            </div>
+                          )}
+                          {ceramicCount > 0 && ceramicCount < 3 && ceramicNextPct > ceramicPct && (
+                            <div className="px-4 py-1.5 border-t border-white/[0.04] bg-zinc-950/40">
+                              <p className="text-[10px] text-zinc-500 text-center">
+                                Add 1 more → <span className="text-cyan-300 font-bold">{Math.round(ceramicNextPct * 100)}% off</span> instead of {Math.round(ceramicPct * 100)}%
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1386,16 +1382,13 @@ export function BuildYourPackage({
             )}
             {selectedAddons.map(a => {
               const base = getAddonEffectivePrice(a, vehicleSize, addonOverrides);
-              const isFreeUnlock = isFreeUnlockId(a.id);
-              const eff = isFreeUnlock && freeUnlocked
-                ? 0
+              const eff = isCeramicPackageId(a.id)
+                ? Math.round(base * (1 - ceramicPct))
                 : addonDiscountedPrice(a.id, base, bundlePct);
               return (
                 <div key={a.id} className="flex items-center justify-between">
                   <span className="text-zinc-500 truncate pr-2">+ {a.label}</span>
-                  <span className="text-zinc-300 tabular-nums shrink-0">
-                    {isFreeUnlock && freeUnlocked ? <span className="text-emerald-400">FREE</span> : `$${eff}`}
-                  </span>
+                  <span className="text-zinc-300 tabular-nums shrink-0">${eff}</span>
                 </div>
               );
             })}
@@ -1403,6 +1396,12 @@ export function BuildYourPackage({
               <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-white/[0.04] text-violet-400 font-bold">
                 <span>🎁 Bundle ({bundlePctLabel(qualifyingCount)})</span>
                 <span className="tabular-nums">−${bundleDiscount}</span>
+              </div>
+            )}
+            {ceramicSavings > 0 && (
+              <div className="flex items-center justify-between text-cyan-400 font-bold">
+                <span>✨ Ceramic ({Math.round(ceramicPct * 100)}% off)</span>
+                <span className="tabular-nums">−${ceramicSavings}</span>
               </div>
             )}
             {multiVehicleDiscount > 0 && (

@@ -25,20 +25,15 @@ type PainOption = {
 };
 
 const PAIN_OPTIONS: PainOption[] = [
-  // Interior
+  // Interior — kept in sync with the simplified builder addon set
   { id: "pet_hair",       emoji: "🐾", label: "Heavy pet hair",                     scopes: ["interior"], addonIds: ["pet_hair"] },
   { id: "stains_seats",   emoji: "🍝", label: "Stains on seats, carpet, or floor", scopes: ["interior"], addonIds: ["upholstery_shampoo"] },
-  { id: "odors",          emoji: "💨", label: "Lingering odors",                   scopes: ["interior"], addonIds: ["odor_bomb"] },
-  { id: "faded_interior", emoji: "☀️", label: "Faded dash, plastic, or trim",       scopes: ["interior"], addonIds: ["uv_interior"] },
-  { id: "worn_leather",   emoji: "🪑", label: "Cracked or worn leather",           scopes: ["interior"], addonIds: ["leather_condition"] },
   { id: "salt_floor",     emoji: "❄️", label: "Salt stains on floor mats",          scopes: ["interior"], addonIds: ["salt_stain_removal"] },
   // Exterior
-  { id: "salt_grime",     emoji: "❄️", label: "Winter salt + grime everywhere",     scopes: ["exterior"], addonIds: ["salt_recovery_addon"] },
+  { id: "rough_paint",    emoji: "🪨", label: "Paint feels rough or gritty",       scopes: ["exterior"], addonIds: ["clay_bar"] },
   { id: "foggy_lights",   emoji: "💡", label: "Cloudy or yellow headlights",       scopes: ["exterior"], addonIds: ["headlight_restore"] },
-  { id: "rough_paint",    emoji: "🪨", label: "Paint feels rough or gritty",       scopes: ["exterior"], addonIds: ["clay_bar"], heavyUpgradeAddonIds: ["mech_chem_decon"] },
-  { id: "brake_dust",     emoji: "🛞", label: "Brake dust caked on wheels",         scopes: ["exterior"], addonIds: ["wheel_ceramic"] },
-  { id: "water_spots",    emoji: "💦", label: "Water spots / hard water stains",    scopes: ["exterior"], addonIds: ["clay_bar"] },
   { id: "want_shine",     emoji: "✨", label: "Want long-term ceramic shine",       scopes: ["exterior"], addonIds: ["ceramic_3yr"] },
+  { id: "brake_dust",     emoji: "🛞", label: "Brake dust caked on wheels",         scopes: ["exterior"], addonIds: ["wheel_ceramic"] },
 ];
 
 const FOUNDATION_DISPLAY: Record<Scope, { name: string; subtitle: string; icon: typeof Sofa }> = {
@@ -83,39 +78,26 @@ function getFoundationPriceFor(services: Service[], scope: Scope, size: "compact
   return Number((svc as any)[key] ?? (svc as any).price_small ?? 0);
 }
 
-// Hard-coded addon prices for the quiz preview (these match BuildYourPackage's
-// INTERIOR_ADDONS + EXTERIOR_ADDONS source of truth — keep in sync). Could be
-// passed in as a prop later if we want them dynamic, but they're static today.
+// Hard-coded addon prices for the quiz preview (mirror BuildYourPackage's
+// simplified addon list). Sedan baseline.
 const ADDON_BASE_PRICES: Record<string, number> = {
   upholstery_shampoo: 75,
   pet_hair:           50,
-  leather_condition:  45,
-  uv_interior:        35,
-  odor_bomb:          60,
-  headliner_clean:    35,
   salt_stain_removal: 50,
   clay_bar:           50,
-  mech_chem_decon:    70,
-  salt_recovery_addon:75,
   headlight_restore:  60,
-  ceramic_3yr:        300,   // sedan default; sized by vehicle later
+  ceramic_3yr:        300,   // sedan default
   wheel_ceramic:      125,
 };
 
 const ADDON_LABELS: Record<string, string> = {
   upholstery_shampoo: "Carpet & Upholstery Shampoo",
   pet_hair:           "Heavy Pet Hair Removal",
-  leather_condition:  "Leather Conditioning",
-  uv_interior:        "UV / Trim & Plastic Restoration",
-  odor_bomb:          "Strong Odor Elimination",
-  headliner_clean:    "Headliner Cleaning",
   salt_stain_removal: "Salt Stain Removal",
   clay_bar:           "Clay Bar Treatment",
-  mech_chem_decon:    "Mech & Chemical Decon",
-  salt_recovery_addon:"Salt Recovery — Undercarriage",
   headlight_restore:  "Headlight Restoration",
-  ceramic_3yr:        "2-Year Pro Ceramic Sealant",
-  wheel_ceramic:      "Wheel & Caliper Ceramic",
+  ceramic_3yr:        "2-Year Ceramic — Body",
+  wheel_ceramic:      "2-Year Ceramic — Wheels",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -150,19 +132,35 @@ export function BuildForMeQuiz({
     if (!scope || !severity) return null;
     const addonIds = painToAddons(pains, severity);
     const foundationPrice = getFoundationPriceFor(services, scope, "sedan");
-    const qualifyingCount = addonIds.length;
-    const pct = bundlePctFor(qualifyingCount);
+
+    // Ceramic items get the tiered ceramic-package discount (10/20/30%),
+    // not the regular bundle. Mirror BuildYourPackage's split so the
+    // preview total matches what the customer sees in the builder.
+    const CERAMIC_IDS = ["ceramic_3yr", "wheel_ceramic", "window_coat_all"];
+    const isCeramic = (id: string) => CERAMIC_IDS.includes(id);
+    const ceramicIds   = addonIds.filter(isCeramic);
+    const regularIds   = addonIds.filter(id => !isCeramic(id));
+    const bundlePct = bundlePctFor(regularIds.length);
+    const ceramicPct = ceramicIds.length === 1 ? 0.10 : ceramicIds.length === 2 ? 0.20 : ceramicIds.length >= 3 ? 0.30 : 0;
+
     const addonRows = addonIds.map(id => {
       const base = ADDON_BASE_PRICES[id] ?? 0;
-      const discounted = addonDiscountedPrice(id, base, pct);
+      const discounted = isCeramic(id)
+        ? Math.round(base * (1 - ceramicPct))
+        : addonDiscountedPrice(id, base, bundlePct);
       return { id, label: ADDON_LABELS[id] ?? id, base, discounted, savings: base - discounted };
     });
     const addonsTotal = addonRows.reduce((s, r) => s + r.discounted, 0);
     const totalSavings = addonRows.reduce((s, r) => s + r.savings, 0);
     const grandTotal = foundationPrice + addonsTotal;
+
+    const labelParts: string[] = [];
+    if (bundlePct > 0) labelParts.push(`${Math.round(bundlePct * 100)}% bundle`);
+    if (ceramicPct > 0) labelParts.push(`${Math.round(ceramicPct * 100)}% ceramic`);
+
     return {
       foundationPrice, addonRows, addonsTotal, totalSavings, grandTotal,
-      pctLabel: pct > 0 ? `${Math.round(pct * 100)}% bundle` : null,
+      pctLabel: labelParts.length > 0 ? labelParts.join(" · ") : null,
     };
   }, [scope, severity, pains, services]);
 

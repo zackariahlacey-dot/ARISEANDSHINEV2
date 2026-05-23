@@ -792,6 +792,20 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
               setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds, additionalVehicles });
               setExpandedBookingId("services");
             }}
+            onSelectPopularService={(serviceName) => {
+              // Popular Detail card: skip the builder entirely and open the
+              // booking section with that service already selected.
+              const svc = services.find(s => s.name === serviceName) ?? null;
+              if (!svc) return;
+              setSelectedService(svc);
+              setBuilderPrefill(null);
+              setExpandedBookingId("services");
+              // Scroll to the booking section
+              setTimeout(() => {
+                const el = document.getElementById("services") ?? document.getElementById("booking");
+                el?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 100);
+            }}
           />
 
           {/* ── Legacy basic-services carousel (HIDDEN — superseded by builder) */}
