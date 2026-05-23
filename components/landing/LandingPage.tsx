@@ -2061,7 +2061,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 240, priceLarge: 270,
+    priceNormal: 240, priceLarge: 265,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
       "Everything in Interior Detail",
@@ -2075,7 +2075,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom quality — every surface, inside and out.",
-    priceNormal: 350, priceLarge: 400,
+    priceNormal: 335, priceLarge: 375,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",
@@ -2225,7 +2225,9 @@ function UltimateServiceCard({
           <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-2">
             {priceNormal === priceLarge ? "Flat Rate — All Vehicle Sizes" : "Range — Varies by Vehicle Size"}
           </div>
-          <div className={`text-5xl font-black tabular-nums leading-none ${isFlagship ? "text-[#D4AF37]" : "text-white"}`}>
+          <div className={`font-black tabular-nums leading-none whitespace-nowrap ${isFlagship ? "text-[#D4AF37]" : "text-white"} ${
+            priceNormal === priceLarge ? "text-5xl" : "text-3xl sm:text-4xl md:text-5xl"
+          }`}>
             {priceNormal === priceLarge ? `$${priceNormal}` : `$${priceNormal}–$${priceLarge}`}
           </div>
           <div className="text-xs text-zinc-600 mt-2">No hidden fees · We bring everything</div>
