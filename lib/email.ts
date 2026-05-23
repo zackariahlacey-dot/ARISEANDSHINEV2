@@ -1494,12 +1494,7 @@ export async function sendBookingEmails(
     resend.emails.send({
       from: FROM_ADDRESS,
       to: ownerTo,
-      subject: (() => {
-        const sn = (data.serviceName ?? "").toLowerCase();
-        const isBuilder = sn === "interior detail" || sn === "exterior detail" || sn === "full detail";
-        const label = isBuilder ? "Custom Package" : data.serviceName;
-        return `New Booking: ${data.customerName} — ${label} on ${formattedDate}`;
-      })(),
+      subject: `New Booking: ${data.customerName} — ${data.serviceName} on ${formattedDate}`,
       html: getAdminBookingAlertHtml({
         customerName: data.customerName,
         customerPhone: data.customerPhone,

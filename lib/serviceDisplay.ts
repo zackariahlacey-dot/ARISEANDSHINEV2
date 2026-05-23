@@ -1,29 +1,20 @@
 /**
  * Customer-facing display label for a service.
  *
- * Interior Detail, Exterior Detail, and Full Detail are all booked through
- * the Build Your Package flow now — they should display as "Custom Package"
- * everywhere a customer or admin sees the booking. The DB stays as the
- * underlying service name (for loyalty + reporting), only the label flips.
- *
- * Pass `includeFoundation: false` for short labels (e.g. emails subjects);
- * default includes the foundation in parens for clarity.
+ * After the rollback to the basic-services + Ultimate Series card flow,
+ * customers book the service by name directly — no more "Custom Package"
+ * wrapper. We still expose the helper + signature so call sites don't
+ * have to change; it just returns the service name as-is.
  */
-export function getServiceDisplayName(serviceName: string | null | undefined, opts: { includeFoundation?: boolean } = {}): string {
+export function getServiceDisplayName(serviceName: string | null | undefined, _opts: { includeFoundation?: boolean } = {}): string {
   if (!serviceName) return "Detailing Service";
-  const { includeFoundation = true } = opts;
-  const map: Record<string, string> = {
-    "Interior Detail": "Custom Package (Interior)",
-    "Exterior Detail": "Custom Package (Exterior)",
-    "Full Detail": "Custom Package (Full)",
-  };
-  const display = map[serviceName];
-  if (!display) return serviceName;
-  return includeFoundation ? display : "Custom Package";
+  void _opts;
+  return serviceName;
 }
 
-/** True when the booking originated from the Build Your Package builder. */
-export function isCustomPackageService(serviceName: string | null | undefined): boolean {
-  if (!serviceName) return false;
-  return serviceName === "Interior Detail" || serviceName === "Exterior Detail" || serviceName === "Full Detail";
+/** Kept for back-compat with admin views — always false now that the
+ *  Build Your Package builder is no longer the booking entry point. */
+export function isCustomPackageService(_serviceName: string | null | undefined): boolean {
+  void _serviceName;
+  return false;
 }

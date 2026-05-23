@@ -178,22 +178,16 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
   const addonsHtml = o.addonsJson?.length
     ? o.addonsJson.map((a) => `<li style="margin:2px 0;font-size:13px;color:#333;">+ ${esc(a.label)} ${a.price > 0 ? `($${a.price})` : `<span style="color:#16a34a;font-weight:700;">(FREE)</span>`}</li>`).join("")
     : "";
-  // Interior/Exterior/Full Detail are now Build Your Package bookings — flag
-  // them in the alert so the owner sees at a glance which packages were stacked.
-  const svcLower = (o.serviceName ?? "").toLowerCase();
-  const isCustomPackage = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
+  // Surface the service name + add-on count up front so the owner knows
+  // at a glance what was booked.
   const hasAddons = (o.addonsJson?.length ?? 0) > 0 || ((o.additionalVehicles?.length ?? 0) > 0);
-  const foundationLabel = svcLower === "interior detail" ? "Interior"
-    : svcLower === "exterior detail" ? "Exterior"
-    : "Full";
   const conditionShort = o.maintenanceCondition === "showroom" ? "Showroom"
     : o.maintenanceCondition === "lived_in" ? "Lived-in"
     : o.maintenanceCondition === "rough" ? "Rough"
     : null;
   const alertTitle = o.isMaintenance
     ? `🔁 Maintenance Detail${conditionShort ? ` · ${conditionShort}` : ""}`
-    : isCustomPackage ? "🛠️ New Custom Package Booking"
-    : "🚗 New Vehicle Booking";
+    : `🚗 New Booking · ${o.serviceName ?? "Detail"}${hasAddons ? " (+add-ons)" : ""}`;
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -240,7 +234,7 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
         ${sectionHeader("Booking")}
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #eeeeee;">
-          ${row("Service", isCustomPackage ? `<strong>${esc("Custom Package (" + foundationLabel + ")")}</strong> <span style="color:#999;font-size:11px;">(${esc(o.serviceName)})</span>` : esc(o.serviceName))}
+          ${row("Service", `<strong>${esc(o.serviceName)}</strong>${hasAddons ? ` <span style="color:#999;font-size:11px;">+ ${o.addonsJson?.length ?? 0} add-on${(o.addonsJson?.length ?? 0) === 1 ? "" : "s"}</span>` : ""}`)}
           ${row("Vehicle 1", esc(vehicleLabel) + (o.vehicleSize ? `<span style="color:#999;font-size:11px;"> — ${esc(o.vehicleSize)}</span>` : ""))}
           ${additionalVehicleRows(o.additionalVehicles, o.multiVehicleDiscount)}
           ${row("Date", esc(o.bookingDate))}

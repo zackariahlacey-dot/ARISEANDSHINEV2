@@ -369,20 +369,14 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
   const firstName = esc(d.customerName.trim().split(/\s+/)[0] ?? "there");
   const vehicleLabel = `${esc(d.vehicleYear)} ${esc(d.vehicleMake)} ${esc(d.vehicleModel)}`;
   const travelStr = d.travelFee > 0 ? `$${d.travelFee}` : "Included";
-  // Build Your Package flow uses Interior/Exterior/Full Detail service rows.
-  // When the customer stacked add-ons via the builder, surface that clearly
-  // in the headline so they recognize the email as their custom package.
+  // Build Your Package is no longer the entry point — customers book each
+  // service by name now. Keep the headline simple: "Your <service> is
+  // confirmed" so the email mirrors what they saw on the card.
   const svcLower = (d.serviceName ?? "").toLowerCase();
-  const isCustomPackage = svcLower === "interior detail" || svcLower === "exterior detail" || svcLower === "full detail";
   const hasAddons = (d.addonsJson?.length ?? 0) > 0 || ((d.additionalVehicles?.length ?? 0) > 0);
-  const foundationLabel = svcLower === "interior detail" ? "Interior"
-    : svcLower === "exterior detail" ? "Exterior"
-    : "Full";
   const headline = d.isMaintenance
     ? "Your Maintenance Detail is Booked!"
-    : isCustomPackage
-      ? "Your Custom Package is Scheduled!"
-      : "Your Detail is Confirmed!";
+    : "Your Detail is Confirmed!";
   const conditionLabel = d.maintenanceCondition === "showroom" ? "Showroom (light cleanup)"
     : d.maintenanceCondition === "lived_in" ? "Lived-in (daily-driver wear)"
     : d.maintenanceCondition === "rough" ? "Rough (heavy reset)"
@@ -410,8 +404,8 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
         </h1>
         ${d.isMaintenance ? `
         <p style="display:inline-block;color:#10b981;font-size:10px;font-weight:800;background:rgba(16,185,129,0.10);border:1px solid rgba(16,185,129,0.35);border-radius:999px;padding:4px 10px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px;">Maintenance Detail${conditionLabel ? ` · ${conditionLabel.split(" ")[0]}` : ""}</p>
-        ` : isCustomPackage && hasAddons ? `
-        <p style="display:inline-block;color:#D4AF37;font-size:10px;font-weight:800;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.35);border-radius:999px;padding:4px 10px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px;">Build Your Package</p>
+        ` : hasAddons ? `
+        <p style="display:inline-block;color:#D4AF37;font-size:10px;font-weight:800;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.35);border-radius:999px;padding:4px 10px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px;">+ Add-ons</p>
         ` : ""}
         <p style="color:#aaaaaa;font-size:14px;margin:0;">
           See you on <strong style="color:#ffffff;">${esc(date)}</strong>
@@ -433,7 +427,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
         <table width="100%" cellpadding="0" cellspacing="0" border="0"
                style="background-color:#f8f8f8;border-radius:14px;overflow:hidden;margin-bottom:28px;
                       border:1px solid #eeeeee;">
-          ${detailRow("Service", esc(d.isMaintenance ? `Maintenance · ${foundationLabel}${conditionLabel ? ` (${conditionLabel.split(" ")[0]})` : ""}` : isCustomPackage ? (hasAddons ? `Custom Package (${foundationLabel})` : d.serviceName) : d.serviceName))}
+          ${detailRow("Service", esc(d.isMaintenance && conditionLabel ? `${d.serviceName} · Maintenance (${conditionLabel.split(" ")[0]})` : d.serviceName))}
           ${detailRow("Vehicle 1", vehicleLabel)}
           ${additionalVehicleRows(d.additionalVehicles, d.multiVehicleDiscount)}
           ${detailRow("Date", esc(date))}
