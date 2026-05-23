@@ -790,7 +790,7 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
               >
                 {carouselServices.map((service) => (
-                  <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-2 pb-3">
+                  <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
                     <div className="w-full max-w-[360px]">
                       <ServiceCard service={service} onBook={() => openBooking(service)} />
                     </div>
@@ -871,7 +871,7 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
               >
                 {ULTIMATE_CARDS.map((card) => (
-                  <div key={card.name} className="snap-center shrink-0 w-full flex justify-center px-4 pt-2 pb-3">
+                  <div key={card.name} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
                     <div className="w-full max-w-[360px]">
                       <UltimateServiceCard {...card} onBook={openUltimateBooking} />
                     </div>
