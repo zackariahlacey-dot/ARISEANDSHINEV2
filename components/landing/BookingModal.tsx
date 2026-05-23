@@ -199,7 +199,16 @@ const WINDOW_COAT_WINDSHIELD_PRICE = 100;
 const WINDOW_COAT_FRONT_PRICE      = 150;
 const WINDOW_COAT_ALL_PRICE        = 250;
 
-function getEffectiveAddonPrice(addon: { id: string; price: number }, vehicleSize: string): number {
+function getEffectiveAddonPrice(
+  addon: { id: string; price: number },
+  vehicleSize: string,
+  overrides?: import("@/app/actions/addonPricing").AddonOverrideMap,
+): number {
+  // Admin override (per-size, then size-agnostic "all") wins over any base.
+  if (overrides) {
+    const ov = overrides[`${addon.id}:${vehicleSize}`] ?? overrides[`${addon.id}:all`];
+    if (ov?.price_cents != null) return ov.price_cents / 100;
+  }
   if (addon.id === "upholstery_shampoo" && (vehicleSize === "xl" || vehicleSize === "extra_large")) return addon.price + 30;
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
@@ -218,8 +227,17 @@ function isPaintCorrectionService(name?: string): boolean {
 
 /** Total minutes added to the booking by selected duration-extending add-ons.
  *  `vehicleSize` is required for size-tiered add-ons (e.g. ceramic_3yr). */
-function getAddonExtraDurationMins(selectedAddons: { id: string }[], vehicleSize: string = "sedan"): number {
+function getAddonExtraDurationMins(
+  selectedAddons: { id: string }[],
+  vehicleSize: string = "sedan",
+  overrides?: import("@/app/actions/addonPricing").AddonOverrideMap,
+): number {
   return selectedAddons.reduce((sum, a) => {
+    // Admin duration override wins over any hard-coded value.
+    if (overrides) {
+      const ov = overrides[`${a.id}:${vehicleSize}`] ?? overrides[`${a.id}:all`];
+      if (ov?.duration_mins != null) return sum + ov.duration_mins;
+    }
     if (a.id === "ceramic_3yr") return sum + (CERAMIC_3YR_DURATION_MINS[vehicleSize] ?? 90);
     if (a.id === "upholstery_shampoo") return sum + (UPHOLSTERY_SHAMPOO_DURATION_MINS[vehicleSize] ?? 30);
     return sum + (DURATION_EXTENDING_ADDONS[a.id] ?? 0);
@@ -969,6 +987,8 @@ export interface BookingSectionProps {
   }> | null;
   /** Called whenever booking step/progress changes so parent can show a summary bar */
   onProgress?: (data: BookingProgressData | null) => void;
+  /** Admin-set per-size add-on price/duration overrides (server-fetched). */
+  addonOverrides?: import("@/app/actions/addonPricing").AddonOverrideMap;
 }
 
 export function BookingSection({
@@ -987,6 +1007,7 @@ export function BookingSection({
   prefilledAddonIds = null,
   prefilledAdditionalVehicles = null,
   onProgress,
+  addonOverrides = {},
 }: BookingSectionProps) {
   const router = useRouter();
   const bookingRef = useRef<HTMLDivElement>(null);
@@ -1067,7 +1088,7 @@ export function BookingSection({
         } else if (DECON_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !DECON_ADDON_IDS.includes(a.id));
         }
-        return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string) }];
+        return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides) }];
       }
     });
   };
@@ -1232,7 +1253,7 @@ export function BookingSection({
       return sum + Math.max(30, base - 30);
     }, 0);
 
-    const addonMins = getAddonExtraDurationMins(selectedAddons, sizeKey);
+    const addonMins = getAddonExtraDurationMins(selectedAddons, sizeKey, addonOverrides);
     const total = Math.min(MAX_SAME_DAY_BOOKING_MINS, primaryMins + addlMins + addonMins);
     // Customer-facing display window: "1 hour less to full" — e.g., 150 min
     // total shows as "1.5–2.5 hrs". Booking system still uses strict total
@@ -1423,7 +1444,7 @@ export function BookingSection({
 
   // Total booking duration: each additional vehicle gets -30 min efficiency discount (min 30).
   // Extra time from duration-extending add-ons (e.g. Ultimate Interior +3 hrs, ceramic_3yr +1.5-2.5 hrs) is folded in here.
-  const addonExtraDurationMins = getAddonExtraDurationMins(selectedAddons, vehicleSize || "sedan");
+  const addonExtraDurationMins = getAddonExtraDurationMins(selectedAddons, vehicleSize || "sedan", addonOverrides);
   const primaryDurationMins = selectedService
     ? getDurationForService(
         selectedService.name,
@@ -1476,7 +1497,7 @@ export function BookingSection({
           .map(a => ({
             id: a.id,
             label: a.label,
-            price: ((FREE_UNLOCK_IDS_BM as readonly string[]).includes(a.id) && freeUnlocked) ? 0 : getEffectiveAddonPrice(a, size ?? "sedan"),
+            price: ((FREE_UNLOCK_IDS_BM as readonly string[]).includes(a.id) && freeUnlocked) ? 0 : getEffectiveAddonPrice(a, size ?? "sedan", addonOverrides),
           }));
         setSelectedAddons(preAddons);
       } else {
@@ -3337,7 +3358,7 @@ export function BookingSection({
 
                                     {/* Price */}
                                     <div className={`shrink-0 text-sm font-black tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                      +${getEffectiveAddonPrice(addon, vehicleSize as string)}
+                                      +${getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides)}
                                     </div>
                                   </button>
                                 );
@@ -3513,7 +3534,7 @@ export function BookingSection({
                                           addon.id === "window_coat_windshield" ? "Front glass only"
                                           : addon.id === "window_coat_front"    ? "Windshield + 2 sides"
                                           : "Every piece of glass";
-                                        const price = getEffectiveAddonPrice(addon, vehicleSize as string);
+                                        const price = getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides);
                                         return (
                                           <button
                                             key={addon.id}
@@ -3854,7 +3875,7 @@ export function BookingSection({
                                             <button
                                               key={addon.id}
                                               type="button"
-                                              onClick={() => toggleAdditionalAddon(idx, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, av.vehicleSize) })}
+                                              onClick={() => toggleAdditionalAddon(idx, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, av.vehicleSize, addonOverrides) })}
                                               className={`w-full flex flex-col items-center px-3 py-2.5 rounded-xl border text-center transition-all ${
                                                 sel
                                                   ? "bg-[#D4AF37]/10 border-[#D4AF37]/50"
@@ -3862,7 +3883,7 @@ export function BookingSection({
                                               }`}
                                             >
                                               <span className={`text-xs font-semibold ${sel ? "text-[#D4AF37]" : "text-zinc-300"}`}>{addon.label}</span>
-                                              <span className={`text-xs font-black ${sel ? "text-white" : "text-[#D4AF37]"}`}>+${getEffectiveAddonPrice(addon, av.vehicleSize)}</span>
+                                              <span className={`text-xs font-black ${sel ? "text-white" : "text-[#D4AF37]"}`}>+${getEffectiveAddonPrice(addon, av.vehicleSize, addonOverrides)}</span>
                                             </button>
                                           );
                                         })}

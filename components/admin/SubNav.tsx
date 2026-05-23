@@ -60,7 +60,7 @@ export function SubNav({ items }: { items: SubNavItem[] }) {
  * Standardized config arrays so every page in a group renders the same nav.
  * Update here, every page reflects it.
  */
-import { Users, Crown, DollarSign, Mail, Settings as SettingsIcon, Calendar, Zap, HardHat } from "lucide-react";
+import { Users, Crown, DollarSign, Mail, Settings as SettingsIcon, Calendar, Zap, HardHat, Tag } from "lucide-react";
 
 /** People cluster: clients + monthly subscribers + contractors. The monthly
  *  page has its own Requests/Subscribers inner toggle, so we don't double
@@ -76,6 +76,7 @@ export const PEOPLE_SUBNAV: SubNavItem[] = [
 export const BUSINESS_SUBNAV: SubNavItem[] = [
   { label: "Revenue", href: "/admin/money",    icon: DollarSign },
   { label: "Email",   href: "/admin/email",    icon: Mail },
+  { label: "Pricing", href: "/admin/pricing",  icon: Tag },
   { label: "Setup",   href: "/admin/settings", icon: SettingsIcon },
 ];
 

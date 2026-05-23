@@ -14,6 +14,7 @@ import {
   bundlePctFor, addonDiscountAmount, addonDiscountedPrice,
   bundlePctLabel,
 } from "@/lib/bundleDiscount";
+import type { AddonOverrideMap } from "@/app/actions/addonPricing";
 import { BuildForMeQuiz } from "./BuildForMeQuiz";
 
 // ─── Foundation services ──────────────────────────────────────────────────
@@ -149,7 +150,16 @@ function getFoundationPrice(service: Service | null, size: VehicleSizeSlug): num
   return Number(service[key] ?? service.price_small ?? 0);
 }
 
-function getAddonEffectivePrice(addon: AddonDefExt, size: VehicleSizeSlug): number {
+function getAddonEffectivePrice(
+  addon: AddonDefExt,
+  size: VehicleSizeSlug,
+  overrides?: AddonOverrideMap,
+): number {
+  // Admin override (per-size, then size-agnostic "all") wins over any base.
+  if (overrides) {
+    const ov = overrides[`${addon.id}:${size}`] ?? overrides[`${addon.id}:all`];
+    if (ov?.price_cents != null) return ov.price_cents / 100;
+  }
   if (addon.sizedPrice) return addon.sizedPrice[size] ?? addon.price;
   if (addon.id === "upholstery_shampoo" && size === "xl") return addon.price + 30;
   return addon.price;
@@ -260,10 +270,14 @@ function getMultiVehicleDiscountAmount(subtotal: number, vehicleCount: number): 
 // ─── Component ────────────────────────────────────────────────────────────
 export function BuildYourPackage({
   services,
+  addonOverrides = {},
   onContinueToBooking,
   onBuilderActiveChange,
 }: {
   services: Service[];
+  /** Admin-set per-size price/duration overrides (server-fetched). When a
+   *  matching key exists, it wins over the hard-coded base. */
+  addonOverrides?: AddonOverrideMap;
   onContinueToBooking: (args: {
     serviceName: string;
     addonIds: string[];
@@ -452,7 +466,7 @@ export function BuildYourPackage({
     return qp.addonIds.reduce((sum, id) => {
       const addon = allAddons.find(a => a.id === id);
       if (!addon) return sum;
-      const base = getAddonEffectivePrice(addon, "sedan");
+      const base = getAddonEffectivePrice(addon, "sedan", addonOverrides);
       return sum + addonDiscountedPrice(id, base, pct);
     }, fPrice);
   };
@@ -488,9 +502,9 @@ export function BuildYourPackage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [freeUnlocked, foundationId]);
 
-  const addonsSubtotal = qualifyingAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize), 0);
+  const addonsSubtotal = qualifyingAddons.reduce((s, a) => s + getAddonEffectivePrice(a, vehicleSize, addonOverrides), 0);
   const addonsBundleSavings = qualifyingAddons.reduce(
-    (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize), bundlePct),
+    (s, a) => s + addonDiscountAmount(a.id, getAddonEffectivePrice(a, vehicleSize, addonOverrides), bundlePct),
     0,
   );
   // Total customer-facing savings = sum of per-add-on percentage discounts.
@@ -521,7 +535,7 @@ export function BuildYourPackage({
       // the modal + email see the exact $ shown to the customer.
       price: isFreeUnlockId(a.id) && freeUnlocked
         ? 0
-        : addonDiscountedPrice(a.id, getAddonEffectivePrice(a, vehicleSize), bundlePct),
+        : addonDiscountedPrice(a.id, getAddonEffectivePrice(a, vehicleSize, addonOverrides), bundlePct),
     }));
     return {
       serviceName: foundationService.name,
@@ -615,7 +629,7 @@ export function BuildYourPackage({
     const isFreeUnlock = isFreeUnlockId(addon.id);
     const isLocked = isFreeUnlock && !freeUnlocked;
     const isPremium = !!addon.premium;
-    const base = getAddonEffectivePrice(addon, vehicleSize);
+    const base = getAddonEffectivePrice(addon, vehicleSize, addonOverrides);
     // When selected, show the customer their current-tier price.
     // When NOT selected, show a preview of what they'd pay if they added
     // this and bumped to the next tier — that's the upsell incentive.
@@ -1371,7 +1385,7 @@ export function BuildYourPackage({
               <p className="text-zinc-600 italic text-center pt-1">No add-ons yet</p>
             )}
             {selectedAddons.map(a => {
-              const base = getAddonEffectivePrice(a, vehicleSize);
+              const base = getAddonEffectivePrice(a, vehicleSize, addonOverrides);
               const isFreeUnlock = isFreeUnlockId(a.id);
               const eff = isFreeUnlock && freeUnlocked
                 ? 0

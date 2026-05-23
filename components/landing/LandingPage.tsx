@@ -145,7 +145,7 @@ const REVIEWS = [
 
 type ExpandedBookingId = "hero" | "services" | "ultimate" | "boat" | "rv" | null;
 
-export function LandingPage({ services }: { services: Service[] }) {
+export function LandingPage({ services, addonOverrides = {} }: { services: Service[]; addonOverrides?: import("@/app/actions/addonPricing").AddonOverrideMap }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -661,6 +661,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onClose={() => setExpandedBookingId(null)}
                 selectedService={expandedBookingId === "hero" ? selectedService : null}
                 services={services}
+                addonOverrides={addonOverrides}
                 onSelectService={setSelectedService}
                 onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
@@ -783,6 +784,7 @@ export function LandingPage({ services }: { services: Service[] }) {
           {/* ── Build Your Package (replaces basic detail cards) ──── */}
           <BuildYourPackage
             services={services}
+            addonOverrides={addonOverrides}
             onBuilderActiveChange={setBuilderActive}
             onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear, additionalVehicles }) => {
               const svc = services.find(s => s.name === serviceName) ?? null;
@@ -845,6 +847,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
                 selectedService={selectedService}
                 services={services}
+                addonOverrides={addonOverrides}
                 onSelectService={setSelectedService}
                 onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
@@ -940,6 +943,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                 onClose={() => { setExpandedBookingId(null); setPrefilledVehicle(null); }}
                 selectedService={selectedService}
                 services={services}
+                addonOverrides={addonOverrides}
                 onSelectService={setSelectedService}
                 onClearService={() => setSelectedService(null)}
                 onBookingSuccess={handleBookingSuccess}
@@ -1041,6 +1045,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onClose={() => setExpandedBookingId(null)}
                     selectedService={null}
                     services={services}
+                    addonOverrides={addonOverrides}
                     onSelectService={setSelectedService}
                     onClearService={() => setSelectedService(null)}
                     onBookingSuccess={handleBookingSuccess}
@@ -1124,6 +1129,7 @@ export function LandingPage({ services }: { services: Service[] }) {
                     onClose={() => setExpandedBookingId(null)}
                     selectedService={null}
                     services={services}
+                    addonOverrides={addonOverrides}
                     onSelectService={setSelectedService}
                     onClearService={() => setSelectedService(null)}
                     onBookingSuccess={handleBookingSuccess}
