@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/customer-rating-emails",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 11 * * *"
     },
     {
       "path": "/api/cron/admin-daily-digest",
