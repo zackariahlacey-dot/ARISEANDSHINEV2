@@ -3,7 +3,7 @@
 import React, { useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Gem } from "lucide-react";
 
 export type BeforeAfterPair = {
   beforeSrc: string;
@@ -152,7 +152,12 @@ function PairSlider({ pair, eager }: { pair: BeforeAfterPair; eager: boolean }) 
   );
 }
 
-export function BeforeAfterGallery() {
+type Props = {
+  /** Fires when the in-section Ultimate CTA is clicked. */
+  onBookUltimate?: () => void;
+};
+
+export function BeforeAfterGallery({ onBookUltimate }: Props = {}) {
   const [index, setIndex] = useState(0);
   const total   = PAIRS.length;
   const current = PAIRS[index];
@@ -243,6 +248,67 @@ export function BeforeAfterGallery() {
           {index + 1} of {total} · Drag the divider to compare
           <div className="w-8 h-px bg-white/5" />
         </div>
+
+        {/* ── Animated Ultimate CTA — promotes Ultimate booking right where the
+            visitor has just seen the visible transformation result. ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/30 max-w-3xl mx-auto mt-14 md:mt-20"
+          style={{ background: "linear-gradient(135deg, #18181b 0%, #0c0c0d 100%)" }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse 70% 60% at 100% 0%, rgba(212,175,55,0.18) 0%, transparent 60%)" }}
+          />
+          <motion.div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            animate={{
+              background: [
+                "radial-gradient(ellipse 40% 80% at 0% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
+                "radial-gradient(ellipse 40% 80% at 100% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
+                "radial-gradient(ellipse 40% 80% at 0% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
+              ],
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
+
+          <div className="relative p-8 md:p-12 flex flex-col items-center text-center gap-5">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_24px_rgba(212,175,55,0.15)]"
+            >
+              <Gem size={11} className="text-[#D4AF37]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">Your Vehicle, Restored</span>
+            </motion.div>
+
+            <h3 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">
+              Book Your <span className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent">Ultimate</span> Transformation Today.
+            </h3>
+            <p className="text-zinc-400 text-sm md:text-base max-w-md leading-relaxed">
+              The same deep-reset service you just saw — in your driveway, on your schedule.
+            </p>
+
+            <button
+              type="button"
+              onClick={onBookUltimate}
+              className="btn-primary-gold-shimmer group relative mt-2 inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#D4AF37] text-zinc-950 font-black tracking-wide text-base hover:scale-[1.04] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] active:scale-[0.98] transition-all duration-500 ease-in-out"
+            >
+              <span className="relative z-[1] inline-flex items-center gap-2">
+                Book Your Ultimate Detail
+                <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+              </span>
+            </button>
+          </div>
+        </motion.div>
       </div>
     </motion.section>
   );

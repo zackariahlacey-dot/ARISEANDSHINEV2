@@ -786,7 +786,9 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
       </motion.section>
 
       {/* ─── Before & After Gallery ───────────────────────────────── */}
-      <BeforeAfterGallery />
+      <BeforeAfterGallery
+        onBookUltimate={() => openUltimateBooking("Ultimate Interior + Exterior Reset")}
+      />
 
 
       {/* ─── Our Services ─────────────────────────────────────────────────────────────── */}
@@ -800,15 +802,80 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
       >
         <div className="w-full max-w-7xl mx-auto">
 
-          {/* Section header — leads with the Ultimate Series as the featured package tier */}
+          {/* Section header */}
           <div className="text-center mb-8 md:mb-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Signature Packages</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">The Ultimate Series.</h2>
-            <p className="text-zinc-500 text-sm mt-2">Our deepest-reset packages — most-requested by Vermont owners.</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Our Services</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">Pick the detail that fits.</h2>
+            <p className="text-zinc-500 text-sm mt-2">Three foundations, four sizes, fully transparent pricing.</p>
           </div>
 
-          {/* ── Ultimate Series — premium deep-reset cards (now featured first) ── */}
-          <div>
+          {/* ── Basic services carousel (mobile) + grid (desktop) ──── */}
+          {mounted && (
+            <div className="flex flex-col items-center w-full lg:hidden">
+              <div
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="w-full flex overflow-x-auto snap-x snap-mandatory"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+              >
+                {carouselServices.map((service) => (
+                  <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
+                    <div className="w-full max-w-[360px]">
+                      <ServiceCard service={service} onBook={() => openBooking(service)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2.5 mt-4">
+                {carouselServices.map((service, i) => (
+                  <button key={service.id} type="button" onClick={() => scrollToCard(i)} aria-label={service.name} className="group">
+                    <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
+            </div>
+          )}
+
+          {/* Desktop: 3-up grid of basic service cards */}
+          {carouselServices.length > 0 && (
+            <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
+              {carouselServices.map((service) => (
+                <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
+              ))}
+            </div>
+          )}
+
+          {/* ── Inline booking — opens when a basic service card is clicked ── */}
+          {mounted && expandedBookingId === "services" && (
+            <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+              <BookingSection
+                isVisible={true}
+                onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
+                selectedService={selectedService}
+                services={services}
+                addonOverrides={addonOverrides}
+                onSelectService={setSelectedService}
+                onClearService={() => setSelectedService(null)}
+                onBookingSuccess={handleBookingSuccess}
+                initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
+                initialDraft={initialDraft}
+                onDraftRestored={() => setInitialDraft(null)}
+                prefilledVehicle={builderPrefill ? {
+                  make: builderPrefill.vehicleMake,
+                  model: builderPrefill.vehicleModel,
+                  size: builderPrefill.vehicleSize,
+                  year: builderPrefill.vehicleYear,
+                } : null}
+                prefilledAddonIds={builderPrefill?.addonIds ?? null}
+                prefilledAdditionalVehicles={builderPrefill?.additionalVehicles ?? null}
+              />
+            </div>
+          )}
+
+          {/* ── Ultimate Series — premium deep-reset cards ── */}
+          {(
+          <div className="mt-14 md:mt-20">
             {/* Ultimate Series intro */}
             <div className="mb-8 md:mb-10">
               <div className="flex items-center gap-3 mb-6">
@@ -857,75 +924,17 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               ))}
             </div>
 
-            {/* ── Animated CTA — pushes Flagship Ultimate booking ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/30 my-10 md:my-14"
-              style={{ background: "linear-gradient(135deg, #18181b 0%, #0c0c0d 100%)" }}
-            >
-              {/* Static gold radial — top-right anchor */}
-              <div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: "radial-gradient(ellipse 70% 60% at 100% 0%, rgba(212,175,55,0.18) 0%, transparent 60%)" }}
-              />
-              {/* Animated gold sweep — sweeps left↔right, draws the eye */}
-              <motion.div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none"
-                animate={{
-                  background: [
-                    "radial-gradient(ellipse 40% 80% at 0% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
-                    "radial-gradient(ellipse 40% 80% at 100% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
-                    "radial-gradient(ellipse 40% 80% at 0% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
-                  ],
-                }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              />
-              {/* Top gold accent line */}
-              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
-
-              <div className="relative p-8 md:p-14 flex flex-col items-center text-center gap-5">
-                <motion.div
-                  initial={{ scale: 0.92, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.15 }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_24px_rgba(212,175,55,0.15)]"
-                >
-                  <Gem size={11} className="text-[#D4AF37]" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">Flagship Service</span>
-                </motion.div>
-
-                <h3 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
-                  Reserve Your <span className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent">Ultimate</span> Detail.
-                </h3>
-                <p className="text-zinc-400 text-base md:text-lg max-w-xl leading-relaxed">
-                  Showroom-quality reset, inside and out. Real-time availability — pick a slot and I&apos;ll come to you.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => openUltimateBooking("Ultimate Interior + Exterior Reset")}
-                  className="btn-primary-gold-shimmer group relative mt-2 inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#D4AF37] text-zinc-950 font-black tracking-wide text-base md:text-lg hover:scale-[1.04] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] active:scale-[0.98] transition-all duration-500 ease-in-out"
-                >
-                  <span className="relative z-[1] inline-flex items-center gap-2">
-                    Book Your Ultimate Detail
-                    <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                  </span>
-                </button>
-
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-1">
-                  Or scroll for foundation tiers
-                </p>
-              </div>
-            </motion.div>
-
             {/* ── Ultimate Paint Correction (sister sub-section) ── */}
             <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
+          </div>
+          )}
+
+          {/* View More Services */}
+          <div className="mt-10 text-center">
+            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#F3E5AB] transition-colors group">
+              View More Services
+              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+            </Link>
           </div>
 
           {/* ── Inline booking for ultimate ── */}
@@ -947,93 +956,6 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               />
             </div>
           )}
-
-          {/* ── Foundation tier (basic services) — secondary section ──── */}
-          <div className="mt-16 md:mt-24">
-            <div className="mb-8 md:mb-10">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex-1 h-px bg-white/[0.05]" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 shrink-0">Or pick a foundation tier</span>
-                <div className="flex-1 h-px bg-white/[0.05]" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-2xl md:text-3xl font-black text-white">Interior · Exterior · Full Detail</h3>
-                <p className="text-zinc-500 text-sm mt-2">Three foundations, three sizes, fully transparent pricing.</p>
-              </div>
-            </div>
-
-            {/* ── Basic services carousel (mobile) + grid (desktop) ──── */}
-            {mounted && (
-              <div className="flex flex-col items-center w-full lg:hidden">
-                <div
-                  ref={carouselRef}
-                  onScroll={handleCarouselScroll}
-                  className="w-full flex overflow-x-auto snap-x snap-mandatory"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-                >
-                  {carouselServices.map((service) => (
-                    <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
-                      <div className="w-full max-w-[360px]">
-                        <ServiceCard service={service} onBook={() => openBooking(service)} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2.5 mt-4">
-                  {carouselServices.map((service, i) => (
-                    <button key={service.id} type="button" onClick={() => scrollToCard(i)} aria-label={service.name} className="group">
-                      <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
-              </div>
-            )}
-
-            {/* Desktop: 3-up grid of basic service cards */}
-            {carouselServices.length > 0 && (
-              <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
-                {carouselServices.map((service) => (
-                  <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
-                ))}
-              </div>
-            )}
-
-            {/* ── Inline booking — opens when a basic service card is clicked ── */}
-            {mounted && expandedBookingId === "services" && (
-              <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
-                <BookingSection
-                  isVisible={true}
-                  onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
-                  selectedService={selectedService}
-                  services={services}
-                  addonOverrides={addonOverrides}
-                  onSelectService={setSelectedService}
-                  onClearService={() => setSelectedService(null)}
-                  onBookingSuccess={handleBookingSuccess}
-                  initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
-                  initialDraft={initialDraft}
-                  onDraftRestored={() => setInitialDraft(null)}
-                  prefilledVehicle={builderPrefill ? {
-                    make: builderPrefill.vehicleMake,
-                    model: builderPrefill.vehicleModel,
-                    size: builderPrefill.vehicleSize,
-                    year: builderPrefill.vehicleYear,
-                  } : null}
-                  prefilledAddonIds={builderPrefill?.addonIds ?? null}
-                  prefilledAdditionalVehicles={builderPrefill?.additionalVehicles ?? null}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* View More Services */}
-          <div className="mt-10 text-center">
-            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#F3E5AB] transition-colors group">
-              View More Services
-              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
-            </Link>
-          </div>
 
         </div>
       </motion.section>
@@ -2191,7 +2113,7 @@ const ULTIMATE_CARDS = [
       "Hot Water Extraction & Deep Shampooing (Seats & Carpets)",
       "Dog Hair & Heavy Dirt Removal",
     ],
-    isFlagship: false,
+    isFlagship: true,
   },
   {
     name: "Ultimate Interior + Exterior Reset",
@@ -2307,7 +2229,10 @@ function UltimateServiceCard({
               }
               <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">{badge.label}</span>
             </div>
-            {isFlagship && (
+            {/* "Most Complete" only on the truly flagship card (gem icon).
+                Both cards share the premium styling via isFlagship now, but
+                this label still belongs only to Interior + Exterior. */}
+            {badge.icon === "gem" && (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08]">
                 <span className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-400">Most Complete</span>
               </div>
