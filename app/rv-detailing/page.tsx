@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { RVDetailingPage } from "@/components/landing/RVDetailingPage";
 import type { Service } from "@/app/page";
+import { RV_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
   title: "Mobile RV Detailing Vermont | Per-Foot Pricing | Arise & Shine VT",
@@ -51,8 +52,14 @@ async function DataProvider() {
 
 export default function RVDetailingRoute() {
   return (
-    <Suspense fallback={<RVDetailingPage services={[]} />}>
-      <DataProvider />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(RV_DETAILING_SCHEMA) }}
+      />
+      <Suspense fallback={<RVDetailingPage services={[]} />}>
+        <DataProvider />
+      </Suspense>
+    </>
   );
 }

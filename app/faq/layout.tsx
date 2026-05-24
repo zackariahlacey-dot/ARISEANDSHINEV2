@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FAQ_SECTIONS, buildFaqPageSchema } from "@/lib/faqContent";
 
 export const metadata: Metadata = {
   title: "FAQ | Mobile Detailing Questions Answered | Arise & Shine VT",
@@ -8,8 +9,19 @@ export const metadata: Metadata = {
     description: "Everything you need to know about booking mobile auto, boat, and RV detailing in Vermont.",
     url: "https://www.ariseandshinevt.com/faq",
   },
+  alternates: { canonical: "https://www.ariseandshinevt.com/faq" },
 };
 
 export default function FaqLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildFaqPageSchema(FAQ_SECTIONS)),
+        }}
+      />
+      {children}
+    </>
+  );
 }

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { DetailingPage } from "@/components/landing/DetailingPage";
 import type { Service } from "@/app/page";
+import { AUTO_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
   title: "Mobile Auto Detailing Vermont | Interior, Exterior & Full Detail | Arise & Shine VT",
@@ -49,8 +50,14 @@ async function DataProvider() {
 
 export default function DetailingRoute() {
   return (
-    <Suspense fallback={<DetailingPage services={[]} />}>
-      <DataProvider />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(AUTO_DETAILING_SCHEMA) }}
+      />
+      <Suspense fallback={<DetailingPage services={[]} />}>
+        <DataProvider />
+      </Suspense>
+    </>
   );
 }

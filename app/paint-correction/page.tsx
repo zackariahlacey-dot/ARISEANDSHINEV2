@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { PaintCorrectionPage } from "@/components/landing/PaintCorrectionPage";
+import { PAINT_CORRECTION_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
   title: "Paint Correction Vermont | Swirl Removal & Restoration | Arise & Shine VT",
@@ -40,8 +41,14 @@ async function DataProvider() {
 
 export default function PaintCorrectionRoute() {
   return (
-    <Suspense fallback={<PaintCorrectionPage services={[]} />}>
-      <DataProvider />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(PAINT_CORRECTION_SCHEMA) }}
+      />
+      <Suspense fallback={<PaintCorrectionPage services={[]} />}>
+        <DataProvider />
+      </Suspense>
+    </>
   );
 }
