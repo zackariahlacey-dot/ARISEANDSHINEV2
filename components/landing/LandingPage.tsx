@@ -37,6 +37,7 @@ import {
   Clock,
   Plus,
   Sofa,
+  ChevronRight,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -73,7 +74,10 @@ import { RecentActivityToast } from "./RecentActivityToast";
 import { Button } from "@/components/ui/button";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { LegalModal, LegalSection, LegalList } from "./LegalModal";
-import { BeforeAfterSlider } from "./BeforeAfterSlider";
+import { BeforeAfterGallery } from "./BeforeAfterGallery";
+import { NewsletterSignup } from "./NewsletterSignup";
+import { NextAvailableBanner } from "./NextAvailableBanner";
+import type { NextAvailableSlot } from "@/lib/nextAvailable";
 
 const sectionViewport = { once: true, margin: "-100px" };
 const sectionVariants = {
@@ -144,7 +148,7 @@ const REVIEWS = [
 
 type ExpandedBookingId = "hero" | "services" | "ultimate" | "boat" | "rv" | null;
 
-export function LandingPage({ services, addonOverrides = {} }: { services: Service[]; addonOverrides?: import("@/app/actions/addonPricing").AddonOverrideMap }) {
+export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: { services: Service[]; addonOverrides?: import("@/app/actions/addonPricing").AddonOverrideMap; nextSlot?: NextAvailableSlot | null }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -403,6 +407,16 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
     }
   };
 
+  // Auto-open booking when arriving with ?book=1 (used by town landing pages).
+  useEffect(() => {
+    if (!mounted) return;
+    if (searchParams.get("book") !== "1") return;
+    setExpandedBookingId("hero");
+    const path = window.location.pathname + (window.location.hash || "");
+    window.history.replaceState(null, "", path || "/");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [mounted, searchParams]);
+
   const scrollToServices = useCallback(() => {
     document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -563,7 +577,7 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
       >
         {/* Moody automotive background image — barely visible texture layer (above fold, priority) */}
         <Image
-          src="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?q=80&w=2000"
+          src="/bmw.jpg"
           alt=""
           aria-hidden
           fill
@@ -591,6 +605,19 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
         />
 
         <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 w-full max-w-3xl mx-auto text-center">
+          {/* Live scarcity banner — only shown when there is a real open slot */}
+          <NextAvailableBanner
+            slot={nextSlot}
+            onBookNow={() => {
+              openBooking();
+              // Allow the BookingSection animation to mount, then scroll it
+              // into the viewport so the click feels like it did something.
+              setTimeout(() => {
+                document.getElementById("hero-booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 120);
+            }}
+          />
+
           {/* Eyebrow pill */}
           <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-10">
             <MapPin size={10} className="shrink-0" />
@@ -651,7 +678,7 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
 
           {/* Hero inline-booking dropdown — opens from any "Book Now" CTA. */}
           {mounted && (
-            <div className="w-full max-w-3xl mx-auto mt-2">
+            <div id="hero-booking" className="w-full max-w-3xl mx-auto mt-2 scroll-mt-24">
               <BookingSection
                 isVisible={expandedBookingId === "hero"}
                 onClose={() => setExpandedBookingId(null)}
@@ -699,9 +726,9 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
           {/* Stats row — added bottom padding for spacing */}
           <div className="flex flex-row items-start justify-center gap-4 md:gap-12 w-full pb-12 md:pb-20">
             {[
-              { value: "500+", label: "Vehicles Detailed" },
-              { value: "5★", label: "Average Rating" },
-              { value: "100%", label: "Mobile Service" },
+              { value: "263+", label: "Vehicles Detailed" },
+              { value: "5.0★", label: "On Google · 10 reviews" },
+              { value: "100%", label: "Mobile · We come to you" },
             ].map((stat) => (
               <div key={stat.label} className="flex flex-col items-center text-center flex-1">
                 <div className="text-2xl md:text-4xl font-bold text-white">
@@ -731,10 +758,10 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
                   <div key={groupIdx} className="flex gap-12 md:gap-24 items-center">
                     {[
                       { icon: ShieldCheck, label: "Fully Insured" },
-                      { icon: Leaf, label: "Eco-Friendly Products" },
-                      { icon: BadgeCheck, label: "Satisfaction Guaranteed" },
+                      { icon: Leaf, label: "Lake-Safe Products" },
                       { icon: MapPin, label: "VT Owned & Operated" },
-                      { icon: Sparkles, label: "Professional Results" },
+                      { icon: CalendarClock, label: "Same-Week Openings" },
+                      { icon: CalendarRange, label: "Real-Time Online Booking" },
                     ].map(({ icon: Icon, label }, i) => (
                       <div
                         key={`${label}-${i}`}
@@ -758,8 +785,8 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
 
       </motion.section>
 
-      {/* ─── Before & After Slider ───────────────────────────────── */}
-      <BeforeAfterSlider />
+      {/* ─── Before & After Gallery ───────────────────────────────── */}
+      <BeforeAfterGallery />
 
 
       {/* ─── Our Services ─────────────────────────────────────────────────────────────── */}
@@ -773,80 +800,15 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
       >
         <div className="w-full max-w-7xl mx-auto">
 
-          {/* Section header */}
+          {/* Section header — leads with the Ultimate Series as the featured package tier */}
           <div className="text-center mb-8 md:mb-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Our Services</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">Pick the detail that fits.</h2>
-            <p className="text-zinc-500 text-sm mt-2">Three foundations, four sizes, fully transparent pricing.</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37] mb-2">Signature Packages</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">The Ultimate Series.</h2>
+            <p className="text-zinc-500 text-sm mt-2">Our deepest-reset packages — most-requested by Vermont owners.</p>
           </div>
 
-          {/* ── Basic services carousel (mobile) + grid (desktop) ──── */}
-          {mounted && (
-            <div className="flex flex-col items-center w-full lg:hidden">
-              <div
-                ref={carouselRef}
-                onScroll={handleCarouselScroll}
-                className="w-full flex overflow-x-auto snap-x snap-mandatory"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-              >
-                {carouselServices.map((service) => (
-                  <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
-                    <div className="w-full max-w-[360px]">
-                      <ServiceCard service={service} onBook={() => openBooking(service)} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2.5 mt-4">
-                {carouselServices.map((service, i) => (
-                  <button key={service.id} type="button" onClick={() => scrollToCard(i)} aria-label={service.name} className="group">
-                    <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
-            </div>
-          )}
-
-          {/* Desktop: 3-up grid of basic service cards */}
-          {carouselServices.length > 0 && (
-            <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
-              {carouselServices.map((service) => (
-                <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
-              ))}
-            </div>
-          )}
-
-          {/* ── Inline booking — opens when a basic service card is clicked ── */}
-          {mounted && expandedBookingId === "services" && (
-            <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
-              <BookingSection
-                isVisible={true}
-                onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
-                selectedService={selectedService}
-                services={services}
-                addonOverrides={addonOverrides}
-                onSelectService={setSelectedService}
-                onClearService={() => setSelectedService(null)}
-                onBookingSuccess={handleBookingSuccess}
-                initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
-                initialDraft={initialDraft}
-                onDraftRestored={() => setInitialDraft(null)}
-                prefilledVehicle={builderPrefill ? {
-                  make: builderPrefill.vehicleMake,
-                  model: builderPrefill.vehicleModel,
-                  size: builderPrefill.vehicleSize,
-                  year: builderPrefill.vehicleYear,
-                } : null}
-                prefilledAddonIds={builderPrefill?.addonIds ?? null}
-                prefilledAdditionalVehicles={builderPrefill?.additionalVehicles ?? null}
-              />
-            </div>
-          )}
-
-          {/* ── Ultimate Series — premium deep-reset cards ── */}
-          {(
-          <div className="mt-14 md:mt-20">
+          {/* ── Ultimate Series — premium deep-reset cards (now featured first) ── */}
+          <div>
             {/* Ultimate Series intro */}
             <div className="mb-8 md:mb-10">
               <div className="flex items-center gap-3 mb-6">
@@ -895,17 +857,75 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
               ))}
             </div>
 
+            {/* ── Animated CTA — pushes Flagship Ultimate booking ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/30 my-10 md:my-14"
+              style={{ background: "linear-gradient(135deg, #18181b 0%, #0c0c0d 100%)" }}
+            >
+              {/* Static gold radial — top-right anchor */}
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: "radial-gradient(ellipse 70% 60% at 100% 0%, rgba(212,175,55,0.18) 0%, transparent 60%)" }}
+              />
+              {/* Animated gold sweep — sweeps left↔right, draws the eye */}
+              <motion.div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                animate={{
+                  background: [
+                    "radial-gradient(ellipse 40% 80% at 0% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
+                    "radial-gradient(ellipse 40% 80% at 100% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
+                    "radial-gradient(ellipse 40% 80% at 0% 50%, rgba(212,175,55,0.12) 0%, transparent 60%)",
+                  ],
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+              />
+              {/* Top gold accent line */}
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
+
+              <div className="relative p-8 md:p-14 flex flex-col items-center text-center gap-5">
+                <motion.div
+                  initial={{ scale: 0.92, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.15 }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_24px_rgba(212,175,55,0.15)]"
+                >
+                  <Gem size={11} className="text-[#D4AF37]" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">Flagship Service</span>
+                </motion.div>
+
+                <h3 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                  Reserve Your <span className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent">Ultimate</span> Detail.
+                </h3>
+                <p className="text-zinc-400 text-base md:text-lg max-w-xl leading-relaxed">
+                  Showroom-quality reset, inside and out. Real-time availability — pick a slot and I&apos;ll come to you.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => openUltimateBooking("Ultimate Interior + Exterior Reset")}
+                  className="btn-primary-gold-shimmer group relative mt-2 inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#D4AF37] text-zinc-950 font-black tracking-wide text-base md:text-lg hover:scale-[1.04] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] active:scale-[0.98] transition-all duration-500 ease-in-out"
+                >
+                  <span className="relative z-[1] inline-flex items-center gap-2">
+                    Book Your Ultimate Detail
+                    <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                  </span>
+                </button>
+
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-1">
+                  Or scroll for foundation tiers
+                </p>
+              </div>
+            </motion.div>
+
             {/* ── Ultimate Paint Correction (sister sub-section) ── */}
             <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
-          </div>
-          )}
-
-          {/* View More Services */}
-          <div className="mt-10 text-center">
-            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#F3E5AB] transition-colors group">
-              View More Services
-              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
-            </Link>
           </div>
 
           {/* ── Inline booking for ultimate ── */}
@@ -927,6 +947,93 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
               />
             </div>
           )}
+
+          {/* ── Foundation tier (basic services) — secondary section ──── */}
+          <div className="mt-16 md:mt-24">
+            <div className="mb-8 md:mb-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 h-px bg-white/[0.05]" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 shrink-0">Or pick a foundation tier</span>
+                <div className="flex-1 h-px bg-white/[0.05]" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl md:text-3xl font-black text-white">Interior · Exterior · Full Detail</h3>
+                <p className="text-zinc-500 text-sm mt-2">Three foundations, three sizes, fully transparent pricing.</p>
+              </div>
+            </div>
+
+            {/* ── Basic services carousel (mobile) + grid (desktop) ──── */}
+            {mounted && (
+              <div className="flex flex-col items-center w-full lg:hidden">
+                <div
+                  ref={carouselRef}
+                  onScroll={handleCarouselScroll}
+                  className="w-full flex overflow-x-auto snap-x snap-mandatory"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+                >
+                  {carouselServices.map((service) => (
+                    <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
+                      <div className="w-full max-w-[360px]">
+                        <ServiceCard service={service} onBook={() => openBooking(service)} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2.5 mt-4">
+                  {carouselServices.map((service, i) => (
+                    <button key={service.id} type="button" onClick={() => scrollToCard(i)} aria-label={service.name} className="group">
+                      <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
+              </div>
+            )}
+
+            {/* Desktop: 3-up grid of basic service cards */}
+            {carouselServices.length > 0 && (
+              <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
+                {carouselServices.map((service) => (
+                  <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
+                ))}
+              </div>
+            )}
+
+            {/* ── Inline booking — opens when a basic service card is clicked ── */}
+            {mounted && expandedBookingId === "services" && (
+              <div className="w-full max-w-[450px] lg:max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                <BookingSection
+                  isVisible={true}
+                  onClose={() => { setExpandedBookingId(null); setBuilderPrefill(null); }}
+                  selectedService={selectedService}
+                  services={services}
+                  addonOverrides={addonOverrides}
+                  onSelectService={setSelectedService}
+                  onClearService={() => setSelectedService(null)}
+                  onBookingSuccess={handleBookingSuccess}
+                  initialLoyaltyDiscountPct={authLoyaltyDiscountPct}
+                  initialDraft={initialDraft}
+                  onDraftRestored={() => setInitialDraft(null)}
+                  prefilledVehicle={builderPrefill ? {
+                    make: builderPrefill.vehicleMake,
+                    model: builderPrefill.vehicleModel,
+                    size: builderPrefill.vehicleSize,
+                    year: builderPrefill.vehicleYear,
+                  } : null}
+                  prefilledAddonIds={builderPrefill?.addonIds ?? null}
+                  prefilledAdditionalVehicles={builderPrefill?.additionalVehicles ?? null}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* View More Services */}
+          <div className="mt-10 text-center">
+            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#F3E5AB] transition-colors group">
+              View More Services
+              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+            </Link>
+          </div>
 
         </div>
       </motion.section>
@@ -1514,10 +1621,11 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
             }}
           >
             <h2 className="text-3xl md:text-5xl font-black tracking-tight mb-4 text-zinc-100">
-              Ready for a Spotless Ride?
+              Let&apos;s get your vehicle on the calendar.
             </h2>
             <p className="text-zinc-400 mb-8 md:mb-10 text-base md:text-lg">
-              Book your mobile detail in minutes. We&apos;ll handle the rest.
+              Real-time availability, transparent pricing, and Vermont&apos;s only owner-operated
+              5-star mobile detailer. Pick a time tonight — I&apos;ll come to you.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 w-full">
               <button
@@ -1525,14 +1633,14 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
                 onClick={() => openBooking()}
                 className="btn-primary-gold-shimmer w-full sm:w-auto bg-zinc-900/80 backdrop-blur-md border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] px-8 py-3 rounded-lg font-semibold active:scale-[0.98] transition-all duration-500 ease-in-out"
               >
-                <span className="relative z-[1]">Book Now</span>
+                <span className="relative z-[1]">See Open Slots</span>
               </button>
               <a
                 href="tel:8025855563"
                 className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-lg border border-zinc-800 text-zinc-300 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] hover:bg-[#D4AF37]/5 transition-all duration-300 font-semibold"
               >
                 <Phone className="w-4 h-4 shrink-0" />
-                Call 802-585-5563
+                Or Call Me — 802-585-5563
               </a>
             </div>
           </div>
@@ -1562,6 +1670,11 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
         className="border-t border-white/[0.06] py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-zinc-950/50"
       >
         <div className="w-full max-w-7xl mx-auto space-y-6">
+          {/* Newsletter signup — captures leads who aren't ready to book yet */}
+          <div className="mx-auto w-full max-w-md rounded-2xl border border-white/[0.06] bg-zinc-900/40 p-5 backdrop-blur-sm">
+            <NewsletterSignup source="footer" />
+          </div>
+
           {/* Main row */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -1606,6 +1719,14 @@ export function LandingPage({ services, addonOverrides = {} }: { services: Servi
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 border-t border-white/[0.04]">
             <Link href="/my-detail" className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors">
               Track My Appointment
+            </Link>
+            <span className="text-zinc-800 text-xs">·</span>
+            <Link href="/guides" className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors">
+              Detailing Guides
+            </Link>
+            <span className="text-zinc-800 text-xs">·</span>
+            <Link href="/service-area" className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors">
+              Service Area
             </Link>
             <span className="text-zinc-800 text-xs">·</span>
             <Link href="/gift-cards" className="text-xs text-zinc-500 hover:text-[#D4AF37] transition-colors">

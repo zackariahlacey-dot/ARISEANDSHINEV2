@@ -4572,68 +4572,70 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         </div>
                       )}
 
-                      <button
-                        onClick={handlePayNow}
-                        disabled={!canConfirm() || isSubmitting || isStripeLoading}
-                        className={`w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] group ${
-                            isStripeLoading
-                              ? "bg-zinc-900/90 border border-[#D4AF37] btn-loading text-zinc-950"
-                              : canConfirm() && !isSubmitting
-                                ? "bg-[#d4af37] text-zinc-950 hover:scale-[1.05] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] btn-pay-now-shimmer"
-                                : "bg-zinc-900/50 border border-white/10 text-zinc-500 opacity-60 cursor-not-allowed"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0 relative z-[1]">
-                            <div className="w-10 h-10 rounded-lg bg-black/20 border border-black/20 flex items-center justify-center shrink-0">
-                              <CreditCard className="w-5 h-5 text-zinc-950" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-base font-semibold text-inherit">
-                                {isStripeLoading ? "Processing…" : isSubscription ? `Subscribe via Stripe — $${totalAfterDiscount.toFixed(2)}` : `Pay Now — $${totalAfterDiscount.toFixed(2)}`}
-                              </div>
-                              <div className="text-xs text-zinc-700 mt-1">
-                                Secure card checkout · Instant confirmation
-                              </div>
-                            </div>
-                          </div>
-                          {!isStripeLoading && (
-                            <ChevronRight className="w-5 h-5 shrink-0 opacity-80 relative z-[1]" />
-                          )}
-                        </button>
-
+                      {/* Pay at Arrival — primary CTA (lower friction for first-time customers) */}
                       <button
                         onClick={handlePayAtArrival}
                         disabled={!canConfirm() || isSubmitting || isStripeLoading}
-                        className={`w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-500 ease-in-out active:scale-[0.99] ${
+                        className={`w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-300 active:scale-[0.99] group ${
                           isSubmitting
-                            ? "bg-zinc-950/50 border border-white/10 btn-loading"
+                            ? "bg-zinc-900/90 border border-[#D4AF37] btn-loading text-zinc-950"
                             : canConfirm() && !isStripeLoading
+                              ? "bg-[#d4af37] text-zinc-950 hover:scale-[1.05] hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] btn-pay-now-shimmer"
+                              : "bg-zinc-900/50 border border-white/10 text-zinc-500 opacity-60 cursor-not-allowed"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 relative z-[1]">
+                          <div className="w-10 h-10 rounded-lg bg-black/20 border border-black/20 flex items-center justify-center shrink-0">
+                            <HandCoins className="w-5 h-5 text-zinc-950" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-base font-semibold text-inherit">
+                              {isSubmitting
+                                ? "Processing…"
+                                : isSubscription
+                                  ? "Subscribe & Pay at Arrival"
+                                  : showDualPrice
+                                    ? `Book — Pay $${totalAfterDiscount.toFixed(2)} on Arrival`
+                                    : `Book — Pay $${totalAfterDiscount.toFixed(2)} on Arrival`}
+                            </div>
+                            <div className="text-xs text-zinc-800 mt-1">
+                              {showDualPrice && !isSubmitting
+                                ? <>Cash or card on the day · <span className="font-bold">or pay ${cashTotal.toFixed(2)} cash · save ${(totalAfterDiscount - cashTotal).toFixed(0)}</span></>
+                                : "Cash or card on the day · We'll confirm via text"}
+                            </div>
+                          </div>
+                        </div>
+                        {!isSubmitting && (
+                          <ChevronRight className="w-5 h-5 shrink-0 opacity-80 relative z-[1]" />
+                        )}
+                      </button>
+
+                      {/* Pay Now — secondary outlined option (instant lock-in for those who prefer) */}
+                      <button
+                        onClick={handlePayNow}
+                        disabled={!canConfirm() || isSubmitting || isStripeLoading}
+                        className={`w-full min-h-[50px] rounded-xl p-4 flex items-center justify-between text-left transition-all duration-500 ease-in-out active:scale-[0.99] ${
+                          isStripeLoading
+                            ? "bg-zinc-950/50 border border-white/10 btn-loading"
+                            : canConfirm() && !isSubmitting
                               ? "bg-transparent border border-[#d4af37]/50 text-[#d4af37] font-medium tracking-wide hover:bg-[#d4af37]/10 hover:border-[#d4af37] hover:-translate-y-0.5 btn-pay-arrival-shimmer"
                               : "bg-zinc-950/30 border border-white/5 text-zinc-500 opacity-60 cursor-not-allowed"
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 relative z-[1]">
                           <div className="w-10 h-10 rounded-lg bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center shrink-0">
-                            <HandCoins className="w-5 h-5 text-[#d4af37]" />
+                            <CreditCard className="w-5 h-5 text-[#d4af37]" />
                           </div>
                           <div className="min-w-0">
                             <div className="text-base font-medium text-inherit tracking-wide">
-                              {isSubmitting
-                                ? "Processing…"
-                                : isSubscription
-                                  ? "Subscribe & Pay at Arrival"
-                                  : showDualPrice
-                                    ? `Pay $${totalAfterDiscount.toFixed(2)} on Arrival`
-                                    : "Book & Pay at Arrival"}
+                              {isStripeLoading ? "Processing…" : isSubscription ? `Subscribe via Stripe — $${totalAfterDiscount.toFixed(2)}` : `Or pay now with card — $${totalAfterDiscount.toFixed(2)}`}
                             </div>
                             <div className="text-xs text-zinc-500 mt-1">
-                              {showDualPrice && !isSubmitting
-                                ? <>We&apos;ll confirm via text · <span className="text-[#D4AF37] font-bold">or ${cashTotal.toFixed(2)} cash &middot; save ${(totalAfterDiscount - cashTotal).toFixed(0)}</span></>
-                                : "We'll confirm via text · Pay cash or card on the day"}
+                              Secure Stripe checkout · Instant confirmation
                             </div>
                           </div>
                         </div>
-                        {!isSubmitting && (
+                        {!isStripeLoading && (
                           <ChevronRight className="w-5 h-5 text-[#d4af37]/70 shrink-0 relative z-[1]" />
                         )}
                       </button>

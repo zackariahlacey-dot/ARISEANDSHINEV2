@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Calendar, Layers } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Calendar, Layers, Star, ExternalLink } from "lucide-react";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
@@ -50,8 +50,20 @@ export default function ContactPage() {
             </h1>
             <p className="text-zinc-400 text-base max-w-xl mx-auto leading-relaxed">
               Questions about a service, want to get a quote, or just need to talk to a real person?
-              We&apos;re here to help.
+              I&apos;m here to help.
             </p>
+            <a
+              href="https://g.page/r/Cd76zEF6l465EAI/review"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-5 px-3.5 py-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.06] hover:bg-[#D4AF37]/[0.12] transition-colors group"
+            >
+              <Star size={12} className="text-[#D4AF37] fill-[#D4AF37]" />
+              <span className="text-xs font-bold text-white">5.0 on Google</span>
+              <span className="text-xs text-zinc-500">·</span>
+              <span className="text-xs text-zinc-400 group-hover:text-[#D4AF37] transition-colors">Read reviews</span>
+              <ExternalLink size={10} className="text-zinc-500 group-hover:text-[#D4AF37] transition-colors" />
+            </a>
           </div>
 
           {/* Contact cards — all centered */}
@@ -89,13 +101,13 @@ export default function ContactPage() {
                 <MapPin size={20} className="text-[#D4AF37]" />
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-1">Service Area</p>
-              <p className="text-white font-bold text-lg mb-1">Vermont, USA</p>
-              <p className="text-zinc-500 text-xs leading-relaxed">
-                Fully mobile — we come to you.{" "}
-                <Link href="/service-area" className="text-[#D4AF37] hover:underline">
-                  View our full service area →
-                </Link>
+              <p className="text-white font-bold text-base mb-1">Williston, VT 05495</p>
+              <p className="text-zinc-400 text-xs leading-relaxed mb-2">
+                Home base. Serving all of Chittenden County and within roughly 1.5 hours of Williston.
               </p>
+              <Link href="/service-area" className="text-[#D4AF37] hover:underline text-xs font-semibold">
+                See full coverage →
+              </Link>
             </div>
 
             {/* Hours */}

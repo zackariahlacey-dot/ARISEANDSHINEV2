@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Shield, Star, Leaf, Sparkles, Phone, Mail, MapPin, Heart, Award } from "lucide-react";
+import { Shield, Star, Leaf, Sparkles, Phone, Mail, MapPin, Heart, Award, ExternalLink } from "lucide-react";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
@@ -49,13 +49,25 @@ export default function AboutPage() {
           <div className="text-center">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">Our Story</p>
             <h1 className="text-3xl sm:text-4xl font-black text-white mb-5 tracking-tight leading-tight">
-              Vermont&apos;s Mobile Detailing<br className="hidden sm:block" /> Specialist
+              Hi, I&apos;m Zackariah.<br className="hidden sm:block" /> I started Arise &amp; Shine VT.
             </h1>
             <p className="text-zinc-400 text-base leading-relaxed max-w-2xl mx-auto">
-              Arise &amp; Shine VT was built on a simple belief: your vehicle deserves professional-level care
-              without the hassle of dropping it off somewhere. We bring the detail shop to your driveway,
-              your marina, or wherever life takes you.
+              Back in July 2025, I started this business with $400 and an idea — bring real, professional-grade
+              detailing to every Vermont driveway, office lot, and marina. No drop-offs, no waiting rooms,
+              no hassle. Just a clean car, right where you parked it.
             </p>
+            <a
+              href="https://g.page/r/Cd76zEF6l465EAI/review"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-5 px-3.5 py-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.06] hover:bg-[#D4AF37]/[0.12] transition-colors group"
+            >
+              <Star size={12} className="text-[#D4AF37] fill-[#D4AF37]" />
+              <span className="text-xs font-bold text-white">5.0 on Google</span>
+              <span className="text-xs text-zinc-500">·</span>
+              <span className="text-xs text-zinc-400 group-hover:text-[#D4AF37] transition-colors">Read reviews</span>
+              <ExternalLink size={10} className="text-zinc-500 group-hover:text-[#D4AF37] transition-colors" />
+            </a>
           </div>
 
           {/* Who we are + What we do — two centered columns */}
@@ -63,22 +75,24 @@ export default function AboutPage() {
             <div className="grid md:grid-cols-2 gap-10">
               {/* Who We Are */}
               <div className="flex flex-col items-center text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4AF37] mb-4">Who We Are</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4AF37] mb-4">My Story</p>
                 <div className="space-y-4 text-zinc-400 text-sm leading-relaxed">
                   <p>
-                    Arise &amp; Shine VT is an owner-operated mobile detailing business proudly serving Vermont.
-                    Every appointment is handled personally — you&apos;re not getting a rotating crew or a franchise
-                    technician. You&apos;re getting the owner, showing up with professional equipment and a
-                    genuine commitment to the result.
+                    I&apos;m Zackariah, the guy who shows up. When you book with Arise &amp; Shine VT, you&apos;re
+                    not getting a rotating crew, a franchise driver, or a subcontractor — you&apos;re getting me,
+                    with professional equipment and a real commitment to leaving your vehicle looking better
+                    than the day you bought it.
                   </p>
                   <p>
-                    We specialize in mobile auto, boat, and RV detailing across the Green Mountain State.
-                    Whether it&apos;s your daily driver, your pontoon coming out of winter storage, or your Class A
-                    RV prepping for a summer trip — we&apos;ve got you covered.
+                    The whole thing started in July 2025 with $400 and a dream: detailing shouldn&apos;t require
+                    you to drive across town, hand over your keys, and rearrange your day. So I built a fully
+                    self-contained mobile setup — my own water, generator, and pro-grade tools — and started
+                    knocking on driveways. Hundreds of vehicles later, I&apos;m still doing every detail myself.
                   </p>
                   <p>
-                    Fully self-contained: our own water, generator, and professional-grade tools.
-                    Your driveway, marina, storage lot — we come to you.
+                    I detail cars, trucks, SUVs, boats, and RVs all across Vermont — from Burlington
+                    driveways to Malletts Bay docks to RV storage lots out by Milton. Wherever you are,
+                    I&apos;ll come to you.
                   </p>
                 </div>
               </div>
