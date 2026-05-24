@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Phone, Menu, X, Sparkles, Anchor, Truck,
   LogIn, LogOut, LayoutDashboard, Gift, User,
-  HelpCircle, MapPin, CalendarSearch, ChevronRight, Home, Layers,
+  HelpCircle, MapPin, CalendarSearch, ChevronRight, Home, Layers, BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -38,6 +38,7 @@ const SERVICE_LINKS = [
 
 const MORE_LINKS = [
   { href: "/about",        label: "About Us",     icon: User        },
+  { href: "/guides",       label: "Detailing Guides", icon: BookOpen },
   { href: "/faq",          label: "FAQ",          icon: HelpCircle  },
   { href: "/service-area", label: "Service Area", icon: MapPin      },
 ];

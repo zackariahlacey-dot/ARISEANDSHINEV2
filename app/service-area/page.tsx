@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MapPin, Car, Anchor, Truck, Phone, ArrowLeft, DollarSign } from "lucide-react";
+import { MapPin, Car, Anchor, Truck, Phone, ArrowLeft, DollarSign, ChevronRight } from "lucide-react";
 import { SiteHeader } from "@/components/landing/SiteHeader";
+import { TOWNS } from "@/lib/townContent";
 
 export const metadata: Metadata = {
   title: "Mobile Detailing Service Area | Burlington, Williston & Chittenden County, VT",
@@ -69,6 +70,33 @@ export default function ServiceAreaPage() {
               </Link>
             ))}
           </div>
+
+          {/* Individual town landing pages */}
+          <section className="w-full flex flex-col gap-4">
+            <div className="text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#D4AF37] mb-2">Detailed coverage by city</p>
+              <h2 className="text-xl sm:text-2xl font-black text-white">Pick your town</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {TOWNS.map((t) => (
+                <Link key={t.slug} href={`/service-area/${t.slug}`}
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/60 backdrop-blur-sm px-4 py-3 hover:border-[#D4AF37]/30 transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <MapPin size={14} className="text-[#D4AF37] shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white truncate group-hover:text-[#D4AF37] transition-colors">{t.shortName}, VT</p>
+                      <p className="text-[11px] text-zinc-500 truncate">
+                        {t.driveTimeMin === 0 ? "Home base" : `~${t.driveTimeMin} min from base`}
+                        {t.waterfront && " · waterfront"}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </section>
 
           {/* Travel fee card — centered header, body text readable */}
           <div className="w-full rounded-2xl border border-white/[0.06] bg-zinc-900/60 backdrop-blur-sm p-7 flex flex-col items-center text-center gap-5">
