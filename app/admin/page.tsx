@@ -14,7 +14,7 @@ import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
 import { sendStripePaymentLink, getPaymentLinkUrl, markPaymentLinkSent } from "@/app/actions/sendStripePaymentLink";
 import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
 import { BookingVehiclesPanel } from "@/components/admin/BookingVehiclesPanel";
-import { useWeather } from "@/lib/useWeather";
+import { useWeather, forecastForDate } from "@/lib/useWeather";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
@@ -252,6 +252,21 @@ export default function TodayPage() {
     }) ?? null;
   }, [todayJobs, nowMins]);
 
+  // Closest upcoming booking on ANY future day — used when today is empty
+  const nextUpcomingJob = useMemo(() => {
+    if (!bookings) return null;
+    return bookings
+      .filter((b: any) =>
+        b.status === "confirmed" &&
+        b.service_name !== "Personal Block" &&
+        b.booking_date > todayStr
+      )
+      .sort((a: any, b: any) =>
+        (a.booking_date ?? "").localeCompare(b.booking_date ?? "") ||
+        (a.booking_time ?? "").localeCompare(b.booking_time ?? "")
+      )[0] ?? null;
+  }, [bookings, todayStr]);
+
   const countdown = useCountdown(nextJob);
 
   // Week at a glance
@@ -420,15 +435,14 @@ export default function TodayPage() {
           onOmw={() => handleSendOmw(nextJob)}
         />
       ) : todayJobs.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
-          <p className="text-zinc-500 text-sm">No jobs scheduled today.</p>
-          <button
-            onClick={() => router.push("/admin/schedule?new=1")}
-            className="mt-3 text-amber-500 text-xs font-black uppercase tracking-wider hover:underline"
-          >
-            + Add a booking
-          </button>
-        </div>
+        <NextUpcomingHero
+          job={nextUpcomingJob}
+          onOpen={() => nextUpcomingJob && setActiveBooking(nextUpcomingJob)}
+          onCall={() => nextUpcomingJob && window.open(`tel:${bPhone(nextUpcomingJob)}`, "_self")}
+          onText={() => nextUpcomingJob && window.open(`sms:${bPhone(nextUpcomingJob)}`, "_self")}
+          onNav={() => { if (!nextUpcomingJob) return; const a = bAddress(nextUpcomingJob); if (a) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`, "_blank"); }}
+          onAddBooking={() => router.push("/admin/schedule?new=1")}
+        />
       ) : (
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 text-center">
           <Check size={24} className="mx-auto text-emerald-500 mb-2" />
@@ -1055,6 +1069,215 @@ function JobCard({
             <Banknote size={11} /> Cash
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Live, minute-precise countdown to a booking_date + booking_time pair. */
+function useTimeUntilBooking(dateStr: string | null, timeStr: string | null) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return useMemo(() => {
+    if (!dateStr) return null;
+    const t = (timeStr ?? "00:00").replace(/\s/g, "");
+    let h = 0, m = 0;
+    const match24 = t.match(/^(\d{1,2}):(\d{2})/);
+    const matchAmPm = t.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])?/);
+    if (match24) {
+      h = parseInt(match24[1], 10);
+      m = parseInt(match24[2], 10);
+      if (matchAmPm?.[3]) {
+        const isPm = matchAmPm[3].toLowerCase() === "pm";
+        if (isPm && h !== 12) h += 12;
+        if (!isPm && h === 12) h = 0;
+      }
+    }
+    const target = new Date(dateStr + "T00:00:00");
+    target.setHours(h, m, 0, 0);
+    const diffMs = target.getTime() - now;
+    const totalMin = Math.floor(diffMs / 60000);
+    const past = totalMin < 0;
+    const abs = Math.abs(totalMin);
+    return {
+      past,
+      days:    Math.floor(abs / (60 * 24)),
+      hours:   Math.floor((abs % (60 * 24)) / 60),
+      minutes: abs % 60,
+      totalMin,
+    };
+  }, [dateStr, timeStr, now]);
+}
+
+function formatCountdown(c: { days: number; hours: number; minutes: number; past: boolean } | null): string {
+  if (!c) return "—";
+  if (c.past) return "now";
+  const parts: string[] = [];
+  if (c.days > 0)  parts.push(`${c.days}d`);
+  if (c.hours > 0) parts.push(`${c.hours}h`);
+  if (c.minutes > 0 && c.days === 0) parts.push(`${c.minutes}m`);
+  return parts.join(" ") || "<1m";
+}
+
+function NextUpcomingHero({
+  job, onOpen, onCall, onText, onNav, onAddBooking,
+}: {
+  job: any | null;
+  onOpen: () => void;
+  onCall: () => void;
+  onText: () => void;
+  onNav: () => void;
+  onAddBooking: () => void;
+}) {
+  const { data: weather } = useWeather();
+  const today = new Date();
+  const todayStr = format(today, "yyyy-MM-dd");
+  const tomorrowStr = format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
+
+  // Empty case: no upcoming bookings at all — premium empty hero
+  if (!job) {
+    const tomorrowFc = forecastForDate(weather?.daily, tomorrowStr);
+    return (
+      <div className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/15 bg-gradient-to-br from-[#D4AF37]/[0.05] via-zinc-900/40 to-black/40 p-5">
+        {/* Subtle radial accent */}
+        <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-[#D4AF37]/[0.08] blur-2xl pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37]/80">All clear</p>
+            <h2 className="text-2xl font-black mt-1 leading-tight tracking-tight">No jobs on the books</h2>
+            <p className="text-xs text-zinc-500 mt-1">Schedule's wide open — perfect time to chase a squeeze.</p>
+          </div>
+          {weather && (
+            <div className="text-right shrink-0 bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2">
+              <p className="text-2xl leading-none">{weather.emoji}</p>
+              <p className="text-[10px] font-black text-zinc-300 mt-1 tabular-nums">{weather.temp}°F</p>
+              <p className="text-[9px] uppercase tracking-widest text-zinc-600">now</p>
+            </div>
+          )}
+        </div>
+
+        {tomorrowFc && (
+          <div className="relative flex items-center justify-between gap-2 bg-white/[0.03] border border-white/[0.05] rounded-xl px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Tomorrow</span>
+              <span className="text-lg">{tomorrowFc.emoji}</span>
+              <span className="text-xs font-black text-zinc-200 tabular-nums">
+                {tomorrowFc.high}° <span className="text-zinc-600">/ {tomorrowFc.low}°</span>
+              </span>
+            </div>
+            {tomorrowFc.precipProb > 0 && (
+              <span className="text-[10px] font-black text-sky-400 tabular-nums">{tomorrowFc.precipProb}% ☔</span>
+            )}
+          </div>
+        )}
+
+        <button
+          onClick={onAddBooking}
+          className="relative mt-3 w-full py-3 rounded-xl bg-[#D4AF37] text-black text-xs font-black uppercase tracking-[0.18em] active:scale-95 transition-all shadow-lg shadow-[#D4AF37]/20"
+        >
+          + Add a booking
+        </button>
+      </div>
+    );
+  }
+
+  // ── Premium "Next Upcoming" hero with live countdown + day forecast ──────
+  const jobDate     = new Date(job.booking_date + "T12:00:00");
+  const dateLabel   = job.booking_date === tomorrowStr ? "Tomorrow" : format(jobDate, "EEE · MMM d");
+  const phone       = bPhone(job);
+  const addr        = bAddress(job);
+  const distance    = Number(job.distance_miles ?? 0);
+  const jobFc       = forecastForDate(weather?.daily, job.booking_date);
+  const countdown   = useTimeUntilBooking(job.booking_date, job.booking_time);
+  const timeStr     = to12h((job.booking_time ?? "00:00").slice(0, 5));
+  const stop        = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
+
+  return (
+    <div
+      onClick={onOpen}
+      className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.08] via-zinc-900/60 to-black/40 cursor-pointer active:scale-[0.99] transition-transform"
+    >
+      {/* Soft gold glow */}
+      <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#D4AF37]/[0.10] blur-3xl pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent pointer-events-none" />
+
+      {/* Header band */}
+      <div className="relative flex items-center justify-between gap-3 px-5 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Next Up</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">· {dateLabel}</span>
+        </div>
+        {jobFc ? (
+          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.06] rounded-full px-2 py-1">
+            <span className="text-sm leading-none">{jobFc.emoji}</span>
+            <span className="text-[10px] font-black text-zinc-200 tabular-nums">{jobFc.high}°/{jobFc.low}°</span>
+            {jobFc.precipProb > 0 && (
+              <span className="text-[10px] font-black text-sky-400 tabular-nums">{jobFc.precipProb}%</span>
+            )}
+          </div>
+        ) : weather && (
+          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.06] rounded-full px-2 py-1">
+            <span className="text-sm leading-none">{weather.emoji}</span>
+            <span className="text-[10px] font-black text-zinc-300 tabular-nums">{weather.temp}°</span>
+          </div>
+        )}
+      </div>
+
+      {/* Hero countdown */}
+      <div className="relative px-5 pt-3 pb-1">
+        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">Starts in</p>
+        <p className="text-4xl font-black text-white mt-0.5 tracking-tight tabular-nums">
+          {formatCountdown(countdown)}
+        </p>
+      </div>
+
+      {/* Client + time + price */}
+      <div className="relative px-5 pt-3 flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-lg font-black text-zinc-100 truncate">{job.customer_name ?? "Unknown"}</p>
+          <p className="text-xs text-zinc-500 font-medium truncate mt-0.5">{job.service_name ?? "Detail"}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-base font-black text-[#D4AF37] tabular-nums">{timeStr}</p>
+          <p className="text-xs font-bold text-zinc-300 tabular-nums">${Number(job.total_price ?? 0).toFixed(0)}</p>
+        </div>
+      </div>
+
+      {/* Address strip */}
+      {addr && (
+        <div className="relative mx-5 mt-3 flex items-center gap-2 bg-black/30 border border-white/[0.05] rounded-xl px-3 py-2">
+          <MapPin size={12} className="text-zinc-500 shrink-0" />
+          <span className="text-xs text-zinc-300 truncate flex-1">{addr}</span>
+          {distance > 0 && (
+            <span className="text-[10px] font-black text-zinc-500 tabular-nums shrink-0">{distance.toFixed(1)} mi</span>
+          )}
+        </div>
+      )}
+
+      {/* Quick actions */}
+      <div className="relative grid grid-cols-4 gap-1.5 px-5 py-4">
+        {addr && (
+          <button onClick={stop(onNav)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-[#D4AF37] text-black text-[9px] font-black uppercase tracking-[0.12em] active:scale-95 transition-all">
+            <Navigation size={14} /> Nav
+          </button>
+        )}
+        {phone && (
+          <button onClick={stop(onCall)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-zinc-200 text-[9px] font-black uppercase tracking-[0.12em] active:scale-95 transition-all">
+            <Phone size={14} /> Call
+          </button>
+        )}
+        {phone && (
+          <button onClick={stop(onText)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-zinc-200 text-[9px] font-black uppercase tracking-[0.12em] active:scale-95 transition-all">
+            <MessageSquare size={14} /> Text
+          </button>
+        )}
+        <button onClick={stop(onAddBooking)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-zinc-200 text-[9px] font-black uppercase tracking-[0.12em] active:scale-95 transition-all">
+          <Zap size={14} /> Book
+        </button>
       </div>
     </div>
   );
