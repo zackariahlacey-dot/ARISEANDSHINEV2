@@ -426,46 +426,34 @@ export async function bookDetailing(
     }
   }
 
-  // ── 2. Insert vehicle ───────────────────────────────────────────────────
+  // ── 2. Find-or-create vehicle (dedupes the customer's garage) ───────────
+  const { findOrCreateVehicle } = await import("@/lib/findOrCreateVehicle");
   const vehicleYearInt = parseInt(payload.vehicleYear, 10);
-  const { data: vehicle, error: vehicleErr } = await adminSupabase
-    .from("vehicles")
-    .insert({
-      user_id: profileId,
-      make: (payload.vehicleMake || "Unknown").trim(),
-      model: (payload.vehicleModel || "Unknown").trim(),
-      year: isNaN(vehicleYearInt) ? null : vehicleYearInt,
-      size: VEHICLE_SIZE_MAP[payload.vehicleSize] || "small",
-    })
-    .select("id")
-    .single();
-
-  if (vehicleErr || !vehicle) {
-    console.error("[bookDetailing] vehicle insert error:", vehicleErr);
-    logError({ type: "booking_attempt", source: "bookDetailing/vehicle", message: vehicleErr?.message ?? "Vehicle insert failed", details: { name: payload.name, email: emailLower, phone: phoneDigits, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
-    return {
-      success: false,
-      error: `Could not save vehicle info: ${vehicleErr?.message || "Unknown error"}. Please try again.`,
-    };
+  const vehicleId = await findOrCreateVehicle(adminSupabase, {
+    userId: profileId,
+    make:   payload.vehicleMake || "Unknown",
+    model:  payload.vehicleModel || "Unknown",
+    year:   isNaN(vehicleYearInt) ? null : vehicleYearInt,
+    size:   (VEHICLE_SIZE_MAP[payload.vehicleSize] || "small") as any,
+  });
+  if (!vehicleId) {
+    logError({ type: "booking_attempt", source: "bookDetailing/vehicle", message: "Vehicle insert failed", details: { name: payload.name, email: emailLower, phone: phoneDigits, service: payload.serviceName, date: payload.bookingDate, time: payload.bookingTime } });
+    return { success: false, error: "Could not save vehicle info. Please try again." };
   }
+  const vehicle = { id: vehicleId };
 
-  // ── 2b. Insert additional vehicles (multi-vehicle booking) ──────────────
+  // ── 2b. Find-or-create additional vehicles (multi-vehicle booking) ──────
   const additionalVehicleDbIds: string[] = [];
   for (const av of (payload.additionalVehicles ?? [])) {
     const avYear = parseInt(av.vehicleYear, 10);
-    const { data: avData, error: avErr } = await adminSupabase
-      .from("vehicles")
-      .insert({
-        user_id: profileId,
-        make: (av.vehicleMake || "Unknown").trim(),
-        model: (av.vehicleModel || "Unknown").trim(),
-        year: isNaN(avYear) ? null : avYear,
-        size: VEHICLE_SIZE_MAP[av.vehicleSize] || "small",
-      })
-      .select("id")
-      .single();
-    if (avErr) console.error("[bookDetailing] additional vehicle insert error:", avErr);
-    if (avData) additionalVehicleDbIds.push(avData.id);
+    const avId = await findOrCreateVehicle(adminSupabase, {
+      userId: profileId,
+      make:   av.vehicleMake || "Unknown",
+      model:  av.vehicleModel || "Unknown",
+      year:   isNaN(avYear) ? null : avYear,
+      size:   (VEHICLE_SIZE_MAP[av.vehicleSize] || "small") as any,
+    });
+    if (avId) additionalVehicleDbIds.push(avId);
   }
 
   const additionalVehiclesForDb =

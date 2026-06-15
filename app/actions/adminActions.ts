@@ -40,34 +40,61 @@ function timeToMins(t: string): number {
 }
 
 export type BookedSlot = {
+  id: string;
   booking_time: string;
   service_name: string | null;
   vehicle_size: string | null;
   customer_name: string | null;
+  customer_phone: string | null;
+  service_address: string | null;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
   duration_mins: number;
+  total_price: number;
 };
 
 /** Returns booked slots for a date with all info needed for the admin timeline view. */
 export async function getBookedSlotsAction(date: string): Promise<BookedSlot[]> {
   const supabase = createAdminClient();
-  const { data } = await supabase
+  // FK-disambiguated embed — bookings has 4 FKs to profiles (user_id, assigned_by,
+  // assigned_to, photo_reviewed_by). Pin to user_id explicitly.
+  const { data, error } = await supabase
     .from("bookings")
-    .select("booking_time, service_name, vehicle_size, customer_name, duration_override, profiles(first_name, last_name)")
+    .select(`
+      id, booking_time, service_name, vehicle_size, customer_name, customer_phone,
+      service_address, vehicle_year, vehicle_make, vehicle_model, total_price,
+      duration_override,
+      profiles:user_id!bookings_user_id_fkey(first_name, last_name, phone)
+    `)
     .eq("booking_date", date)
     .neq("status", "cancelled");
+
+  if (error) {
+    console.error("[getBookedSlotsAction]", error.message);
+    return [];
+  }
   return (data ?? []).map(r => {
     const svcName = (r as any).service_name ?? "";
     const vSize   = (r as any).vehicle_size ?? "medium";
     const override = (r as any).duration_override;
     const dur = override != null ? override : (SERVICE_DURATIONS[svcName]?.[vSize] ?? 180);
-    const profileName = [(r as any).profiles?.first_name, (r as any).profiles?.last_name].filter(Boolean).join(" ");
+    const profile = (r as any).profiles;
+    const profileName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
     const custName = ((r as any).customer_name ?? profileName) || "Client";
     return {
-      booking_time: String(r.booking_time ?? ""),
-      service_name: svcName || null,
-      vehicle_size: vSize || null,
-      customer_name: custName,
-      duration_mins: dur,
+      id:              String((r as any).id ?? ""),
+      booking_time:    String(r.booking_time ?? ""),
+      service_name:    svcName || null,
+      vehicle_size:    vSize || null,
+      customer_name:   custName,
+      customer_phone:  (r as any).customer_phone ?? profile?.phone ?? null,
+      service_address: (r as any).service_address ?? null,
+      vehicle_year:    (r as any).vehicle_year ?? null,
+      vehicle_make:    (r as any).vehicle_make ?? null,
+      vehicle_model:   (r as any).vehicle_model ?? null,
+      duration_mins:   dur,
+      total_price:     Number((r as any).total_price ?? 0),
     };
   });
 }
@@ -171,20 +198,16 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
     snapshotYear = existingV.year != null ? String(existingV.year) : snapshotYear;
     dbVehicleSize = existingV.size || dbVehicleSize;
   } else {
-    const { data: newV, error: vehicleErr } = await supabase
-      .from("vehicles")
-      .insert({
-        user_id: targetUserId,
-        make: snapshotMake,
-        model: snapshotModel,
-        year: parseInt(String(payload.vehicleYear), 10) || new Date().getFullYear(),
-        size: dbVehicleSize,
-      })
-      .select("id")
-      .single();
-
-    if (vehicleErr || !newV) throw new Error("Vehicle creation failed");
-    vehicle = newV;
+    const { findOrCreateVehicle } = await import("@/lib/findOrCreateVehicle");
+    const id = await findOrCreateVehicle(supabase, {
+      userId: targetUserId,
+      make:   snapshotMake,
+      model:  snapshotModel,
+      year:   parseInt(String(payload.vehicleYear), 10) || new Date().getFullYear(),
+      size:   dbVehicleSize as any,
+    });
+    if (!id) throw new Error("Vehicle creation failed");
+    vehicle = { id };
   }
 
   // 4. Check Availability First — prevent double booking
@@ -221,21 +244,20 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
   // Create additional vehicle rows for multi-vehicle bookings
   const addlVehicles: any[] = payload.additionalVehicles ?? [];
   const addlVehicleDbIds: string[] = [];
-  for (const av of addlVehicles) {
-    const avYear = parseInt(String(av.vehicleYear), 10);
-    const avDbSize = VEHICLE_SIZE_MAP[av.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
-    const { data: avData } = await supabase
-      .from("vehicles")
-      .insert({
-        user_id: targetUserId,
-        make: (av.vehicleMake || "Unknown").trim(),
-        model: (av.vehicleModel || "Unknown").trim(),
-        year: isNaN(avYear) ? null : avYear,
-        size: avDbSize,
-      })
-      .select("id")
-      .single();
-    if (avData) addlVehicleDbIds.push(avData.id);
+  {
+    const { findOrCreateVehicle } = await import("@/lib/findOrCreateVehicle");
+    for (const av of addlVehicles) {
+      const avYear = parseInt(String(av.vehicleYear), 10);
+      const avDbSize = VEHICLE_SIZE_MAP[av.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
+      const id = await findOrCreateVehicle(supabase, {
+        userId: targetUserId,
+        make:   av.vehicleMake || "Unknown",
+        model:  av.vehicleModel || "Unknown",
+        year:   isNaN(avYear) ? null : avYear,
+        size:   avDbSize as any,
+      });
+      if (id) addlVehicleDbIds.push(id);
+    }
   }
   const additionalVehiclesForDb = addlVehicles.length > 0
     ? addlVehicles.map((av, i) => ({
@@ -391,17 +413,29 @@ export async function getAllBookings() {
   });
 }
 
+function computeStage(bookingCount: number, lastService: string | null, ltv: number): "lead" | "active" | "lapsed" | "churned" | "vip" {
+  if (bookingCount === 0) return "lead";
+  if (ltv >= 500) return "vip";
+  if (!lastService) return "lead";
+  const daysSince = (Date.now() - new Date(lastService + "T12:00:00").getTime()) / 86400000;
+  if (daysSince <= 90) return "active";
+  if (daysSince <= 180) return "lapsed";
+  return "churned";
+}
+
 export async function getAllClients() {
   const supabase = createAdminClient();
   const adminEmail = (process.env.ADMIN_EMAIL || "zackariahlacey@gmail.com").toLowerCase();
 
   // 1. All profiles with vehicles + bookings (including snapshot columns)
+  // Disambiguate the bookings embed via the user_id FK — bookings also has
+  // assigned_by / assigned_to / photo_reviewed_by FKs back to profiles.
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select(`
       *,
       vehicles(*),
-      bookings:bookings(
+      bookings:bookings!bookings_user_id_fkey(
         id, total_price, booking_date, booking_time, status, notes,
         customer_name, customer_email, customer_phone, service_address, service_name,
         vehicle_make, vehicle_model, vehicle_year, vehicle_size,
@@ -504,6 +538,10 @@ export async function getAllClients() {
 
       const isSignedUp = signedUpIds.has(client.id);
 
+      const bookingCount = sortedBookings.filter((b: any) => b.status !== "cancelled").length;
+      const lastService = sortedBookings[0]?.booking_date || null;
+      const lifecycle = computeStage(bookingCount, lastService, ltv);
+
       return {
         ...client,
         first_name: displayFirst || client.first_name || "",
@@ -513,10 +551,13 @@ export async function getAllClients() {
         _display_name: displayName,
         _ltv: ltv,
         _lastAddress: lastAddress,
-        _lastService: sortedBookings[0]?.booking_date || null,
-        _bookingCount: sortedBookings.filter((b: any) => b.status !== "cancelled").length,
+        _lastService: lastService,
+        _bookingCount: bookingCount,
         _is_signed_up: isSignedUp,
         _is_orphan: false,
+        _lifecycle: client.lifecycle_stage && client.lifecycle_stage !== "lead" ? client.lifecycle_stage : lifecycle,
+        tags: Array.isArray(client.tags) ? client.tags : [],
+        do_not_contact: !!client.do_not_contact,
         bookings: sortedBookings.map((b: any) => ({
           ...b,
           display_date: b.booking_date,
@@ -543,6 +584,13 @@ export async function getAllClients() {
       _lastService: sortedBookings[0]?.booking_date || null,
       _bookingCount: sortedBookings.filter((b: any) => b.status !== "cancelled").length,
       _is_signed_up: false,
+      _lifecycle: computeStage(
+        sortedBookings.filter((b: any) => b.status !== "cancelled").length,
+        sortedBookings[0]?.booking_date || null,
+        ltv,
+      ),
+      tags: [],
+      do_not_contact: false,
       bookings: sortedBookings.map((b: any) => ({
         ...b,
         display_date: b.booking_date,

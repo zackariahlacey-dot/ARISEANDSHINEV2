@@ -105,23 +105,19 @@ export async function createAdminBooking(
     }
   }
 
-  // 2. Insert vehicle
-  const { data: vehicle, error: vehicleErr } = await supabase
-    .from("vehicles")
-    .insert({
-      user_id: profileId,
-      make: payload.vehicleMake.trim(),
-      model: payload.vehicleModel.trim(),
-      year: parseInt(payload.vehicleYear, 10) || new Date().getFullYear(),
-      size: VEHICLE_SIZE_MAP[payload.vehicleSize],
-    })
-    .select("id")
-    .single();
-
-  if (vehicleErr || !vehicle) {
-    console.error("[createAdminBooking] vehicle insert:", vehicleErr);
+  // 2. Find-or-create vehicle (dedupes the customer's garage)
+  const { findOrCreateVehicle } = await import("@/lib/findOrCreateVehicle");
+  const vehicleId = await findOrCreateVehicle(supabase, {
+    userId: profileId,
+    make:   payload.vehicleMake,
+    model:  payload.vehicleModel,
+    year:   parseInt(payload.vehicleYear, 10) || new Date().getFullYear(),
+    size:   VEHICLE_SIZE_MAP[payload.vehicleSize] as any,
+  });
+  if (!vehicleId) {
     return { success: false, error: "Could not save vehicle." };
   }
+  const vehicle = { id: vehicleId };
 
   const status =
     payload.paymentOption === "pay_at_arrival" ? "confirmed" : "pending_payment";

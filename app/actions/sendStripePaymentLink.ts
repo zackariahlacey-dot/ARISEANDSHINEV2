@@ -1,10 +1,23 @@
 "use server";
 
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function getPaymentLinkUrl(bookingId: string): Promise<string> {
   const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
   return `${origin}/pay/${bookingId}`;
+}
+
+/** Stamps payment_link_sent_at on a booking. Called after email succeeds or
+ *  after the admin fires off the SMS link (SMS is sent client-side via sms:). */
+export async function markPaymentLinkSent(bookingId: string): Promise<{ ok: boolean }> {
+  if (!bookingId) return { ok: false };
+  const supabase = createAdminClient();
+  await supabase
+    .from("bookings")
+    .update({ payment_link_sent_at: new Date().toISOString() })
+    .eq("id", bookingId);
+  return { ok: true };
 }
 
 export async function sendStripePaymentLink(bookingId: string, booking: {
@@ -66,7 +79,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
           <tr>
             <td style="padding:28px 32px;">
               <p style="font-size:20px;font-weight:900;color:#ffffff;margin:0 0 8px;">Your Payment Link is Ready</p>
-              <p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;line-height:1.6;">Hi ${firstName}, your Arise &amp; Shine VT invoice is ready. Click below to pay securely — you can also leave a tip if you&apos;d like (never expected!).</p>
+              <p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;line-height:1.6;">Hi ${firstName}, your Arise &amp; Shine VT invoice is ready. Click below to pay securely.</p>
               <table cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td style="padding:12px 0;border-bottom:1px solid #27272a;">
@@ -91,7 +104,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
               <div style="margin-top:24px;text-align:center;">
                 <a href="${payUrl}" style="display:inline-block;padding:14px 32px;background-color:#d4af37;color:#000000;font-size:13px;font-weight:900;text-decoration:none;border-radius:8px;letter-spacing:0.08em;text-transform:uppercase;">Pay Now — $${totalPrice}</a>
               </div>
-              <p style="font-size:11px;color:#52525b;margin:16px 0 0;text-align:center;">You can also leave a tip on the payment page — it&apos;s always optional.</p>
+              <p style="font-size:11px;color:#52525b;margin:16px 0 0;text-align:center;">Secure payment powered by Stripe.</p>
             </td>
           </tr>
           <tr>
@@ -115,6 +128,8 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
             html,
           });
           emailSent = true;
+          // Stamp the booking so the admin UI can show "Payment Link Sent"
+          await markPaymentLinkSent(bookingId).catch(() => undefined);
         } catch (emailErr) {
           console.error("[sendStripePaymentLink] Email failed:", emailErr);
         }

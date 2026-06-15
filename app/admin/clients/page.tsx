@@ -6,13 +6,15 @@ import {
   getAllClients, updateCustomerProfile, sendCustomEmailAction, massEmailAction,
 } from "@/app/actions/adminActions";
 import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
+import { updateProfileFields } from "@/app/actions/clientCrmActions";
+import { ClientCrmPanel } from "@/components/admin/ClientCrmPanel";
 import { useToast } from "@/components/admin/Toast";
 import { Modal } from "@/components/admin/Modal";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import {
   Users, Search, Phone, MessageSquare, Mail, Navigation,
   Car, Star, Crown, AlertTriangle,
-  Save, CheckCircle2, ChevronRight,
+  Save, CheckCircle2, ChevronRight, Pencil,
   Loader2, Send, X, ArrowLeft, UserCheck, UserX, CalendarPlus, Repeat,
 } from "lucide-react";
 import { sendMonthlyPlanInvite } from "@/app/actions/monthlySubscriptions";
@@ -108,6 +110,12 @@ export default function ClientsPage() {
   const [savingNotes, setSavingNotes]     = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
   const [view, setView]           = useState<"list" | "email">("list");
+  // Inline-edit profile
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<{ first_name: string; last_name: string; phone: string; email: string; address: string; loyalty_discount_pct: string }>({
+    first_name: "", last_name: "", phone: "", email: "", address: "", loyalty_discount_pct: "",
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Email state
   const [emailMode, setEmailMode]   = useState<"individual" | "mass">("individual");
@@ -201,11 +209,16 @@ export default function ClientsPage() {
     if (!emailSubject || !emailBody) { toast("Subject and body required", "error"); return; }
     setSending(true);
     try {
-      const personalised = emailBody.replace(/{{name}}/g, (singleRecipient.first_name ?? "there"));
+      const first = singleRecipient.first_name ?? "there";
+      const full = `${singleRecipient.first_name ?? ""} ${singleRecipient.last_name ?? ""}`.trim() || first;
+      const personalised = emailBody
+        .replace(/{{firstName}}/g, first)
+        .replace(/{{fullName}}/g, full)
+        .replace(/{{name}}/g, first);
       const r = await sendCustomEmailAction(to, emailSubject, personalised);
       if (r.success) toast("Email sent! ✅");
       else toast(r.error ?? "Failed", "error");
-    } catch { toast("Failed to send", "error"); }
+    } catch (e: any) { toast(e?.message ?? "Failed to send", "error"); }
     setSending(false);
   }
 
@@ -237,8 +250,51 @@ export default function ClientsPage() {
       toast("Notes saved");
       setEditingNotes(false);
       queryClient.invalidateQueries({ queryKey: ["admin", "clients"] });
-    } catch { toast("Failed", "error"); }
+    } catch (e: any) { toast(e?.message ?? "Failed", "error"); }
     setSavingNotes(false);
+  }
+
+  function openProfileEdit(c: any) {
+    setProfileDraft({
+      first_name: c.first_name ?? "",
+      last_name:  c.last_name  ?? "",
+      phone:      c.phone      ?? "",
+      email:      c.email      ?? "",
+      address:    c.address    ?? c._lastAddress ?? "",
+      loyalty_discount_pct: String(c.loyalty_discount_pct ?? 0),
+    });
+    setEditingProfile(true);
+  }
+
+  async function saveProfileEdits() {
+    if (!activeClient || activeClient._is_orphan) return;
+    setSavingProfile(true);
+    const loyalty = Number(profileDraft.loyalty_discount_pct);
+    const r = await updateProfileFields(activeClient.id, {
+      first_name: profileDraft.first_name.trim() || null,
+      last_name:  profileDraft.last_name.trim()  || null,
+      phone:      profileDraft.phone.trim()      || null,
+      email:      profileDraft.email.trim()      || null,
+      address:    profileDraft.address.trim()    || null,
+      loyalty_discount_pct: isNaN(loyalty) ? 0 : Math.max(0, Math.min(100, loyalty)),
+    });
+    setSavingProfile(false);
+    if (r.ok) {
+      toast("Profile saved ✅");
+      setEditingProfile(false);
+      setActiveClient({
+        ...activeClient,
+        first_name: profileDraft.first_name,
+        last_name:  profileDraft.last_name,
+        phone:      profileDraft.phone,
+        email:      profileDraft.email,
+        address:    profileDraft.address,
+        loyalty_discount_pct: isNaN(loyalty) ? 0 : Math.max(0, Math.min(100, loyalty)),
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "clients"] });
+    } else {
+      toast(r.error ?? "Failed", "error");
+    }
   }
 
   const isAtRisk = (c: any) => {
@@ -618,6 +674,49 @@ export default function ClientsPage() {
 
             {clientTab === "overview" && (
               <div className="space-y-3">
+                {/* Inline-edit profile */}
+                {editingProfile && !activeClient._is_orphan ? (
+                  <div className="bg-white/[0.02] border border-amber-500/30 rounded-xl p-3 space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Edit Profile</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input value={profileDraft.first_name} onChange={e => setProfileDraft(d => ({ ...d, first_name: e.target.value }))} placeholder="First" className="bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
+                      <input value={profileDraft.last_name}  onChange={e => setProfileDraft(d => ({ ...d, last_name: e.target.value }))}  placeholder="Last"  className="bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
+                    </div>
+                    <input value={profileDraft.phone}   onChange={e => setProfileDraft(d => ({ ...d, phone: e.target.value }))}   placeholder="Phone"   className="w-full bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
+                    <input value={profileDraft.email}   onChange={e => setProfileDraft(d => ({ ...d, email: e.target.value }))}   placeholder="Email"   className="w-full bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
+                    <input value={profileDraft.address} onChange={e => setProfileDraft(d => ({ ...d, address: e.target.value }))} placeholder="Address" className="w-full bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Loyalty %</span>
+                      <input type="number" min="0" max="100" value={profileDraft.loyalty_discount_pct} onChange={e => setProfileDraft(d => ({ ...d, loyalty_discount_pct: e.target.value }))} className="w-20 bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => setEditingProfile(false)} className="flex-1 py-2 rounded-lg border border-white/[0.08] text-zinc-400 text-xs font-black uppercase tracking-wider">Cancel</button>
+                      <button onClick={saveProfileEdits} disabled={savingProfile} className="flex-1 py-2 rounded-lg bg-amber-500 text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
+                        {savingProfile ? <Loader2 size={11} className="animate-spin" /> : <><Save size={11} /> Save</>}
+                      </button>
+                    </div>
+                  </div>
+                ) : !activeClient._is_orphan && (
+                  <button
+                    onClick={() => openProfileEdit(activeClient)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider active:scale-[0.98]"
+                  >
+                    <Pencil size={12} /> Edit Profile
+                  </button>
+                )}
+
+                {/* CRM panel — tags, lifecycle, DNC, subs, tasks, emails */}
+                {!activeClient._is_orphan && (
+                  <ClientCrmPanel
+                    profileId={activeClient.id}
+                    initialTags={Array.isArray(activeClient.tags) ? activeClient.tags : []}
+                    initialDnc={!!activeClient.do_not_contact}
+                    initialLifecycle={activeClient._lifecycle ?? "lead"}
+                    email={activeClient.email ?? null}
+                    onChange={() => queryClient.invalidateQueries({ queryKey: ["admin", "clients"] })}
+                  />
+                )}
+
                 {/* Contact */}
                 <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
                   {activeClient.phone && (() => {

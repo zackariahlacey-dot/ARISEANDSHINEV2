@@ -11,16 +11,19 @@ import {
   getErrorLogs,
 } from "@/app/actions/adminActions";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
-import { sendStripePaymentLink } from "@/app/actions/sendStripePaymentLink";
+import { sendStripePaymentLink, getPaymentLinkUrl, markPaymentLinkSent } from "@/app/actions/sendStripePaymentLink";
+import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
+import { BookingVehiclesPanel } from "@/components/admin/BookingVehiclesPanel";
+import { useWeather } from "@/lib/useWeather";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
 import { NeedsAttentionWidget } from "@/components/admin/NeedsAttentionWidget";
 import {
-  Navigation, Phone, MessageSquare, Check, DollarSign,
+  Navigation, Phone, MessageSquare, Check, CheckCircle2, DollarSign,
   Car, Clock, MapPin, ChevronRight, CalendarDays, Loader2,
   Zap, AlertTriangle, Send, RotateCcw, X, TrendingUp, RefreshCw,
-  CreditCard, Banknote,
+  CreditCard, Banknote, Mail, Wind, Search,
 } from "lucide-react";
 import { format, isToday, parseISO, isTomorrow, isYesterday, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -142,6 +145,8 @@ export default function TodayPage() {
     queryKey: ["admin", "bookings"],
     queryFn: async () => await getAllBookings(),
     staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: errorLogs = [] } = useQuery({
@@ -161,6 +166,7 @@ export default function TodayPage() {
   });
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
+  const yesterdayStr = format(new Date(Date.now() - 86400000), "yyyy-MM-dd");
 
   const todayJobs = useMemo(() => {
     if (!bookings) return [];
@@ -169,18 +175,73 @@ export default function TodayPage() {
       .sort((a: any, b: any) => (a.booking_time ?? "").localeCompare(b.booking_time ?? ""));
   }, [bookings, todayStr]);
 
-  const recentBookings = useMemo(() => {
+  // Unpaid leftovers: anything from yesterday (or earlier in the last week)
+  // that's been completed but has no payment recorded yet.
+  const unpaidLeftovers = useMemo(() => {
     if (!bookings) return [];
+    const sevenDaysAgo = format(new Date(Date.now() - 7 * 86400000), "yyyy-MM-dd");
     return bookings
       .filter((b: any) =>
-        b.status !== "cancelled" &&
+        b.booking_date >= sevenDaysAgo &&
+        b.booking_date < todayStr &&
+        (b.status === "completed" || b.status === "complete") &&
+        !b.paid_at &&
+        !b.stripe_checkout_session_id &&
         b.service_name !== "Personal Block"
       )
+      .sort((a: any, b: any) => (b.booking_date ?? "").localeCompare(a.booking_date ?? ""));
+  }, [bookings, todayStr]);
+
+  const recentBookings = useMemo(() => {
+    if (!bookings) return [];
+    const sevenDaysAgo = Date.now() - 7 * 86400000;
+    return bookings
+      .filter((b: any) => {
+        if (b.status === "cancelled") return false;
+        if (b.service_name === "Personal Block") return false;
+        const createdMs = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return createdMs >= sevenDaysAgo;
+      })
       .sort((a: any, b: any) =>
         (b.created_at ?? "").localeCompare(a.created_at ?? "")
-      )
-      .slice(0, 10);
+      );
   }, [bookings]);
+
+  const [recentExpanded, setRecentExpanded] = useState(false);
+  const [failedExpanded, setFailedExpanded] = useState(false);
+  const [errorsExpanded, setErrorsExpanded] = useState(false);
+  const RECENT_PREVIEW_COUNT = 3;
+  const ERROR_PREVIEW_COUNT = 2;
+
+  // Booking search — across all time, by name / phone / email
+  const [bookingSearch, setBookingSearch] = useState("");
+  const searchResults = useMemo(() => {
+    const q = bookingSearch.trim().toLowerCase();
+    if (!bookings || q.length < 2) return [];
+    return bookings
+      .filter((b: any) => {
+        if (b.service_name === "Personal Block") return false;
+        const name  = (b.customer_name ?? "").toLowerCase();
+        const profName = `${b.profiles?.first_name ?? ""} ${b.profiles?.last_name ?? ""}`.trim().toLowerCase();
+        const phone = String(b.customer_phone ?? b.profiles?.phone ?? "").replace(/\D/g, "");
+        const email = (b.customer_email ?? b.profiles?.email ?? "").toLowerCase();
+        const qDigits = q.replace(/\D/g, "");
+        return (
+          name.includes(q) ||
+          profName.includes(q) ||
+          (qDigits.length >= 3 && phone.includes(qDigits)) ||
+          email.includes(q)
+        );
+      })
+      .sort((a: any, b: any) =>
+        (b.booking_date ?? "").localeCompare(a.booking_date ?? "") ||
+        (b.booking_time ?? "").localeCompare(a.booking_time ?? "")
+      )
+      .slice(0, 30);
+  }, [bookings, bookingSearch]);
+
+  const failedBookings = useMemo(() => errorLogs.filter((e: any) => e.type === "booking_attempt"), [errorLogs]);
+  const siteErrors    = useMemo(() => errorLogs.filter((e: any) => e.type !== "booking_attempt"), [errorLogs]);
 
   const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
 
@@ -219,15 +280,6 @@ export default function TodayPage() {
   }, [todayJobs]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
-  async function handleComplete(b: any) {
-    try {
-      await updateStatus.mutateAsync({ id: b.id, status: "completed" });
-      toast("Job marked complete! 🎉");
-      setActiveBooking(null);
-      refetch();
-    } catch { toast("Error marking complete", "error"); }
-  }
-
   async function handleCancel(b: any) {
     if (!confirm("Cancel this booking?")) return;
     try {
@@ -263,10 +315,38 @@ export default function TodayPage() {
         bookingTime:   b.booking_time  ?? "",
         customerEmail: email,
       });
-      if ("url" in r) toast("Stripe payment link sent!");
+      if ("url" in r) { toast("Payment link emailed ✅"); refetch(); }
       else toast(r.error ?? "Failed", "error");
-    } catch { toast("Failed", "error"); }
+    } catch (e: any) { toast(e?.message ?? "Failed", "error"); }
     setSendingPaymentLink(false);
+  }
+
+  async function handleTextPay(b: any) {
+    const phone = bPhone(b);
+    if (!phone) { toast("No phone on file", "error"); return; }
+    if (!Number(b.total_price) || Number(b.total_price) <= 0) { toast("Invalid price", "error"); return; }
+    try {
+      const url = await getPaymentLinkUrl(b.id);
+      const firstName = bName(b).split(" ")[0] || "there";
+      const total = Number(b.total_price).toFixed(2);
+      const body =
+        `Hi ${firstName}, thanks again from Arise & Shine VT! ` +
+        `Here's your secure payment link for $${total}` +
+        (b.service_name ? ` (${b.service_name})` : "") + `:\n\n${url}`;
+      const cleanPhone = phone.replace(/\D/g, "");
+      window.location.href = `sms:${cleanPhone}?&body=${encodeURIComponent(body)}`;
+      markPaymentLinkSent(b.id).catch(() => undefined);
+      refetch();
+    } catch (e: any) { toast(e?.message ?? "Failed", "error"); }
+  }
+
+  async function handleMarkCash(b: any) {
+    if (!confirm(`Mark this booking as PAID IN CASH for $${Number(b.total_price ?? 0).toFixed(0)}?`)) return;
+    try {
+      const r = await markBookingPaidCash(b.id);
+      if (r.ok) { toast("Marked paid (cash) ✅"); refetch(); setActiveBooking(null); }
+      else toast(r.error ?? "Failed", "error");
+    } catch (e: any) { toast(e?.message ?? "Failed", "error"); }
   }
 
   async function handleReschedule() {
@@ -289,7 +369,7 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="px-4 pt-4 pb-6 max-w-2xl mx-auto space-y-5">
+    <div className="px-4 pt-4 pb-28 max-w-2xl mx-auto space-y-5">
 
       {/* ── Date header ──────────────────────────────────────────────────── */}
       <div className="flex items-baseline justify-between">
@@ -317,60 +397,28 @@ export default function TodayPage() {
       {/* ── Needs attention (auto-refreshes every 60s) ────────────────────── */}
       <NeedsAttentionWidget />
 
-      {/* ── Next job hero ────────────────────────────────────────────────── */}
+      {/* ── Unpaid leftovers from the past week ───────────────────────────── */}
+      {unpaidLeftovers.length > 0 && (
+        <UnpaidLeftoversBanner
+          rows={unpaidLeftovers}
+          onSendEmail={handleStripeLink}
+          onSendText={handleTextPay}
+          onMarkCash={handleMarkCash}
+          onOpen={(b) => setActiveBooking(b)}
+        />
+      )}
+
+      {/* ── Next job hero (enriched: weather, countdown, miles) ─────────── */}
       {nextJob ? (
-        <div
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/[0.03] border border-amber-500/20 p-5 cursor-pointer active:scale-[0.98] transition-transform"
-          onClick={() => setActiveBooking(nextJob)}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock size={12} className="text-amber-500 shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Next Job</span>
-                {countdown !== null && countdown > 0 && (
-                  <span className="ml-auto text-[10px] font-black text-zinc-400">
-                    in {countdown >= 60 ? `${Math.floor(countdown / 60)}h ${countdown % 60}m` : `${countdown}m`}
-                  </span>
-                )}
-                {countdown !== null && countdown <= 0 && (
-                  <span className="ml-auto text-[10px] font-black text-emerald-400">NOW</span>
-                )}
-              </div>
-              <p className="text-xl font-black truncate">{bName(nextJob)}</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm text-zinc-400 font-medium truncate">{bService(nextJob)}</p>
-                {(() => { try { const av = Array.isArray(nextJob.additional_vehicles_json) ? nextJob.additional_vehicles_json : []; return av.length > 0 ? <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">{av.length + 1} vehicles</span> : null; } catch { return null; } })()}
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-2xl font-black text-amber-500">{formatTime(nextJob.booking_time)}</p>
-              <p className="text-sm font-bold text-zinc-300">${Number(nextJob.total_price).toFixed(0)}</p>
-            </div>
-          </div>
-
-          {bAddress(nextJob) && (
-            <div className="flex items-center gap-1.5 mt-3 text-zinc-400 text-xs">
-              <MapPin size={11} className="shrink-0" />
-              <span className="truncate">{bAddress(nextJob)}</span>
-            </div>
-          )}
-
-          {/* Quick action strip */}
-          <div className="flex gap-2 mt-4">
-            <QuickBtn icon={<Navigation size={14} />} label="Directions" gold onClick={() => {
-              const addr = bAddress(nextJob);
-              if (addr) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`, "_blank");
-            }} />
-            {bPhone(nextJob) && (
-              <QuickBtn icon={<Phone size={14} />} label="Call" onClick={() => window.open(`tel:${bPhone(nextJob)}`, "_self")} />
-            )}
-            {bPhone(nextJob) && (
-              <QuickBtn icon={<MessageSquare size={14} />} label="Text" onClick={() => window.open(`sms:${bPhone(nextJob)}`, "_self")} />
-            )}
-            <QuickBtn icon={<Send size={14} />} label="On My Way" onClick={() => handleSendOmw(nextJob)} />
-          </div>
-        </div>
+        <UpNextHero
+          job={nextJob}
+          countdown={countdown}
+          onOpen={() => setActiveBooking(nextJob)}
+          onCall={() => window.open(`tel:${bPhone(nextJob)}`, "_self")}
+          onText={() => window.open(`sms:${bPhone(nextJob)}`, "_self")}
+          onNav={() => { const a = bAddress(nextJob); if (a) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`, "_blank"); }}
+          onOmw={() => handleSendOmw(nextJob)}
+        />
       ) : todayJobs.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
           <p className="text-zinc-500 text-sm">No jobs scheduled today.</p>
@@ -433,102 +481,234 @@ export default function TodayPage() {
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2">Today's Schedule</p>
           <div className="space-y-2">
             {todayJobs.map((b: any) => (
-              <JobCard key={b.id} b={b} onClick={() => setActiveBooking(b)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Recent Bookings ──────────────────────────────────────────────── */}
-      {recentBookings.length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2">Recently Booked</p>
-          <div className="space-y-1.5">
-            {recentBookings.map((b: any) => {
-              const bookedAt = b.created_at ? new Date(b.created_at) : null;
-              const bookedLabel = bookedAt
-                ? isToday(bookedAt)     ? `Today ${format(bookedAt, "h:mm a")}`
-                : isYesterday(bookedAt) ? "Yesterday"
-                : format(bookedAt, "MMM d")
-                : "";
-              return (
-              <button
+              <JobCard
                 key={b.id}
+                b={b}
                 onClick={() => setActiveBooking(b)}
-                className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
-              >
-                {/* Large date badge — when they booked */}
-                {bookedAt && (
-                  <div className="shrink-0 w-10 text-center">
-                    <p className="text-[9px] font-black uppercase text-zinc-600">{format(bookedAt, "MMM")}</p>
-                    <p className="text-xl font-black text-zinc-300 leading-tight">{format(bookedAt, "d")}</p>
-                    <p className="text-[8px] text-zinc-700">{format(bookedAt, "h:mma")}</p>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
-                  <p className="text-xs text-zinc-600 truncate">
-                    {b.service_name ?? "Detail"} · appt {dayLabel(b.booking_date)}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right space-y-0.5">
-                  <p className="text-sm font-black text-zinc-300">${Number(b.total_price).toFixed(0)}</p>
-                  <PayBadge b={b} />
-                </div>
-                <ChevronRight size={13} className="text-zinc-700 shrink-0" />
-              </button>
-            )})}
+                onCall={() => window.open(`tel:${bPhone(b)}`, "_self")}
+                onText={() => window.open(`sms:${bPhone(b)}`, "_self")}
+                onNav={() => { const a = bAddress(b); if (a) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`, "_blank"); }}
+                onPayEmail={() => handleStripeLink(b)}
+                onPayText={() => handleTextPay(b)}
+                onMarkCash={() => handleMarkCash(b)}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── Failed booking attempts ──────────────────────────────────────── */}
-      {errorLogs.filter((e: any) => e.type === "booking_attempt").length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/70 mb-2">Failed Booking Attempts</p>
-          <div className="space-y-1.5">
-            {errorLogs.filter((e: any) => e.type === "booking_attempt").slice(0, 5).map((e: any) => (
-              <div key={e.id} className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl px-4 py-3 flex items-start gap-3">
-                <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-zinc-300 truncate">
-                    {e.details?.email ?? "Unknown"} — {e.details?.service ?? ""}
-                  </p>
-                  <p className="text-[10px] text-zinc-600 mt-0.5">{e.message}</p>
-                  {e.details?.date && (
-                    <p className="text-[10px] text-zinc-700">Slot: {e.details.date} {e.details.time}</p>
+      {/* ── Search any booking by name / phone / email ────────────────────── */}
+      <div>
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <input
+            value={bookingSearch}
+            onChange={e => setBookingSearch(e.target.value)}
+            placeholder="Search all bookings by name, phone, email…"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+          />
+          {bookingSearch && (
+            <button
+              onClick={() => setBookingSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {bookingSearch.trim().length >= 2 && (
+          <div className="mt-2 space-y-1.5">
+            {searchResults.length === 0 ? (
+              <p className="text-[11px] text-zinc-600 italic text-center py-4">
+                No bookings found for &ldquo;{bookingSearch}&rdquo;
+              </p>
+            ) : (
+              <>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">
+                  {searchResults.length} match{searchResults.length === 1 ? "" : "es"}
+                </p>
+                {searchResults.map((b: any) => {
+                  const date = b.booking_date ? new Date(b.booking_date + "T12:00:00") : null;
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => setActiveBooking(b)}
+                      className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all active:scale-[0.98]"
+                    >
+                      {date && (
+                        <div className="shrink-0 w-10 text-center">
+                          <p className="text-[9px] font-black uppercase text-zinc-600">{format(date, "MMM")}</p>
+                          <p className="text-lg font-black text-zinc-300 leading-tight">{format(date, "d")}</p>
+                          <p className="text-[8px] text-zinc-700">{b.booking_time ? to12h(String(b.booking_time).slice(0, 5)) : ""}</p>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
+                        <p className="text-[11px] text-zinc-600 truncate">
+                          {b.service_name ?? "Detail"} · {dayLabel(b.booking_date)}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right space-y-0.5">
+                        <p className="text-sm font-black text-zinc-300">${Number(b.total_price ?? 0).toFixed(0)}</p>
+                        <div className="flex items-center justify-end gap-1">
+                          <StatusBadge status={b.status} />
+                        </div>
+                      </div>
+                      <ChevronRight size={12} className="text-zinc-700 shrink-0" />
+                    </button>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Recent Bookings (past 7 days, collapsible) ────────────────────── */}
+      {recentBookings.length > 0 && (() => {
+        const visible = recentExpanded ? recentBookings : recentBookings.slice(0, RECENT_PREVIEW_COUNT);
+        const hiddenCount = recentBookings.length - RECENT_PREVIEW_COUNT;
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">
+                Booked This Week · {recentBookings.length}
+              </p>
+              {hiddenCount > 0 && (
+                <button
+                  onClick={() => setRecentExpanded(e => !e)}
+                  className="text-[9px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 active:scale-95"
+                >
+                  {recentExpanded ? "Show less" : `Show all ${recentBookings.length}`}
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {visible.map((b: any) => {
+                const bookedAt = b.created_at ? new Date(b.created_at) : null;
+                return (
+                <button
+                  key={b.id}
+                  onClick={() => setActiveBooking(b)}
+                  className="w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
+                >
+                  {bookedAt && (
+                    <div className="shrink-0 w-10 text-center">
+                      <p className="text-[9px] font-black uppercase text-zinc-600">{format(bookedAt, "MMM")}</p>
+                      <p className="text-xl font-black text-zinc-300 leading-tight">{format(bookedAt, "d")}</p>
+                      <p className="text-[8px] text-zinc-700">{format(bookedAt, "h:mma")}</p>
+                    </div>
                   )}
-                </div>
-                <p className="text-[9px] text-zinc-700 shrink-0">
-                  {e.created_at ? format(new Date(e.created_at), "MMM d h:mma") : ""}
-                </p>
-              </div>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate text-zinc-200">{b.customer_name ?? "Unknown"}</p>
+                    <p className="text-xs text-zinc-600 truncate">
+                      {b.service_name ?? "Detail"} · appt {dayLabel(b.booking_date)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right space-y-0.5">
+                    <p className="text-sm font-black text-zinc-300">${Number(b.total_price).toFixed(0)}</p>
+                    <PayBadge b={b} />
+                  </div>
+                  <ChevronRight size={13} className="text-zinc-700 shrink-0" />
+                </button>
+              )})}
+            </div>
+            {!recentExpanded && hiddenCount > 0 && (
+              <button
+                onClick={() => setRecentExpanded(true)}
+                className="w-full mt-1.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] active:scale-[0.98] transition-all"
+              >
+                + {hiddenCount} more
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* ── Site error log ───────────────────────────────────────────────── */}
-      {errorLogs.filter((e: any) => e.type !== "booking_attempt").length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-500/70 mb-2">Site Errors</p>
-          <div className="space-y-1.5">
-            {errorLogs.filter((e: any) => e.type !== "booking_attempt").slice(0, 8).map((e: any) => (
-              <div key={e.id} className="bg-red-500/[0.04] border border-red-500/15 rounded-xl px-4 py-3 flex items-start gap-3">
-                <AlertTriangle size={13} className="text-red-400 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-0.5">{e.source ?? e.type}</p>
-                  <p className="text-xs text-zinc-300 truncate">{e.message}</p>
-                  {e.details?.email && <p className="text-[10px] text-zinc-600">{e.details.email}</p>}
+      {/* ── Failed booking attempts (collapsible) ─────────────────────────── */}
+      {failedBookings.length > 0 && (() => {
+        const visible = failedExpanded ? failedBookings : failedBookings.slice(0, ERROR_PREVIEW_COUNT);
+        const hidden = failedBookings.length - ERROR_PREVIEW_COUNT;
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/70">
+                Failed Booking Attempts · {failedBookings.length}
+              </p>
+              {hidden > 0 && (
+                <button onClick={() => setFailedExpanded(e => !e)} className="text-[9px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 active:scale-95">
+                  {failedExpanded ? "Show less" : `Show all ${failedBookings.length}`}
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {visible.map((e: any) => (
+                <div key={e.id} className="bg-amber-500/[0.04] border border-amber-500/15 rounded-xl px-4 py-3 flex items-start gap-3">
+                  <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-zinc-300 truncate">
+                      {e.details?.email ?? "Unknown"} — {e.details?.service ?? ""}
+                    </p>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">{e.message}</p>
+                    {e.details?.date && (
+                      <p className="text-[10px] text-zinc-700">Slot: {e.details.date} {e.details.time}</p>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-zinc-700 shrink-0">
+                    {e.created_at ? format(new Date(e.created_at), "MMM d h:mma") : ""}
+                  </p>
                 </div>
-                <p className="text-[9px] text-zinc-700 shrink-0">
-                  {e.created_at ? format(new Date(e.created_at), "MMM d h:mma") : ""}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
+            {!failedExpanded && hidden > 0 && (
+              <button onClick={() => setFailedExpanded(true)} className="w-full mt-1.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] active:scale-[0.98] transition-all">
+                + {hidden} more
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* ── Site error log (collapsible) ──────────────────────────────────── */}
+      {siteErrors.length > 0 && (() => {
+        const visible = errorsExpanded ? siteErrors : siteErrors.slice(0, ERROR_PREVIEW_COUNT);
+        const hidden = siteErrors.length - ERROR_PREVIEW_COUNT;
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-500/70">
+                Site Errors · {siteErrors.length}
+              </p>
+              {hidden > 0 && (
+                <button onClick={() => setErrorsExpanded(e => !e)} className="text-[9px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 active:scale-95">
+                  {errorsExpanded ? "Show less" : `Show all ${siteErrors.length}`}
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {visible.map((e: any) => (
+                <div key={e.id} className="bg-red-500/[0.04] border border-red-500/15 rounded-xl px-4 py-3 flex items-start gap-3">
+                  <AlertTriangle size={13} className="text-red-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-0.5">{e.source ?? e.type}</p>
+                    <p className="text-xs text-zinc-300 truncate">{e.message}</p>
+                    {e.details?.email && <p className="text-[10px] text-zinc-600">{e.details.email}</p>}
+                  </div>
+                  <p className="text-[9px] text-zinc-700 shrink-0">
+                    {e.created_at ? format(new Date(e.created_at), "MMM d h:mma") : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {!errorsExpanded && hidden > 0 && (
+              <button onClick={() => setErrorsExpanded(true)} className="w-full mt-1.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.05] text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] active:scale-[0.98] transition-all">
+                + {hidden} more
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Booking detail modal ─────────────────────────────────────────── */}
       <Modal open={!!activeBooking && !showReschedule} onClose={() => setActiveBooking(null)}>
@@ -539,7 +719,6 @@ export default function TodayPage() {
               <div>
                 <p className="text-xs text-zinc-500">{dayLabel(activeBooking.booking_date)} · {formatTime(activeBooking.booking_time)}</p>
                 <h2 className="text-xl font-black mt-0.5">{bName(activeBooking)}</h2>
-                <p className="text-sm text-zinc-400">{bService(activeBooking)}</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black text-amber-500">${Number(activeBooking.total_price).toFixed(0)}</p>
@@ -547,11 +726,45 @@ export default function TodayPage() {
               </div>
             </div>
 
-            {/* Details */}
+            {/* Payment quick-actions */}
+            {activeBooking.status !== "cancelled" && (() => {
+              const paid     = !!activeBooking.paid_at;
+              const linkSent = !!activeBooking.payment_link_sent_at;
+              const src      = (activeBooking.payment_source as string | null) ?? "";
+              if (paid) return (
+                <div className="flex items-center justify-center gap-2 bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 font-black text-sm uppercase tracking-wider py-3 rounded-xl">
+                  <CheckCircle2 size={16} /> Client Paid{src ? ` · ${src === "cash" ? "Cash" : "Stripe"}` : ""}
+                </div>
+              );
+              return (
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => handleStripeLink(activeBooking)} disabled={sendingPaymentLink}
+                    className={cn(
+                      "flex items-center justify-center gap-1 font-black text-[11px] uppercase tracking-wider py-3 rounded-xl border active:scale-95 transition-all disabled:opacity-50",
+                      linkSent ? "bg-sky-500/[0.06] border-sky-500/25 text-sky-300" : "bg-sky-500/15 border-sky-500/35 text-sky-400"
+                    )}>
+                    {sendingPaymentLink ? <Loader2 size={12} className="animate-spin" /> : <><Mail size={12} /> Email {linkSent && "↻"}</>}
+                  </button>
+                  <button onClick={() => handleTextPay(activeBooking)}
+                    className={cn(
+                      "flex items-center justify-center gap-1 font-black text-[11px] uppercase tracking-wider py-3 rounded-xl border active:scale-95 transition-all",
+                      linkSent ? "bg-amber-500/[0.06] border-amber-500/25 text-amber-300" : "bg-amber-500/15 border-amber-500/35 text-amber-400"
+                    )}>
+                    <MessageSquare size={12} /> Text {linkSent && "↻"}
+                  </button>
+                  <button onClick={() => handleMarkCash(activeBooking)}
+                    className="flex items-center justify-center gap-1 bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 font-black text-[11px] uppercase tracking-wider py-3 rounded-xl active:scale-95 transition-all">
+                    <DollarSign size={12} /> Cash
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Vehicles + line items (editable) */}
+            <BookingVehiclesPanel bookingId={activeBooking.id} onChange={() => refetch()} />
+
+            {/* Contact + address */}
             <div className="space-y-2 text-sm">
-              {bVehicle(activeBooking) && (
-                <DetailRow icon={<Car size={14} />} value={bVehicle(activeBooking)} />
-              )}
               {bAddress(activeBooking) && (
                 <DetailRow icon={<MapPin size={14} />} value={bAddress(activeBooking)!} />
               )}
@@ -581,39 +794,6 @@ export default function TodayPage() {
                   </div>
                 );
               })()}
-              {(() => {
-                try {
-                  const addons: any[] = Array.isArray(activeBooking.addons_json) ? activeBooking.addons_json : [];
-                  const extra: any[] = Array.isArray(activeBooking.additional_vehicles_json) ? activeBooking.additional_vehicles_json : [];
-                  if (addons.length === 0 && extra.length === 0) return null;
-                  return (
-                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
-                      {addons.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-1.5">Add-ons</p>
-                          {addons.map((a: any) => (
-                            <div key={a.id} className="flex justify-between text-xs text-zinc-400">
-                              <span>+ {a.label}</span>
-                              <span className="font-mono text-zinc-500">${a.price}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {extra.length > 0 && (
-                        <div className={addons.length > 0 ? "pt-2 border-t border-white/[0.05]" : ""}>
-                          <p className="text-[9px] font-black uppercase tracking-wider text-zinc-600 mb-1.5">Additional Vehicles</p>
-                          {extra.map((v: any, i: number) => (
-                            <div key={i} className="flex justify-between text-xs text-zinc-400">
-                              <span>{[v.vehicleYear, v.vehicleMake, v.vehicleModel].filter(Boolean).join(" ") || `Vehicle ${i + 2}`}</span>
-                              <span className="font-mono text-zinc-500">${v.servicePrice ?? 0}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                } catch { return null; }
-              })()}
               {activeBooking.notes && (
                 <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-xs text-zinc-400 whitespace-pre-wrap">
                   {activeBooking.notes}
@@ -633,27 +813,14 @@ export default function TodayPage() {
                 <ActionBtn icon={<MessageSquare size={15} />} label="Text" onClick={() => window.open(`sms:${bPhone(activeBooking)}`, "_self")} />
               )}
               <ActionBtn icon={<Send size={15} />} label="On My Way" onClick={() => handleSendOmw(activeBooking)} />
-              <ActionBtn icon={<DollarSign size={15} />} label={sendingPaymentLink ? "Sending…" : "Send Payment Link"} onClick={() => handleStripeLink(activeBooking)} disabled={sendingPaymentLink} />
               <ActionBtn icon={<RotateCcw size={15} />} label="Reschedule" onClick={() => { setRescheduleDate(activeBooking.booking_date); setShowReschedule(true); }} />
+              <button
+                onClick={() => handleCancel(activeBooking)}
+                className="flex items-center justify-center gap-2 bg-white/[0.05] hover:bg-red-500/20 text-red-400 font-black text-xs uppercase tracking-wider py-3 rounded-xl border border-red-500/20 transition-all active:scale-95"
+              >
+                <X size={15} /> Cancel
+              </button>
             </div>
-
-            {/* Status actions */}
-            {activeBooking.status === "confirmed" && (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleComplete(activeBooking)}
-                  className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all active:scale-95"
-                >
-                  <Check size={15} /> Mark Complete
-                </button>
-                <button
-                  onClick={() => handleCancel(activeBooking)}
-                  className="flex items-center justify-center gap-2 bg-white/[0.05] hover:bg-red-500/20 text-red-400 font-black text-xs uppercase tracking-wider py-3 rounded-xl border border-red-500/20 transition-all active:scale-95"
-                >
-                  <X size={15} /> Cancel
-                </button>
-              </div>
-            )}
           </div>
         )}
       </Modal>
@@ -699,6 +866,25 @@ export default function TodayPage() {
           </div>
         </div>
       </Modal>
+
+      {/* ── Sticky bottom progress banner ─────────────────────────────────── */}
+      {todayJobs.length > 0 && (
+        <div className="fixed bottom-4 left-0 right-0 z-30 pointer-events-none px-4 max-w-2xl mx-auto">
+          <div className="pointer-events-auto rounded-2xl bg-zinc-950/90 backdrop-blur border border-white/[0.08] px-4 py-2.5 flex items-center justify-between gap-4 shadow-2xl">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Today's Progress</p>
+              <p className="text-sm font-black text-zinc-100">
+                {todayJobs.filter((b: any) => b.status === "completed" || b.status === "complete").length}
+                <span className="text-zinc-500"> / {todayJobs.length} done</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Cash Today</p>
+              <p className="text-sm font-black text-emerald-400">${pendingEarnings.toFixed(0)}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Stripe recovery modal ──────────────────────────────────────────── */}
       <Modal open={showRecovery} onClose={() => { setShowRecovery(false); setRecoveryResult(null); setRecoverySessionId(""); }}>
@@ -756,57 +942,285 @@ function PayBadge({ b }: { b: any }) {
   );
 }
 
-function JobCard({ b, onClick }: { b: any; onClick: () => void }) {
+function JobCard({
+  b, onClick, onCall, onText, onNav, onPayEmail, onPayText, onMarkCash,
+}: {
+  b: any;
+  onClick: () => void;
+  onCall: () => void;
+  onText: () => void;
+  onNav: () => void;
+  onPayEmail: () => void;
+  onPayText: () => void;
+  onMarkCash: () => void;
+}) {
   const stripe = isStripePaid(b);
+  const paid   = !!b.paid_at;
+  const linkSent = !!b.payment_link_sent_at;
   const extraVehicles: any[] = Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json : [];
   const primaryAddons: any[] = Array.isArray(b.addons_json) ? b.addons_json : [];
   const extraAddons = extraVehicles.reduce((s: number, av: any) => s + (Array.isArray(av?.selectedAddons) ? av.selectedAddons.length : 0), 0);
   const totalAddons = primaryAddons.length + extraAddons;
   const totalVehicles = 1 + extraVehicles.length;
   const vehicleLabel = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
+  const phone = b.customer_phone ?? b.profiles?.phone ?? null;
+  const addr = b.service_address ?? null;
+  const email = b.customer_email ?? b.profiles?.email ?? null;
   const statusColor: Record<string, string> = {
     confirmed: stripe ? "border-l-sky-500" : "border-l-emerald-500",
     completed: stripe ? "border-l-sky-400" : "border-l-emerald-400",
     "no-show": "border-l-red-500",
     cancelled: "border-l-zinc-700",
   };
+
+  const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
+
   return (
-    <button
+    <div
       onClick={onClick}
       className={cn(
-        "w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98] border-l-2",
+        "w-full text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-3 transition-all active:scale-[0.98] border-l-2 cursor-pointer",
         statusColor[b.status] ?? "border-l-zinc-700"
       )}
     >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-xs font-black text-amber-500">{to12h((b.booking_time ?? "00:00").slice(0, 5))}</span>
-          <span className="text-sm font-bold truncate">{b.customer_name ?? "Unknown"}</span>
-          {totalVehicles > 1 && (
-            <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
-              {totalVehicles} vehicles
-            </span>
-          )}
-          {totalAddons > 0 && (
-            <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-              +{totalAddons} add-on{totalAddons === 1 ? "" : "s"}
-            </span>
-          )}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xs font-black text-amber-500">{to12h((b.booking_time ?? "00:00").slice(0, 5))}</span>
+            <span className="text-sm font-bold truncate">{b.customer_name ?? "Unknown"}</span>
+            {totalVehicles > 1 && (
+              <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                {totalVehicles} vehicles
+              </span>
+            )}
+            {totalAddons > 0 && (
+              <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                +{totalAddons}
+              </span>
+            )}
+            {paid && (
+              <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5">
+                <CheckCircle2 size={8} /> Paid
+              </span>
+            )}
+            {!paid && linkSent && (
+              <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/25">
+                Link sent
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-zinc-500 truncate">{b.service_name ?? "Detail"}{vehicleLabel ? ` · ${vehicleLabel}` : ""}</p>
         </div>
-        <p className="text-xs text-zinc-500 truncate">{b.service_name ?? "Detail"}</p>
-        {vehicleLabel && (
-          <p className="text-[11px] text-zinc-600 truncate mt-0.5">{vehicleLabel}</p>
-        )}
-      </div>
-      <div className="text-right shrink-0 space-y-0.5">
-        <p className="text-sm font-black">${Number(b.total_price).toFixed(0)}</p>
-        <div className="flex items-center justify-end gap-1">
-          <PayBadge b={b} />
+        <div className="text-right shrink-0 space-y-0.5">
+          <p className="text-sm font-black">${Number(b.total_price).toFixed(0)}</p>
           <StatusBadge status={b.status} />
         </div>
       </div>
-      <ChevronRight size={14} className="text-zinc-700 shrink-0" />
-    </button>
+
+      {/* Inline action row — no card-open required */}
+      <div className="flex gap-1 mt-2.5 pt-2 border-t border-white/[0.04]">
+        {addr && (
+          <button onClick={stop(onNav)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 text-[9px] font-black uppercase tracking-wider active:scale-95" aria-label="Navigate">
+            <Navigation size={11} /> Nav
+          </button>
+        )}
+        {phone && (
+          <button onClick={stop(onCall)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-[9px] font-black uppercase tracking-wider active:scale-95" aria-label="Call">
+            <Phone size={11} /> Call
+          </button>
+        )}
+        {phone && (
+          <button onClick={stop(onText)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-[9px] font-black uppercase tracking-wider active:scale-95" aria-label="Text">
+            <MessageSquare size={11} /> Text
+          </button>
+        )}
+        {!paid && email && (
+          <button onClick={stop(onPayEmail)} className={cn(
+            "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider active:scale-95",
+            linkSent ? "bg-sky-500/[0.06] border-sky-500/25 text-sky-300" : "bg-sky-500/15 border-sky-500/30 text-sky-400"
+          )} aria-label="Email Pay Link">
+            <Mail size={11} /> {linkSent ? "Resend" : "Pay"}
+          </button>
+        )}
+        {!paid && phone && (
+          <button onClick={stop(onPayText)} className={cn(
+            "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-wider active:scale-95",
+            linkSent ? "bg-amber-500/[0.06] border-amber-500/25 text-amber-300" : "bg-amber-500/15 border-amber-500/30 text-amber-400"
+          )} aria-label="Text Pay Link">
+            <DollarSign size={11} /> {linkSent ? "Resend" : "Pay"}
+          </button>
+        )}
+        {!paid && (
+          <button onClick={stop(onMarkCash)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-wider active:scale-95" aria-label="Mark Cash">
+            <Banknote size={11} /> Cash
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UpNextHero({
+  job, countdown, onOpen, onCall, onText, onNav, onOmw,
+}: {
+  job: any;
+  countdown: number | null;
+  onOpen: () => void;
+  onCall: () => void;
+  onText: () => void;
+  onNav: () => void;
+  onOmw: () => void;
+}) {
+  const { data: weather } = useWeather();
+  const addr = job.service_address ?? null;
+  const phone = job.customer_phone ?? job.profiles?.phone ?? null;
+  const distance = Number(job.distance_miles ?? 0);
+  const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
+
+  // ETA at default 35 mph average for Vermont rural drive — close enough
+  const etaMin = distance > 0 ? Math.round((distance / 35) * 60) : 0;
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/[0.03] border border-amber-500/20 p-5 cursor-pointer active:scale-[0.98] transition-transform"
+      onClick={onOpen}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2">
+          <Clock size={12} className="text-amber-500 shrink-0" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Up Next</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {weather && (
+            <span className="text-[10px] font-black text-zinc-300 flex items-center gap-1">
+              {weather.emoji} {weather.temp}°F
+              {weather.wind > 0 && <span className="text-zinc-500 ml-0.5"><Wind size={9} className="inline" /> {weather.wind}</span>}
+            </span>
+          )}
+          {countdown !== null && countdown > 0 && (
+            <span className="text-[10px] font-black text-zinc-300">
+              in {countdown >= 60 ? `${Math.floor(countdown / 60)}h ${countdown % 60}m` : `${countdown}m`}
+            </span>
+          )}
+          {countdown !== null && countdown <= 0 && (
+            <span className="text-[10px] font-black text-emerald-400">NOW</span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xl font-black truncate">{job.customer_name ?? "Unknown"}</p>
+          <p className="text-sm text-zinc-400 font-medium truncate">{job.service_name ?? "Detail"}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-2xl font-black text-amber-500">{to12h((job.booking_time ?? "00:00").slice(0, 5))}</p>
+          <p className="text-sm font-bold text-zinc-300">${Number(job.total_price).toFixed(0)}</p>
+        </div>
+      </div>
+
+      {addr && (
+        <div className="flex items-center gap-1.5 mt-3 text-zinc-400 text-xs">
+          <MapPin size={11} className="shrink-0" />
+          <span className="truncate flex-1">{addr}</span>
+          {distance > 0 && (
+            <span className="text-zinc-500 text-[10px] font-bold shrink-0 ml-2">
+              {distance.toFixed(1)} mi · ~{etaMin}m drive
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-4">
+        {addr && (
+          <button onClick={stop(onNav)} className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black active:scale-95">
+            <Navigation size={14} /> Directions
+          </button>
+        )}
+        {phone && (
+          <button onClick={stop(onCall)} className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-white/[0.06] text-zinc-300 active:scale-95">
+            <Phone size={14} /> Call
+          </button>
+        )}
+        {phone && (
+          <button onClick={stop(onText)} className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-white/[0.06] text-zinc-300 active:scale-95">
+            <MessageSquare size={14} /> Text
+          </button>
+        )}
+        <button onClick={stop(onOmw)} className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-white/[0.06] text-zinc-300 active:scale-95">
+          <Send size={14} /> OMW
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UnpaidLeftoversBanner({
+  rows, onSendEmail, onSendText, onMarkCash, onOpen,
+}: {
+  rows: any[];
+  onSendEmail: (b: any) => void;
+  onSendText:  (b: any) => void;
+  onMarkCash:  (b: any) => void;
+  onOpen:      (b: any) => void;
+}) {
+  const totalOwed = rows.reduce((s, r) => s + Number(r.total_price ?? 0), 0);
+  const [expanded, setExpanded] = useState(rows.length <= 2);
+
+  return (
+    <div className="rounded-2xl bg-orange-500/[0.06] border border-orange-500/25 p-3 space-y-2">
+      <button onClick={() => setExpanded(e => !e)} className="w-full flex items-center justify-between gap-2 text-left">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={14} className="text-orange-400 shrink-0" />
+          <span className="text-xs font-black uppercase tracking-wider text-orange-300">
+            {rows.length} Unpaid Job{rows.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        <span className="text-sm font-black text-orange-400 tabular-nums">${totalOwed.toFixed(0)}</span>
+      </button>
+
+      {expanded && (
+        <div className="space-y-2 pt-1">
+          {rows.map(b => {
+            const phone = b.customer_phone ?? b.profiles?.phone ?? null;
+            const email = b.customer_email ?? b.profiles?.email ?? null;
+            const linkSent = !!b.payment_link_sent_at;
+            return (
+              <div key={b.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2">
+                <button onClick={() => onOpen(b)} className="w-full text-left flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold truncate">{b.customer_name ?? "Unknown"}</p>
+                    <p className="text-[10px] text-zinc-500">{format(parseISO(b.booking_date + "T12:00:00"), "MMM d")} · {b.service_name ?? "Detail"}</p>
+                  </div>
+                  <p className="text-sm font-black text-orange-400 tabular-nums shrink-0">${Number(b.total_price).toFixed(0)}</p>
+                </button>
+                <div className="flex gap-1 mt-1.5">
+                  {email && (
+                    <button onClick={() => onSendEmail(b)} className={cn(
+                      "flex-1 flex items-center justify-center gap-1 py-1 rounded-md border text-[9px] font-black uppercase tracking-wider",
+                      linkSent ? "bg-sky-500/[0.06] border-sky-500/25 text-sky-300" : "bg-sky-500/15 border-sky-500/30 text-sky-400"
+                    )}>
+                      <Mail size={10} /> {linkSent ? "Resend Email" : "Email Link"}
+                    </button>
+                  )}
+                  {phone && (
+                    <button onClick={() => onSendText(b)} className={cn(
+                      "flex-1 flex items-center justify-center gap-1 py-1 rounded-md border text-[9px] font-black uppercase tracking-wider",
+                      linkSent ? "bg-amber-500/[0.06] border-amber-500/25 text-amber-300" : "bg-amber-500/15 border-amber-500/30 text-amber-400"
+                    )}>
+                      <MessageSquare size={10} /> {linkSent ? "Resend SMS" : "Text Link"}
+                    </button>
+                  )}
+                  <button onClick={() => onMarkCash(b)} className="flex-1 flex items-center justify-center gap-1 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-wider">
+                    <Banknote size={10} /> Cash
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

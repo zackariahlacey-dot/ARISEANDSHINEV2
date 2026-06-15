@@ -57,7 +57,7 @@ export async function sendContractorPaymentLink(
   const url = await getPaymentLinkUrl(bookingId);
   const totalPrice = Number((b as any).total_price) || 0;
   const firstName = (((b as any).customer_name as string) ?? "there").trim().split(/\s+/)[0] ?? "there";
-  const smsBody = `Hi ${firstName}, your detail is done. Pay + add an optional tip here: ${url} — Arise & Shine VT`;
+  const smsBody = `Hi ${firstName}, your detail is done. Pay securely here: ${url} — Arise & Shine VT`;
   const smsHref = (b as any).customer_phone
     ? `sms:${String((b as any).customer_phone).replace(/\D/g, "")}?&body=${encodeURIComponent(smsBody)}`
     : `sms:?&body=${encodeURIComponent(smsBody)}`;

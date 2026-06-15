@@ -23,7 +23,9 @@ import {
   blockRestOfDayAction,
   updateBookingDurationAction,
 } from "@/app/actions/adminActions";
-import { sendStripePaymentLink, getPaymentLinkUrl } from "@/app/actions/sendStripePaymentLink";
+import { sendStripePaymentLink, getPaymentLinkUrl, markPaymentLinkSent } from "@/app/actions/sendStripePaymentLink";
+import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
+import { BookingVehiclesPanel } from "@/components/admin/BookingVehiclesPanel";
 import { cashPriceFor } from "@/lib/cashPricing";
 import { useQuery } from "@tanstack/react-query";
 import { getSqueezeRequests, updateSqueezeStatus, type SqueezeRequest } from "@/app/actions/squeezeActions";
@@ -36,7 +38,7 @@ import { listContractors, type ContractorSummary } from "@/app/actions/contracto
 import { manuallyAssignBooking } from "@/app/actions/autoAssignBooking";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, MapPin,
-  Phone, MessageSquare, Navigation, Check, X, Trash2,
+  Phone, MessageSquare, Navigation, Check, CheckCircle2, X, Trash2,
   RotateCcw, Loader2, Car, DollarSign, Lock, Zap, Send,
   Copy, Pencil, StickyNote, Mail, AlertCircle, ClipboardCheck,
   UserPlus, AlertTriangle,
@@ -100,8 +102,13 @@ function payType(b: any): "paid" | "cash" | "unknown" {
 }
 
 // ── Day-view default hours (used for quick-book slot range) ─────────────────
+// Customer-facing operating hours come from `operating_hours`. The TIMELINE
+// extends wider (5 AM – 11 PM) so admin can book early/late jobs that don't
+// fit the public window.
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR   = 20;
+const TIMELINE_DAY_START_HOUR = 5;
+const TIMELINE_DAY_END_HOUR   = 23;
 
 // ── Shared add-on data (mirrors BookingModal) ──────────────────────────────
 const ADMIN_ADDONS = [
@@ -240,6 +247,7 @@ export function NewBookingForm({
   onSuccess,
   onCancel,
   clientPrefill,
+  onDirtyChange,
 }: {
   defaultDate: string;
   services: any[];
@@ -247,6 +255,8 @@ export function NewBookingForm({
   onCancel: () => void;
   /** When set, step 1 contact fields are filled; vehicle pathway can pick a saved car */
   clientPrefill?: ClientPrefillForBooking | null;
+  /** Bubbles up "has the user entered anything" so the parent can guard close */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -314,9 +324,39 @@ export function NewBookingForm({
   const [slotsLoading,  setSlotsLoading]  = useState(false);
   const [operatingHours,setOperatingHours]= useState<any>(null);
   const [showOverlapConfirm, setShowOverlapConfirm] = useState(false);
+  const [slotPeek, setSlotPeek] = useState<any | null>(null);  // booked-slot detail popup
 
   /** When set, reuse this vehicles row instead of inserting a new one (vehicle pathway only) */
   const [existingVehicleId, setExistingVehicleId] = useState<string | null>(null);
+
+  // Tell the parent whenever the user has put anything meaningful into the
+  // form — used to confirm before closing/discarding the booking.
+  useEffect(() => {
+    if (!onDirtyChange) return;
+    const prefilled = !!clientPrefill;
+    const contactChanged = prefilled
+      ? false
+      : !!(name || phone || email || address);
+    const dirty = !!(
+      pathway !== null ||
+      step > 1 ||
+      contactChanged ||
+      vehicleYear || vehicleMake || vehicleModel ||
+      serviceId || footage !== "" || priceOverride || durationOverride ||
+      selectedAddons.length > 0 ||
+      additionalVehicles.length > 0 ||
+      bookingTime || notes
+    );
+    onDirtyChange(dirty);
+  }, [
+    onDirtyChange, clientPrefill,
+    pathway, step,
+    name, phone, email, address,
+    vehicleYear, vehicleMake, vehicleModel,
+    serviceId, footage, priceOverride, durationOverride,
+    selectedAddons, additionalVehicles,
+    bookingTime, notes,
+  ]);
 
   useEffect(() => {
     if (!clientPrefill) return;
@@ -954,11 +994,11 @@ export function NewBookingForm({
           {slotsLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="animate-spin text-amber-500" size={20} /></div>
           ) : (() => {
-            // Build every 30-min interval for the day (7 AM – 8 PM)
-            const TIMELINE_START = DAY_START_HOUR * 60;  // 7:00 AM in minutes
-            const TIMELINE_END   = DAY_END_HOUR   * 60;  // 8:00 PM in minutes
+            // Wider timeline (5 AM – 11 PM) so admin can book before/after public hours
+            const TIMELINE_START = TIMELINE_DAY_START_HOUR * 60;
+            const TIMELINE_END   = TIMELINE_DAY_END_HOUR   * 60;
 
-            // Convert booked slots to { startMins, endMins, customer, service }
+            // Convert booked slots to { startMins, endMins, customer, service, full }
             const bookedRanges = bookedSlots.map(b => {
               const startMins = timeToMins(b.booking_time);
               return {
@@ -967,6 +1007,7 @@ export function NewBookingForm({
                 customer: b.customer_name ?? "Client",
                 service:  b.service_name  ?? "Service",
                 duration: b.duration_mins,
+                full:     b,  // raw row so the peek popup can read vehicle/address/phone
               };
             });
 
@@ -999,7 +1040,16 @@ export function NewBookingForm({
                     <button
                       key={slotVal}
                       type="button"
-                      onClick={() => setBookingTime(slotVal)}
+                      onClick={() => {
+                        // Tapping a booked row → peek the client's details first.
+                        // The "Book here anyway" button inside the popup is what
+                        // actually selects the time and triggers the overlap flow.
+                        if (booking && !isSelected) {
+                          setSlotPeek({ ...booking, slotVal });
+                          return;
+                        }
+                        setBookingTime(slotVal);
+                      }}
                       className={cn(
                         "w-full flex items-center gap-3 px-3 transition-all text-left",
                         isHourMark ? "py-2.5" : "py-1.5",
@@ -1110,6 +1160,72 @@ export function NewBookingForm({
           </div>
         </div>
       )}
+
+      {/* ── Booked-slot peek popup ──────────────────────────────────────── */}
+      {slotPeek && (() => {
+        const b = slotPeek.full ?? {};
+        const startMins = slotPeek.startMins as number;
+        const endMins   = slotPeek.endMins as number;
+        const vehicle = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
+        const tel = (b.customer_phone ?? "").replace(/\D/g, "");
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setSlotPeek(null)}>
+            <div className="bg-zinc-900 border border-white/[0.1] rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-3" onClick={e => e.stopPropagation()}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Booked slot</p>
+                  <h3 className="text-lg font-black truncate">{slotPeek.customer ?? "Client"}</h3>
+                  <p className="text-xs text-amber-400 font-bold">{minsToDisplay(startMins)} – {minsToDisplay(endMins)}</p>
+                </div>
+                <button type="button" onClick={() => setSlotPeek(null)} className="w-8 h-8 rounded-lg bg-white/[0.04] text-zinc-500 hover:text-white flex items-center justify-center shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                {slotPeek.service && (
+                  <div className="flex items-center gap-2 text-zinc-300"><span className="text-zinc-600 w-12 shrink-0">Service</span><span className="truncate">{slotPeek.service}</span></div>
+                )}
+                {vehicle && (
+                  <div className="flex items-center gap-2 text-zinc-300"><Car size={11} className="text-zinc-600 shrink-0" /><span className="truncate">{vehicle}</span></div>
+                )}
+                {b.service_address && (
+                  <div className="flex items-center gap-2 text-zinc-300"><MapPin size={11} className="text-zinc-600 shrink-0" /><span className="truncate">{b.service_address}</span></div>
+                )}
+                {b.customer_phone && (
+                  <div className="flex items-center gap-2 text-zinc-300"><Phone size={11} className="text-zinc-600 shrink-0" /><span>{fmtPhone(b.customer_phone)}</span></div>
+                )}
+                {Number(b.total_price ?? 0) > 0 && (
+                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.05]">
+                    <span className="text-zinc-500">Total</span>
+                    <span className="text-amber-400 font-black tabular-nums">${Number(b.total_price).toFixed(0)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                {tel && (
+                  <>
+                    <a href={`tel:${tel}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-200 text-[10px] font-black uppercase tracking-wider">
+                      <Phone size={11} /> Call
+                    </a>
+                    <a href={`sms:${tel}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-200 text-[10px] font-black uppercase tracking-wider">
+                      <MessageSquare size={11} /> Text
+                    </a>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setBookingTime(slotPeek.slotVal); setSlotPeek(null); }}
+                  className="flex-1 py-2 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-400 text-[10px] font-black uppercase tracking-wider"
+                >
+                  Book Here Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Overlap override confirmation modal ─────────────────────────── */}
       {showOverlapConfirm && (
@@ -1231,11 +1347,21 @@ export default function SchedulePage() {
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [activeBooking, setActiveBooking]   = useState<any>(null);
   const [showNewBooking, setShowNewBooking] = useState(false);
+  const [newBookingDirty, setNewBookingDirty] = useState(false);
+
+  const handleCloseNewBooking = useCallback(() => {
+    if (newBookingDirty && !confirm("Discard this booking? Any details you've entered will be lost.")) return;
+    setShowNewBooking(false);
+    setNewBookingDirty(false);
+    setActiveSqueeze(null);
+    setSqueezePrefill(null);
+  }, [newBookingDirty]);
   const [showBlockTime, setShowBlockTime]   = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [sendingLink, setSendingLink]       = useState(false);
+  const [payChannelPick, setPayChannelPick] = useState(false);
   // Detail modal sub-states
   const [editPriceMode, setEditPriceMode]   = useState(false);
   const [editPriceVal,  setEditPriceVal]    = useState("");
@@ -1355,8 +1481,14 @@ export default function SchedulePage() {
         bookingTime:   b.booking_time  ?? "",
         customerEmail: email,
       });
-      if ("url" in r) toast("Stripe link sent!"); else toast(r.error ?? "Failed", "error");
-    } catch { toast("Failed", "error"); }
+      if ("url" in r) {
+        toast("Payment link emailed ✅");
+        setActiveBooking((prev: any) => prev ? { ...prev, payment_link_sent_at: new Date().toISOString() } : prev);
+        refetch();
+      } else {
+        toast(r.error ?? "Failed", "error");
+      }
+    } catch (e: any) { toast(e?.message ?? "Failed", "error"); }
     setSendingLink(false);
   }
   async function handleOmw(b: any) {
@@ -1364,6 +1496,24 @@ export default function SchedulePage() {
     if (addr) window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`, "_blank");
     try { await sendOmw.mutateAsync(b.id); toast("On My Way sent!"); }
     catch { toast("Failed", "error"); }
+  }
+  async function handleMarkPaidCash(b: any) {
+    if (!confirm(`Mark this booking as PAID IN CASH for $${Number(b.total_price ?? 0).toFixed(0)}? This will move it to Complete.`)) return;
+    setSendingLink(true);
+    try {
+      const r = await markBookingPaidCash(b.id);
+      if (r.ok) {
+        toast("Marked paid (cash) ✅");
+        setActiveBooking({ ...b, status: "completed", payment_source: "cash" });
+        refetch();
+      } else {
+        toast(r.error ?? "Failed", "error");
+      }
+    } catch (e: any) {
+      toast(e?.message ?? "Failed", "error");
+    } finally {
+      setSendingLink(false);
+    }
   }
   async function handleTextPayLink(b: any) {
     const phone = bPhone(b);
@@ -1376,13 +1526,17 @@ export default function SchedulePage() {
       const body =
         `Hi ${firstName}, thanks again from Arise & Shine VT! ` +
         `Here's your secure payment link for $${total}` +
-        (b.service_name ? ` (${b.service_name})` : "") + `:\n\n${url}\n\n` +
-        `You can also leave a tip on the page (totally optional).`;
+        (b.service_name ? ` (${b.service_name})` : "") + `:\n\n${url}`;
       const cleanPhone = phone.replace(/\D/g, "");
       // iOS prefers `&body=`, Android uses `?body=` — `?&body=` works on both.
       const smsUrl = `sms:${cleanPhone}?&body=${encodeURIComponent(body)}`;
       window.location.href = smsUrl;
-    } catch { toast("Failed to build link", "error"); }
+      // Optimistic stamp; the server action is fire-and-forget since we
+      // can't be 100% sure the user actually sent the SMS once iOS opens.
+      markPaymentLinkSent(b.id).catch(() => undefined);
+      setActiveBooking((prev: any) => prev ? { ...prev, payment_link_sent_at: new Date().toISOString() } : prev);
+      refetch();
+    } catch (e: any) { toast(e?.message ?? "Failed to build link", "error"); }
   }
   function handleSaveContact(b: any) {
     const fullName = bName(b);
@@ -1435,10 +1589,14 @@ export default function SchedulePage() {
   }
   async function handleSavePrice() {
     if (!activeBooking || editPriceVal === "") return;
+    const newPrice = Number(editPriceVal);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast("Price must be a non-negative number", "error");
+      return;
+    }
     setSavingDetails(true);
     try {
       const oldPrice = Number(activeBooking.total_price);
-      const newPrice = Number(editPriceVal);
       await updateBookingDetailsAction(
         activeBooking.id,
         { total_price: newPrice },
@@ -1448,7 +1606,7 @@ export default function SchedulePage() {
       setEditPriceMode(false);
       toast(oldPrice !== newPrice ? "Price updated — customer notified!" : "Price saved!");
       refetch();
-    } catch { toast("Failed to save", "error"); }
+    } catch (e: any) { toast(e?.message ?? "Failed to save", "error"); }
     setSavingDetails(false);
   }
   async function handleSaveNotes() {
@@ -1460,7 +1618,7 @@ export default function SchedulePage() {
       setEditNotesMode(false);
       toast("Notes saved!");
       refetch();
-    } catch { toast("Failed to save", "error"); }
+    } catch (e: any) { toast(e?.message ?? "Failed to save", "error"); }
     setSavingDetails(false);
   }
 
@@ -2063,7 +2221,7 @@ export default function SchedulePage() {
       </div>
 
       {/* ── New Booking Modal ───────────────────────────────────────────── */}
-      <Modal open={showNewBooking} onClose={() => { setShowNewBooking(false); setActiveSqueeze(null); setSqueezePrefill(null); }}>
+      <Modal open={showNewBooking} onClose={handleCloseNewBooking}>
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-lg font-black">New Booking</h2>
           {activeSqueeze && (
@@ -2098,6 +2256,7 @@ export default function SchedulePage() {
           defaultDate={format(selectedDay, "yyyy-MM-dd")}
           services={services ?? []}
           clientPrefill={squeezePrefill}
+          onDirtyChange={setNewBookingDirty}
           onSuccess={async () => {
             if (activeSqueeze) {
               await updateSqueezeStatus(activeSqueeze.id, "booked");
@@ -2106,9 +2265,10 @@ export default function SchedulePage() {
               setSqueezePrefill(null);
             }
             setShowNewBooking(false);
+            setNewBookingDirty(false);
             refetch();
           }}
-          onCancel={() => { setShowNewBooking(false); setActiveSqueeze(null); setSqueezePrefill(null); }}
+          onCancel={() => handleCloseNewBooking()}
         />
       </Modal>
 
@@ -2122,7 +2282,7 @@ export default function SchedulePage() {
       </Modal>
 
       {/* ── Booking Detail / Action Sheet ────────────────────────────────── */}
-      <Modal open={!!activeBooking && !showReschedule} onClose={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); setEditDurMode(false); }}>
+      <Modal open={!!activeBooking && !showReschedule} onClose={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); setEditDurMode(false); setPayChannelPick(false); }}>
         {activeBooking && (() => {
           const phone   = bPhone(activeBooking);
           const email   = bEmail(activeBooking);
@@ -2194,8 +2354,7 @@ export default function SchedulePage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h2 className="text-2xl font-black leading-tight tracking-tight">{bName(activeBooking)}</h2>
-                      <p className="text-sm text-zinc-400 mt-0.5">{service}</p>
-                      {vehicle && <p className="text-xs text-zinc-600 mt-0.5">{vehicle}</p>}
+                      {/* Vehicle + service intentionally omitted here — see Vehicles & Pricing panel below */}
                     </div>
 
                     {/* Price + edit */}
@@ -2259,84 +2418,69 @@ export default function SchedulePage() {
                 </div>
               </div>
 
-              {/* ── Vehicles & Add-ons ───────────────────────────────────── */}
-              {(() => {
-                const addls: any[] = Array.isArray(activeBooking.additional_vehicles_json) ? activeBooking.additional_vehicles_json : [];
-                const primaryAddons: any[] = Array.isArray(activeBooking.addons_json) ? activeBooking.addons_json : [];
-                if (addls.length === 0 && primaryAddons.length === 0) return null;
-                const totalVehicles = 1 + addls.length;
+              {/* ── Payment quick-actions (top of card) ────────────────────── */}
+              {activeBooking.status !== "cancelled" && (() => {
+                const isPaid     = !!activeBooking.paid_at;
+                const linkSent   = !!activeBooking.payment_link_sent_at;
+                const paySource  = (activeBooking.payment_source as string | null) ?? "";
+
+                if (isPaid) {
+                  return (
+                    <div className="flex items-center justify-center gap-2 bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 font-black text-sm uppercase tracking-wider py-3.5 rounded-xl">
+                      <Check size={16} /> Client Paid{paySource ? ` · ${paySource === "cash" ? "Cash" : paySource === "stripe" ? "Stripe" : paySource}` : ""}
+                    </div>
+                  );
+                }
+
                 return (
-                  <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-hidden">
-                    <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Vehicles & Add-ons</span>
-                      {totalVehicles > 1 && (
-                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
-                          {totalVehicles} vehicles
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Primary vehicle */}
-                    <div className="px-4 py-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/25">Vehicle 1</span>
-                          </div>
-                          <p className="text-sm font-bold text-zinc-100">{vehicle || "—"}</p>
-                          <p className="text-xs text-zinc-500 mt-0.5">{service}</p>
-                        </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {payChannelPick ? (
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          onClick={async () => { await handleStripeLink(activeBooking); setPayChannelPick(false); }}
+                          disabled={sendingLink}
+                          className="flex items-center justify-center gap-1 bg-sky-500/15 border border-sky-500/35 text-sky-400 font-black text-[11px] uppercase tracking-wider py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          {sendingLink ? <Loader2 size={13} className="animate-spin" /> : <><Mail size={13} /> Email</>}
+                        </button>
+                        <button
+                          onClick={() => { handleTextPayLink(activeBooking); setPayChannelPick(false); }}
+                          disabled={sendingLink}
+                          className="flex items-center justify-center gap-1 bg-amber-500/15 border border-amber-500/35 text-amber-400 font-black text-[11px] uppercase tracking-wider py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <MessageSquare size={13} /> Text
+                        </button>
                       </div>
-                      {primaryAddons.length > 0 && (
-                        <ul className="mt-2 space-y-1">
-                          {primaryAddons.map((a, i) => (
-                            <li key={i} className="flex items-center justify-between gap-2 text-xs">
-                              <span className="text-zinc-400 truncate">+ {a.label ?? a.id}</span>
-                              <span className="text-zinc-300 tabular-nums shrink-0">${Number(a.price ?? 0).toFixed(0)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    {/* Additional vehicles */}
-                    {addls.map((av: any, i: number) => {
-                      const yr = av.vehicleYear ?? av.yr ?? "";
-                      const mk = av.vehicleMake ?? av.mk ?? "";
-                      const md = av.vehicleModel ?? av.md ?? "";
-                      const sn = av.serviceName ?? av.sn ?? "";
-                      const sp = Number(av.servicePrice ?? av.sp ?? 0);
-                      const avAddons: any[] = Array.isArray(av.selectedAddons) ? av.selectedAddons : [];
-                      return (
-                        <div key={i} className="px-4 py-3 border-t border-white/[0.04]">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25">Vehicle {i + 2}</span>
-                              </div>
-                              <p className="text-sm font-bold text-zinc-100">{`${yr} ${mk} ${md}`.trim() || "—"}</p>
-                              <p className="text-xs text-zinc-500 mt-0.5">{sn}</p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-black text-zinc-200 tabular-nums">${sp.toFixed(0)}</p>
-                            </div>
-                          </div>
-                          {avAddons.length > 0 && (
-                            <ul className="mt-2 space-y-1">
-                              {avAddons.map((a: any, j: number) => (
-                                <li key={j} className="flex items-center justify-between gap-2 text-xs">
-                                  <span className="text-zinc-400 truncate">+ {a.label ?? a.id}</span>
-                                  <span className="text-zinc-300 tabular-nums shrink-0">${Number(a.price ?? 0).toFixed(0)}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      );
-                    })}
+                    ) : (
+                      <button
+                        onClick={() => setPayChannelPick(true)}
+                        disabled={sendingLink}
+                        className={cn(
+                          "flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50 border",
+                          linkSent
+                            ? "bg-sky-500/[0.06] border-sky-500/25 text-sky-300"
+                            : "bg-sky-500/15 border-sky-500/35 text-sky-400"
+                        )}
+                      >
+                        {linkSent ? <><CheckCircle2 size={14} /> Payment Sent · Resend</> : <><Send size={14} /> Send Payment Link</>}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleMarkPaidCash(activeBooking)}
+                      disabled={sendingLink}
+                      className="flex items-center justify-center gap-2 bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 font-black text-xs uppercase tracking-wider py-3 rounded-xl active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <DollarSign size={14} /> Mark Paid (Cash)
+                    </button>
                   </div>
                 );
               })()}
+
+              {/* ── Vehicles & Add-ons (editable, multi-vehicle) ──────────── */}
+              <BookingVehiclesPanel
+                bookingId={activeBooking.id}
+                onChange={() => refetch()}
+              />
 
               {/* ── Contractor assignment ───────────────────────────────── */}
               {!activeBooking.service_name?.includes("Personal Block") && (
@@ -2485,12 +2629,9 @@ export default function SchedulePage() {
                         </div>
                       );
                     })()}
-                    {/* Math check: warn if numbers don't reconcile */}
-                    {Math.abs(subtotal - knownDiscounts - impliedExtra - totalPrice) > 0.5 && (
-                      <div className="px-4 py-2 bg-amber-500/[0.06] border-t border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-1.5">
-                        <AlertTriangle size={11} /> Math mismatch — discounts may be missing from notes. Subtotal ${subtotal.toFixed(2)} − discounts ${(knownDiscounts + impliedExtra).toFixed(2)} ≠ ${totalPrice.toFixed(2)}.
-                      </div>
-                    )}
+                    {/* Math-mismatch warning intentionally removed — the
+                        booking_vehicles panel above is now the source of
+                        truth for line items; this view is informational only. */}
                   </div>
                 );
               })()}
@@ -2576,19 +2717,6 @@ export default function SchedulePage() {
                   onClick={() => handleOmw(activeBooking)}
                 />
                 <BigActionBtn
-                  icon={sendingLink ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
-                  label={sendingLink ? "Sending…" : "Email Pay Link"}
-                  onClick={() => handleStripeLink(activeBooking)}
-                  disabled={sendingLink}
-                />
-                {phone && (
-                  <BigActionBtn
-                    icon={<DollarSign size={18} />}
-                    label="Text Pay Link"
-                    onClick={() => handleTextPayLink(activeBooking)}
-                  />
-                )}
-                <BigActionBtn
                   icon={<UserPlus size={18} />}
                   label="Save Contact"
                   onClick={() => handleSaveContact(activeBooking)}
@@ -2645,17 +2773,13 @@ export default function SchedulePage() {
               </div>
 
               {/* ── Job Status ───────────────────────────────────────────── */}
+              {/* Per-vehicle "Mark Done" + cash/Stripe auto-complete handle this now;
+                  No-Show kept as a small standalone since it's its own outcome. */}
               {activeBooking.status === "confirmed" && (
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button onClick={() => handleComplete(activeBooking)}
-                    className="flex items-center justify-center gap-2 bg-emerald-500 text-black font-black text-sm uppercase tracking-wide py-4 rounded-2xl active:scale-95 transition-all shadow-lg shadow-emerald-500/20">
-                    <ClipboardCheck size={17} /> Complete
-                  </button>
-                  <button onClick={() => handleNoShowClick(activeBooking)}
-                    className="flex items-center justify-center gap-2 bg-white/[0.04] text-orange-400 border border-orange-500/25 font-black text-sm uppercase tracking-wide py-4 rounded-2xl active:scale-95 transition-all">
-                    <AlertCircle size={17} /> No-Show
-                  </button>
-                </div>
+                <button onClick={() => handleNoShowClick(activeBooking)}
+                  className="w-full flex items-center justify-center gap-2 bg-white/[0.04] text-orange-400 border border-orange-500/25 font-black text-sm uppercase tracking-wide py-3 rounded-2xl active:scale-95 transition-all">
+                  <AlertCircle size={16} /> Mark No-Show
+                </button>
               )}
 
               {/* ── Danger zone ─────────────────────────────────────────── */}
@@ -2677,7 +2801,7 @@ export default function SchedulePage() {
 
               {/* ── Dismiss ──────────────────────────────────────────────── */}
               <button
-                onClick={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); }}
+                onClick={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); setPayChannelPick(false); }}
                 className="w-full py-4 rounded-2xl bg-white/[0.04] border border-white/[0.06] text-zinc-400 font-black text-sm tracking-wide active:scale-[0.98] transition-all"
               >
                 Close

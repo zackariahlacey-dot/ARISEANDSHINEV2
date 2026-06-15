@@ -1,13 +1,26 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   AlertOctagon, Camera, Star, MailX, UserMinus, HardHat, TrendingUp,
-  ChevronRight, Loader2, Check,
+  ChevronRight, ChevronDown, Loader2, Check,
 } from "lucide-react";
 import { getAdminNeedsAttention, type AttentionItem } from "@/app/actions/adminNeedsAttention";
 import { cn } from "@/lib/utils";
+
+// Solo-operator mode: hide contractor-related items entirely. Flip to false
+// if you ever onboard contractors and want those signals back on the dashboard.
+const HIDE_CONTRACTOR_ITEMS = true;
+const CONTRACTOR_KINDS = new Set<AttentionItem["kind"]>([
+  "unassigned_booking",
+  "contractor_issue",
+  "contractor_activation",
+  "contractor_eligible_promotion",
+]);
+
+const COLLAPSE_KEY = "admin.needsAttention.collapsed";
 
 const ICONS: Record<AttentionItem["kind"], typeof Camera> = {
   photo_review:                 Camera,
@@ -42,6 +55,23 @@ export function NeedsAttentionWidget() {
     refetchInterval: 60_000,
   });
 
+  // Collapsed-by-default; remembered per-browser via localStorage so toggling
+  // sticks across page reloads.
+  const [collapsed, setCollapsed] = useState<boolean>(true);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(COLLAPSE_KEY);
+      if (stored !== null) setCollapsed(stored === "1");
+    } catch {}
+  }, []);
+  function toggle() {
+    setCollapsed(c => {
+      const next = !c;
+      try { localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 p-4 flex items-center gap-2 text-[11px] text-zinc-500">
@@ -50,7 +80,8 @@ export function NeedsAttentionWidget() {
     );
   }
 
-  const list = (items ?? []) as AttentionItem[];
+  const rawList = (items ?? []) as AttentionItem[];
+  const list = HIDE_CONTRACTOR_ITEMS ? rawList.filter(i => !CONTRACTOR_KINDS.has(i.kind)) : rawList;
   const urgentCount = list.filter(i => i.severity === "urgent").length;
   const warnCount   = list.filter(i => i.severity === "warn").length;
 
@@ -69,11 +100,17 @@ export function NeedsAttentionWidget() {
   }
 
   return (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between mb-1">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-          Needs attention · {list.length}
-        </p>
+    <section className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 overflow-hidden">
+      {/* Collapsible header */}
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+            Needs attention · {list.length}
+          </p>
+        </div>
         <div className="flex items-center gap-1.5">
           {urgentCount > 0 && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-400 border border-rose-500/30">
@@ -85,43 +122,53 @@ export function NeedsAttentionWidget() {
               {warnCount} warn
             </span>
           )}
+          <ChevronDown
+            size={14}
+            className={cn(
+              "text-zinc-500 transition-transform",
+              collapsed ? "rotate-0" : "rotate-180",
+            )}
+          />
         </div>
-      </div>
+      </button>
 
-      <div className="space-y-1.5">
-        {list.slice(0, 10).map(item => {
-          const Icon = ICONS[item.kind];
-          return (
-            <Link
-              key={`${item.kind}-${item.id}`}
-              href={item.href}
-              className={cn(
-                "block rounded-xl border px-3 py-2.5 transition-colors active:scale-[0.99]",
-                SEVERITY_CLASS[item.severity],
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={cn(
-                  "shrink-0 w-8 h-8 rounded-lg border flex items-center justify-center",
-                  ICON_CLASS[item.severity],
-                )}>
-                  <Icon size={14} strokeWidth={2.25} />
+      {/* Expanded list */}
+      {!collapsed && (
+        <div className="px-3 pb-3 space-y-1.5 border-t border-white/[0.04] pt-2">
+          {list.slice(0, 10).map(item => {
+            const Icon = ICONS[item.kind];
+            return (
+              <Link
+                key={`${item.kind}-${item.id}`}
+                href={item.href}
+                className={cn(
+                  "block rounded-xl border px-3 py-2.5 transition-colors active:scale-[0.99]",
+                  SEVERITY_CLASS[item.severity],
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={cn(
+                    "shrink-0 w-8 h-8 rounded-lg border flex items-center justify-center",
+                    ICON_CLASS[item.severity],
+                  )}>
+                    <Icon size={14} strokeWidth={2.25} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-black text-zinc-100 truncate">{item.title}</p>
+                    <p className="text-[10px] text-zinc-500 truncate">{item.subtitle}</p>
+                  </div>
+                  <ChevronRight size={13} className="shrink-0 text-zinc-600" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-black text-zinc-100 truncate">{item.title}</p>
-                  <p className="text-[10px] text-zinc-500 truncate">{item.subtitle}</p>
-                </div>
-                <ChevronRight size={13} className="shrink-0 text-zinc-600" />
-              </div>
-            </Link>
-          );
-        })}
-        {list.length > 10 && (
-          <p className="text-[10px] text-zinc-600 text-center pt-1">
-            +{list.length - 10} more · tap items above to resolve them
-          </p>
-        )}
-      </div>
+              </Link>
+            );
+          })}
+          {list.length > 10 && (
+            <p className="text-[10px] text-zinc-600 text-center pt-1">
+              +{list.length - 10} more · tap items above to resolve them
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

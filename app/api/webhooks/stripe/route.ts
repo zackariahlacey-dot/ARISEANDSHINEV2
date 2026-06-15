@@ -234,11 +234,15 @@ export async function POST(req: NextRequest) {
       // dashboards + admin payroll reports. tip is 100% the contractor's
       // per the signed Payment & Tax Terms agreement.
       if ((existing as any).stripe_checkout_session_id !== session.id) {
+        // Payment received → auto-complete the booking
+        const nowIso = new Date().toISOString();
         const { error: updateErr } = await supabase
           .from("bookings")
           .update({
-            status: "confirmed",
+            status: "completed",
             stripe_checkout_session_id: session.id,
+            paid_at: nowIso,
+            payment_source: "stripe",
             ...(tipCents > 0 ? { tip_cents: tipCents } : {}),
           })
           .eq("id", m.booking_id)
@@ -247,6 +251,12 @@ export async function POST(req: NextRequest) {
           console.error("[webhooks/stripe] Admin booking update failed:", updateErr);
           return NextResponse.json({ error: "Admin booking update failed" }, { status: 500 });
         }
+        // Cascade: mark every booking_vehicle complete too
+        await supabase
+          .from("booking_vehicles")
+          .update({ status: "complete", completed_at: nowIso })
+          .eq("booking_id", m.booking_id)
+          .neq("status", "complete");
       } else if (tipCents > 0) {
         // Same session re-fired (retry after email failure): make sure tip
         // is still captured even if we're not re-updating status.
