@@ -273,6 +273,15 @@ export async function updateSqueezeStatus(
   return { success: !error };
 }
 
+/** Permanently delete a squeeze request. Use sparingly — prefer dismissing. */
+export async function deleteSqueezeRequest(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!id) return { success: false, error: "Missing id." };
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("squeeze_requests").delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 // ── Convert "9:30 AM" → "09:30:00" ───────────────────────────────────────────
 function to24h(time12: string): string {
   const m = time12.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);

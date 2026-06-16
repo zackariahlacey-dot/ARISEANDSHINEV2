@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getSqueezeRequests, updateSqueezeStatus, scheduleSqueezeRequest,
+  getSqueezeRequests, updateSqueezeStatus, scheduleSqueezeRequest, deleteSqueezeRequest,
   type SqueezeRequest, type SqueezeStatus,
 } from "@/app/actions/squeezeActions";
 import { useToast } from "@/components/admin/Toast";
 import {
   Zap, Phone, Mail, Car, Anchor, Truck, Clock, Check, X,
   MessageSquare, Loader2, ChevronDown, CalendarDays, DollarSign, MessageCircle,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SubNav, SCHEDULE_SUBNAV } from "@/components/admin/SubNav";
@@ -93,6 +94,19 @@ function SqueezeCard({ request }: { request: SqueezeRequest }) {
       toast(`Marked as ${STATUS_CONFIG[status]?.label ?? status}`);
     },
     onError: () => toast("Failed to update status", "error"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteSqueezeRequest(id),
+    onSuccess: (r) => {
+      if (r.success) {
+        qc.invalidateQueries({ queryKey: ["squeeze"] });
+        toast("Request deleted");
+      } else {
+        toast(r.error ?? "Delete failed", "error");
+      }
+    },
+    onError: () => toast("Delete failed", "error"),
   });
 
   const schedMutation = useMutation({
@@ -311,9 +325,40 @@ function SqueezeCard({ request }: { request: SqueezeRequest }) {
             type="button"
             onClick={() => statusMutation.mutate({ id: request.id, status: "dismissed" })}
             disabled={statusMutation.isPending}
+            title="Dismiss (keeps in DB)"
             className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[10px] font-black text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.06] transition-all active:scale-95 disabled:opacity-50"
           >
             <X size={11} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirm(`Delete this squeeze request from ${request.name}? This can't be undone.`)) return;
+              deleteMutation.mutate(request.id);
+            }}
+            disabled={deleteMutation.isPending}
+            title="Permanently delete"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/[0.06] border border-red-500/20 text-[10px] font-black text-red-400 hover:bg-red-500/15 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {deleteMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+          </button>
+        </div>
+      )}
+
+      {/* Dismissed cards also get a Delete option so old junk can be cleared */}
+      {request.status === "dismissed" && (
+        <div className="flex justify-end mt-3 pt-3 border-t border-white/[0.04]">
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirm(`Permanently delete this squeeze request from ${request.name}?`)) return;
+              deleteMutation.mutate(request.id);
+            }}
+            disabled={deleteMutation.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/[0.06] border border-red-500/20 text-[10px] font-black uppercase tracking-widest text-red-400 hover:bg-red-500/15 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {deleteMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+            Delete
           </button>
         </div>
       )}

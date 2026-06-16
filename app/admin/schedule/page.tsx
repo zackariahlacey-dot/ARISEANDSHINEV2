@@ -28,7 +28,7 @@ import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
 import { BookingVehiclesPanel } from "@/components/admin/BookingVehiclesPanel";
 import { cashPriceFor } from "@/lib/cashPricing";
 import { useQuery } from "@tanstack/react-query";
-import { getSqueezeRequests, updateSqueezeStatus, type SqueezeRequest } from "@/app/actions/squeezeActions";
+import { getSqueezeRequests, updateSqueezeStatus, deleteSqueezeRequest, type SqueezeRequest } from "@/app/actions/squeezeActions";
 import { useToast } from "@/components/admin/Toast";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Modal } from "@/components/admin/Modal";
@@ -1883,7 +1883,7 @@ export default function SchedulePage() {
                     &ldquo;{sq.available_dates}&rdquo;
                   </p>
 
-                  {/* Actions */}
+                  {/* Primary action row */}
                   <div className="flex gap-1.5">
                     <button
                       onClick={() => {
@@ -1903,14 +1903,63 @@ export default function SchedulePage() {
                     >
                       <Zap size={11} /> Schedule
                     </button>
+                    {sq.phone && (
+                      <a
+                        href={`sms:${(sq.phone ?? "").replace(/\D/g, "")}`}
+                        title="Text"
+                        className="flex items-center justify-center w-9 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-300 hover:text-white hover:bg-white/[0.09] transition-all active:scale-95"
+                      >
+                        <MessageSquare size={13} />
+                      </a>
+                    )}
                     {sq.email && (
                       <a
                         href={`mailto:${sq.email}`}
-                        className="flex items-center justify-center w-9 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.09] transition-all active:scale-95"
+                        title="Email"
+                        className="flex items-center justify-center w-9 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-300 hover:text-white hover:bg-white/[0.09] transition-all active:scale-95"
                       >
                         <Mail size={13} />
                       </a>
                     )}
+                  </div>
+
+                  {/* Secondary status row */}
+                  <div className="flex gap-1.5">
+                    {sq.status === "pending" && (
+                      <button
+                        onClick={async () => {
+                          await updateSqueezeStatus(sq.id, "contacted");
+                          refetchSqueeze();
+                          toast("Marked contacted");
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-[9px] font-black uppercase tracking-widest text-blue-400 hover:bg-blue-500/20 transition-all active:scale-95"
+                      >
+                        <MessageSquare size={9} /> Contacted
+                      </button>
+                    )}
+                    <button
+                      onClick={async () => {
+                        await updateSqueezeStatus(sq.id, "dismissed");
+                        refetchSqueeze();
+                        toast("Dismissed");
+                      }}
+                      title="Dismiss (keeps record)"
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-all active:scale-95"
+                    >
+                      <X size={9} /> Dismiss
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Permanently delete this squeeze request from ${sq.name}? This can't be undone.`)) return;
+                        const r = await deleteSqueezeRequest(sq.id);
+                        if (r.success) { refetchSqueeze(); toast("Request deleted"); }
+                        else toast(r.error ?? "Delete failed", "error");
+                      }}
+                      title="Permanently delete"
+                      className="flex items-center justify-center w-9 py-1.5 rounded-md bg-red-500/[0.06] border border-red-500/20 text-red-400 hover:bg-red-500/15 transition-all active:scale-95"
+                    >
+                      <Trash2 size={11} />
+                    </button>
                   </div>
                 </div>
               );
