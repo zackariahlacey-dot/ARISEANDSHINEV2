@@ -116,6 +116,13 @@ function ceramicPackagePct(count: number): number {
   return 0.30;
 }
 
+/** Seat Removal SKUs are face-value specialty add-ons — excluded from the
+ *  basic bundle discount math. Their savings are baked into the 2-Row / 3-Row
+ *  bundle pricing already. */
+const SEAT_REMOVAL_ADDON_IDS = ["seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"] as const;
+const isSeatRemovalAddonId = (id: string): boolean =>
+  (SEAT_REMOVAL_ADDON_IDS as readonly string[]).includes(id);
+
 // Three customer-facing popular details. Clicking one bypasses the builder
 // and opens the booking section with that service pre-selected (the parent
 // handles the handoff via onSelectPopularService).
@@ -461,7 +468,7 @@ export function BuildYourPackage({
   // standard bundle tiers.
   const foundationPrice = getFoundationPrice(foundationService, vehicleSize);
   const selectedAddons = allAvailable.filter(a => selectedAddonIds.includes(a.id));
-  const qualifyingAddons = selectedAddons.filter(a => !isCeramicPackageId(a.id));
+  const qualifyingAddons = selectedAddons.filter(a => !isCeramicPackageId(a.id) && !isSeatRemovalAddonId(a.id));
   const ceramicAddons    = selectedAddons.filter(a =>  isCeramicPackageId(a.id));
   const qualifyingCount = qualifyingAddons.length;
   const bundlePct      = bundlePctFor(qualifyingCount);

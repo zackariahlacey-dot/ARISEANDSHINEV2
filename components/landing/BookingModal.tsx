@@ -66,8 +66,8 @@ function getMaintenanceSetupFee(serviceName: string): number {
 
 const ALL_ADD_ONS = [
   // ── Vehicle / Standard ────────────────────────────────────────────────────
-  { id: "engine_bay",        label: "Engine Bay Detail",                    price: 50,  desc: "Deep clean and degrease the engine bay — great before any exterior detail." },
-  { id: "headlight_restore",   label: "Headlight Restoration",               price: 60,  desc: "Restore cloudy or yellowed lenses to like-new clarity, UV sealed to prevent re-hazing." },
+  { id: "engine_bay",        label: "Engine Bay Detail",                    price: 85,  desc: "Deep degrease, dressing, and plastic care. Customers love the \"open the hood and it looks new\" moment. Skipped on vehicles with sensitive electronics by your request." },
+  { id: "headlight_restore",   label: "Headlight Restoration",               price: 65,  desc: "Sand, polish, and UV-seal cloudy or yellowed lenses to like-new clarity. Visible result, lasts 2+ years. Pair pricing." },
   { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 75,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
   { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. 3-row SUVs / work vans are automatically $105 (extra row + cargo area)." },
   { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
@@ -76,16 +76,22 @@ const ALL_ADD_ONS = [
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45,  desc: "Deep shampoo for two sections of floorboards" },
   { id: "floor_all",         label: "Floorboard Shampoo – All Sections",     price: 60,  desc: "Full deep shampoo for all floorboard sections" },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50,  desc: "Smooths paint by lifting embedded contaminants and upgrades your ceramic spray from 3-month to 6-month protection. Required prep before any sealant." },
-  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 50,  desc: "Deep extraction of embedded pet hair from seats, carpet & cargo area. Applied upon inspection — only charged if heavy accumulation is present." },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                 price: 75,  desc: "Beyond standard vacuum: pumice + electrostatic extraction lifts embedded pet hair from seats, carpets, and cargo area. Charged only when heavy accumulation is present (we'll confirm on inspection)." },
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
   // ── Build Your Package add-ons (new) ─────────────────────────────────────
   { id: "headliner_clean",     label: "Headliner Cleaning",                   price: 40,  desc: "Gentle dry-foam cleaning of the fabric headliner — lifts stains, smoke residue and dust without saturating the adhesive." },
   { id: "salt_stain_removal",  label: "Salt Stain Removal & Prevention",      price: 50,  desc: "Vermont winter survival: neutralize and lift dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
-  { id: "seat_removal",        label: "Seat Removal — Deepest Clean",         price: 125, desc: "We physically remove all seats to reach the spots impossible to clean otherwise — under the rails, deep carpet pockets, and the underside of each seat. Hot water extraction on every surface. The single deepest clean we offer." },
+  // ── Seat Removal Deep Clean — premium upgrade (specialty, excluded from bundle discount) ──
+  { id: "seat_removal_driver",     label: "Seat Removal — Driver Side",       price: 60,  desc: "Driver seat physically removed for under-rail and seat-underside hot water extraction. Premium spill / wear coverage." },
+  { id: "seat_removal_passenger",  label: "Seat Removal — Passenger Side",    price: 60,  desc: "Front passenger seat physically removed for under-rail and seat-underside hot water extraction." },
+  { id: "seat_removal_rear",       label: "Seat Removal — Rear Seats",        price: 85,  desc: "Rear bench or buckets physically removed. Reaches the carpet pockets and crevices nobody else touches — perfect after kids, dogs, or a long road trip." },
+  { id: "seat_removal_3rd_row",    label: "Seat Removal — 3rd Row",           price: 95,  desc: "3rd-row bench or captain's chairs physically removed for deep extraction. Big rigs only." },
+  { id: "seat_removal_all_2row",   label: "All Seats Removed — 2-Row Bundle", price: 150, desc: "Every seat physically removed (driver, passenger, rear) for the deepest interior clean we offer. Best value vs booking individually — saves $55." },
+  { id: "seat_removal_all_3row",   label: "All Seats Removed — 3-Row Bundle", price: 225, desc: "Every seat physically removed (driver, passenger, rear, 3rd-row) for the deepest interior clean we offer. Big rigs / 3-row SUVs / work vans. Saves $75 vs individual." },
   { id: "steam_sanitation",    label: "Steam Sanitation",                     price: 45,  desc: "High-pressure steam sanitizes vents, cup holders, seat tracks and every crevice — kills bacteria and lifts grime nothing else can reach." },
   { id: "trim_dressing",       label: "Rubber, Plastics & Vinyl Dressing",    price: 30,  desc: "UV-protective dressing on all exterior trim, rubber seals, plastics, and vinyl — brings tired surfaces back to deep black. FREE when you stack 3 or more add-ons. (Glass polish is already included in every exterior package.)" },
   { id: "mech_chem_decon",     label: "Mechanical & Chemical Decontamination", price: 85,  desc: "The full-monty paint prep: clay bar + iron remover chemically dissolves embedded brake dust and industrial fallout from paint and wheels. Replaces basic Clay Bar." },
-  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on",  price: 85,  desc: "Add the Salt Season Recovery undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment to your exterior service. Cheaper than booking it standalone since the wash is already done." },
+  { id: "salt_recovery_addon", label: "Winter Salt Recovery — Undercarriage",  price: 85,  desc: "Vermont winter survival: undercarriage flush, door-jamb deep clean, and salt-neutralizer treatment added to any exterior service. Recommended monthly Nov–Apr." },
   // ── Ultimate Series (premium upgrades — high-ticket) ─────────────────────
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
@@ -116,12 +122,16 @@ type AddonItem = typeof ALL_ADD_ONS[number];
 const FLOOR_ADDON_IDS    = ["floor_1", "floor_2", "floor_all"];
 const MARINE_ADDON_IDS   = ["marine_isinglass", "marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
-/** High-ticket upgrades for Ultimate packages — engine bay & headlight restore remain paid add-ons */
-const ULTIMATE_ADDON_IDS = ["engine_bay", "polish_ceramic", "headlight_restore", "ozone_treatment"];
+/** All seat-removal SKUs — premium specialty, excluded from the basic bundle discount math. */
+const SEAT_REMOVAL_ADDON_IDS = ["seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"] as const;
+const isSeatRemovalAddonId = (id: string): boolean =>
+  (SEAT_REMOVAL_ADDON_IDS as readonly string[]).includes(id);
+/** High-ticket upgrades for Ultimate packages — engine bay, headlight, pet hair, and seat removal */
+const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", "pet_hair", ...SEAT_REMOVAL_ADDON_IDS];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
-const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation", "seat_removal"];
+const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation", "seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"];
 /** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
 const BUILDER_EXTERIOR_ADDON_IDS = ["clay_bar", "mech_chem_decon", "headlight_restore", "trim_dressing", "salt_recovery_addon", "wheel_ceramic"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
@@ -170,7 +180,13 @@ const DURATION_EXTENDING_ADDONS: Record<string, number> = {
   odor_bomb:            60,  // Strong Odor Elimination +1 hr
   headliner_clean:      30,  // Headliner Cleaning +30 min
   salt_stain_removal:   30,  // Salt Stain Removal +30 min
-  seat_removal:         90,  // Seat Removal Deepest Clean +1.5 hrs
+  // Seat Removal — per-section + bundle tiers
+  seat_removal_driver:     30,
+  seat_removal_passenger:  30,
+  seat_removal_rear:       45,
+  seat_removal_3rd_row:    45,
+  seat_removal_all_2row:   90,  // saves a little time vs per-section because we batch the work
+  seat_removal_all_3row:  135,
   // Exterior add-ons
   // clay_bar — no extra time (works in parallel with hand wash drying)
   headlight_restore:    30,  // Headlight Restoration +30 min
@@ -380,27 +396,21 @@ function getServiceCategory(service: Service): { label: string; color: string } 
 const FOOTAGE_RATE: Record<string, number> = {
   // Boats — 15 ft minimum
   "Boat Interior":          15,
-  "Boat Exterior":          20,
-  "Boat Full Detail":       32,
-  "Boat Showroom Package":  55,
+  "Boat Exterior":          16,
+  "Boat Full Detail":       28,
   // RVs — 20 ft minimum
-  "RV Interior":            15,
-  "RV Exterior":            12,
-  "RV Full Detail":         25,
-  "RV Showroom 1-Step":     25,
-  "RV Showroom 2-Step":     40,
+  "RV Exterior":            15,
+  "RV Interior":            25,
+  "RV Full Detail":         38,
 };
 /** Minimum footage per service */
 const FOOTAGE_MIN_FEET: Record<string, number> = {
   "Boat Interior":          15,
   "Boat Exterior":          15,
   "Boat Full Detail":       15,
-  "Boat Showroom Package":  15,
-  "RV Interior":            20,
   "RV Exterior":            20,
+  "RV Interior":            20,
   "RV Full Detail":         20,
-  "RV Showroom 1-Step":     20,
-  "RV Showroom 2-Step":     20,
 };
 // backward-compat aliases used in a few inline JSX references
 const BOAT_RATE = FOOTAGE_RATE;
@@ -419,10 +429,9 @@ const SERVICE_DESCRIPTION_OVERRIDES: Record<string, string> = {
 
 /** Maps DB service names → display names shown on the booking confirmation screen */
 const BOAT_DISPLAY_NAMES: Record<string, { name: string; tagline: string }> = {
-  "Boat Interior":         { name: "Boat Interior",         tagline: "Full interior clean — vinyl, carpet, dash, storage & odor treatment. No buffing or polishing." },
-  "Boat Exterior":         { name: "Boat Exterior",         tagline: "Hull wash, oxidation removal, wax/sealant & deck rinse. No buffing or polishing." },
-  "Boat Full Detail":      { name: "Boat Full Detail",      tagline: "Complete interior + exterior — hull, wax, interior vacuum & vinyl protect. No buffing or polishing." },
-  "Boat Showroom Package": { name: "Boat Showroom Package", tagline: "Exterior detail + machine polish — showroom-ready finish with ceramic or carnauba wax." },
+  "Boat Interior":    { name: "Boat Interior",    tagline: "Full interior clean — vinyl, carpet, dash, storage & odor treatment. No buffing or polishing." },
+  "Boat Exterior":    { name: "Boat Exterior",    tagline: "Hull wash, hand-applied wax, deck rinse & metal polish. No machine polishing." },
+  "Boat Full Detail": { name: "Boat Full Detail", tagline: "Complete interior + exterior — hull, wax, interior vacuum & vinyl protect. Best value." },
 };
 
 type SizeKey = "price_small" | "price_medium" | "price_large" | "price_extra_large";
@@ -1059,8 +1068,15 @@ export function BookingSection({
     }));
 
   const toggleAddon = (addon: AddonItem) => {
+    const isBundleSeat = addon.id === "seat_removal_all_2row" || addon.id === "seat_removal_all_3row";
+    const isIndividualSeat = isSeatRemovalAddonId(addon.id) && !isBundleSeat;
     setSelectedAddons(prev => {
       const isSelected = prev.some(a => a.id === addon.id);
+      // Block selecting an individual seat-removal when a bundle is already active.
+      // (Visual disable is also applied at render time — this is the safety net.)
+      if (isIndividualSeat && !isSelected && prev.some(a => a.id === "seat_removal_all_2row" || a.id === "seat_removal_all_3row")) {
+        return prev;
+      }
       if (isSelected) {
         return prev.filter(a => a.id !== addon.id);
       } else {
@@ -1075,6 +1091,10 @@ export function BookingSection({
           filtered = prev.filter(a => !WINDOW_COATING_ADDON_IDS.includes(a.id));
         } else if (DECON_ADDON_IDS.includes(addon.id)) {
           filtered = prev.filter(a => !DECON_ADDON_IDS.includes(a.id));
+        } else if (isBundleSeat) {
+          // Selecting an All-Seats bundle replaces any individual seat picks
+          // AND any other bundle (only one bundle can be active at a time).
+          filtered = prev.filter(a => !isSeatRemovalAddonId(a.id));
         }
         return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides) }];
       }
@@ -1201,7 +1221,9 @@ export function BookingSection({
   // surfaces show identical numbers.
   // Ceramic Package members get their OWN tiered discount (10/20/30%) and
   // are excluded from the regular bundle math so they can't double-dip.
-  const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicPackageId(a.id));
+  // Seat Removal SKUs are face-value specialty — also excluded from bundle math
+  // (their savings are baked into the 2-Row / 3-Row bundle pricing already).
+  const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicPackageId(a.id) && !isSeatRemovalAddonId(a.id));
   const ceramicAddons    = selectedAddons.filter(a => isCeramicPackageId(a.id));
   const bundlePct = bundlePctFor(qualifyingAddons.length);
   const addonsBundleSavings = qualifyingAddons.reduce(
@@ -1609,7 +1631,10 @@ export function BookingSection({
       serviceName: selectedService?.name ?? null,
       date: selectedDate || null,
       time: selectedTime || null,
-      price: step >= 3 ? totalAfterDiscount : null,
+      // Show running total (service + add-ons) as soon as a service is picked —
+      // not just at step 3 — so the sticky "Back to booking" pill reflects
+      // every add-on the customer toggles.
+      price: selectedService && totalAfterDiscount > 0 ? totalAfterDiscount : null,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, step, selectedService?.name, selectedDate, selectedTime, totalAfterDiscount]);
@@ -3289,8 +3314,10 @@ export function BookingSection({
                         const standAlone = available.filter(a =>
                           !FLOOR_ADDON_IDS.includes(a.id)
                           && !WINDOW_COATING_ADDON_IDS.includes(a.id)
-                          && !isCeramicPackageId(a.id),
+                          && !isCeramicPackageId(a.id)
+                          && !isSeatRemovalAddonId(a.id),
                         );
+                        const seatRemovalOpts = available.filter(a => isSeatRemovalAddonId(a.id));
                         const floorOpts  = available.filter(a => FLOOR_ADDON_IDS.includes(a.id));
                         // Keep the original tier selector for windshield-only
                         // + front-3 (cheaper entry points). The all-glass tier
@@ -3378,6 +3405,176 @@ export function BookingSection({
                                   </button>
                                 );
                               })}
+
+                              {/* ── Premium Upgrade: Seat Removal Deep Clean ── */}
+                              {seatRemovalOpts.length > 0 && (() => {
+                                // Auto-detect vehicle row count from vehicleSize.
+                                // 3-row vehicles (xl / extra_large): show 3rd-row + 3-row bundle, hide 2-row bundle.
+                                // 2-row vehicles (sedan/medium/suv/large): hide 3rd-row + 3-row bundle.
+                                // Unknown (no size yet): show all 6 so customer can choose.
+                                const size = (vehicleSize as string) || "";
+                                const is3Row = size === "xl" || size === "extra_large";
+                                const is2Row = size === "sedan" || size === "medium" || size === "suv" || size === "large";
+                                const HIDDEN_BY_SIZE: Set<string> = is3Row
+                                  ? new Set(["seat_removal_all_2row"])
+                                  : is2Row
+                                    ? new Set(["seat_removal_3rd_row", "seat_removal_all_3row"])
+                                    : new Set();
+                                const sectionOpts = seatRemovalOpts.filter(o =>
+                                  !HIDDEN_BY_SIZE.has(o.id) &&
+                                  o.id !== "seat_removal_all_2row" &&
+                                  o.id !== "seat_removal_all_3row");
+                                const bundleOpts = seatRemovalOpts.filter(o =>
+                                  !HIDDEN_BY_SIZE.has(o.id) &&
+                                  (o.id === "seat_removal_all_2row" || o.id === "seat_removal_all_3row"));
+                                const anySelected = seatRemovalOpts.some(o => selectedAddons.some(a => a.id === o.id));
+                                const SHORT_LABEL: Record<string, string> = {
+                                  seat_removal_driver:    "Driver",
+                                  seat_removal_passenger: "Passenger",
+                                  seat_removal_rear:      "Rear",
+                                  seat_removal_3rd_row:   "3rd Row",
+                                };
+                                const SEAT_SAVINGS: Record<string, number> = {
+                                  seat_removal_all_2row: 55,
+                                  seat_removal_all_3row: 75,
+                                };
+                                return (
+                                  <div className={`relative rounded-2xl border overflow-hidden transition-all ${
+                                    anySelected
+                                      ? "border-[#D4AF37]/60 bg-gradient-to-br from-[#D4AF37]/[0.08] via-zinc-950/40 to-zinc-950/40 shadow-[0_0_18px_rgba(212,175,55,0.15)]"
+                                      : "border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.02] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/50"
+                                  }`}>
+                                    {/* Header */}
+                                    <div className={`px-4 pt-3 pb-2.5 border-b border-white/[0.06] ${
+                                      anySelected ? "bg-[#D4AF37]/[0.06]" : "bg-zinc-950/30"
+                                    }`}>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Crown size={13} className="text-[#D4AF37] shrink-0" fill="currentColor" />
+                                        <p className="text-sm font-bold text-zinc-100 leading-tight">Seat Removal Deep Clean</p>
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
+                                          <Crown size={8} fill="currentColor" />Premium
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-zinc-500 leading-snug">
+                                        Seats physically removed for under-rail and seat-underside hot water extraction. Pick à la carte or bundle for the deepest clean we offer.
+                                      </p>
+                                    </div>
+
+                                    {/* Per-section options — grid like ceramic package.
+                                        Disabled when a bundle is active (mutual exclusivity). */}
+                                    {(() => {
+                                      const bundleActive = selectedAddons.some(a => a.id === "seat_removal_all_2row" || a.id === "seat_removal_all_3row");
+                                      return (
+                                    <div className={`grid gap-2 p-2 bg-zinc-950/40 ${sectionOpts.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
+                                      {sectionOpts.map((opt) => {
+                                        const isSelected = selectedAddons.some(a => a.id === opt.id);
+                                        const price = getEffectiveAddonPrice(opt, vehicleSize as string, addonOverrides);
+                                        return (
+                                          <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => toggleAddon(opt)}
+                                            aria-pressed={isSelected}
+                                            disabled={bundleActive}
+                                            title={bundleActive ? "Included in the All Seats bundle" : undefined}
+                                            className={`relative px-1.5 py-2.5 rounded-xl border-2 text-center transition-all active:scale-[0.97] ${
+                                              bundleActive
+                                                ? "bg-zinc-900/40 border-white/[0.05] opacity-40 cursor-not-allowed"
+                                                : isSelected
+                                                  ? "bg-gradient-to-b from-[#D4AF37]/30 to-[#D4AF37]/10 border-[#D4AF37] shadow-[0_0_12px_rgba(212,175,55,0.3)] -translate-y-0.5"
+                                                  : "bg-zinc-900/60 border-white/10 hover:border-[#D4AF37]/50 hover:bg-zinc-900"
+                                            }`}
+                                          >
+                                            <div className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
+                                              bundleActive
+                                                ? "bg-zinc-800/60 border border-zinc-800"
+                                                : isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-zinc-700"
+                                            }`}>
+                                              {bundleActive
+                                                ? <Check size={9} className="text-[#D4AF37]/60" strokeWidth={3} />
+                                                : isSelected
+                                                  ? <Check size={9} className="text-black" strokeWidth={3} />
+                                                  : <Plus size={8} className="text-zinc-500" strokeWidth={3} />}
+                                            </div>
+                                            <div className={`text-[10px] font-black uppercase tracking-wider mt-0.5 ${
+                                              bundleActive ? "text-zinc-500" : isSelected ? "text-[#D4AF37]" : "text-zinc-200"
+                                            }`}>
+                                              {SHORT_LABEL[opt.id] ?? opt.label}
+                                            </div>
+                                            <div className={`text-sm font-black mt-1 tabular-nums ${
+                                              bundleActive ? "text-zinc-600 line-through" : isSelected ? "text-white" : "text-[#D4AF37]"
+                                            }`}>
+                                              +${price}
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                      );
+                                    })()}
+
+                                    {/* Bundle row — full-width, save badge */}
+                                    {bundleOpts.length > 0 && (
+                                      <div className="px-2 pb-2 bg-zinc-950/40">
+                                        <div className={`flex items-center gap-1.5 mb-1.5 ${bundleOpts.length === 1 ? "justify-center" : ""}`}>
+                                          <div className="flex-1 h-px bg-white/[0.05]" />
+                                          <span className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                                            {bundleOpts.length === 2 ? "Or Bundle & Save" : "Best Value Bundle"}
+                                          </span>
+                                          <div className="flex-1 h-px bg-white/[0.05]" />
+                                        </div>
+                                        <div className={`grid gap-2 ${bundleOpts.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                                          {bundleOpts.map((opt) => {
+                                            const isSelected = selectedAddons.some(a => a.id === opt.id);
+                                            const price = getEffectiveAddonPrice(opt, vehicleSize as string, addonOverrides);
+                                            const savings = SEAT_SAVINGS[opt.id];
+                                            const isThree = opt.id === "seat_removal_all_3row";
+                                            return (
+                                              <button
+                                                key={opt.id}
+                                                type="button"
+                                                onClick={() => toggleAddon(opt)}
+                                                aria-pressed={isSelected}
+                                                className={`relative px-3 py-2 rounded-xl border-2 transition-all active:scale-[0.97] flex items-center justify-between gap-2 ${
+                                                  isSelected
+                                                    ? "bg-gradient-to-b from-[#D4AF37]/30 to-[#D4AF37]/10 border-[#D4AF37] shadow-[0_0_12px_rgba(212,175,55,0.3)]"
+                                                    : "bg-gradient-to-b from-[#D4AF37]/[0.08] to-zinc-950/40 border-[#D4AF37]/40 hover:border-[#D4AF37]/70"
+                                                }`}
+                                              >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                  <div className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
+                                                    isSelected ? "bg-[#D4AF37]" : "bg-zinc-800 border border-[#D4AF37]/40"
+                                                  }`}>
+                                                    {isSelected ? <Check size={9} className="text-black" strokeWidth={3} /> : <Plus size={8} className="text-[#D4AF37]" strokeWidth={3} />}
+                                                  </div>
+                                                  <div className="text-left">
+                                                    <div className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-[#D4AF37]" : "text-[#F3E5AB]"}`}>
+                                                      All Seats · {isThree ? "3-Row" : "2-Row"}
+                                                    </div>
+                                                    <div className="text-[9px] text-emerald-400 font-bold tabular-nums">Save ${savings}</div>
+                                                  </div>
+                                                </div>
+                                                <div className={`shrink-0 text-base font-black tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
+                                                  +${price}
+                                                </div>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Footer note — only when both bundles shown (unknown size) */}
+                                    {!is2Row && !is3Row && (
+                                      <div className="px-3 py-1.5 border-t border-white/[0.05] bg-zinc-950/30">
+                                        <p className="text-[10px] text-zinc-500 text-center">
+                                          Select your vehicle size above so we can hide the option that doesn&apos;t fit.
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
 
                               {/* Floorboard Shampoo — tiered selector */}
                               {floorOpts.length > 0 && (

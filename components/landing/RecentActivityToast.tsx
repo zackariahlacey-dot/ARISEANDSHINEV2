@@ -21,7 +21,7 @@ const ENTRIES: { city: string; action: string; type: EntryType }[] = [
   { city: "Winooski",        action: "Maintenance Club joined",       type: "club" },
   { city: "Richmond",        action: "Boat Full Detail booked",       type: "boat" },
   { city: "Charlotte",       action: "Boat Exterior booked",          type: "boat" },
-  { city: "Milton",          action: "RV Exterior Refresh booked",    type: "rv"   },
+  { city: "Milton",          action: "RV Exterior booked",            type: "rv"   },
   { city: "Shelburne",       action: "Boat Interior booked",          type: "boat" },
 ];
 

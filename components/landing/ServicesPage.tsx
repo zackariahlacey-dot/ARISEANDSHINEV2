@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Sparkles, Crown, Star, Gem, Layers, Shield, ShieldCheck,
+  Sparkles, Crown, Star, Gem,
   CheckCircle, AlertTriangle, ChevronDown, Car,
   ArrowLeft, MapPin, ChevronRight, Phone,
 } from "lucide-react";
@@ -58,37 +58,6 @@ const ULTIMATE_CARDS = [
   },
 ] as const;
 
-const PAINT_CORRECTION_CARDS = [
-  {
-    level: 1 as const,
-    name: "Single-Stage Paint Enhancement",
-    tagline: "Massive gloss improvement for well-maintained vehicles.",
-    priceNormal: 350, priceLarge: 450,
-    process: [
-      "Full Decontamination Wash & Iron Removal",
-      "Mechanical Clay Bar Treatment",
-      "Single-pass machine polish with a finishing foam pad",
-      "Removes 50–70% of light swirl marks and oxidation",
-    ],
-    protection: "Includes 6-Month Ceramic Sealant",
-    bestFor: "Newer cars or well-maintained paint",
-  },
-  {
-    level: 2 as const,
-    name: "Two-Stage Paint Correction",
-    tagline: "The ultimate restoration for deep scratches and heavy swirls.",
-    priceNormal: 650, priceLarge: 800,
-    process: [
-      "Full Decontamination & Clay Bar Prep",
-      "Step 1: Heavy compounding pass with microfiber/wool pad",
-      "Step 2: Finishing polish pass to remove haze and maximize clarity",
-      "Removes 85–95% of all correctable surface defects",
-    ],
-    protection: "Includes 12-Month Premium Ceramic Coating Lite",
-    bestFor: "Dark colors or older paint with swirls & scratches",
-  },
-] as const;
-
 const EXTERIOR_ITEMS = [
   "Full handwash and foam bath",
   "Deep clean wheel wells, rims, and tires",
@@ -116,9 +85,8 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 
 const FAQ = [
   { q: "Do you come to my location?", a: "Yes — we're 100% mobile. We come to your home, office, or anywhere in Vermont. No shop visit needed." },
-  { q: "How long does a detail take?", a: "Interior or Exterior Details typically take 1.5–2.5 hours. Full Details run 2.5–4 hours. Ultimate Series and Paint Correction may take a full day." },
+  { q: "How long does a detail take?", a: "Interior or Exterior typically take 1.5–2.5 hours. Full Details run 2.5–4 hours. Ultimate Series may take a full day." },
   { q: "What products do you use?", a: "We use professional-grade, eco-friendly products including pH-neutral soaps, ceramic-grade protectants, and premium interior dressings — safe for all surfaces." },
-  { q: "Is Paint Correction weather-dependent?", a: "Yes. Paint Correction requires a shaded, stable environment (ideally a garage). We will confirm conditions before scheduling." },
   { q: "What's the cancellation policy?", a: "Cancellations must be made at least 24 hours in advance. Same-day cancellations may incur a $50 fee. We'll never charge you if we reschedule due to weather." },
 ];
 
@@ -131,7 +99,7 @@ const viewport = { once: true, margin: "-80px" };
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 const DETAILING_ORDER = ["Interior Detail", "Full Detail", "Exterior Detail"];
-type BookingContext = "standard" | "ultimate" | "paintcorrection" | "club" | null;
+type BookingContext = "standard" | "ultimate" | "club" | null;
 
 export function ServicesPage({ services }: { services: Service[] }) {
   const detailingServices = useMemo(() =>
@@ -169,7 +137,6 @@ export function ServicesPage({ services }: { services: Service[] }) {
   const NAV_SECTIONS = [
     { label: "Auto Detailing", id: "auto-detailing" },
     { label: "Ultimate Packages", id: "ultimate-packages" },
-    { label: "Paint Correction", id: "paint-correction" },
   ];
 
   return (
@@ -254,27 +221,6 @@ export function ServicesPage({ services }: { services: Service[] }) {
             <p className="text-[11px] text-zinc-600 leading-relaxed">
               <span className="font-bold text-zinc-500">Heavy Soil / Biohazard:</span>{" "}
               Vehicles with extreme mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.
-            </p>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* ── 3. Paint Correction ── */}
-      <motion.section id="paint-correction" initial="hidden" whileInView="visible" viewport={viewport} variants={sectionVariants}
-        className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
-      >
-        <div className="w-full max-w-7xl mx-auto">
-          <SectionHeader eyebrow="Precision Refinishing" title="Paint Correction" subtitle="Machine polishing to remove swirl marks, oxidation, and scratches — revealing the clarity your paint deserves." />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10 md:mt-14">
-            {PAINT_CORRECTION_CARDS.map((card) => (
-              <PaintCorrectionCard key={card.name} {...card} onBook={() => openBooking("paintcorrection")} />
-            ))}
-          </div>
-          <div className="mt-6 flex items-start gap-2.5 max-w-2xl mx-auto text-center justify-center">
-            <AlertTriangle size={13} className="text-amber-500/70 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-zinc-600 leading-relaxed">
-              <span className="font-bold text-zinc-500">Important Note:</span>{" "}
-              Paint Correction requires a stable, shaded environment or garage. Mobile service is weather-dependent.
             </p>
           </div>
         </div>
@@ -462,80 +408,6 @@ function UltimateServiceCard({ name, tagline, priceNormal, priceLarge, badge, fe
           <Sparkles size={9} className="inline mr-1" />
           Counts toward your loyalty tier
         </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Paint Correction Card ─────────────────────────────────────────────────────
-
-function PaintCorrectionCard({ level, name, tagline, priceNormal, priceLarge, process, protection, bestFor, onBook }: {
-  level: 1 | 2; name: string; tagline: string; priceNormal: number; priceLarge: number;
-  process: readonly string[]; protection: string; bestFor: string; onBook: () => void;
-}) {
-  const isFull = level === 2;
-  return (
-    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${isFull ? "border border-[#D4AF37]/45 shadow-[0_0_40px_rgba(212,175,55,0.1)] bg-zinc-900/70 hover:shadow-[0_16px_50px_rgba(212,175,55,0.2)]" : "border border-white/[0.07] bg-zinc-900/50 hover:border-[#D4AF37]/25"}`}>
-      {isFull && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent shrink-0" />}
-      <div className="p-7 flex flex-col flex-1">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2.5">
-            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-black border ${isFull ? "bg-[#D4AF37]/15 border-[#D4AF37]/40 text-[#D4AF37]" : "bg-white/[0.06] border-white/10 text-zinc-400"}`}>{level}</div>
-            <Layers size={11} className={isFull ? "text-[#D4AF37]" : "text-zinc-500"} strokeWidth={2} />
-            <span className={`text-[10px] font-black uppercase tracking-[0.25em] ${isFull ? "text-[#D4AF37]" : "text-zinc-500"}`}>Level {level}</span>
-          </div>
-          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{name}</h3>
-          <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{tagline}</p>
-          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-white/[0.06] text-[11px] text-zinc-400">
-            <CheckCircle size={11} className="text-[#D4AF37]" />{bestFor}
-          </div>
-        </div>
-
-        {/* Pricing */}
-        <div className={`flex rounded-xl mb-6 overflow-hidden border ${isFull ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
-          <div className="flex-1 py-4 text-center bg-white/[0.02]">
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mb-1">Starting at</div>
-            <div className="text-2xl font-black text-white tabular-nums">${priceNormal}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Normal</div>
-          </div>
-          <div className="w-px bg-white/[0.06]" />
-          <div className={`flex-1 py-4 text-center ${isFull ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mb-1">Starting at</div>
-            <div className={`text-2xl font-black tabular-nums ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>${priceLarge}</div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 mt-1">Large</div>
-          </div>
-        </div>
-
-        {/* Process */}
-        <div className="mb-6 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-3">Process</p>
-          <ul className="space-y-2.5">
-            {process.map((step) => (
-              <li key={step} className="flex items-start gap-3 text-sm text-zinc-300 leading-snug">
-                <span className="mt-[3px] w-3.5 h-3.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
-                  <span className="w-1 h-1 rounded-full bg-[#D4AF37]" />
-                </span>
-                {step}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Includes: clay bar + door jamb cleaning note */}
-        <div className="mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3 bg-zinc-800/40 border border-white/[0.05]">
-          <CheckCircle size={13} className="text-[#D4AF37] shrink-0 mt-0.5" />
-          <span className="text-[11px] text-zinc-400 leading-relaxed">Includes <strong className="text-zinc-200">clay bar treatment</strong> and <strong className="text-zinc-200">door jamb cleaning</strong></span>
-        </div>
-
-        {/* Protection */}
-        <div className={`flex items-center gap-2.5 rounded-xl px-4 py-3 mb-6 border ${isFull ? "bg-[#D4AF37]/[0.07] border-[#D4AF37]/20" : "bg-white/[0.03] border-white/[0.06]"}`}>
-          <Shield size={15} className={isFull ? "text-[#D4AF37] shrink-0" : "text-zinc-500 shrink-0"} />
-          <span className={`text-xs font-semibold ${isFull ? "text-[#D4AF37]" : "text-zinc-400"}`}>{protection}</span>
-        </div>
-
-        <button onClick={onBook} className={`w-full py-3.5 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${isFull ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_20px_rgba(212,175,55,0.35)]" : "btn-primary-gold-shimmer bg-zinc-950 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:scale-[1.02]"}`}>
-          Book Now <Sparkles size={13} className="shrink-0" />
-        </button>
       </div>
     </div>
   );

@@ -7,14 +7,16 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Star, Phone, ArrowRight, Truck,
-  Droplets, Calculator, ChevronRight,
-  Minus, Plus, Layers, AlertTriangle, X, Zap,
+  Droplets, Calculator, ChevronRight, Clock,
+  Minus, Plus, Layers, AlertTriangle, X,
+  MapPin, BadgeCheck,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
+import { getFootageDurationMins, formatDurationRange } from "@/lib/footageDuration";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -38,7 +40,6 @@ type RVService = {
   displayName: string;
   subtitle: string;
   ratePerFoot: number;
-  rateMax: number | null;
   badge: string | null;
   tagline: string;
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
@@ -52,13 +53,12 @@ type RVService = {
 
 const RV_SERVICES_STATIC: RVService[] = [
   {
-    dbName: "RV Exterior Refresh",
-    displayName: "Exterior Refresh",
-    subtitle: "The Maintenance Detail",
-    ratePerFoot: 18,
-    rateMax: null,
+    dbName: "RV Exterior",
+    displayName: "RV Exterior",
+    subtitle: "Exterior Detail",
+    ratePerFoot: 15,
     badge: null,
-    tagline: "Best for well-maintained RVs needing a seasonal wash and protection.",
+    tagline: "Hand wash, seal, and protect — your seasonal maintenance detail.",
     icon: Droplets,
     features: [
       "Foam Bath & Hand Wash — scratch-free contact wash",
@@ -67,21 +67,21 @@ const RV_SERVICES_STATIC: RVService[] = [
       "Wheel & Tire Service — rims, wells + UV tire dressing",
       "Glass — streak-free exterior window cleaning",
       "6-Month Protection — high-gloss ceramic spray sealant",
+      "No machine polishing",
     ],
     accent: "text-[#D4AF37]",
-    border: "border-white/[0.08]",
-    bg: "bg-zinc-900/50",
-    popular: false,
+    border: "border-[#D4AF37]/40",
+    bg: "bg-[#D4AF37]/[0.05]",
+    popular: true,
     premium: false,
   },
   {
-    dbName: "RV Living Space Reset",
-    displayName: "Living Space Reset",
-    subtitle: "Interior Only",
-    ratePerFoot: 28,
-    rateMax: null,
+    dbName: "RV Interior",
+    displayName: "RV Interior",
+    subtitle: "Interior Detail",
+    ratePerFoot: 25,
     badge: null,
-    tagline: "Best for deep cleaning lived-in rigs or preparing for a trip or sale.",
+    tagline: "Full interior reset — deep clean every cabinet, surface, and seat.",
     icon: Sparkles,
     features: [
       "Kitchen — countertops, microwave, stovetop & fridge",
@@ -98,48 +98,26 @@ const RV_SERVICES_STATIC: RVService[] = [
     premium: false,
   },
   {
-    dbName: "RV Ultimate Transformation",
-    displayName: "Ultimate RV Transformation",
-    subtitle: "Full Detail",
-    ratePerFoot: 50,
-    rateMax: null,
-    badge: "Total Package",
-    tagline: "The complete restoration — showroom condition inside and out.",
+    dbName: "RV Full Detail",
+    displayName: "RV Full Detail",
+    subtitle: "Interior + Exterior",
+    ratePerFoot: 38,
+    badge: "Best Value",
+    tagline: "Everything inside and out — the complete road-ready package.",
     icon: Layers,
     features: [
-      "Everything in Exterior Refresh",
-      "Everything in Living Space Reset",
+      "Everything in RV Exterior",
+      "Everything in RV Interior",
       "Awning Service — deep clean underside & top",
       "Storage Bays — degrease & vacuum all compartments",
       "Metal Polishing — chrome/stainless ladders, handles & trim",
+      "Best value — save vs booking separately",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/50",
     bg: "",
-    popular: true,
-    premium: true,
-  },
-  {
-    dbName: "RV Oxidation Restoration",
-    displayName: "Oxidation Restoration",
-    subtitle: 'The "Chalky" Fix',
-    ratePerFoot: 35,
-    rateMax: 45,
-    badge: "Specialized",
-    tagline: "Best for faded, dull, or chalky fiberglass — exterior only.",
-    icon: Zap,
-    features: [
-      "Prep — full decon wash + iron fallout removal",
-      "Step 1 (Leveling) — heavy compound, strip dead oxidation",
-      "Step 2 (Refining) — machine polish for color depth & gloss",
-      "Step 3 (Seal) — 12-month marine-grade sealant application",
-      "Headlights — complimentary lens restoration included",
-    ],
-    accent: "text-amber-400",
-    border: "border-amber-500/30",
-    bg: "bg-amber-500/[0.025]",
     popular: false,
-    premium: false,
+    premium: true,
   },
 ];
 
@@ -199,37 +177,35 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
       </div>
 
       <div
-        className={`flex md:grid md:grid-cols-4 gap-3 mb-5 ${carouselScrollClass} pb-2 -mx-1 px-1 md:mx-0 md:px-0 md:overflow-visible`}
+        className={`flex md:grid md:grid-cols-3 gap-3 mb-5 ${carouselScrollClass} pb-2 -mx-1 px-1 md:mx-0 md:px-0 md:overflow-visible`}
       >
-        {RV_SERVICES_STATIC.map((svc) => (
-          <div
-            key={svc.dbName}
-            className={`snap-center shrink-0 w-[min(72vw,220px)] md:w-auto rounded-xl border p-4 text-center ${
-              svc.premium
-                ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]"
-                : svc.rateMax != null
-                  ? "border-amber-500/25 bg-amber-500/[0.03]"
-                  : "border-white/[0.07] bg-zinc-900/40"
-            }`}
-          >
-            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
-            {svc.rateMax != null ? (
-              <>
-                <p className="text-lg font-black tabular-nums text-amber-400">
-                  ${calc(svc.ratePerFoot).toLocaleString()}–${calc(svc.rateMax).toLocaleString()}
+        {RV_SERVICES_STATIC.map((svc) => {
+          const mins = getFootageDurationMins(svc.dbName, feet);
+          return (
+            <div
+              key={svc.dbName}
+              className={`snap-center shrink-0 w-[min(82vw,260px)] md:w-auto rounded-xl border p-4 text-center ${
+                svc.premium
+                  ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]"
+                  : svc.popular
+                    ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.04]"
+                    : "border-white/[0.07] bg-zinc-900/40"
+              }`}
+            >
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
+              <p className={`text-xl font-black tabular-nums ${svc.premium ? "text-[#D4AF37]" : "text-white"}`}>
+                ${calc(svc.ratePerFoot).toLocaleString()}
+              </p>
+              <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
+              {mins != null && (
+                <p className="text-[9px] text-zinc-500 mt-1.5 flex items-center justify-center gap-1">
+                  <Clock size={9} className="text-[#D4AF37]/70" />
+                  <span className="tabular-nums">{formatDurationRange(mins)}</span>
                 </p>
-                <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}–${svc.rateMax}/ft</p>
-              </>
-            ) : (
-              <>
-                <p className={`text-xl font-black tabular-nums ${svc.premium ? "text-[#D4AF37]" : "text-white"}`}>
-                  ${calc(svc.ratePerFoot).toLocaleString()}
-                </p>
-                <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
-              </>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
       <p className="text-[10px] text-zinc-600 text-center md:hidden -mt-2 mb-4">Swipe for packages</p>
 
@@ -399,12 +375,12 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
             Mobile RV Detailing<br />Vermont
           </h1>
 
-          <p className="text-sm md:text-base text-zinc-400 mb-5 max-w-lg mx-auto">
-            Per-foot pricing statewide — we come to you.
+          <p className="text-sm md:text-base text-zinc-400 mb-5 max-w-lg mx-auto leading-relaxed">
+            Mobile RV, motorhome, travel trailer, and fifth-wheel detailing statewide — at your campsite, storage facility, or driveway. Burlington, Stowe, Killington, and the Northeast Kingdom. Per-foot pricing, 20 ft minimum.
           </p>
 
           <p className="text-sm font-bold text-[#D4AF37] mb-8 px-2">
-            Exterior Refresh $18/ft · Living Space Reset $28/ft · Full Transformation $50/ft · Oxidation $35–45/ft
+            RV Exterior $15/ft · RV Interior $25/ft · RV Full Detail $38/ft
           </p>
 
           {/* CTAs */}
@@ -525,20 +501,15 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
 
           <p className="text-center text-[11px] text-zinc-600 mb-4 md:hidden">Swipe to compare packages</p>
           <div
-            className={`flex md:grid md:grid-cols-2 gap-4 ${carouselScrollClass} pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:pb-0`}
+            className={`flex md:grid md:grid-cols-3 gap-4 ${carouselScrollClass} pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:pb-0`}
           >
             {displayServices.map((svc) => {
               const Icon = svc.icon;
-              const isOxidation = svc.rateMax != null;
               return (
                 <div
                   key={svc.dbName}
-                  className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 md:hover:-translate-y-1 snap-center shrink-0 w-[min(88vw,400px)] md:w-auto md:min-w-0 md:snap-none md:shrink ${svc.border} ${!svc.premium ? svc.bg : ""} ${
-                    svc.premium
-                      ? "shadow-[0_0_60px_rgba(212,175,55,0.18)]"
-                      : isOxidation
-                        ? "shadow-[0_0_20px_rgba(245,158,11,0.07)]"
-                        : ""
+                  className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 md:hover:-translate-y-1 snap-center shrink-0 w-[min(88vw,380px)] md:w-auto md:min-w-0 md:snap-none md:shrink ${svc.border} ${!svc.premium ? svc.bg : ""} ${
+                    svc.premium ? "shadow-[0_0_60px_rgba(212,175,55,0.18)]" : ""
                   }`}
                   style={svc.premium ? { background: "linear-gradient(170deg, #131310 0%, #0b0b09 100%)" } : undefined}
                 >
@@ -552,17 +523,17 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3 min-h-[24px] w-full">
                       {svc.premium && (
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-black bg-gradient-to-r from-[#D4AF37] to-[#F0D060] px-3 py-1 rounded-full shadow-[0_2px_8px_rgba(212,175,55,0.4)]">
-                          <Sparkles size={9} />Total Package
+                          <Sparkles size={9} />Best Value
                         </span>
                       )}
-                      {isOxidation && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
-                          <Zap size={9} />Specialized
+                      {!svc.premium && svc.popular && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">
+                          <Star size={9} fill="currentColor" />Most Popular
                         </span>
                       )}
-                      {!svc.premium && !isOxidation && svc.badge && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
-                          <Star size={9} />{svc.badge}
+                      {!svc.premium && !svc.popular && svc.badge && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#F3E5AB] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
+                          <BadgeCheck size={9} />{svc.badge}
                         </span>
                       )}
                     </div>
@@ -574,7 +545,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                         <h3 className={`font-black tracking-tight text-white ${svc.premium ? "text-xl" : "text-lg"}`}>
                           {svc.displayName}
                         </h3>
-                        <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${isOxidation ? "text-amber-500/60" : "text-[#D4AF37]/55"}`}>
+                        <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-[#D4AF37]/55">
                           {svc.subtitle}
                         </p>
                       </div>
@@ -585,39 +556,24 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                     <div className={`w-full rounded-xl mb-5 py-3 text-center border ${
                       svc.premium
                         ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.05]"
-                        : isOxidation
-                          ? "border-amber-500/25 bg-amber-500/[0.03]"
-                          : "border-white/[0.06] bg-white/[0.02]"
+                        : "border-white/[0.06] bg-white/[0.02]"
                     }`}>
-                      {isOxidation ? (
-                        <>
-                          <div className="text-3xl font-black tabular-nums text-amber-400">
-                            ${svc.ratePerFoot}–${svc.rateMax}<span className="text-lg font-bold text-zinc-500">/ft</span>
-                          </div>
-                          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
-                            Min {RV_MIN_FEET}ft · Exterior only
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className={`tabular-nums font-black ${svc.premium ? "text-5xl" : "text-3xl"}`}>
-                            {svc.premium ? (
-                              <span
-                                className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-                                style={{ filter: "drop-shadow(0 1px 10px rgba(212,175,55,0.5))" }}
-                              >
-                                ${svc.ratePerFoot}
-                              </span>
-                            ) : (
-                              <span className="text-[#D4AF37]">${svc.ratePerFoot}</span>
-                            )}
-                            <span className="text-lg font-bold text-zinc-500">/ft</span>
-                          </div>
-                          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
-                            Min {RV_MIN_FEET}ft · ${svc.ratePerFoot * RV_MIN_FEET} minimum
-                          </div>
-                        </>
-                      )}
+                      <div className={`tabular-nums font-black ${svc.premium ? "text-5xl" : "text-3xl"}`}>
+                        {svc.premium ? (
+                          <span
+                            className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
+                            style={{ filter: "drop-shadow(0 1px 10px rgba(212,175,55,0.5))" }}
+                          >
+                            ${svc.ratePerFoot}
+                          </span>
+                        ) : (
+                          <span className="text-[#D4AF37]">${svc.ratePerFoot}</span>
+                        )}
+                        <span className="text-lg font-bold text-zinc-500">/ft</span>
+                      </div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1 px-1">
+                        Min {RV_MIN_FEET}ft · ${svc.ratePerFoot * RV_MIN_FEET} minimum
+                      </div>
                     </div>
 
                     {/* Feature list */}
@@ -630,12 +586,10 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                           <span className={`mt-[3px] w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
                             svc.premium
                               ? "bg-[#D4AF37]/30 border border-[#D4AF37]/60"
-                              : isOxidation
-                                ? "bg-amber-500/15 border border-amber-500/30"
-                                : "bg-[#D4AF37]/15 border border-[#D4AF37]/30"
+                              : "bg-[#D4AF37]/15 border border-[#D4AF37]/30"
                           }`}>
                             <span className={`rounded-full ${
-                              svc.premium ? "w-1.5 h-1.5 bg-[#D4AF37]" : isOxidation ? "w-1 h-1 bg-amber-400" : "w-1 h-1 bg-[#D4AF37]"
+                              svc.premium ? "w-1.5 h-1.5 bg-[#D4AF37]" : "w-1 h-1 bg-[#D4AF37]"
                             }`} />
                           </span>
                           <span className="text-left">{f}</span>
@@ -648,9 +602,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
                       className={`w-full py-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] min-h-[52px] ${
                         svc.premium
                           ? "btn-primary-gold-shimmer bg-zinc-900/80 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_24px_rgba(212,175,55,0.35)] overflow-hidden"
-                          : isOxidation
-                            ? "bg-zinc-950 border border-amber-500/30 text-amber-400 hover:bg-amber-500/[0.08]"
-                            : "bg-zinc-950 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/[0.08]"
+                          : "bg-zinc-950 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/[0.08]"
                       }`}
                     >
                       <span className="relative z-[1] flex items-center gap-2">
@@ -701,6 +653,44 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
           {" "}Final price confirmed before any work begins.
         </p>
       </div>
+
+      {/* ── Vermont Areas We Serve (SEO + local trust) ─────────────────── */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+      >
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+              <MapPin size={11} /> Mobile · Statewide
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Vermont Areas We Detail</h2>
+            <p className="text-zinc-500 mt-3 max-w-2xl mx-auto text-sm leading-relaxed">
+              We come to your campground, storage facility, dealer lot, or driveway anywhere in Vermont. Class A, Class B, Class C, fifth-wheels, travel trailers, and pop-ups all welcome.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            {[
+              { area: "Burlington Area", places: "South Burlington · Williston · Essex" },
+              { area: "Chittenden County", places: "Shelburne · Colchester · Winooski" },
+              { area: "Stowe & Smugglers", places: "Stowe · Cambridge · Jeffersonville" },
+              { area: "Killington / Rutland", places: "Killington · Pittsford · Mendon" },
+              { area: "Northeast Kingdom", places: "St. Johnsbury · Newport · Lyndon" },
+              { area: "Champlain Valley", places: "Charlotte · Hinesburg · Vergennes" },
+              { area: "Mad River Valley", places: "Waitsfield · Warren · Waterbury" },
+              { area: "Southern Vermont", places: "Brattleboro · Bennington · Manchester" },
+            ].map((s) => (
+              <div key={s.area} className="rounded-xl border border-white/[0.06] bg-zinc-900/40 p-4 hover:border-[#D4AF37]/30 transition-colors">
+                <p className="text-sm font-bold text-white leading-tight">{s.area}</p>
+                <p className="text-[11px] text-zinc-500 mt-1 leading-snug">{s.places}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[11px] text-zinc-600 mt-6 leading-relaxed">
+            Outside Chittenden County? We travel for any rig 30 ft+. Call{" "}
+            <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a> for travel quote.
+          </p>
+        </div>
+      </motion.section>
 
       {/* Other services */}
       <section className="py-8 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]">

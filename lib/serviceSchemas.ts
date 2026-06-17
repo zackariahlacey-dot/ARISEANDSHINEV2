@@ -101,10 +101,10 @@ export const AUTO_DETAILING_SCHEMA = buildServiceSchema({
 export const BOAT_DETAILING_SCHEMA = buildServiceSchema({
   name: "Mobile Boat Detailing",
   description:
-    "Per-foot marine detailing in Vermont — interior, exterior, and full boat detailing using lake-safe products. We come to your marina, launch site, or storage facility.",
+    "Per-foot marine detailing in Vermont — interior, exterior, and full boat detailing using lake-safe products. Dockside on Lake Champlain, Mallets Bay, Shelburne Bay, and statewide. We come to your slip, marina, or driveway.",
   url: "https://www.ariseandshinevt.com/boat-detailing",
   lowPrice: 15,
-  highPrice: 55,
+  highPrice: 28,
   unitCode: "FOT",
   serviceType: "Boat Detailing",
 });
@@ -112,20 +112,10 @@ export const BOAT_DETAILING_SCHEMA = buildServiceSchema({
 export const RV_DETAILING_SCHEMA = buildServiceSchema({
   name: "Mobile RV Detailing",
   description:
-    "Per-foot RV and motorhome detailing in Vermont — exterior refresh, living space reset, oxidation restoration, and full transformation. We come to your campsite, driveway, or storage lot.",
+    "Per-foot RV and motorhome detailing in Vermont — full exterior wash & seal, full interior reset, and complete inside-and-out detailing. We come to your campsite, dealer lot, or driveway statewide.",
   url: "https://www.ariseandshinevt.com/rv-detailing",
-  lowPrice: 18,
-  highPrice: 55,
+  lowPrice: 15,
+  highPrice: 38,
   unitCode: "FOT",
   serviceType: "RV Detailing",
-});
-
-export const PAINT_CORRECTION_SCHEMA = buildServiceSchema({
-  name: "Paint Correction",
-  description:
-    "Multi-stage machine paint correction in Vermont — swirl mark removal, light scratch reduction, oxidation removal, and gloss restoration. Mobile service statewide.",
-  url: "https://www.ariseandshinevt.com/paint-correction",
-  lowPrice: 250,
-  highPrice: 900,
-  serviceType: "Paint Correction",
 });

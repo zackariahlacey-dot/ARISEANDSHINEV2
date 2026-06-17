@@ -146,18 +146,9 @@ export default async function TownPage({ params }: { params: Promise<{ city: str
               href="/rv-detailing"
               icon={Truck}
               label="RV Detailing"
-              priceRange="$18–$55/ft"
+              priceRange="$15–$38/ft"
               note={`We come to ${town.shortName} driveways, storage lots, or campsites.`}
             />
-            {!town.waterfront && (
-              <ServiceCard
-                href="/paint-correction"
-                icon={Car}
-                label="Paint Correction"
-                priceRange="$250+"
-                note="Swirl mark removal, oxidation, scratch reduction — restored gloss."
-              />
-            )}
           </section>
 
           {/* Local FAQ */}

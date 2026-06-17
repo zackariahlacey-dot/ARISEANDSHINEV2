@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   MapPin, Sparkles, Crown, CheckCircle, Leaf, ShieldCheck,
   BadgeCheck, Star, Phone, ArrowRight, Car, Gem, AlertTriangle,
-  Sofa, Droplets, Zap, Layers, Clock, Plus, Snowflake,
+  Sofa, Droplets, Zap,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
@@ -87,53 +87,6 @@ const ULTIMATE_CARDS = [
     isFlagship: true,
   },
 ] as const;
-
-// ── Paint Correction (Ultimate Exterior + 1-Step / 2-Step) ──────────────────
-// 3-tier pricing — matches the global customer-facing size picker.
-const PAINT_CORRECTION_SIZES = [
-  { id: "sedan" as const, label: "Sedan / Coupe",       desc: "Cars, coupes, 2-row crossovers" },
-  { id: "suv"   as const, label: "SUV / Truck",         desc: "2-row SUVs, midsize trucks" },
-  { id: "xl"    as const, label: "3-Row / Work Van",    desc: "3-row SUVs, Yukon, Sprinter, Transit" },
-];
-
-type PaintSizeId = typeof PAINT_CORRECTION_SIZES[number]["id"];
-
-// Prices and times scale per vehicle size — synced with DB and SERVICE_DURATIONS.
-const PAINT_CORRECTION_CARDS = [
-  {
-    serviceName: "Ultimate Exterior + 1-Step Paint Correction",
-    badge: "Single Stage",
-    badgeIcon: Layers,
-    tagline: "Removes 60–75% of light defects — swirls, oxidation, water spots.",
-    isFlagship: false,
-    prices:    { sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
-  },
-  {
-    serviceName: "Ultimate Exterior + 2-Step Paint Correction",
-    badge: "Flagship — Two Stage",
-    badgeIcon: Gem,
-    tagline: "Removes 85–95% of correctable defects — deeper scratches, heavy swirls.",
-    isFlagship: true,
-    prices:    { sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
-  },
-] as const;
-
-const ULTIMATE_EXTERIOR_INCLUDES = [
-  "Hand wash & dry",
-  "Clay bar treatment",
-  "Glass & windows cleaned",
-  "Wheel wells, rims & tires",
-  "Plastic trim restoration",
-  "6-month ceramic spray sealant",
-];
-
-const CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  sedan: 300, suv: 350, xl: 400,
-};
 
 const sv = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } };
 const vp = { once: true, margin: "-80px" };
@@ -399,70 +352,6 @@ export function DetailingPage({ services }: { services: Service[] }) {
       </motion.section>
       )}
 
-      {/* ── Salt Season Recovery (Vermont Winter Defense) ───────────────────── */}
-      {(() => {
-        const saltSvc = services.find(s => s.name === "Salt Season Recovery");
-        if (!saltSvc) return null;
-        return (
-          <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-            className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
-          >
-            <div className="max-w-4xl mx-auto">
-              <div className="mb-6 text-center">
-                <div className="inline-flex items-center gap-1.5 mb-2">
-                  <Snowflake size={14} className="text-cyan-400" />
-                  <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-cyan-400/80">Vermont Winter Defense</p>
-                </div>
-                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Salt Season Recovery</h2>
-                <p className="text-zinc-400 mt-2 text-sm max-w-xl mx-auto leading-relaxed">
-                  Vermont road salt destroys cars. This quick monthly service flushes salt, neutralizes calcium buildup,
-                  and applies fresh paint protection — keeping your investment safe Nov through April.
-                </p>
-              </div>
-              <div className="relative rounded-2xl overflow-hidden border border-cyan-500/25 bg-gradient-to-br from-cyan-500/[0.04] to-zinc-900/60">
-                <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
-                <div className="p-6 md:p-7 flex flex-col md:flex-row md:items-center gap-5">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Snowflake size={16} className="text-cyan-400" />
-                      <h3 className="text-lg md:text-xl font-black text-white tracking-tight">Salt Season Recovery</h3>
-                    </div>
-                    <ul className="space-y-1.5 mt-3">
-                      {[
-                        "Full undercarriage rinse — flush trapped road salt",
-                        "Door jamb deep clean & salt neutralization",
-                        "Tire dressing & wheel barrel rinse",
-                        "3-month ceramic spray sealant for paint protection",
-                      ].map(item => (
-                        <li key={item} className="flex items-start gap-2 text-xs text-zinc-300 leading-snug">
-                          <CheckCircle size={11} className="text-cyan-400 shrink-0 mt-0.5" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-[11px] text-zinc-500 mt-3 leading-relaxed">
-                      <Clock size={10} className="inline -mt-0.5" /> About 1.5 hrs on site · Recommended every 4–6 weeks during salt season
-                    </p>
-                  </div>
-                  <div className="md:w-48 flex flex-col items-center gap-3">
-                    <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/[0.06] px-5 py-3 text-center w-full">
-                      <div className="text-3xl font-black text-white tabular-nums">$135</div>
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-cyan-300/70 mt-0.5">Flat Rate — All Sizes</div>
-                    </div>
-                    <button
-                      onClick={() => openBooking(saltSvc)}
-                      className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-cyan-400 text-zinc-950 hover:opacity-90 transition-all active:scale-[0.97] shadow-[0_4px_16px_rgba(34,211,238,0.25)]"
-                    >
-                      Book Salt Recovery
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.section>
-        );
-      })()}
-
       {/* ── Ultimate Series (HIDDEN — superseded by Build Your Package) ──────── */}
       {false && (
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
@@ -548,9 +437,6 @@ export function DetailingPage({ services }: { services: Service[] }) {
       </motion.section>
       )}
 
-      {/* ── Ultimate Paint Correction ────────────────────────────────────────── */}
-      <PaintCorrectionSection openBooking={openUltimateBooking} />
-
       {/* ── Why Us ───────────────────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
         className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
@@ -621,11 +507,8 @@ export function DetailingPage({ services }: { services: Service[] }) {
           style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(212,175,55,0.06) 0%, transparent 70%)" }} />
         <div className="relative z-10 max-w-xl mx-auto">
           <h2 className="text-xl md:text-2xl font-black text-white mb-2">Looking for more?</h2>
-          <p className="text-zinc-500 text-sm mb-6">Paint restoration, boat detailing, or a monthly maintenance plan — we do it all.</p>
+          <p className="text-zinc-500 text-sm mb-6">Boat detailing, RV detailing, or a monthly maintenance plan — we do it all.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/paint-correction" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/35 hover:text-white transition-all text-sm font-semibold">
-              Paint Correction <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-            </Link>
             <Link href="/protected" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/[0.07] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/35 hover:text-white transition-all text-sm font-semibold">
               Monthly Plans <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
@@ -650,222 +533,3 @@ export function DetailingPage({ services }: { services: Service[] }) {
   );
 }
 
-// ── Ultimate Paint Correction Section ──────────────────────────────────────
-// Two ultra-premium cards with interactive 4-tier size pills. Picking a tier
-// updates the price and time-on-site readout per card. Both cards include the
-// shared "Ultimate Exterior Includes" feature list and a 6-month ceramic spray.
-// Add-on info strip below the cards summarises the 2-yr ceramic upgrade and
-// the Ultimate Interior add-on (configured & priced inside the booking flow).
-function PaintCorrectionSection({ openBooking }: { openBooking: (serviceName: string) => void }) {
-  const [size, setSize] = useState<PaintSizeId>("sedan");
-  const fmtHours = (h: number) => (Number.isInteger(h) ? `${h} hrs` : `${h} hrs`);
-
-  return (
-    <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-      className="relative py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05] overflow-hidden"
-    >
-      {/* Layered gold radial — adds depth vs the plain Ultimate Series block above */}
-      <div aria-hidden className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 70%)" }} />
-
-      <div className="relative max-w-5xl mx-auto">
-        <div className="mb-9 text-center">
-          <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1.5">Paint Restoration</p>
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-            style={{ filter: "drop-shadow(0 1px 16px rgba(212,175,55,0.18))" }}>
-            Ultimate Paint Correction
-          </h2>
-          <p className="text-zinc-400 mt-3 text-sm max-w-xl mx-auto leading-relaxed">
-            Machine polishing to remove swirls, oxidation and scratches — paired with our full Ultimate Exterior detail and a 6-month ceramic spray. Optional 2-year professional ceramic sealant available below.
-          </p>
-        </div>
-
-        {/* ── Shared size pills — control both cards at once ── */}
-        <div className="mb-6 flex justify-center">
-          <div className="inline-flex flex-wrap justify-center gap-1.5 p-1.5 rounded-2xl bg-zinc-900/70 border border-white/[0.07] backdrop-blur-sm">
-            {PAINT_CORRECTION_SIZES.map((s) => {
-              const active = s.id === size;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSize(s.id)}
-                  className={`px-3.5 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all duration-200 ${
-                    active
-                      ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_2px_14px_rgba(212,175,55,0.35)]"
-                      : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
-                  }`}
-                  aria-pressed={active}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Two cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
-          {PAINT_CORRECTION_CARDS.map((card) => {
-            const BadgeIcon = card.badgeIcon;
-            const price = card.prices[size];
-            const hoursLow = card.hoursLow[size];
-            const hoursHigh = card.hoursHigh[size];
-            return (
-              <div key={card.serviceName}
-                className={`group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
-                  card.isFlagship
-                    ? "border border-[#D4AF37]/55 shadow-[0_0_50px_rgba(212,175,55,0.14)] bg-gradient-to-b from-zinc-900/85 to-zinc-950/70"
-                    : "border border-white/[0.08] bg-zinc-900/55 hover:border-[#D4AF37]/30"
-                }`}
-              >
-                {/* Top accent bar */}
-                <div className={`h-[2px] w-full shrink-0 ${card.isFlagship
-                  ? "bg-gradient-to-r from-[#D4AF37]/45 via-[#F3E5AB] to-[#D4AF37]/45"
-                  : "bg-gradient-to-r from-transparent via-[#D4AF37]/35 to-transparent"}`}
-                />
-
-                <div className="p-6 flex flex-col flex-1">
-                  {/* Badge + name */}
-                  <div className="mb-4 text-center">
-                    <div className="inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-zinc-800/60 border border-white/[0.06]">
-                      <BadgeIcon size={10} className="text-[#D4AF37]" fill={card.isFlagship ? "currentColor" : "none"} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">{card.badge}</span>
-                    </div>
-                    <h3 className="text-lg md:text-xl font-black text-white tracking-tight leading-snug">
-                      {card.serviceName.replace("Ultimate Exterior + ", "")}
-                    </h3>
-                    <p className="text-[11px] text-zinc-500 mt-1.5 leading-snug">{card.tagline}</p>
-                  </div>
-
-                  {/* Animated price + time readout */}
-                  <div className={`relative rounded-xl mb-5 px-4 py-4 border ${
-                    card.isFlagship ? "border-[#D4AF37]/25 bg-[#D4AF37]/[0.05]" : "border-white/[0.07] bg-white/[0.02]"
-                  }`}>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-0.5">Your price</div>
-                        <motion.div
-                          key={`price-${card.serviceName}-${size}`}
-                          initial={{ opacity: 0.5, y: -3 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className={`text-3xl font-black tabular-nums ${card.isFlagship ? "text-[#D4AF37]" : "text-white"}`}
-                        >
-                          ${price}
-                        </motion.div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-0.5 flex items-center gap-1 justify-end">
-                          <Clock size={9} className="text-zinc-500" />
-                          On site
-                        </div>
-                        <motion.div
-                          key={`hours-${card.serviceName}-${size}`}
-                          initial={{ opacity: 0.5, y: -3 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className="text-lg font-black tabular-nums text-zinc-200"
-                        >
-                          {hoursLow}–{hoursHigh} hrs
-                        </motion.div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Includes — ultimate exterior */}
-                  <div className="mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-2.5 text-center">Includes Ultimate Exterior</p>
-                    <ul className="grid grid-cols-1 gap-1.5">
-                      {ULTIMATE_EXTERIOR_INCLUDES.map((item) => (
-                        <li key={item} className="flex items-start gap-2 text-[12px] text-zinc-300 leading-snug">
-                          <span className={`mt-[3px] w-3 h-3 rounded-full flex items-center justify-center shrink-0 ${
-                            card.isFlagship ? "bg-[#D4AF37]/15 border border-[#D4AF37]/30" : "bg-white/[0.06] border border-white/[0.1]"
-                          }`}>
-                            <span className={`w-1 h-1 rounded-full ${card.isFlagship ? "bg-[#D4AF37]" : "bg-zinc-400"}`} />
-                          </span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Defect reduction callout */}
-                  <div className={`mb-5 rounded-xl px-3.5 py-2.5 border text-center ${
-                    card.isFlagship ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.07]" : "border-white/[0.07] bg-white/[0.03]"
-                  }`}>
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Sparkles size={11} className="text-[#D4AF37]" />
-                      <span className="text-[11px] font-bold tracking-wide text-zinc-200">
-                        {card.isFlagship ? "Removes 85–95% of defects" : "Removes 60–75% of defects"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button onClick={() => openBooking(card.serviceName)}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
-                      card.isFlagship
-                        ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_18px_rgba(212,175,55,0.32)]"
-                        : "bg-zinc-900 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/[0.08]"
-                    }`}>
-                    Book {card.isFlagship ? "2-Step" : "1-Step"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Add-ons strip ── */}
-        <div className="mt-7 max-w-4xl mx-auto rounded-2xl border border-white/[0.07] bg-zinc-900/40 p-5">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Plus size={12} className="text-[#D4AF37]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Available Add-ons</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* 2-Year Ceramic */}
-            <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.04] p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <ShieldCheck size={12} className="text-[#D4AF37]" />
-                <h4 className="text-[12px] font-black tracking-wide text-white">2-Year Pro Ceramic Sealant</h4>
-              </div>
-              <p className="text-[11px] text-zinc-500 leading-relaxed mb-3">
-                Upgrade from the included 6-month spray to a professional-grade 2-year ceramic sealant.
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#D4AF37] tabular-nums">${CERAMIC_3YR_PRICES[size]}</span>
-                <span className="text-[10px] text-zinc-500">{PAINT_CORRECTION_SIZES.find(s => s.id === size)?.label}</span>
-              </div>
-            </div>
-
-            {/* Ultimate Interior add-on */}
-            <div className="rounded-xl border border-white/[0.08] bg-zinc-900/60 p-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Sofa size={12} className="text-[#D4AF37]" />
-                <h4 className="text-[12px] font-black tracking-wide text-white">Ultimate Interior Add-on</h4>
-              </div>
-              <p className="text-[11px] text-zinc-500 leading-relaxed mb-3">
-                Add the full Ultimate Interior to your paint correction — hot water extraction, steam sanitation, salt neutralization. Adds 3 hrs.
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#D4AF37] tabular-nums">$175</span>
-                <span className="text-[10px] text-zinc-500">Flat rate · all sizes</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-[10px] text-zinc-600 text-center mt-4 leading-relaxed">
-            Pick add-ons during booking — pricing flows through to your final total.
-          </p>
-        </div>
-
-        {/* Weather notice */}
-        <div className="mt-5 flex items-center justify-center gap-2 max-w-xl mx-auto">
-          <AlertTriangle size={12} className="text-amber-500/60 shrink-0" />
-          <p className="text-[10px] text-zinc-600 leading-relaxed text-center">
-            Paint correction requires a stable, shaded environment or garage. We confirm site conditions before scheduling.
-          </p>
-        </div>
-      </div>
-    </motion.section>
-  );
-}

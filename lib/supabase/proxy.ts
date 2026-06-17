@@ -67,7 +67,6 @@ export async function updateSession(request: NextRequest) {
     !pathname.startsWith("/api") &&
     !pathname.startsWith("/services") &&
     !pathname.startsWith("/detailing") &&
-    !pathname.startsWith("/paint-correction") &&
     !pathname.startsWith("/maintenance-club") && // redirect → /protected
     !pathname.startsWith("/boat-detailing") &&
     !pathname.startsWith("/rv-detailing") &&

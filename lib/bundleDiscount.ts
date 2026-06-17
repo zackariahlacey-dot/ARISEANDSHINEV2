@@ -2,15 +2,18 @@
  * Bundle discount system — pure percentage per add-on.
  *
  *   1 add-on    → no discount
- *   2 add-ons   → 15% off each
- *   3 add-ons   → 22% off each (+ free Steam Sanitation + Trim Dressing)
- *   4 add-ons   → 28% off each
- *   5+ add-ons  → 35% off each
+ *   2 add-ons   → 10% off each
+ *   3+ add-ons  → 15% off each
  *
- * The body ceramic (`ceramic_3yr`) caps at $50 off max — even at the 35%
+ * The body ceramic (`ceramic_3yr`) caps at $50 off max — even at the 15%
  * tier its absolute discount can't exceed that. Protects margin on the
  * single most expensive add-on; everything else (wheel ceramic, window
  * coatings, smaller add-ons) takes the full percentage.
+ *
+ * Seat Removal SKUs and Ceramic Package members are EXCLUDED from this
+ * bundle math (see BookingModal.tsx + BuildYourPackage.tsx). Ceramic items
+ * get their own 10/20/30% package discount. Seat Removal bundles already
+ * have savings baked into the 2-Row ($150) and 3-Row ($225) package prices.
  *
  * All displayed dollar amounts are rounded to the nearest whole dollar so
  * the customer never sees $19.50.
@@ -25,10 +28,8 @@ export const CAPPED_ADDON_DISCOUNTS: Record<string, number> = {
  *  (non-free-unlock) add-ons stacked. */
 export function bundlePctFor(qualifyingAddonCount: number): number {
   if (qualifyingAddonCount <= 1) return 0;
-  if (qualifyingAddonCount === 2) return 0.15;
-  if (qualifyingAddonCount === 3) return 0.22;
-  if (qualifyingAddonCount === 4) return 0.28;
-  return 0.35;
+  if (qualifyingAddonCount === 2) return 0.10;
+  return 0.15;
 }
 
 /** Dollar amount off ONE add-on, applying the cap when relevant. */
@@ -55,7 +56,7 @@ export function totalAddonBundleSavings(
   return addons.reduce((s, a) => s + addonDiscountAmount(a.id, a.price, pct), 0);
 }
 
-/** Friendly label e.g. "22% off each" for UI hints. */
+/** Friendly label e.g. "10% off each" for UI hints. */
 export function bundlePctLabel(qualifyingAddonCount: number): string {
   const p = bundlePctFor(qualifyingAddonCount);
   if (p <= 0) return "";

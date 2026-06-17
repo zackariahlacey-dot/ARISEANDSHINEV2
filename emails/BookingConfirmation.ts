@@ -183,7 +183,6 @@ const BOAT_DISPLAY: Record<string, string> = {
   "Boat Interior":         "Boat Interior",
   "Boat Exterior":         "Boat Exterior",
   "Boat Full Detail":      "Boat Full Detail",
-  "Boat Showroom Package": "Marine Showroom Polish",
 };
 
 /** Maps DB service names to display names for RVs */
@@ -191,8 +190,6 @@ const RV_DISPLAY: Record<string, string> = {
   "RV Interior":        "RV Interior",
   "RV Exterior":        "RV Exterior",
   "RV Full Detail":     "RV Full Detail",
-  "RV Showroom 1-Step": "RV Showroom — 1-Step Polish",
-  "RV Showroom 2-Step": "RV Showroom — 2-Step Polish",
 };
 
 function getDisplayServiceName(serviceName: string, type: ServiceType): string {

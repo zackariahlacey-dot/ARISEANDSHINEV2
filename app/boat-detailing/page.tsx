@@ -6,26 +6,29 @@ import type { Service } from "@/app/page";
 import { BOAT_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
-  title: "Mobile Boat Detailing Vermont | Per-Foot Pricing | Arise & Shine VT",
+  title: "Mobile Boat Detailing Vermont | Lake Champlain Specialists | Arise & Shine VT",
   description:
-    "Professional mobile boat detailing in Vermont. Interior Detail from $18/ft, Exterior from $20/ft, Full Detail from $32/ft. We come to your marina, dock, or driveway. Lake Champlain area specialists.",
+    "Mobile boat detailing in Vermont — dockside on Lake Champlain, Mallets Bay, Shelburne Bay & statewide. Boat Interior $15/ft · Boat Exterior $16/ft · Boat Full Detail $28/ft. Lake-safe products, no trailering required.",
   keywords: [
     "boat detailing Vermont",
     "marine detailing Vermont",
     "mobile boat detailing VT",
     "boat cleaning Vermont",
     "boat detailing Lake Champlain",
+    "boat detailing Mallets Bay",
+    "boat detailing Burlington VT",
+    "boat detailing Colchester VT",
+    "boat detailing Shelburne VT",
     "hull cleaning Vermont",
     "boat interior detailing Vermont",
     "boat wax Vermont",
-    "marine detailing Burlington VT",
     "pontoon cleaning Vermont",
     "boat detail price per foot Vermont",
-    "gelcoat restoration Vermont",
+    "dockside boat detailing Vermont",
   ],
   openGraph: {
-    title: "Mobile Boat Detailing Vermont | Arise & Shine VT",
-    description: "Per-foot marine detailing — interior from $18/ft, exterior from $20/ft, full detail from $32/ft. We come to you.",
+    title: "Mobile Boat Detailing Vermont | Lake Champlain Specialists",
+    description: "Dockside boat detailing — Interior $15/ft · Exterior $16/ft · Full Detail $28/ft. We come to your slip or driveway. Lake-safe products, statewide service.",
     url: "https://ariseandshinevt.com/boat-detailing",
     siteName: "Arise & Shine VT",
     locale: "en_US",
@@ -39,9 +42,10 @@ async function DataProvider() {
   const { data: services } = await supabase
     .from("services")
     .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription")
+    .eq("is_active", true)
     .order("price_small", { ascending: true });
 
-  const BOAT_NAMES = ["Boat Interior", "Boat Exterior", "Boat Full Detail", "Boat Showroom Package"];
+  const BOAT_NAMES = ["Boat Interior", "Boat Exterior", "Boat Full Detail"];
   return (
     <BoatDetailingPage
       services={(services ?? []).filter((s: Service) =>

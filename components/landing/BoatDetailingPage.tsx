@@ -8,15 +8,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Star, ShieldCheck,
   BadgeCheck, Phone, ArrowRight, Anchor, Waves,
-  Droplets, Leaf, Calculator, ChevronRight,
-  Minus, Plus, Zap, FlaskConical, Eye, Wrench, Snowflake,
-  AlertTriangle, X,
+  Droplets, Leaf, Calculator, ChevronRight, Clock,
+  Minus, Plus, Zap, FlaskConical, Eye, Wrench,
+  AlertTriangle, X, MapPin,
 } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking } from "./BookingModal";
 import { recoverStripeBooking } from "@/app/actions/recoverStripeBooking";
+import { getFootageDurationMins, formatDurationRange } from "@/lib/footageDuration";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -62,17 +63,17 @@ const BOAT_SERVICES_STATIC = [
   {
     dbName: "Boat Exterior",
     displayName: "Boat Exterior",
-    ratePerFoot: 20,
+    ratePerFoot: 16,
     badge: "Most Popular" as string | null,
-    tagline: "Hull wash, oxidation removal, wax/sealant & deck rinse.",
+    tagline: "Hull wash, hand-applied wax, deck rinse & metal polish.",
     icon: Droplets,
     features: [
       "Full hull, transom & waterline wash",
-      "Light oxidation removal by hand",
+      "Light hand-applied oxidation removal",
       "Paste wax or ceramic spray sealant",
       "Deck rinse & dry",
       "Metal brightening & chrome polish",
-      "No buffing or polishing",
+      "No machine polishing",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/40",
@@ -82,40 +83,20 @@ const BOAT_SERVICES_STATIC = [
   {
     dbName: "Boat Full Detail",
     displayName: "Boat Full Detail",
-    ratePerFoot: 32,
-    badge: null as string | null,
-    tagline: "Complete interior + exterior detail. No buffing or polishing.",
+    ratePerFoot: 28,
+    badge: "Best Value" as string | null,
+    tagline: "Interior + Exterior — every surface inside and out.",
     icon: Sparkles,
     features: [
       "Everything in Boat Interior",
-      "Full hull wash, oxidation removal & wax",
-      "Deck rinse, metal & chrome polish",
+      "Everything in Boat Exterior",
       "Bilge area wipe & deodorize",
-      "No buffing or polishing",
+      "Best value — save vs booking separately",
+      "No machine polishing",
     ],
     accent: "text-[#D4AF37]",
     border: "border-[#D4AF37]/30",
     bg: "bg-[#D4AF37]/[0.04]",
-    popular: false,
-  },
-  {
-    dbName: "Boat Showroom Package",
-    displayName: "Boat Showroom Package",
-    ratePerFoot: 55,
-    badge: "Premium" as string | null,
-    tagline: "Exterior detail + machine polish — showroom-ready finish.",
-    icon: Sparkles,
-    features: [
-      "Full hull wash & decontamination",
-      "Heavy oxidation removal by machine",
-      "Machine polish for gel coat gloss restoration",
-      "Ceramic or carnauba wax topcoat",
-      "Deck rinse, metal & chrome polish",
-      "Includes buffing & machine polishing",
-    ],
-    accent: "text-[#F3E5AB]",
-    border: "border-[#D4AF37]/50",
-    bg: "bg-[#D4AF37]/[0.06]",
     popular: false,
   },
 ] as const;
@@ -210,18 +191,27 @@ function PriceCalculator({ onBook }: { onBook: () => void }) {
       <div
         className={`flex md:grid md:grid-cols-3 gap-3 mb-5 ${carouselScrollClass} pb-2 -mx-1 px-1 md:mx-0 md:px-0 md:overflow-visible`}
       >
-        {BOAT_SERVICES_STATIC.map((svc) => (
-          <div
-            key={svc.dbName}
-            className={`snap-center shrink-0 w-[min(82vw,280px)] md:w-auto rounded-xl border p-4 text-center ${svc.popular ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}
-          >
-            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
-            <p className={`text-xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
-              ${calc(svc.ratePerFoot).toLocaleString()}
-            </p>
-            <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
-          </div>
-        ))}
+        {BOAT_SERVICES_STATIC.map((svc) => {
+          const mins = getFootageDurationMins(svc.dbName, feet);
+          return (
+            <div
+              key={svc.dbName}
+              className={`snap-center shrink-0 w-[min(82vw,280px)] md:w-auto rounded-xl border p-4 text-center ${svc.popular ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.06]" : "border-white/[0.07] bg-zinc-900/40"}`}
+            >
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1 leading-tight">{svc.displayName}</p>
+              <p className={`text-xl font-black tabular-nums ${svc.popular ? "text-[#D4AF37]" : "text-white"}`}>
+                ${calc(svc.ratePerFoot).toLocaleString()}
+              </p>
+              <p className="text-[9px] text-zinc-600 mt-0.5">${svc.ratePerFoot}/ft</p>
+              {mins != null && (
+                <p className="text-[9px] text-zinc-500 mt-1.5 flex items-center justify-center gap-1">
+                  <Clock size={9} className="text-[#D4AF37]/70" />
+                  <span className="tabular-nums">{formatDurationRange(mins)}</span>
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
       <p className="text-[10px] text-zinc-600 text-center md:hidden -mt-2 mb-4">Swipe for packages</p>
 
@@ -392,12 +382,12 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
           </h1>
 
           <p className="text-base md:text-xl text-zinc-400 leading-relaxed mb-3 max-w-2xl mx-auto">
-            We come to your marina, driveway, or storage yard — anywhere in Vermont. Per-foot dockside pricing with no trailering required.
+            We come to your dock, marina, or driveway — anywhere in Vermont. Lake Champlain specialists serving Burlington, Colchester, Mallets Bay, Shelburne, and the entire Champlain Valley. Per-foot dockside pricing, no trailering required.
           </p>
 
           {/* Rates */}
           <p className="text-sm font-bold text-[#D4AF37] mb-6 px-2 leading-relaxed text-center">
-            Boat Interior $15/ft · Boat Exterior $20/ft · Full Detail $32/ft · Showroom Package $55/ft
+            Boat Interior $15/ft · Boat Exterior $16/ft · Boat Full Detail $28/ft
           </p>
 
           {/* CTAs */}
@@ -476,7 +466,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
           <div className="text-center mb-8">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-2">Simple Process</p>
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">How It Works</h2>
-            <p className="text-zinc-500 mt-2 text-sm">From booking to a showroom-clean boat — here's what to expect.</p>
+            <p className="text-zinc-500 mt-2 text-sm">From booking to a spotless boat — here&apos;s what to expect.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
@@ -556,7 +546,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
                       )}
                       {svc.badge && !svc.popular && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#F3E5AB] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-full">
-                          <Snowflake size={9} />
+                          <BadgeCheck size={9} />
                           {svc.badge}
                         </span>
                       )}
@@ -659,6 +649,43 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
 
           <p className="text-center text-[11px] text-zinc-600 mt-5">
             All add-ons confirmed on-site. Per-foot pricing based on measured boat length.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── Vermont Waters We Serve (SEO + local trust) ─────────────────── */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+      >
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+              <MapPin size={11} /> Mobile · Statewide
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">Vermont Waters We Detail</h2>
+            <p className="text-zinc-500 mt-3 max-w-2xl mx-auto text-sm leading-relaxed">
+              We&apos;re Lake Champlain locals. From a fishing skiff on Lake Memphremagog to a 40-foot cruiser on Mallets Bay, we travel to your slip, lift, or driveway anywhere in Vermont.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            {[
+              { name: "Lake Champlain", cities: "Burlington · Colchester · Charlotte" },
+              { name: "Mallets Bay", cities: "Marble Island · Marble Bay Marina" },
+              { name: "Shelburne Bay", cities: "Shelburne · Charlotte" },
+              { name: "Lake Memphremagog", cities: "Newport · Derby" },
+              { name: "Lake Bomoseen", cities: "Castleton · Hubbardton" },
+              { name: "Lake Dunmore", cities: "Salisbury · Leicester" },
+              { name: "Lake Willoughby", cities: "Westmore · Newark" },
+              { name: "Connecticut River", cities: "Brattleboro · Bellows Falls" },
+            ].map((w) => (
+              <div key={w.name} className="rounded-xl border border-white/[0.06] bg-zinc-900/40 p-4 hover:border-[#D4AF37]/30 transition-colors">
+                <p className="text-sm font-bold text-white leading-tight">{w.name}</p>
+                <p className="text-[11px] text-zinc-500 mt-1 leading-snug">{w.cities}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[11px] text-zinc-600 mt-6 leading-relaxed">
+            Don&apos;t see your lake? We travel statewide — call <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a> for a quote.
           </p>
         </div>
       </motion.section>

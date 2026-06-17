@@ -113,20 +113,25 @@ const TIMELINE_DAY_END_HOUR   = 23;
 // ── Shared add-on data (mirrors BookingModal) ──────────────────────────────
 const ADMIN_ADDONS = [
   // Vehicle — standard
-  { id: "engine_bay",        label: "Engine Bay Detail",                     price: 50  },
-  { id: "headlight_restore", label: "Headlight Restoration",                 price: 60  },
+  { id: "engine_bay",        label: "Engine Bay Detail",                     price: 85  },
+  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65  },
   { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 75  },
   { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
   { id: "uv_interior",       label: "UV Protection & Interior Restoration",  price: 35  },
   { id: "leather_condition", label: "Leather Conditioning",                  price: 45  },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50  },
-  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 50  },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 75  },
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35  },
   // Build Your Package add-ons
   { id: "headliner_clean",   label: "Headliner Cleaning",                    price: 40  },
   { id: "salt_stain_removal",label: "Salt Stain Removal & Prevention",       price: 50  },
   { id: "steam_sanitation",  label: "Steam Sanitation (free at 3+ addons)",  price: 45  },
-  { id: "seat_removal",      label: "Seat Removal — Deepest Clean",          price: 125 },
+  { id: "seat_removal_driver",    label: "Seat Removal — Driver Side",       price: 60  },
+  { id: "seat_removal_passenger", label: "Seat Removal — Passenger Side",    price: 60  },
+  { id: "seat_removal_rear",      label: "Seat Removal — Rear Seats",        price: 85  },
+  { id: "seat_removal_3rd_row",   label: "Seat Removal — 3rd Row",           price: 95  },
+  { id: "seat_removal_all_2row",  label: "All Seats — 2-Row Bundle",         price: 150 },
+  { id: "seat_removal_all_3row",  label: "All Seats — 3-Row Bundle",         price: 225 },
   { id: "trim_dressing",     label: "Rubber, Plastics & Vinyl Dressing",     price: 30  },
   { id: "mech_chem_decon",   label: "Mechanical & Chemical Decontamination", price: 85  },
   { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on", price: 85  },
@@ -158,7 +163,7 @@ const ADMIN_ADDONS = [
 ];
 const VEHICLE_ADDON_IDS  = ["engine_bay","headlight_restore","odor_bomb","upholstery_shampoo","uv_interior","leather_condition","clay_bar","pet_hair","tar_bug","floor_1","floor_2","floor_all"];
 /** Build Your Package interior add-ons — surfaced for Interior + Full bookings */
-const BUILDER_INTERIOR_IDS = ["upholstery_shampoo","pet_hair","leather_condition","uv_interior","odor_bomb","steam_sanitation","headliner_clean","salt_stain_removal","seat_removal"];
+const BUILDER_INTERIOR_IDS = ["upholstery_shampoo","pet_hair","leather_condition","uv_interior","odor_bomb","steam_sanitation","headliner_clean","salt_stain_removal","seat_removal_driver","seat_removal_passenger","seat_removal_rear","seat_removal_3rd_row","seat_removal_all_2row","seat_removal_all_3row"];
 /** Build Your Package exterior add-ons — surfaced for Exterior + Full bookings */
 const BUILDER_EXTERIOR_IDS = ["clay_bar","mech_chem_decon","headlight_restore","trim_dressing","salt_recovery_addon","wheel_ceramic","ceramic_3yr"];
 const BOAT_ADDON_IDS     = ["marine_isinglass","marine_engine_bay"];
@@ -196,27 +201,23 @@ const FOOTAGE_RATES: Record<string, number> = {
   "Boat Interior":               15,
   "Boat Exterior":               20,
   "Boat Full Detail":            32,
-  "Boat Showroom Package":       55,
-  "RV Exterior Refresh":         18,
-  "RV Living Space Reset":       28,
-  "RV Ultimate Transformation":  50,
-  "RV Oxidation Restoration":    40,
+  "RV Interior":                 28,
+  "RV Exterior":                 18,
+  "RV Full Detail":              50,
 };
 const FOOTAGE_MIN: Record<string, number> = {
-  "Boat Interior": 15, "Boat Exterior": 15, "Boat Full Detail": 15, "Boat Showroom Package": 15,
-  "RV Exterior Refresh": 20, "RV Living Space Reset": 20, "RV Ultimate Transformation": 20, "RV Oxidation Restoration": 20,
+  "Boat Interior": 15, "Boat Exterior": 15, "Boat Full Detail": 15,
+  "RV Interior": 20, "RV Exterior": 20, "RV Full Detail": 20,
 };
 const BOAT_DISPLAY: Record<string, { name: string; sub: string }> = {
-  "Boat Interior":         { name: "Boat Interior",         sub: "$15/ft · 15 ft min" },
-  "Boat Exterior":         { name: "Boat Exterior",         sub: "$20/ft · 15 ft min" },
-  "Boat Full Detail":      { name: "Boat Full Detail",      sub: "$32/ft · 15 ft min" },
-  "Boat Showroom Package": { name: "Marine Showroom Polish", sub: "$55/ft · 15 ft min" },
+  "Boat Interior":    { name: "Boat Interior",    sub: "$15/ft · 15 ft min" },
+  "Boat Exterior":    { name: "Boat Exterior",    sub: "$20/ft · 15 ft min" },
+  "Boat Full Detail": { name: "Boat Full Detail", sub: "$32/ft · 15 ft min" },
 };
 const RV_DISPLAY: Record<string, { name: string; sub: string }> = {
-  "RV Exterior Refresh":       { name: "RV Exterior Refresh",       sub: "$18/ft · 20 ft min" },
-  "RV Living Space Reset":     { name: "RV Living Space Reset",     sub: "$28/ft · 20 ft min" },
-  "RV Ultimate Transformation":{ name: "RV Ultimate Transformation",sub: "$50/ft · 20 ft min" },
-  "RV Oxidation Restoration":  { name: "RV Oxidation Restoration",  sub: "$35–45/ft · 20 ft min" },
+  "RV Interior":    { name: "RV Interior",    sub: "$28/ft · 20 ft min" },
+  "RV Exterior":    { name: "RV Exterior",    sub: "$18/ft · 20 ft min" },
+  "RV Full Detail": { name: "RV Full Detail", sub: "$50/ft · 20 ft min" },
 };
 
 type Pathway = "vehicle" | "boat" | "rv";

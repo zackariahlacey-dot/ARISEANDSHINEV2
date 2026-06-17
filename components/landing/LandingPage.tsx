@@ -33,10 +33,6 @@ import {
   X,
   Zap,
   Trophy,
-  Layers,
-  Clock,
-  Plus,
-  Sofa,
   ChevronRight,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -44,13 +40,6 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import type { DraftBooking, BookingProgressData } from "./BookingModal";
-import { detectVehicleSize } from "@/lib/detectVehicleSize";
-import {
-  filterMakesByQuery,
-  filterModelsByQuery,
-  sizeTierToSlug,
-  type ModelEntry,
-} from "@/lib/vehicleDatabase";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { SiteHeader } from "./SiteHeader";
 import { SqueezeMeInModal } from "./SqueezeMeInModal";
@@ -923,9 +912,6 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                 <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} />
               ))}
             </div>
-
-            {/* ── Ultimate Paint Correction (sister sub-section) ── */}
-            <LandingPaintCorrectionBlock onBook={openUltimateBooking} />
           </div>
           )}
 
@@ -1006,10 +992,9 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                 {/* Pricing rows */}
                 <div className="space-y-1.5 mb-4">
                   {[
-                    { label: "Marine Interior Reset",  price: "$18/ft" },
-                    { label: "Marine Exterior Shine",  price: "$22/ft" },
-                    { label: "Captain's Full Detail",  price: "$35/ft" },
-                    { label: "Showroom Restoration",   price: "from $65/ft" },
+                    { label: "Boat Interior",     price: "$15/ft" },
+                    { label: "Boat Exterior",     price: "$16/ft" },
+                    { label: "Boat Full Detail",  price: "$28/ft" },
                   ].map(({ label, price }) => (
                     <div key={label} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-zinc-950/60 border border-white/[0.04]">
                       <span className="text-xs text-zinc-300 font-medium">{label}</span>
@@ -1017,6 +1002,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                     </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-zinc-700 mb-4 px-1">15 ft minimum · Heavy mold or bilge odor +$75–$150</p>
 
                 {/* CTAs */}
                 <div className="flex items-center gap-2.5">
@@ -1089,18 +1075,17 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                 {/* Pricing rows */}
                 <div className="space-y-1.5 mb-3">
                   {[
-                    { label: "Exterior Refresh",        price: "$18/ft" },
-                    { label: "Living Space Reset",       price: "$28/ft" },
-                    { label: "Ultimate Transformation",  price: "$50/ft" },
-                    { label: "+ Oxidation Restoration",  price: "$35–45/ft", muted: true },
-                  ].map(({ label, price, muted }) => (
-                    <div key={label} className={`flex items-center justify-between py-1.5 px-3 rounded-lg border ${muted ? "bg-transparent border-dashed border-white/[0.04]" : "bg-zinc-950/60 border-white/[0.04]"}`}>
-                      <span className={`text-xs font-medium ${muted ? "text-zinc-600" : "text-zinc-300"}`}>{label}</span>
-                      <span className={`text-xs font-black tabular-nums ${muted ? "text-zinc-600" : "text-[#D4AF37]"}`}>{price}</span>
+                    { label: "RV Exterior",     price: "$15/ft" },
+                    { label: "RV Interior",     price: "$25/ft" },
+                    { label: "RV Full Detail",  price: "$38/ft" },
+                  ].map(({ label, price }) => (
+                    <div key={label} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-zinc-950/60 border-white/[0.04] border">
+                      <span className="text-xs font-medium text-zinc-300">{label}</span>
+                      <span className="text-xs font-black tabular-nums text-[#D4AF37]">{price}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-zinc-700 mb-4 px-1">Add-ons: $50/slide · Roof seal $200+ · Pet hair/mold $75–$150</p>
+                <p className="text-[10px] text-zinc-700 mb-4 px-1">20 ft minimum · Heavy mold or pet hair +$75–$150</p>
 
                 {/* CTAs */}
                 <div className="flex items-center gap-2.5">
@@ -2130,54 +2115,6 @@ const ULTIMATE_CARDS = [
   },
 ] as const;
 
-// ─── Ultimate Paint Correction (Ultimate Exterior + 1-Step / 2-Step) ─────────
-// 3-tier pricing model — matches the global customer-facing size picker.
-const PAINT_CORRECTION_SIZES = [
-  { id: "sedan" as const, label: "Sedan / Coupe",       desc: "Cars, coupes, 2-row crossovers" },
-  { id: "suv"   as const, label: "SUV / Truck",         desc: "2-row SUVs, midsize trucks" },
-  { id: "xl"    as const, label: "3-Row / Work Van",    desc: "3-row SUVs, Yukon, Sprinter, Transit" },
-];
-
-type PaintSizeId = typeof PAINT_CORRECTION_SIZES[number]["id"];
-
-const PAINT_CORRECTION_CARDS = [
-  {
-    serviceName: "Ultimate Exterior + 1-Step Paint Correction",
-    short: "1-Step Correction",
-    badge: "Single Stage",
-    badgeIcon: Layers,
-    tagline: "Removes 60–75% of light defects.",
-    isFlagship: false,
-    prices:    { sedan: 425, suv: 500, xl: 675 } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { sedan: 4.5, suv: 5.5, xl: 6.5 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { sedan: 5.5, suv: 6.5, xl: 8.0 } satisfies Record<PaintSizeId, number>,
-  },
-  {
-    serviceName: "Ultimate Exterior + 2-Step Paint Correction",
-    short: "2-Step Correction",
-    badge: "Flagship — Two Stage",
-    badgeIcon: Gem,
-    tagline: "Removes 85–95% of correctable defects.",
-    isFlagship: true,
-    prices:    { sedan: 650, suv: 800,  xl: 950  } satisfies Record<PaintSizeId, number>,
-    hoursLow:  { sedan: 7.5, suv: 9.0,  xl: 11.0 } satisfies Record<PaintSizeId, number>,
-    hoursHigh: { sedan: 9.0, suv: 11.0, xl: 13.0 } satisfies Record<PaintSizeId, number>,
-  },
-] as const;
-
-const ULTIMATE_EXTERIOR_INCLUDES_LANDING = [
-  "Hand wash & dry",
-  "Clay bar treatment",
-  "Glass & windows",
-  "Wheel wells & tires",
-  "Plastic trim restoration",
-  "6-month ceramic spray",
-];
-
-const PAINT_CERAMIC_3YR_PRICES: Record<PaintSizeId, number> = {
-  sedan: 300, suv: 350, xl: 400,
-};
-
 // ─── Ultimate Service Card ─────────────────────────────────────────────────────
 
 function UltimateServiceCard({
@@ -2313,6 +2250,36 @@ function UltimateServiceCard({
         )}
       </div>
 
+      {/* ── Premium Upgrade — Seat Removal Deep Clean ── */}
+      <div className="px-7 pb-4">
+        <div className="relative rounded-xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.06] via-zinc-950/40 to-zinc-950/40 overflow-hidden">
+          <div className="h-[1.5px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Crown size={11} className="text-[#D4AF37]" fill="currentColor" />
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#D4AF37]">Premium Upgrade Available</p>
+            </div>
+            <p className="text-xs font-bold text-zinc-100 leading-snug mb-2">Seat Removal Deep Clean</p>
+            <p className="text-[11px] text-zinc-500 leading-snug mb-2.5">
+              Physically remove every seat for under-rail and seat-underside hot water extraction. The deepest clean we offer.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-white/[0.06] bg-zinc-950/60 px-2.5 py-2 text-center">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">2-Row</p>
+                <p className="text-base font-black tabular-nums text-[#D4AF37]">+$150</p>
+                <p className="text-[9px] text-emerald-400 font-bold mt-0.5">Save $55</p>
+              </div>
+              <div className="rounded-lg border border-white/[0.06] bg-zinc-950/60 px-2.5 py-2 text-center">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">3-Row</p>
+                <p className="text-base font-black tabular-nums text-[#D4AF37]">+$225</p>
+                <p className="text-[9px] text-emerald-400 font-bold mt-0.5">Save $75</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-zinc-600 mt-2 text-center">Per-section à la carte from $60. Add at booking.</p>
+          </div>
+        </div>
+      </div>
+
       {/* CTA */}
       <div className="px-7 pb-7">
         <button
@@ -2333,339 +2300,3 @@ function UltimateServiceCard({
     </div>
   );
 }
-
-// ─── Ultimate Paint Correction Block (Landing) ─────────────────────────────
-// Sister sub-section to the Ultimate Series. The customer types in their make
-// and model at the top — same autocomplete style as the booking flow — and
-// auto-detect maps it to one of the 4 size tiers (compact/sedan/suv/xl).
-// The pill row stays visible so they can also pick manually. Both 1-Step and
-// 2-Step cards animate price + on-site time as the size changes. Clicking
-// "Book" routes through openUltimateBooking with the typed vehicle, so the
-// inline BookingSection opens with the right service AND vehicle preselected.
-function LandingPaintCorrectionBlock({
-  onBook,
-}: {
-  onBook: (serviceName: string, vehicle?: { make: string; model: string; size?: VehicleSizeSlug } | null) => void;
-}) {
-  const [vehicleMake, setVehicleMake] = useState("");
-  const [vehicleModel, setVehicleModel] = useState("");
-  const [size, setSize] = useState<PaintSizeId | null>(null);
-  const [autoDetected, setAutoDetected] = useState(false);
-  // Single shared expand state — toggling on one card expands both, since the
-  // included features are identical across the 1-Step / 2-Step packages.
-  const [showIncludes, setShowIncludes] = useState(false);
-
-  // Mirror the booking modal's auto-detect — debounce on make/model change, run
-  // detectVehicleSize, and update the size pill if a match is found. Returns one
-  // of compact/sedan/suv/xl, all of which align with the 4-tier picker.
-  useEffect(() => {
-    if (!vehicleMake.trim() || vehicleModel.trim().length < 2) return;
-    const t = setTimeout(() => {
-      const detected = detectVehicleSize(vehicleMake, vehicleModel);
-      if (detected) {
-        setSize(detected as PaintSizeId);
-        setAutoDetected(true);
-      }
-    }, 400);
-    return () => clearTimeout(t);
-  }, [vehicleMake, vehicleModel]);
-
-  const activeSize: PaintSizeId = size ?? "sedan";
-  const hasTypedVehicle = vehicleMake.trim().length > 0 && vehicleModel.trim().length >= 2;
-  const handleBook = (serviceName: string) => {
-    // Always pass make/model when the customer typed them — even if our DB didn't
-    // recognise the size. The booking modal's own auto-detect will run a second
-    // pass and the customer can also adjust manually inside the booking flow.
-    onBook(serviceName, hasTypedVehicle
-      ? {
-          make: vehicleMake.trim(),
-          model: vehicleModel.trim(),
-          ...(size ? { size: size as VehicleSizeSlug } : {}),
-        }
-      : null);
-  };
-
-  return (
-    <div className="mt-12 md:mt-16 relative">
-      <div aria-hidden className="absolute inset-0 pointer-events-none -z-0"
-        style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(212,175,55,0.06) 0%, transparent 70%)" }} />
-
-      {/* Sub-section divider */}
-      <div className="relative mb-8">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1 h-px bg-white/[0.05]" />
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 shrink-0">
-            <Layers size={11} className="text-[#D4AF37]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">Take It Even Further</span>
-          </div>
-          <div className="flex-1 h-px bg-white/[0.05]" />
-        </div>
-        <div className="text-center">
-          <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
-            Ultimate <span className="text-[#D4AF37]">Paint Correction.</span>
-          </h3>
-          <p className="text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
-            Machine polishing + our full Ultimate Exterior detail. 6-month ceramic spray included.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Vehicle inputs (Make / Model) — same style as booking modal ── */}
-      <div className="relative mb-7 max-w-md mx-auto">
-        <div className="flex items-center justify-center gap-2 mb-2.5">
-          <Car size={12} className="text-[#D4AF37]" />
-          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Your Vehicle</span>
-          {autoDetected && size && (
-            <span className="inline-flex items-center gap-1 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-2 py-0.5 rounded-full text-[8.5px] font-bold uppercase tracking-widest">
-              <Zap size={8} className="fill-[#D4AF37]" /> {PAINT_CORRECTION_SIZES.find(s => s.id === size)?.label}
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <PaintMakeInput value={vehicleMake} onChange={(v) => { setVehicleMake(v); setAutoDetected(false); }}
-            onSelect={() => { setVehicleModel(""); setAutoDetected(false); setSize(null); }} />
-          <PaintModelInput value={vehicleModel} onChange={(v) => { setVehicleModel(v); setAutoDetected(false); }}
-            make={vehicleMake}
-            onSelect={(_, slug) => { setSize(slug as PaintSizeId); setAutoDetected(true); }} />
-        </div>
-        {!size && vehicleMake.trim() && vehicleModel.trim().length >= 2 && (
-          <p className="text-[10px] text-zinc-500 mt-2 text-center">We&apos;ll confirm your exact size at booking</p>
-        )}
-      </div>
-
-      {/* Cards */}
-      <div className="relative grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-        {PAINT_CORRECTION_CARDS.map((card) => {
-          const BadgeIcon = card.badgeIcon;
-          const price = card.prices[activeSize];
-          const hoursLow = card.hoursLow[activeSize];
-          const hoursHigh = card.hoursHigh[activeSize];
-          return (
-            <div key={card.serviceName}
-              className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
-                card.isFlagship
-                  ? "border border-[#D4AF37]/55 shadow-[0_0_50px_rgba(212,175,55,0.14)] bg-gradient-to-b from-zinc-900/85 to-zinc-950/70"
-                  : "border border-white/[0.08] bg-zinc-900/55 hover:border-[#D4AF37]/30"
-              }`}
-            >
-              <div className={`h-[2px] w-full shrink-0 ${card.isFlagship
-                ? "bg-gradient-to-r from-[#D4AF37]/45 via-[#F3E5AB] to-[#D4AF37]/45"
-                : "bg-gradient-to-r from-transparent via-[#D4AF37]/35 to-transparent"}`}
-              />
-
-              <div className="p-5 flex flex-col flex-1">
-                <div className="mb-4 text-center">
-                  <div className="inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-full bg-zinc-800/60 border border-white/[0.06]">
-                    <BadgeIcon size={10} className="text-[#D4AF37]" fill={card.isFlagship ? "currentColor" : "none"} />
-                    <span className="text-[9px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">{card.badge}</span>
-                  </div>
-                  <h4 className="text-base md:text-lg font-black text-white tracking-tight leading-snug">{card.short}</h4>
-                  <p className="text-[11px] text-zinc-500 mt-1.5 leading-snug">{card.tagline}</p>
-                </div>
-
-                {/* Animated price + time — placeholder until vehicle detected */}
-                <div className={`relative rounded-xl mb-4 px-4 py-3 border ${
-                  card.isFlagship ? "border-[#D4AF37]/25 bg-[#D4AF37]/[0.05]" : "border-white/[0.07] bg-white/[0.02]"
-                }`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-0.5">
-                        {size ? "Your price" : "From"}
-                      </div>
-                      <motion.div
-                        key={`price-${card.serviceName}-${activeSize}-${size != null}`}
-                        initial={{ opacity: 0.5, y: -3 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className={`text-2xl font-black tabular-nums ${card.isFlagship ? "text-[#D4AF37]" : "text-white"}`}
-                      >
-                        ${size ? price : card.prices.sedan}
-                      </motion.div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500 mb-0.5 flex items-center gap-1 justify-end">
-                        <Clock size={9} className="text-zinc-500" /> On site
-                      </div>
-                      <motion.div
-                        key={`hours-${card.serviceName}-${activeSize}-${size != null}`}
-                        initial={{ opacity: 0.5, y: -3 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className="text-base font-black tabular-nums text-zinc-200"
-                      >
-                        {size ? `${hoursLow}–${hoursHigh} hrs` : `${card.hoursLow.sedan}–${card.hoursHigh.xl} hrs`}
-                      </motion.div>
-                    </div>
-                  </div>
-                  {!size && (
-                    <p className="text-[9.5px] text-zinc-500 mt-2 text-center leading-snug">
-                      Enter your vehicle above for an exact price
-                    </p>
-                  )}
-                </div>
-
-                {/* Ultimate Exterior includes — collapsed by default */}
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowIncludes(s => !s)}
-                    aria-expanded={showIncludes}
-                    className="w-full flex items-center justify-between py-2 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/[0.03] transition-all"
-                  >
-                    <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                      {showIncludes ? "Includes Ultimate Exterior" : "Learn more"}
-                    </span>
-                    <ChevronDown size={12} className={`text-[#D4AF37] transition-transform duration-200 ${showIncludes ? "rotate-180" : ""}`} />
-                  </button>
-                  {showIncludes && (
-                    <div className="mt-2 rounded-xl px-3 py-2.5 bg-zinc-800/40 border border-white/[0.05]">
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {ULTIMATE_EXTERIOR_INCLUDES_LANDING.map((item) => (
-                          <span key={item} className="text-[9.5px] text-zinc-300 px-1.5 py-0.5 rounded-full bg-zinc-900/60 border border-white/[0.05]">
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button onClick={() => handleBook(card.serviceName)}
-                  className={`w-full py-2.5 rounded-xl font-bold text-[13px] transition-all duration-200 active:scale-[0.97] ${
-                    card.isFlagship
-                      ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_18px_rgba(212,175,55,0.32)]"
-                      : "bg-zinc-900 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/[0.08]"
-                  }`}>
-                  Book {card.short.replace(" Correction", "")}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Add-on summary line */}
-      <div className="relative mt-5 max-w-3xl mx-auto rounded-xl border border-white/[0.07] bg-zinc-900/40 px-4 py-3">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-5 text-[11px] text-zinc-400 text-center">
-          <div className="flex items-center gap-1.5">
-            <Plus size={11} className="text-[#D4AF37]" />
-            <span><strong className="text-zinc-200">2-yr Ceramic</strong>{" "}
-              {size
-                ? `+$${PAINT_CERAMIC_3YR_PRICES[activeSize]}`
-                : `+$${PAINT_CERAMIC_3YR_PRICES.sedan}–$${PAINT_CERAMIC_3YR_PRICES.xl}`}
-            </span>
-          </div>
-          <div className="hidden sm:block w-px h-3.5 bg-white/[0.08]" />
-          <div className="flex items-center gap-1.5">
-            <Sofa size={11} className="text-[#D4AF37]" />
-            <span><strong className="text-zinc-200">Ultimate Interior</strong> add-on +$175 · adds 3 hrs</span>
-          </div>
-        </div>
-      </div>
-
-      <p className="relative mt-3 text-center text-[10px] text-zinc-600">
-        <Link href="/paint-correction" className="hover:text-[#D4AF37] transition-colors">See full paint correction details →</Link>
-      </p>
-    </div>
-  );
-}
-
-// ─── Inline make/model autocompletes ───────────────────────────────────────
-// Lightweight versions matching the booking modal's style. Defined here rather
-// than imported from BookingModal so the landing-page bundle doesn't pull in
-// the entire booking flow up front.
-function PaintMakeInput({
-  value, onChange, onSelect,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onSelect?: (make: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const options = filterMakesByQuery(value);
-  const showDropdown = open && options.length > 0;
-
-  useEffect(() => {
-    const handle = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        placeholder="Toyota"
-        autoComplete="off"
-        className="w-full text-center bg-zinc-950/60 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[14px]"
-      />
-      {showDropdown && (
-        <div className="absolute top-full left-0 right-0 z-[60] mt-1 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
-          {options.slice(0, 12).map((make) => (
-            <button key={make} type="button"
-              onMouseDown={(e) => { e.preventDefault(); onChange(make); onSelect?.(make); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              {make}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PaintModelInput({
-  value, onChange, make, onSelect,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  make: string;
-  onSelect?: (model: string, sizeSlug: VehicleSizeSlug) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const options: ModelEntry[] = filterModelsByQuery(make, value);
-  const showDropdown = open && make.trim() !== "" && options.length > 0;
-
-  useEffect(() => {
-    const handle = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        placeholder="Camry"
-        autoComplete="off"
-        className="w-full text-center bg-zinc-950/60 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-3 py-2.5 outline-none transition-all placeholder:text-zinc-600 text-[14px]"
-      />
-      {showDropdown && (
-        <div className="absolute top-full left-0 right-0 z-[60] mt-1 max-h-44 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
-          {options.slice(0, 14).map((entry) => (
-            <button key={entry.model} type="button"
-              onMouseDown={(e) => { e.preventDefault(); onChange(entry.model); onSelect?.(entry.model, sizeTierToSlug(entry.size)); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              {entry.model}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-

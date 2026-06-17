@@ -287,13 +287,10 @@ export function MaintenanceClubPage({ services }: { services: Service[] }) {
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(212,175,55,0.07) 0%, transparent 70%)" }} />
         <div className="relative z-10 max-w-xl mx-auto">
-          <p className="text-zinc-500 text-sm mb-6">Just need a one-time detail or paint correction?</p>
+          <p className="text-zinc-500 text-sm mb-6">Just need a one-time detail?</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href="/detailing" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold">
               Auto Detailing <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </a>
-            <a href="/paint-correction" className="group flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/50 text-zinc-300 hover:border-[#D4AF37]/40 hover:text-white transition-all text-sm font-semibold">
-              Paint Correction <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </a>
           </div>
         </div>

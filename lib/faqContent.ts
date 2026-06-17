@@ -14,7 +14,7 @@ export const FAQ_SECTIONS = [
       { q: "Do you come to me?", a: "Yes — 100% mobile. We come to your home, office, marina, campground, or storage facility anywhere in our Vermont service area. You don't have to go anywhere or drop anything off." },
       { q: "Do you need power or water at my location?", a: "No. We're fully self-contained with our own water supply, generator, and professional-grade equipment. All we need is access to your vehicle." },
       { q: "What happens if it rains?", a: "We'll reach out to reschedule at no charge. Exterior work needs dry conditions to give you the best result. Interior-only appointments can sometimes still proceed in light rain — we'll figure it out together." },
-      { q: "How long does a detail take?", a: "Standard auto details: Interior — about 2.5 hours. Exterior — about 2 hours. Full Detail — about 3 hours. Paint Correction: 1-Step runs roughly 5.5 to 8 hours depending on vehicle size. 2-Step runs 9 to 10+ hours and typically reserves the whole day. Boats and RVs scale by length — interior or exterior alone runs 3 to 6 hours, a full boat or RV detail runs 5 to 10 hours, and oxidation restoration or ultimate transformation packages can take the entire day. We'll give you a specific estimate when you book." },
+      { q: "How long does a detail take?", a: "Standard auto details: Interior — about 2.5 hours. Exterior — about 2 hours. Full Detail — about 3 hours. Ultimate Interior Reset runs about 3.5 hours; Ultimate Full Reset runs about 4.5 hours. Boats and RVs scale by length — a Boat or RV Exterior runs about 3–4 hours at minimum length and grows roughly 30 minutes per 5 ft. A Boat or RV Full Detail runs 5–8 hours and may reserve the whole day on rigs over 35 ft. We'll give you a specific estimate when you book." },
       { q: "Do I need to be home during the appointment?", a: "No. As long as your vehicle is accessible at the scheduled time and location, we can work independently. We'll send you a text when we start and when we finish." },
     ],
   },
@@ -37,9 +37,9 @@ export const FAQ_SECTIONS = [
   {
     category: "Boats, RVs & Specialty Services",
     items: [
-      { q: "Do you detail boats?", a: "Yes — we detail powerboats, pontoons, sailboats, and center consoles at your marina, launch, or storage. Minimum 15 ft, priced per linear foot. We use 100% lake-safe products." },
-      { q: "Do you detail RVs and motorhomes?", a: "Yes — Class A, B, and C motorhomes, travel trailers, and fifth wheels. Minimum 20 ft, priced per linear foot. We come to your campground, storage lot, or driveway." },
-      { q: "What is paint correction?", a: "Paint correction is a multi-stage machine polishing process that removes swirl marks, light scratches, oxidation, and water spots from your vehicle's clear coat — restoring deep gloss and clarity." },
+      { q: "Do you detail boats?", a: "Yes — we detail powerboats, pontoons, sailboats, and center consoles at your marina, slip, dock, or storage. Minimum 15 ft, priced per linear foot: Boat Interior $15/ft, Boat Exterior $16/ft, Boat Full Detail $28/ft. All products are 100% lake-safe and biodegradable." },
+      { q: "Do you detail RVs and motorhomes?", a: "Yes — Class A, B, and C motorhomes, travel trailers, fifth wheels, and pop-ups. Minimum 20 ft, priced per linear foot: RV Exterior $15/ft, RV Interior $25/ft, RV Full Detail $38/ft. We come to your campground, storage lot, dealer, or driveway anywhere in Vermont." },
+      { q: "Do you offer paint correction or machine polishing?", a: "Not at this time. We focus on maintenance details and full inside-and-out cleanings — hand wash, hand wax, interior steam, ceramic spray sealant. If you need machine polishing or paint correction, we're happy to refer you to a Vermont specialist." },
     ],
   },
   {

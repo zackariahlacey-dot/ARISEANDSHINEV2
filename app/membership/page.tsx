@@ -125,7 +125,7 @@ export default async function MembershipPage() {
                 <div className="border-t border-white/[0.08] pt-2 mt-2"></div>
                 <div className="flex justify-between"><span>Book Full Detail (mid)</span><span className="tabular-nums">−$255</span></div>
                 <div className="flex justify-between"><span>+ Engine bay add-on</span><span className="tabular-nums">−$60</span></div>
-                <div className="flex justify-between"><span>Book Salt Season Recovery</span><span className="tabular-nums">−$135</span></div>
+                <div className="flex justify-between"><span>Book Exterior Detail</span><span className="tabular-nums">−$135</span></div>
                 <div className="flex justify-between"><span>Book Ultimate Int+Ext (sedan)</span><span className="tabular-nums">−$365</span></div>
                 <div className="border-t border-white/[0.08] pt-2 mt-2 flex justify-between font-bold text-[#D4AF37]">
                   <span>Credit remaining</span><span className="tabular-nums">$435</span>

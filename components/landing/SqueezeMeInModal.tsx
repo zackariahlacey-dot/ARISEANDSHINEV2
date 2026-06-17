@@ -60,18 +60,16 @@ const AUTO_SERVICES = [
   { label: "Not sure yet",                       price: "",           desc: "We'll figure it out together"                             },
 ];
 const BOAT_SERVICES = [
-  { label: "Boat Interior",    price: "$15/ft",    desc: "Vinyl, carpet, upholstery & odor treatment"    },
-  { label: "Boat Exterior",    price: "$20/ft",    desc: "Hull wash, oxidation removal & wax/sealant"    },
-  { label: "Boat Full Detail", price: "$32/ft",    desc: "Interior + exterior combined"                  },
-  { label: "Showroom Package", price: "$55/ft",    desc: "Machine polish + ceramic coating topcoat"      },
-  { label: "Not sure yet",     price: "",          desc: "We'll figure it out together"                  },
+  { label: "Boat Interior",    price: "$15/ft",    desc: "Vinyl, carpet, upholstery & odor treatment"  },
+  { label: "Boat Exterior",    price: "$16/ft",    desc: "Hull wash, hand wax & deck rinse"            },
+  { label: "Boat Full Detail", price: "$28/ft",    desc: "Interior + exterior combined · best value"   },
+  { label: "Not sure yet",     price: "",          desc: "We'll figure it out together"                },
 ];
 const RV_SERVICES = [
-  { label: "Exterior Refresh",        price: "$18/ft",    desc: "Full wash, clay bar & wax"                             },
-  { label: "Living Space Reset",      price: "$28/ft",    desc: "Interior deep clean — surfaces, upholstery & fixtures" },
-  { label: "Ultimate Transformation", price: "$50/ft",    desc: "Interior + exterior full detail"                       },
-  { label: "Oxidation Restoration",   price: "$35–45/ft", desc: "Machine polish to restore faded paint"                 },
-  { label: "Not sure yet",            price: "",          desc: "We'll figure it out together"                          },
+  { label: "RV Exterior",    price: "$15/ft",    desc: "Foam bath, seal inspection, ceramic spray"                     },
+  { label: "RV Interior",    price: "$25/ft",    desc: "Kitchen, bath, upholstery steam clean & full reset"            },
+  { label: "RV Full Detail", price: "$38/ft",    desc: "Interior + exterior combined · best value"                     },
+  { label: "Not sure yet",   price: "",          desc: "We'll figure it out together"                                  },
 ];
 
 const URGENCY_OPTIONS = [

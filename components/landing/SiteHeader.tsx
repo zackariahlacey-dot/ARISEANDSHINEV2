@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Phone, Menu, X, Sparkles, Anchor, Truck,
   LogIn, LogOut, LayoutDashboard, Gift, User,
-  HelpCircle, MapPin, CalendarSearch, ChevronRight, Home, Layers, BookOpen,
+  HelpCircle, MapPin, CalendarSearch, ChevronRight, Home, BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -22,7 +22,6 @@ const ADMIN_EMAIL = "zackariahlacey@gmail.com";
 const NAV_LINKS = [
   { href: "/",                 label: "Home"             },
   { href: "/detailing",        label: "Auto Detailing"   },
-  { href: "/paint-correction", label: "Paint Correction" },
   { href: "/boat-detailing",   label: "Boat Detailing"   },
   { href: "/rv-detailing",     label: "RV Detailing"     },
   { href: "/about",            label: "About"            },
@@ -30,10 +29,9 @@ const NAV_LINKS = [
 ];
 
 const SERVICE_LINKS = [
-  { href: "/detailing",        label: "Auto Detailing",   icon: Sparkles, desc: "Cars, trucks & SUVs"        },
-  { href: "/paint-correction", label: "Paint Correction", icon: Layers,   desc: "1-Step / 2-Step + ceramic"  },
-  { href: "/boat-detailing",   label: "Boat Detailing",   icon: Anchor,   desc: "Marine interior & exterior" },
-  { href: "/rv-detailing",     label: "RV Detailing",     icon: Truck,    desc: "Per-foot pricing"           },
+  { href: "/detailing",        label: "Auto Detailing",   icon: Sparkles, desc: "Cars, trucks & SUVs"          },
+  { href: "/boat-detailing",   label: "Boat Detailing",   icon: Anchor,   desc: "Per-foot · Lake Champlain"    },
+  { href: "/rv-detailing",     label: "RV Detailing",     icon: Truck,    desc: "Per-foot · motorhomes & 5ers" },
 ];
 
 const MORE_LINKS = [

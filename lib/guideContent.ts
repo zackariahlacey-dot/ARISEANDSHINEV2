@@ -58,7 +58,7 @@ export const GUIDES: Guide[] = [
           "**Service type** — Interior, exterior, or full detail. Interior is more labor-intensive than exterior (think stain removal vs. wash), so it often costs slightly more for the same vehicle.",
           "**Vehicle size** — A sedan has roughly half the interior surface area of a three-row SUV. Detailers price by size tier (sedan / SUV / three-row or oversized) to keep this fair.",
           "**Vehicle condition** — A well-maintained car needs a wash and refresh. A car that hasn't been detailed in two years and lives outside year-round needs deep extraction, leather restoration, and salt-stain neutralization. Some detailers absorb this into the base price; others add a \"condition fee.\"",
-          "**Add-ons** — Engine bay detail, ceramic coating, paint correction, headliner shampoo, ozone treatment, pet hair removal beyond standard.",
+          "**Add-ons** — Engine bay detail, ceramic spray sealant, headliner shampoo, ozone treatment, pet hair removal beyond standard.",
         ],
       },
       {
@@ -124,7 +124,7 @@ export const GUIDES: Guide[] = [
       {
         heading: "May–June: Pollen reset + paint protection",
         paragraphs: [
-          "Vermont's spring pollen blooms (especially birch and maple) coat cars in a yellow film that's bonded to your clear coat by mid-June if left alone. This is also when most Vermonters start using their cars more — road trips, lake runs, longer commutes. It's the right window for paint correction or a ceramic-style sealant that'll carry through summer.",
+          "Vermont's spring pollen blooms (especially birch and maple) coat cars in a yellow film that's bonded to your clear coat by mid-June if left alone. This is also when most Vermonters start using their cars more — road trips, lake runs, longer commutes. It's the right window for a deep wash and a fresh ceramic spray sealant that'll carry through summer.",
         ],
       },
       {
@@ -196,12 +196,12 @@ export const GUIDES: Guide[] = [
       {
         heading: "If you've already let it go too long",
         paragraphs: [
-          "If you're reading this in March or April and realizing your car has been salt-coated since December, a Salt Season Recovery detail will do most of the repair. This is purpose-built for what Vermont winter does — neutralizing wash, deep wheel and underbody work, salt-stain extraction from carpets, and a fresh layer of protection to carry you into spring.",
+          "If you're reading this in March or April and realizing your car has been salt-coated since December, a Full Detail will do most of the repair — a neutralizing wash, deep wheel and underbody work, salt-stain extraction from carpets, and a fresh layer of ceramic spray sealant to carry you into spring.",
           "Left alone, salt damage compounds — what's surface staining now becomes deep rust pitting next winter. The intervention is much cheaper than the repair.",
         ],
       },
     ],
-    primaryCta: { label: "Book salt season recovery", href: "/detailing" },
+    primaryCta: { label: "Book a Full Detail", href: "/detailing" },
     relatedSlugs: ["best-time-to-detail-car-vermont", "detailing-vs-car-wash"],
   },
   {

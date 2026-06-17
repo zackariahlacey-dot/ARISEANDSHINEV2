@@ -1,6 +1,13 @@
 import { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 
 // Service durations in minutes (pure service time, no travel)
+//
+// Boat & RV durations are calibrated to the high-end of each length bracket
+// using the formula in lib/footageDuration.ts:
+//   - medium/sedan = ≤30 ft (boats) / ≤30 ft (RVs)
+//   - large/suv    = 31–45 ft
+//   - extra_large/xl = 46+ ft
+// This guarantees the booking system never under-reserves time on long boats/RVs.
 export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
   "Interior Detail": {
     // 2.5 hrs base — customer-facing display window shows "1.5–2.5 hrs"
@@ -15,10 +22,6 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     // 3 hrs base — display window shows "2–3 hrs" to customer
     small: 180, medium: 180, large: 180, extra_large: 180,
     sedan: 180, suv: 180, xl: 180,
-  },
-  "Salt Season Recovery": {
-    small: 90, medium: 90, large: 90, extra_large: 90,
-    sedan: 90, suv: 90, xl: 90,
   },
   "Interior Monthly Maintenance": {
     small: 90, medium: 90, large: 120, extra_large: 120,
@@ -37,53 +40,33 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 270, medium: 270, large: 270, extra_large: 270,
     sedan: 270, suv: 270, xl: 270,
   },
-  // Paint Correction (Ultimate Exterior + 1-Step / 2-Step)
-  // Times scale by vehicle size — these are full exterior + machine polish jobs.
-  // Booking system uses the high-end for slot reservation to avoid double-booking.
-  // Large/XL 2-Step is capped at 600 min (10 hrs = longest open day Tue/Wed/Fri 8a-6p);
-  // realistic jobs may run 11-13+ hrs and the booking blocks the whole day.
-  "Ultimate Exterior + 1-Step Paint Correction": {
-    small: 270, medium: 330, large: 390, extra_large: 480,
-    sedan: 330, suv: 390, xl: 480,
-  },
-  "Ultimate Exterior + 2-Step Paint Correction": {
-    small: 480, medium: 540, large: 600, extra_large: 600,
-    sedan: 540, suv: 600, xl: 600,
-  },
-  // Boat Detailing — durations scale by length bracket
-  // sedan/medium = ≤30ft, suv/large = 31–45ft, xl/extra_large = 46ft+
+  // ── Boat Detailing — length-bracketed durations ─────────────────────
+  // medium ≤30 ft · large 31–45 ft · xl 46+ ft
   "Boat Interior": {
-    small: 180, medium: 240, large: 300, extra_large: 360,
-    sedan: 240, suv: 300, xl: 360,
+    small: 225, medium: 225, large: 300, extra_large: 350,
+    sedan: 225, suv: 300, xl: 350,
   },
   "Boat Exterior": {
-    small: 150, medium: 180, large: 240, extra_large: 300,
-    sedan: 180, suv: 240, xl: 300,
+    small: 180, medium: 180, large: 240, extra_large: 280,
+    sedan: 180, suv: 240, xl: 280,
   },
   "Boat Full Detail": {
-    small: 300, medium: 390, large: 480, extra_large: 600,
-    sedan: 390, suv: 480, xl: 600,
+    small: 405, medium: 405, large: 540, extra_large: 600,
+    sedan: 405, suv: 540, xl: 600,
   },
-  "Boat Showroom Package": {
-    small: 240, medium: 300, large: 420, extra_large: 540,
-    sedan: 300, suv: 420, xl: 540,
+  // ── RV Detailing — length-bracketed durations ───────────────────────
+  // medium ≤30 ft · large 31–45 ft · xl 46+ ft
+  "RV Exterior": {
+    small: 240, medium: 240, large: 330, extra_large: 390,
+    sedan: 240, suv: 330, xl: 390,
   },
-  // RV Detailing — sizes map to length brackets: medium/sedan=≤36ft, large/suv=37-45ft, xl/extra_large=46ft+
-  "RV Exterior Refresh": {
-    small: 240, medium: 270, large: 330, extra_large: 390,
-    sedan: 270, suv: 330, xl: 390,
+  "RV Interior": {
+    small: 300, medium: 300, large: 390, extra_large: 450,
+    sedan: 300, suv: 390, xl: 450,
   },
-  "RV Living Space Reset": {
-    small: 300, medium: 360, large: 420, extra_large: 480,
-    sedan: 360, suv: 420, xl: 480,
-  },
-  "RV Ultimate Transformation": {
-    small: 480, medium: 570, large: 660, extra_large: 780,
-    sedan: 570, suv: 660, xl: 780,
-  },
-  "RV Oxidation Restoration": {
-    small: 480, medium: 540, large: 660, extra_large: 780,
-    sedan: 540, suv: 660, xl: 780,
+  "RV Full Detail": {
+    small: 480, medium: 480, large: 600, extra_large: 600,
+    sedan: 480, suv: 600, xl: 600,
   },
 };
 

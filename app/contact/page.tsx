@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Calendar, Layers, Star, ExternalLink } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Calendar, Star, ExternalLink } from "lucide-react";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
@@ -23,7 +23,6 @@ const HOURS = [
 
 const QUICK_LINKS = [
   { label: "Book Auto Detailing",  href: "/detailing",        icon: Sparkles      },
-  { label: "Paint Correction",     href: "/paint-correction", icon: Layers        },
   { label: "Book Boat Detailing",  href: "/boat-detailing",   icon: Anchor        },
   { label: "Book RV Detailing",    href: "/rv-detailing",     icon: Truck         },
   { label: "FAQs",                 href: "/faq",              icon: MessageCircle },

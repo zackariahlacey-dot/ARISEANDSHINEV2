@@ -28,7 +28,6 @@ const SERVICES_OFFERED = [
   { label: "Full Detail Packages",      href: "/detailing" },
   { label: "Boat & Marine Detailing",   href: "/boat-detailing" },
   { label: "RV & Motorhome Detailing",  href: "/rv-detailing" },
-  { label: "Paint Correction",          href: "/paint-correction" },
   { label: "Monthly Plans",             href: "/protected" },
 ];
 
