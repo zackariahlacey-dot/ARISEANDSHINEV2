@@ -2971,9 +2971,28 @@ export function BookingSection({
             <>
               {/* ── HEADER ─────────────────────────────────────────────── */}
               <div className="sticky top-0 z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-zinc-800/50 shrink-0 bg-inherit">
-                <h2 className="text-lg font-bold text-white">
-                  {isSubscription ? "Maintenance Club Setup" : "Book Your Detail"}
-                </h2>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <h2 className="text-lg font-bold text-white">
+                    {isSubscription ? "Maintenance Club Setup" : "Book Your Detail"}
+                  </h2>
+                  {/* Easy-access "Change Service" button — only on Step 1 so
+                      customers can swap services before locking in date/time. */}
+                  {step === 1 && selectedService && onClearService && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClearService();
+                        setBookingCategory(null);
+                        setSelectedAddons([]);
+                      }}
+                      className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/[0.05] text-[#D4AF37] text-[11px] font-bold uppercase tracking-wider hover:border-[#D4AF37]/60 hover:bg-[#D4AF37]/[0.1] active:scale-[0.97] transition-all"
+                      aria-label="Choose a different service"
+                    >
+                      <ChevronLeft size={12} strokeWidth={3} />
+                      Change Service
+                    </button>
+                  )}
+                </div>
                 {selectedService ? (() => {
                   // Builder handoff: re-label as "Custom Package (Foundation)" and
                   // include the full build total (foundation + add-ons after bundle),
