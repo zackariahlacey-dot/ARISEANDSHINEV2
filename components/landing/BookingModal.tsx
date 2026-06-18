@@ -80,7 +80,8 @@ const ALL_ADD_ONS = [
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
   // ── Build Your Package add-ons (new) ─────────────────────────────────────
   { id: "headliner_clean",     label: "Headliner Cleaning",                   price: 40,  desc: "Gentle dry-foam cleaning of the fabric headliner — lifts stains, smoke residue and dust without saturating the adhesive." },
-  { id: "salt_stain_removal",  label: "Salt Stain Removal & Prevention",      price: 50,  desc: "Vermont winter survival: neutralize and lift dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
+  { id: "salt_stain_removal",  label: "Minor Salt Stain Treatment",           price: 50,  desc: "Vermont winter survival: neutralize and lift light-to-moderate dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
+  { id: "extreme_salt_removal",label: "Extreme Salt Stain Treatment",         price: 150, desc: "For severe, deep-set salt damage — enzymatic pH-neutralizing cleaner, multiple hot water extractions, and salt-repellent sealing on every affected surface. Recommended for carpets with months of accumulated road salt." },
   // ── Seat Removal Deep Clean — premium upgrade (specialty, excluded from bundle discount) ──
   { id: "seat_removal_driver",     label: "Seat Removal — Driver Side",       price: 60,  desc: "Driver seat physically removed for under-rail and seat-underside hot water extraction. Premium spill / wear coverage." },
   { id: "seat_removal_passenger",  label: "Seat Removal — Passenger Side",    price: 60,  desc: "Front passenger seat physically removed for under-rail and seat-underside hot water extraction." },
@@ -128,13 +129,18 @@ const isSeatRemovalAddonId = (id: string): boolean =>
   (SEAT_REMOVAL_ADDON_IDS as readonly string[]).includes(id);
 /** High-ticket upgrades for Ultimate packages — engine bay, headlight, and seat removal.
  *  Heavy Pet Hair Removal is INCLUDED in Ultimate (no separate add-on row needed). */
-const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", ...SEAT_REMOVAL_ADDON_IDS];
+const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", "extreme_salt_removal", ...SEAT_REMOVAL_ADDON_IDS];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
-const BUILDER_INTERIOR_ADDON_IDS = ["upholstery_shampoo", "pet_hair", "uv_interior", "leather_condition", "odor_bomb", "headliner_clean", "salt_stain_removal", "steam_sanitation", "seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"];
+// Basic services (Interior / Exterior / Full Detail) get a slimmed-down add-on
+// list that mirrors Ultimate's premium upsells PLUS three basic-only specialties
+// (carpet shampoo + minor & extreme salt treatments) that aren't included by
+// default in basic packages. Customers wanting the full kitchen-sink list are
+// nudged toward Ultimate via the upgrade banner.
+const BUILDER_INTERIOR_ADDON_IDS = ["ozone_treatment", "upholstery_shampoo", "salt_stain_removal", "extreme_salt_removal", "seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"];
 /** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
-const BUILDER_EXTERIOR_ADDON_IDS = ["clay_bar", "mech_chem_decon", "headlight_restore", "trim_dressing", "salt_recovery_addon", "wheel_ceramic"];
+const BUILDER_EXTERIOR_ADDON_IDS = ["engine_bay", "headlight_restore"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
 const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior", "wheel_ceramic"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
@@ -179,7 +185,8 @@ const DURATION_EXTENDING_ADDONS: Record<string, number> = {
   pet_hair:             30,  // Heavy Pet Hair Removal +30 min
   odor_bomb:            60,  // Strong Odor Elimination +1 hr
   headliner_clean:      30,  // Headliner Cleaning +30 min
-  salt_stain_removal:   30,  // Salt Stain Removal +30 min
+  salt_stain_removal:   30,  // Minor Salt Stain Treatment +30 min
+  extreme_salt_removal: 75,  // Extreme Salt Stain Treatment +1.25 hr
   // Seat Removal — per-section + bundle tiers
   seat_removal_driver:     30,
   seat_removal_passenger:  30,
@@ -285,7 +292,7 @@ function getAddonExtraDurationMins(
 /** Salt-season add-ons (Salt Stain Removal + Winter Salt Recovery — Undercarriage)
  *  are hidden during the off-season (May–Jul) and surface again starting Aug 1.
  *  Vermont salt season runs roughly Aug → late Apr. */
-const SALT_SEASON_ADDON_IDS = new Set(["salt_stain_removal", "salt_recovery_addon"]);
+const SALT_SEASON_ADDON_IDS = new Set(["salt_stain_removal", "extreme_salt_removal", "salt_recovery_addon"]);
 function isSaltSeasonActive(now: Date = new Date()): boolean {
   const m = now.getMonth() + 1; // 1-12
   // Hidden May (5), June (6), July (7). Visible Aug-Apr.
@@ -1458,8 +1465,9 @@ export function BookingSection({
     if (!selectedService) return null;
     const n = selectedService.name.toLowerCase();
     if (n.includes("ultimate") || n.includes("boat") || n.includes("rv") || n.includes("motorhome") || n.includes("maintenance") || n.includes("paint") || n.includes("correction")) return null;
-    const hasIncludedAddon = selectedAddons.some(a => INCLUDED_IN_ULTIMATE_IDS.includes(a.id));
-    if (!hasIncludedAddon) return null;
+    // Always show the upgrade banner on basic Interior / Full Detail bookings —
+    // gives every customer a clear path to Ultimate without having to first
+    // discover that they could be saving by upgrading.
     const targetName = (n.includes("interior") && !n.includes("full"))
       ? "Ultimate Interior Reset"
       : "Ultimate Interior + Exterior Reset";

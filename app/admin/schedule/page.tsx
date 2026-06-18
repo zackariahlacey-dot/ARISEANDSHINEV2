@@ -124,7 +124,8 @@ const ADMIN_ADDONS = [
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35  },
   // Build Your Package add-ons
   { id: "headliner_clean",   label: "Headliner Cleaning",                    price: 40  },
-  { id: "salt_stain_removal",label: "Salt Stain Removal & Prevention",       price: 50  },
+  { id: "salt_stain_removal",label: "Minor Salt Stain Treatment",            price: 50  },
+  { id: "extreme_salt_removal", label: "Extreme Salt Stain Treatment",       price: 150 },
   { id: "steam_sanitation",  label: "Steam Sanitation (free at 3+ addons)",  price: 45  },
   { id: "seat_removal_driver",    label: "Seat Removal — Driver Side",       price: 60  },
   { id: "seat_removal_passenger", label: "Seat Removal — Passenger Side",    price: 60  },
