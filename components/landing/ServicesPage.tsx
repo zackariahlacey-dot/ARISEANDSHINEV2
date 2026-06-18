@@ -85,7 +85,7 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 
 const FAQ = [
   { q: "Do you come to my location?", a: "Yes — we're 100% mobile. We come to your home, office, or anywhere in Vermont. No shop visit needed." },
-  { q: "How long does a detail take?", a: "Interior or Exterior typically take 1.5–2.5 hours. Full Details run 2.5–4 hours. Ultimate Series may take a full day." },
+  { q: "How long does a detail take?", a: "Interior typically takes 1.5–2 hours, Exterior 1–1.5 hours, Full Detail 2–2.5 hours. Ultimate Interior Reset runs 2.5–3.5 hours; Ultimate Interior + Exterior Reset runs 3.5–4.5 hours." },
   { q: "What products do you use?", a: "We use professional-grade, eco-friendly products including pH-neutral soaps, ceramic-grade protectants, and premium interior dressings — safe for all surfaces." },
   { q: "What's the cancellation policy?", a: "Cancellations must be made at least 24 hours in advance. Same-day cancellations may incur a $50 fee. We'll never charge you if we reschedule due to weather." },
 ];
