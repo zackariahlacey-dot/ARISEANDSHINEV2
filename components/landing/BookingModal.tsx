@@ -282,19 +282,32 @@ function getAddonExtraDurationMins(
  * `vehicleSize` is optional and only used to surface Work Van cargo-cleaning add-ons
  * on interior-touching services when the customer's vehicle is a work van (xl).
  */
+/** Salt-season add-ons (Salt Stain Removal + Winter Salt Recovery — Undercarriage)
+ *  are hidden during the off-season (May–Jul) and surface again starting Aug 1.
+ *  Vermont salt season runs roughly Aug → late Apr. */
+const SALT_SEASON_ADDON_IDS = new Set(["salt_stain_removal", "salt_recovery_addon"]);
+function isSaltSeasonActive(now: Date = new Date()): boolean {
+  const m = now.getMonth() + 1; // 1-12
+  // Hidden May (5), June (6), July (7). Visible Aug-Apr.
+  return m >= 8 || m <= 4;
+}
+
 function getAddonsForService(serviceName: string, vehicleSize?: string): readonly AddonItem[] {
   const n = serviceName.toLowerCase();
   const isWorkVan = vehicleSize === "xl";
   const cargoIds = isWorkVan ? CARGO_ADDON_IDS : [];
+  const saltSeasonOn = isSaltSeasonActive();
+  const seasonalFilter = (addons: readonly AddonItem[]): readonly AddonItem[] =>
+    saltSeasonOn ? addons : addons.filter(a => !SALT_SEASON_ADDON_IDS.has(a.id));
 
   // ── Marine / Boat ────────────────────────────────────────────────────────
   if (n.includes("boat")) {
-    return ALL_ADD_ONS.filter(a => MARINE_ADDON_IDS.includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => MARINE_ADDON_IDS.includes(a.id)));
   }
 
   // ── RV ───────────────────────────────────────────────────────────────────
   if (n.includes("rv") || n.includes("motorhome")) {
-    return ALL_ADD_ONS.filter(a => RV_ADDON_IDS.includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => RV_ADDON_IDS.includes(a.id)));
   }
 
   // ── Vehicle services below — never include marine or RV add-ons ──────────
@@ -303,7 +316,7 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
   // and the Ultimate Interior add-on. Cargo cleaning surfaces only when the
   // Ultimate Interior add-on is implied (handled at render-time on the interior side).
   if (isPaintCorrectionService(serviceName)) {
-    return ALL_ADD_ONS.filter(a => [...PAINT_CORRECTION_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS].includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => [...PAINT_CORRECTION_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS].includes(a.id)));
   }
 
   // Ultimate packages: high-ticket upgrades. Cargo cleaning if work van.
@@ -316,29 +329,29 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
       ...cargoIds,
       ...(includesExterior ? [...WINDOW_COATING_ADDON_IDS, "ceramic_3yr", "wheel_ceramic"] : []),
     ];
-    return ALL_ADD_ONS.filter(a => ids.includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => ids.includes(a.id)));
   }
 
   // Exterior Detail (Build Your Package foundation) — all exterior builder add-ons + window coating + cargo if work van
   if (n.includes("exterior") && !n.includes("full")) {
-    return ALL_ADD_ONS.filter(a => [...BUILDER_EXTERIOR_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS, "engine_bay"].includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => [...BUILDER_EXTERIOR_ADDON_IDS, ...WINDOW_COATING_ADDON_IDS, "engine_bay"].includes(a.id)));
   }
 
   // Interior Detail (Build Your Package foundation) — all interior builder add-ons + cargo if work van.
   // No window coating — we don't touch exterior glass on an interior-only service.
   if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
     const ids = [...BUILDER_INTERIOR_ADDON_IDS, ...cargoIds];
-    return ALL_ADD_ONS.filter(a => ids.includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => ids.includes(a.id)));
   }
 
   // Maintenance plans: engine bay + floor shampoo (quick recurring visits)
   if (n.includes("maintenance")) {
-    return ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id));
+    return seasonalFilter(ALL_ADD_ONS.filter(a => a.id === "engine_bay" || FLOOR_ADDON_IDS.includes(a.id)));
   }
 
   // Full Detail (Build Your Package foundation) → all interior + exterior add-ons + cargo if work van + window coating
   const ids = [...BUILDER_INTERIOR_ADDON_IDS, ...BUILDER_EXTERIOR_ADDON_IDS, ...cargoIds, ...WINDOW_COATING_ADDON_IDS];
-  return ALL_ADD_ONS.filter(a => ids.includes(a.id));
+  return seasonalFilter(ALL_ADD_ONS.filter(a => ids.includes(a.id)));
 }
 
 /**
@@ -1099,6 +1112,17 @@ export function BookingSection({
         return [...filtered, { id: addon.id, label: addon.label, price: getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides) }];
       }
     });
+  };
+
+  /** Clears in-flight draft from localStorage + sessionStorage AND resets the
+   *  in-modal state that would otherwise carry over (add-ons, category). Used
+   *  by Cancel + Change Service buttons so customers actually get a clean
+   *  start instead of being auto-restored to the booking they just abandoned. */
+  const discardDraftAndReset = () => {
+    try { localStorage.removeItem(PERSISTENT_DRAFT_KEY); } catch {}
+    try { sessionStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
+    setSelectedAddons([]);
+    setBookingCategory(null);
   };
 
   // Step 2 — Date & Time
@@ -2981,9 +3005,8 @@ export function BookingSection({
                     <button
                       type="button"
                       onClick={() => {
+                        discardDraftAndReset();
                         onClearService();
-                        setBookingCategory(null);
-                        setSelectedAddons([]);
                       }}
                       className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/[0.05] text-[#D4AF37] text-[11px] font-bold uppercase tracking-wider hover:border-[#D4AF37]/60 hover:bg-[#D4AF37]/[0.1] active:scale-[0.97] transition-all"
                       aria-label="Choose a different service"
@@ -4991,14 +5014,38 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
 
               {/* ── FOOTER / NAVIGATION (Steps 1 & 2 only) ───────────────── */}
               {step < 3 && (
-                <div className="sticky bottom-0 z-10 px-4 sm:px-6 pt-4 pb-4 sm:pb-6 border-t border-zinc-800/50 flex items-center justify-between shrink-0 bg-inherit">
-                  <button
-                    onClick={step === 1 ? onClose : handleBack}
-                    className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors py-2 min-h-[44px] sm:min-h-0"
-                  >
-                    <ChevronLeft size={15} />
-                    {step === 1 ? "Cancel" : "Back"}
-                  </button>
+                <div className="sticky bottom-0 z-10 px-4 sm:px-6 pt-4 pb-4 sm:pb-6 border-t border-zinc-800/50 flex items-center justify-between gap-2 shrink-0 bg-inherit">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      onClick={() => {
+                        // Cancel clears any in-flight draft so reopening the
+                        // modal starts fresh instead of auto-restoring the
+                        // booking the customer just abandoned.
+                        if (step === 1) {
+                          discardDraftAndReset();
+                          onClose();
+                        } else {
+                          handleBack();
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors py-2 min-h-[44px] sm:min-h-0"
+                    >
+                      <ChevronLeft size={15} />
+                      {step === 1 ? "Cancel" : "Back"}
+                    </button>
+                    {step === 1 && selectedService && onClearService && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          discardDraftAndReset();
+                          onClearService();
+                        }}
+                        className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/[0.05] text-[#D4AF37] text-[11px] font-bold uppercase tracking-wider hover:border-[#D4AF37]/60 hover:bg-[#D4AF37]/[0.1] active:scale-[0.97] transition-all"
+                      >
+                        Change Service
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={handleNext}
                     disabled={!canGoNext()}
