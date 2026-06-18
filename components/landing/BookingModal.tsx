@@ -43,7 +43,7 @@ import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBooking
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import { todayInBusinessTz } from "@/lib/dates";
-import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, isPremiumServiceName, PREMIUM_SERVICE_BONUS_PCT } from "@/lib/bundleDiscount";
+import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, isPremiumServiceName, PREMIUM_SERVICE_BONUS_PCT } from "@/lib/bundleDiscount";
 import {
   filterMakesByQuery,
   filterModelsByQuery,
@@ -3477,10 +3477,24 @@ export function BookingSection({
                                       </p>
                                     </div>
 
-                                    {/* Price */}
-                                    <div className={`shrink-0 text-sm font-black tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                      +${getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides)}
-                                    </div>
+                                    {/* Price — shows discounted price next to original when a discount is active */}
+                                    {(() => {
+                                      const base = getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides);
+                                      const discounted = addonDiscountedPrice(addon.id, base, bundlePct);
+                                      const isDiscounted = bundlePct > 0 && discounted < base;
+                                      return (
+                                        <div className={`shrink-0 flex items-baseline gap-1.5 tabular-nums`}>
+                                          {isDiscounted && (
+                                            <span className="text-[11px] font-bold text-zinc-500 line-through">${base}</span>
+                                          )}
+                                          <span className={`text-sm font-black ${
+                                            isDiscounted ? "text-emerald-300" : isSelected ? "text-white" : "text-[#D4AF37]"
+                                          }`}>
+                                            +${discounted}
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
                                   </button>
                                 );
                               })}
@@ -3780,9 +3794,22 @@ export function BookingSection({
                                             <div className={`text-[9px] font-medium mt-0.5 ${isSelected ? "text-cyan-300/80" : "text-zinc-500"}`}>
                                               {subLabel}
                                             </div>
-                                            <div className={`text-sm font-black mt-1.5 tabular-nums ${isSelected ? "text-white" : "text-[#D4AF37]"}`}>
-                                              ${price}
-                                            </div>
+                                            {(() => {
+                                              const discountedPrice = ceramicPct > 0 ? Math.round(price * (1 - ceramicPct)) : price;
+                                              const isDiscounted = ceramicPct > 0 && discountedPrice < price;
+                                              return (
+                                                <div className="mt-1.5 tabular-nums">
+                                                  {isDiscounted && (
+                                                    <div className="text-[10px] font-bold text-zinc-500 line-through leading-none">${price}</div>
+                                                  )}
+                                                  <div className={`text-sm font-black leading-none mt-0.5 ${
+                                                    isDiscounted ? "text-emerald-300" : isSelected ? "text-white" : "text-[#D4AF37]"
+                                                  }`}>
+                                                    ${discountedPrice}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })()}
                                           </button>
                                         );
                                       })}
