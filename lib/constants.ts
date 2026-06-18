@@ -10,18 +10,19 @@ import { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 // This guarantees the booking system never under-reserves time on long boats/RVs.
 export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
   "Interior Detail": {
-    // 2.5 hrs base — customer-facing display window shows "1.5–2.5 hrs"
-    small: 150, medium: 150, large: 150, extra_large: 150,
-    sedan: 150, suv: 150, xl: 150,
-  },
-  "Exterior Detail": {
+    // 2 hrs base — customer-facing display window shows "1.5–2 hrs"
     small: 120, medium: 120, large: 120, extra_large: 120,
     sedan: 120, suv: 120, xl: 120,
   },
+  "Exterior Detail": {
+    // 1.5 hrs base — display window shows "1–1.5 hrs"
+    small: 90, medium: 90, large: 90, extra_large: 90,
+    sedan: 90, suv: 90, xl: 90,
+  },
   "Full Detail": {
-    // 3 hrs base — display window shows "2–3 hrs" to customer
-    small: 180, medium: 180, large: 180, extra_large: 180,
-    sedan: 180, suv: 180, xl: 180,
+    // 2.5 hrs base — display window shows "2–2.5 hrs"
+    small: 150, medium: 150, large: 150, extra_large: 150,
+    sedan: 150, suv: 150, xl: 150,
   },
   "Interior Monthly Maintenance": {
     small: 90, medium: 90, large: 120, extra_large: 120,
@@ -31,14 +32,16 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 150, medium: 150, large: 210, extra_large: 210,
     sedan: 150, suv: 210, xl: 210,
   },
-  // Ultimate Series
+  // Ultimate Series — display window "2.5–3.5" / "3.5–4.5", book the upper-mid
   "Ultimate Interior Reset": {
-    small: 210, medium: 210, large: 210, extra_large: 210,
-    sedan: 210, suv: 210, xl: 210,
+    // 3 hrs booked — covers the 2.5–3.5 hr realistic window
+    small: 180, medium: 180, large: 180, extra_large: 180,
+    sedan: 180, suv: 180, xl: 180,
   },
   "Ultimate Interior + Exterior Reset": {
-    small: 270, medium: 270, large: 270, extra_large: 270,
-    sedan: 270, suv: 270, xl: 270,
+    // 4 hrs booked — covers the 3.5–4.5 hr realistic window
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    sedan: 240, suv: 240, xl: 240,
   },
   // ── Boat Detailing — length-bracketed durations ─────────────────────
   // medium ≤30 ft · large 31–45 ft · xl 46+ ft

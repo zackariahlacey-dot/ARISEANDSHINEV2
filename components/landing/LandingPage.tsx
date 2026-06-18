@@ -2092,7 +2092,7 @@ const ULTIMATE_CARDS = [
     priceNormal: 240, priceLarge: 265,
     badge: { label: "Best for Families", icon: "star" as const },
     /** Estimated on-site duration window. Calibrated from SERVICE_DURATIONS. */
-    timeOnSite: "3.5–4 hrs",
+    timeOnSite: "2.5–3.5 hrs",
     features: [
       "Everything in Interior Detail",
       "UV Protection on All Interior Plastics & Surfaces",
@@ -2112,7 +2112,7 @@ const ULTIMATE_CARDS = [
     tagline: "Showroom quality — every surface, inside and out.",
     priceNormal: 335, priceLarge: 375,
     badge: { label: "Flagship Service", icon: "gem" as const },
-    timeOnSite: "4.5–5 hrs",
+    timeOnSite: "3.5–4.5 hrs",
     features: [
       "Everything in Ultimate Interior Reset",
       "Full Exterior Hand Wash & Dry",
