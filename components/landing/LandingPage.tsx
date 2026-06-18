@@ -891,7 +891,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                 {ULTIMATE_CARDS.map((card) => (
                   <div key={card.name} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
                     <div className="w-full max-w-[360px]">
-                      <UltimateServiceCard {...card} onBook={openUltimateBooking} />
+                      <UltimateServiceCard {...card} onBook={openUltimateBooking} loyaltyDiscountPct={authLoyaltyDiscountPct} />
                     </div>
                   </div>
                 ))}
@@ -909,7 +909,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             {/* Desktop: Ultimate grid */}
             <div className="hidden lg:grid lg:grid-cols-2 gap-6 items-start">
               {ULTIMATE_CARDS.map((card) => (
-                <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} />
+                <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} loyaltyDiscountPct={authLoyaltyDiscountPct} />
               ))}
             </div>
           </div>
@@ -2091,12 +2091,19 @@ const ULTIMATE_CARDS = [
     tagline: "The deep interior clean your vehicle deserves.",
     priceNormal: 240, priceLarge: 265,
     badge: { label: "Best for Families", icon: "star" as const },
+    /** Estimated on-site duration window. Calibrated from SERVICE_DURATIONS. */
+    timeOnSite: "3.5–4 hrs",
     features: [
       "Everything in Interior Detail",
       "UV Protection on All Interior Plastics & Surfaces",
       "Full Interior Dressing (Dash, Doors, Trim)",
       "Hot Water Extraction & Deep Shampooing (Seats & Carpets)",
       "Dog Hair & Heavy Dirt Removal",
+      "Standard Salt Stain Removal (Vermont winter survival)",
+      "Carpet & Upholstery Shampoo (Hot Water Extraction)",
+      "Clay Bar Treatment (Interior Glass)",
+      "Strong Odor Elimination",
+      "Leather Conditioning",
     ],
     isFlagship: true,
   },
@@ -2105,11 +2112,14 @@ const ULTIMATE_CARDS = [
     tagline: "Showroom quality — every surface, inside and out.",
     priceNormal: 335, priceLarge: 375,
     badge: { label: "Flagship Service", icon: "gem" as const },
+    timeOnSite: "4.5–5 hrs",
     features: [
       "Everything in Ultimate Interior Reset",
       "Full Exterior Hand Wash & Dry",
+      "Clay Bar Treatment (Paint Decontamination)",
       "Plastic Trim Restoration",
       "6-Month Ceramic Spray Coating",
+      "Standard Salt Stain Removal (carpets + door sills)",
     ],
     isFlagship: true,
   },
@@ -2119,14 +2129,22 @@ const ULTIMATE_CARDS = [
 
 function UltimateServiceCard({
   name, tagline, priceNormal, priceLarge,
-  badge, features, onBook, isFlagship,
+  badge, features, onBook, isFlagship, timeOnSite, loyaltyDiscountPct = 0,
 }: {
   name: string; tagline: string; priceNormal: number; priceLarge: number;
   badge: { label: string; icon: "star" | "gem" };
   features: readonly string[];
   onBook: (name: string) => void;
   isFlagship: boolean;
+  timeOnSite?: string;
+  /** Customer's loyalty tier discount (0-1). When > 0, surfaces a live
+   *  "Your VIP price" preview on the card so members see the savings
+   *  before they even open the booking flow. */
+  loyaltyDiscountPct?: number;
 }) {
+  const loyaltyActive = loyaltyDiscountPct > 0;
+  const discountedNormal = loyaltyActive ? Math.round(priceNormal * (1 - loyaltyDiscountPct)) : priceNormal;
+  const discountedLarge  = loyaltyActive ? Math.round(priceLarge  * (1 - loyaltyDiscountPct)) : priceLarge;
   const [showFeatures, setShowFeatures] = useState(false);
   return (
     <div
@@ -2205,15 +2223,35 @@ function UltimateServiceCard({
             ? "bg-gradient-to-br from-[#D4AF37]/[0.13] to-[#D4AF37]/[0.04] border-[#D4AF37]/30"
             : "bg-zinc-950/60 border-[#D4AF37]/18"
         }`}>
-          <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-2">
-            {priceNormal === priceLarge ? "Flat Rate — All Vehicle Sizes" : "Range — Varies by Vehicle Size"}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">
+              {priceNormal === priceLarge ? "Flat Rate — All Vehicle Sizes" : "Range — Varies by Vehicle Size"}
+            </div>
+            {loyaltyActive && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 border border-emerald-400/40 text-emerald-300">
+                <Crown size={8} fill="currentColor" /> Your VIP −{Math.round(loyaltyDiscountPct * 100)}%
+              </span>
+            )}
           </div>
+          {loyaltyActive && (
+            <div className="text-xs font-bold text-zinc-500 line-through tabular-nums mb-1">
+              {priceNormal === priceLarge ? `$${priceNormal}` : `$${priceNormal}–$${priceLarge}`}
+            </div>
+          )}
           <div className={`font-black tabular-nums leading-none whitespace-nowrap ${isFlagship ? "text-[#D4AF37]" : "text-white"} ${
             priceNormal === priceLarge ? "text-5xl" : "text-3xl sm:text-4xl md:text-5xl"
           }`}>
-            {priceNormal === priceLarge ? `$${priceNormal}` : `$${priceNormal}–$${priceLarge}`}
+            {discountedNormal === discountedLarge ? `$${discountedNormal}` : `$${discountedNormal}–$${discountedLarge}`}
           </div>
-          <div className="text-xs text-zinc-600 mt-2">No hidden fees · We bring everything</div>
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            <div className="text-xs text-zinc-600">No hidden fees · We bring everything</div>
+            {timeOnSite && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-900/60 border border-white/[0.08] text-[10px] font-bold text-zinc-300">
+                <Sparkles size={9} className="text-[#D4AF37]" />
+                {timeOnSite} on site
+              </span>
+            )}
+          </div>
           {/* Decorative gem watermark */}
           <div className="absolute right-4 bottom-3 opacity-[0.12]">
             <Gem size={56} className="text-[#D4AF37]" strokeWidth={0.8} />
@@ -2221,18 +2259,19 @@ function UltimateServiceCard({
         </div>
       </div>
 
-      {/* Features — collapsed by default; "Learn more" reveals the full list. */}
+      {/* Features — collapsed by default; "What's Included" reveals the full list. */}
       <div className="px-7 pb-6 flex-1">
         <button
           type="button"
           onClick={() => setShowFeatures(s => !s)}
           aria-expanded={showFeatures}
-          className="w-full flex items-center justify-between py-2.5 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/[0.03] transition-all"
+          className="w-full flex items-center justify-between py-3 px-4 rounded-xl border-2 border-[#D4AF37]/40 bg-[#D4AF37]/[0.05] hover:bg-[#D4AF37]/[0.12] hover:border-[#D4AF37]/70 active:scale-[0.99] transition-all group"
         >
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-            {showFeatures ? "What's included" : "Learn more"}
+          <span className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#D4AF37]">
+            <CheckCircle size={12} strokeWidth={2.5} className="shrink-0" />
+            {showFeatures ? "Hide What's Included" : `See What's Included (${features.length})`}
           </span>
-          <ChevronDown size={14} className={`text-[#D4AF37] transition-transform duration-200 ${showFeatures ? "rotate-180" : ""}`} />
+          <ChevronDown size={15} className={`text-[#D4AF37] transition-transform duration-200 ${showFeatures ? "rotate-180" : ""}`} />
         </button>
         {showFeatures && (
           <ul className="space-y-3 mt-4">

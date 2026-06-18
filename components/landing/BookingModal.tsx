@@ -301,7 +301,10 @@ function getAddonExtraDurationMins(
 /** Salt-season add-ons (Salt Stain Removal + Winter Salt Recovery — Undercarriage)
  *  are hidden during the off-season (May–Jul) and surface again starting Aug 1.
  *  Vermont salt season runs roughly Aug → late Apr. */
-const SALT_SEASON_ADDON_IDS = new Set(["salt_stain_removal", "salt_recovery_addon"]);
+// Salt Stain Removal is year-round — late-spring carpet staining is real even
+// after the salt season ends. Only the winter undercarriage add-on (a true
+// cold-season service) stays gated to Aug-Apr.
+const SALT_SEASON_ADDON_IDS = new Set(["salt_recovery_addon"]);
 function isSaltSeasonActive(now: Date = new Date()): boolean {
   const m = now.getMonth() + 1; // 1-12
   // Hidden May (5), June (6), July (7). Visible Aug-Apr.
@@ -1487,9 +1490,16 @@ export function BookingSection({
     const targetPrice = vehicleSize
       ? getPriceForSize(targetService, vehicleSize as VehicleSizeSlug)
       : (targetService.price_small ?? 0);
-    const delta = targetPrice - (servicePrice + addonsTotal);
+    // Honest upgrade delta: only the add-ons INCLUDED in Ultimate become free
+    // post-upgrade. Premium add-ons (engine bay, headlight, seat removal,
+    // ceramic, etc.) survive and still cost the same on Ultimate, so they
+    // shouldn't be counted as part of the "savings" from upgrading.
+    const includedAddonsCost = selectedAddons
+      .filter(a => INCLUDED_IN_ULTIMATE_IDS.includes(a.id))
+      .reduce((sum, a) => sum + a.price, 0);
+    const delta = targetPrice - (servicePrice + includedAddonsCost);
     return { targetService, targetName, targetPrice, delta };
-  }, [ultimateNudgeDismissed, selectedService, selectedAddons, services, servicePrice, addonsTotal, vehicleSize]);
+  }, [ultimateNudgeDismissed, selectedService, selectedAddons, services, servicePrice, vehicleSize]);
 
   const handleSwitchToUltimate = () => {
     if (!ultimateNudge) return;
@@ -3047,17 +3057,23 @@ export function BookingSection({
                     ? `Custom Package (${foundationLabel})`
                     : (BOAT_DISPLAY_NAMES[selectedService.name]?.name ?? selectedService.name);
                   const buildTotal = (computedPrice ?? 0) + addonsTotal;
+                  // Live running total — always shows service + add-ons - bundle/ceramic
+                  // discounts so the desktop modal header acts as a sticky summary
+                  // even before Step 3. Mirrors the mobile sticky pill.
+                  const runningTotal = totalAfterDiscount > 0 ? totalAfterDiscount : null;
+                  const headerPrice = fromBuilder ? buildTotal : (runningTotal ?? computedPrice ?? null);
                   return (
                     <>
                       <p className="text-sm text-[#D4AF37] mt-0.5 font-medium">
                         {displayName}
-                        {computedPrice != null && (
+                        {headerPrice != null && (
                           <span className="text-white font-semibold">
-                            {" "}— ${fromBuilder ? buildTotal.toFixed(0) : computedPrice}
+                            {" "}— ${typeof headerPrice === "number" ? Math.round(headerPrice) : headerPrice}
                           </span>
                         )}
                       </p>
-                      {fromBuilder && selectedAddons.length > 0 && (
+                      {/* Live breakdown — shows for builder OR any service with add-ons */}
+                      {((fromBuilder && selectedAddons.length > 0) || (!fromBuilder && selectedAddons.length > 0)) && (
                         <p className="text-[11px] text-zinc-500 mt-0.5">
                           Base ${computedPrice} · {selectedAddons.length} add-on{selectedAddons.length === 1 ? "" : "s"}
                           {bundleDiscount > 0 && (
@@ -3958,12 +3974,23 @@ export function BookingSection({
                                   : "Complete interior + exterior reset · clay bar · full shampoo · wax & sealant — the full package in one visit."}
                               </p>
 
-                              {/* Price row + CTA */}
+                              {/* Price row + CTA — apples-to-apples: only count add-ons
+                                  that become FREE on Ultimate. Premium ones (engine bay,
+                                  headlight, seat removal, ceramic) survive the upgrade
+                                  and shouldn't be in the strikethrough. */}
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs text-zinc-600 line-through">
-                                    ${servicePrice + addonsTotal}
-                                  </span>
+                                  {(() => {
+                                    const includedCost = selectedAddons
+                                      .filter(a => INCLUDED_IN_ULTIMATE_IDS.includes(a.id))
+                                      .reduce((sum, a) => sum + a.price, 0);
+                                    const comparisonPrice = servicePrice + includedCost;
+                                    return (
+                                      <span className="text-xs text-zinc-600 line-through">
+                                        ${Math.round(comparisonPrice)}
+                                      </span>
+                                    );
+                                  })()}
                                   <span className="text-base font-black text-[#D4AF37]">
                                     ${ultimateNudge.targetPrice}
                                   </span>
