@@ -80,8 +80,7 @@ const ALL_ADD_ONS = [
   { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35,  desc: "Safely dissolve and remove road tar, bug splatter & tree sap before the detail wash." },
   // ── Build Your Package add-ons (new) ─────────────────────────────────────
   { id: "headliner_clean",     label: "Headliner Cleaning",                   price: 40,  desc: "Gentle dry-foam cleaning of the fabric headliner — lifts stains, smoke residue and dust without saturating the adhesive." },
-  { id: "salt_stain_removal",  label: "Minor Salt Stain Treatment",           price: 50,  desc: "Vermont winter survival: neutralize and lift light-to-moderate dried salt stains from carpets and door sills, then apply a salt-repellent treatment for the rest of the season." },
-  { id: "extreme_salt_removal",label: "Extreme Salt Stain Treatment",         price: 150, desc: "For severe, deep-set salt damage — enzymatic pH-neutralizing cleaner, multiple hot water extractions, and salt-repellent sealing on every affected surface. Recommended for carpets with months of accumulated road salt." },
+  { id: "salt_stain_removal",  label: "Standard Salt Stain Removal",          price: 45,  desc: "Vermont winter survival: enzymatic neutralizer, hot water extraction, and a salt-repellent sealing pass on all affected carpets and door sills. Price scales by vehicle size ($45 sedan / $60 SUV / $75 3-row). Included free in every Ultimate package." },
   // ── Seat Removal Deep Clean — premium upgrade (specialty, excluded from bundle discount) ──
   { id: "seat_removal_driver",     label: "Seat Removal — Driver Side",       price: 60,  desc: "Driver seat physically removed for under-rail and seat-underside hot water extraction. Premium spill / wear coverage." },
   { id: "seat_removal_passenger",  label: "Seat Removal — Passenger Side",    price: 60,  desc: "Front passenger seat physically removed for under-rail and seat-underside hot water extraction." },
@@ -129,7 +128,7 @@ const isSeatRemovalAddonId = (id: string): boolean =>
   (SEAT_REMOVAL_ADDON_IDS as readonly string[]).includes(id);
 /** High-ticket upgrades for Ultimate packages — engine bay, headlight, and seat removal.
  *  Heavy Pet Hair Removal is INCLUDED in Ultimate (no separate add-on row needed). */
-const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", "extreme_salt_removal", ...SEAT_REMOVAL_ADDON_IDS];
+const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", ...SEAT_REMOVAL_ADDON_IDS];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
@@ -138,12 +137,14 @@ const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "uph
 // (carpet shampoo + minor & extreme salt treatments) that aren't included by
 // default in basic packages. Customers wanting the full kitchen-sink list are
 // nudged toward Ultimate via the upgrade banner.
-const BUILDER_INTERIOR_ADDON_IDS = ["ozone_treatment", "upholstery_shampoo", "salt_stain_removal", "extreme_salt_removal", "seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"];
+const BUILDER_INTERIOR_ADDON_IDS = ["ozone_treatment", "upholstery_shampoo", "salt_stain_removal", "seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"];
 /** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
 // Basic Exterior / Full Detail get the full Ceramic Package multi-pick
 // (Body / Wheels / Windows) so the 2-pick = 15% / 3-pick = 25% tier ladder
 // still works on basic bookings — same as Ultimate Interior + Exterior.
-const BUILDER_EXTERIOR_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "wheel_ceramic"];
+// Clay bar surfaces here too so Full Detail customers can add paint decon
+// without upgrading to Ultimate; it's still included in Ultimate Int+Ext.
+const BUILDER_EXTERIOR_ADDON_IDS = ["engine_bay", "headlight_restore", "clay_bar", "ceramic_3yr", "wheel_ceramic"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
 const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior", "wheel_ceramic"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
@@ -168,7 +169,7 @@ function ceramicPackagePct(count: number): number {
   return 0.25;
 }
 /** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
-const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
+const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar", "salt_stain_removal"];
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
@@ -188,8 +189,7 @@ const DURATION_EXTENDING_ADDONS: Record<string, number> = {
   pet_hair:             30,  // Heavy Pet Hair Removal +30 min
   odor_bomb:            60,  // Strong Odor Elimination +1 hr
   headliner_clean:      30,  // Headliner Cleaning +30 min
-  salt_stain_removal:   30,  // Minor Salt Stain Treatment +30 min
-  extreme_salt_removal: 75,  // Extreme Salt Stain Treatment +1.25 hr
+  salt_stain_removal:   45,  // Standard Salt Stain Removal +45 min (scales w/ size)
   // Seat Removal — per-section + bundle tiers
   seat_removal_driver:     30,
   seat_removal_passenger:  30,
@@ -251,6 +251,12 @@ function getEffectiveAddonPrice(
     if (ov?.price_cents != null) return ov.price_cents / 100;
   }
   if (addon.id === "upholstery_shampoo" && (vehicleSize === "xl" || vehicleSize === "extra_large")) return addon.price + 30;
+  if (addon.id === "salt_stain_removal") {
+    // Size-tiered: $45 sedan / $60 SUV / $75 3-row & work van
+    if (vehicleSize === "xl" || vehicleSize === "extra_large") return 75;
+    if (vehicleSize === "suv" || vehicleSize === "large")      return 60;
+    return 45;
+  }
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "window_coat_windshield") return WINDOW_COAT_WINDSHIELD_PRICE;
@@ -295,7 +301,7 @@ function getAddonExtraDurationMins(
 /** Salt-season add-ons (Salt Stain Removal + Winter Salt Recovery — Undercarriage)
  *  are hidden during the off-season (May–Jul) and surface again starting Aug 1.
  *  Vermont salt season runs roughly Aug → late Apr. */
-const SALT_SEASON_ADDON_IDS = new Set(["salt_stain_removal", "extreme_salt_removal", "salt_recovery_addon"]);
+const SALT_SEASON_ADDON_IDS = new Set(["salt_stain_removal", "salt_recovery_addon"]);
 function isSaltSeasonActive(now: Date = new Date()): boolean {
   const m = now.getMonth() + 1; // 1-12
   // Hidden May (5), June (6), July (7). Visible Aug-Apr.
