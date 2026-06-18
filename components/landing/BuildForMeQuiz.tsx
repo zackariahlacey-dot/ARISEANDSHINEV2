@@ -141,7 +141,7 @@ export function BuildForMeQuiz({
     const ceramicIds   = addonIds.filter(isCeramic);
     const regularIds   = addonIds.filter(id => !isCeramic(id));
     const bundlePct = bundlePctFor(regularIds.length);
-    const ceramicPct = ceramicIds.length === 1 ? 0.10 : ceramicIds.length === 2 ? 0.20 : ceramicIds.length >= 3 ? 0.30 : 0;
+    const ceramicPct = ceramicIds.length >= 3 ? 0.25 : ceramicIds.length === 2 ? 0.15 : 0;
 
     const addonRows = addonIds.map(id => {
       const base = ADDON_BASE_PRICES[id] ?? 0;

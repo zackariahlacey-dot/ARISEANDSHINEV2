@@ -43,7 +43,7 @@ import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBooking
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import { todayInBusinessTz } from "@/lib/dates";
-import { bundlePctFor, addonDiscountAmount } from "@/lib/bundleDiscount";
+import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, isPremiumServiceName, PREMIUM_SERVICE_BONUS_PCT } from "@/lib/bundleDiscount";
 import {
   filterMakesByQuery,
   filterModelsByQuery,
@@ -153,10 +153,9 @@ const CERAMIC_PACKAGE_IDS = ["ceramic_3yr", "wheel_ceramic", "window_coat_all"] 
 const isCeramicPackageId = (id: string): boolean =>
   (CERAMIC_PACKAGE_IDS as readonly string[]).includes(id);
 function ceramicPackagePct(count: number): number {
-  if (count <= 0) return 0;
-  if (count === 1) return 0.10;
-  if (count === 2) return 0.20;
-  return 0.30;
+  if (count <= 1) return 0;
+  if (count === 2) return 0.15;
+  return 0.25;
 }
 /** Add-ons that are INCLUDED in Ultimate packages — selecting these triggers the upgrade nudge */
 const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "odor_bomb", "uv_interior", "leather_condition", "clay_bar"];
@@ -1225,7 +1224,11 @@ export function BookingSection({
   // (their savings are baked into the 2-Row / 3-Row bundle pricing already).
   const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicPackageId(a.id) && !isSeatRemovalAddonId(a.id));
   const ceramicAddons    = selectedAddons.filter(a => isCeramicPackageId(a.id));
-  const bundlePct = bundlePctFor(qualifyingAddons.length);
+  // Premium service bonus: Ultimate Interior Reset / Ultimate Full Reset get
+  // an extra +10% on every basic add-on. Stacks additively with bundle tier.
+  const isPremiumService = isPremiumServiceName(selectedService?.name);
+  const bundlePctRaw = bundlePctFor(qualifyingAddons.length);
+  const bundlePct = effectiveBundlePctFor(qualifyingAddons.length, isPremiumService);
   const addonsBundleSavings = qualifyingAddons.reduce(
     (sum, a) => sum + addonDiscountAmount(a.id, a.price, bundlePct),
     0,
@@ -3357,6 +3360,82 @@ export function BookingSection({
                               </div>
                             )}
 
+                            {/* ── Live Discount Status Card — premium bonus + basic bundle tier ── */}
+                            {(isPremiumService || standAlone.length > 0) && (() => {
+                              const count = qualifyingAddons.length;
+                              const basicPct = bundlePctRaw;                                    // tier from add-on count alone
+                              const totalPctNow = Math.round(bundlePct * 100);                  // includes premium
+                              const nextTierAtCount = count < 2 ? 2 : count < 3 ? 3 : null;
+                              const nextTierBasicPct = nextTierAtCount === 2 ? 10 : nextTierAtCount === 3 ? 15 : null;
+                              const nextTierTotalPct = nextTierBasicPct != null
+                                ? nextTierBasicPct + (isPremiumService ? Math.round(PREMIUM_SERVICE_BONUS_PCT * 100) : 0)
+                                : null;
+                              return (
+                                <div className={`rounded-2xl border overflow-hidden mb-3 transition-all ${
+                                  bundlePct > 0
+                                    ? "border-emerald-400/40 bg-gradient-to-br from-emerald-500/[0.07] via-zinc-950/40 to-zinc-950/40 shadow-[0_0_14px_rgba(16,185,129,0.10)]"
+                                    : "border-white/[0.07] bg-zinc-950/40"
+                                }`}>
+                                  {/* Premium bonus row */}
+                                  {isPremiumService && (
+                                    <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-gradient-to-r from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.04] border-b border-white/[0.06]">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <Crown size={11} className="text-[#D4AF37] shrink-0" fill="currentColor" />
+                                        <span className="text-[11px] font-bold text-[#F3E5AB] leading-tight">Ultimate bonus active</span>
+                                      </div>
+                                      <span className="text-[11px] font-black tabular-nums text-[#D4AF37]">+10% off all add-ons</span>
+                                    </div>
+                                  )}
+                                  {/* Bundle tier row */}
+                                  <div className="px-3.5 py-2.5 flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 mb-0.5">
+                                        <Sparkles size={11} className={bundlePct > 0 ? "text-emerald-400" : "text-zinc-500"} />
+                                        <span className={`text-[11px] font-black uppercase tracking-wider ${bundlePct > 0 ? "text-emerald-300" : "text-zinc-400"}`}>
+                                          Bundle savings
+                                        </span>
+                                      </div>
+                                      {bundlePct > 0 ? (
+                                        <p className="text-[11px] text-zinc-300 leading-snug">
+                                          <span className="font-black text-white">{totalPctNow}% off</span> every basic add-on
+                                          {isPremiumService && <span className="text-zinc-500"> ({basicPct > 0 ? `${Math.round(basicPct * 100)}% bundle + 10% Ultimate` : "10% Ultimate bonus"})</span>}
+                                          {nextTierTotalPct != null && (
+                                            <> · <span className="text-zinc-400">Add 1 more → <span className="text-emerald-300 font-bold">{nextTierTotalPct}% off</span></span></>
+                                          )}
+                                        </p>
+                                      ) : nextTierTotalPct != null ? (
+                                        <p className="text-[11px] text-zinc-400 leading-snug">
+                                          Pick <span className="font-black text-white">{nextTierAtCount}</span> basic add-ons to unlock <span className="font-black text-emerald-300">{nextTierTotalPct}% off</span> each
+                                          {isPremiumService && <span className="text-zinc-500"> (Ultimate bonus stacks)</span>}
+                                        </p>
+                                      ) : (
+                                        <p className="text-[11px] text-zinc-500">Already at max basic discount. Add more if you'd like — pricing holds.</p>
+                                      )}
+                                    </div>
+                                    {/* Tier pill ladder */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {[
+                                        { c: 2, pct: 10 },
+                                        { c: 3, pct: 15 },
+                                      ].map(t => {
+                                        const reached = count >= t.c;
+                                        return (
+                                          <div key={t.c} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black border transition-all ${
+                                            reached
+                                              ? "border-emerald-400/60 bg-emerald-500/[0.15] text-emerald-300"
+                                              : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
+                                          }`}>
+                                            {reached && <Check size={8} strokeWidth={3} />}
+                                            {t.c}+{t.pct}%
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
                             <div className="space-y-2">
                               {/* Standalone add-ons (non-floor) */}
                               {standAlone.map((addon) => {
@@ -3650,15 +3729,17 @@ export function BookingSection({
                                       <div className="flex items-center gap-1.5 text-[10px] font-bold">
                                         {[1, 2, 3].map(tier => {
                                           const reached = ceramicCount >= tier;
-                                          const pct = tier * 10;
+                                          const tierPct = Math.round(ceramicPackagePct(tier) * 100);
                                           return (
                                             <div key={tier} className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md border transition-all ${
                                               reached
-                                                ? "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
+                                                ? tierPct === 0
+                                                  ? "border-zinc-500/40 bg-zinc-500/[0.08] text-zinc-400"
+                                                  : "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
                                                 : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
                                             }`}>
                                               {reached && <Check size={9} strokeWidth={3} />}
-                                              {tier} pick{tier > 1 ? "s" : ""} = {pct}% off
+                                              {tier} pick{tier > 1 ? "s" : ""} = {tierPct}% off
                                             </div>
                                           );
                                         })}
@@ -3721,7 +3802,7 @@ export function BookingSection({
                                     ) : (
                                       <div className="px-4 py-2 border-t border-white/[0.06] bg-cyan-500/[0.02]">
                                         <p className="text-[10px] text-zinc-500 text-center">
-                                          Pick any one to start at <span className="text-cyan-300 font-bold">10% off</span> · pick all 3 for <span className="text-cyan-300 font-bold">30% off</span>
+                                          Pick <span className="text-cyan-300 font-bold">2</span> for <span className="text-cyan-300 font-bold">15% off</span> · pick all <span className="text-cyan-300 font-bold">3</span> for <span className="text-cyan-300 font-bold">25% off</span>
                                         </p>
                                       </div>
                                     )}

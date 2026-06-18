@@ -110,10 +110,9 @@ const CERAMIC_PACKAGE_IDS = ["ceramic_3yr", "wheel_ceramic", "window_coat_all"] 
 const isCeramicPackageId = (id: string): boolean =>
   (CERAMIC_PACKAGE_IDS as readonly string[]).includes(id);
 function ceramicPackagePct(count: number): number {
-  if (count <= 0) return 0;
-  if (count === 1) return 0.10;
-  if (count === 2) return 0.20;
-  return 0.30;
+  if (count <= 1) return 0;
+  if (count === 2) return 0.15;
+  return 0.25;
 }
 
 /** Seat Removal SKUs are face-value specialty add-ons — excluded from the
@@ -1204,15 +1203,17 @@ export function BuildYourPackage({
                             <div className="flex items-center gap-1.5 text-[10px] font-bold">
                               {[1, 2, 3].map(tier => {
                                 const reached = ceramicCount >= tier;
-                                const pct = tier === 1 ? 10 : tier === 2 ? 20 : 30;
+                                const tierPct = Math.round(ceramicPackagePct(tier) * 100);
                                 return (
                                   <div key={tier} className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md border transition-all ${
                                     reached
-                                      ? "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
+                                      ? tierPct === 0
+                                        ? "border-zinc-500/40 bg-zinc-500/[0.08] text-zinc-400"
+                                        : "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
                                       : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
                                   }`}>
                                     {reached && <Check size={9} strokeWidth={3} />}
-                                    {tier} pick{tier > 1 ? "s" : ""} = {pct}% off
+                                    {tier} pick{tier > 1 ? "s" : ""} = {tierPct}% off
                                   </div>
                                 );
                               })}
@@ -1274,7 +1275,7 @@ export function BuildYourPackage({
                           ) : (
                             <div className="px-4 py-2 border-t border-white/[0.06] bg-cyan-500/[0.02]">
                               <p className="text-[10px] text-zinc-500 text-center">
-                                Pick any one to start at <span className="text-cyan-300 font-bold">10% off</span> · pick all 3 for <span className="text-cyan-300 font-bold">30% off</span>
+                                Pick <span className="text-cyan-300 font-bold">2</span> for <span className="text-cyan-300 font-bold">15% off</span> · pick all <span className="text-cyan-300 font-bold">3</span> for <span className="text-cyan-300 font-bold">25% off</span>
                               </p>
                             </div>
                           )}
