@@ -126,8 +126,9 @@ const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_ge
 const SEAT_REMOVAL_ADDON_IDS = ["seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"] as const;
 const isSeatRemovalAddonId = (id: string): boolean =>
   (SEAT_REMOVAL_ADDON_IDS as readonly string[]).includes(id);
-/** High-ticket upgrades for Ultimate packages — engine bay, headlight, pet hair, and seat removal */
-const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", "pet_hair", ...SEAT_REMOVAL_ADDON_IDS];
+/** High-ticket upgrades for Ultimate packages — engine bay, headlight, and seat removal.
+ *  Heavy Pet Hair Removal is INCLUDED in Ultimate (no separate add-on row needed). */
+const ULTIMATE_ADDON_IDS = ["engine_bay", "headlight_restore", "ozone_treatment", ...SEAT_REMOVAL_ADDON_IDS];
 /** Simplified add-ons for Interior, Exterior, and Full Detail */
 const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "upholstery_shampoo", "uv_interior", "leather_condition", "clay_bar"];
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
