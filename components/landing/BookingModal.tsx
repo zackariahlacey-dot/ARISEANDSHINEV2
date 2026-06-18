@@ -140,7 +140,10 @@ const STANDARD_ADDON_IDS = ["engine_bay", "headlight_restore", "odor_bomb", "uph
 // nudged toward Ultimate via the upgrade banner.
 const BUILDER_INTERIOR_ADDON_IDS = ["ozone_treatment", "upholstery_shampoo", "salt_stain_removal", "extreme_salt_removal", "seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"];
 /** Build Your Package — Exterior side add-ons (surfaces on Exterior + Full foundations) */
-const BUILDER_EXTERIOR_ADDON_IDS = ["engine_bay", "headlight_restore"];
+// Basic Exterior / Full Detail get the full Ceramic Package multi-pick
+// (Body / Wheels / Windows) so the 2-pick = 15% / 3-pick = 25% tier ladder
+// still works on basic bookings — same as Ultimate Interior + Exterior.
+const BUILDER_EXTERIOR_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "wheel_ceramic"];
 /** Add-ons offered with Paint Correction (Ultimate Exterior + 1-Step / 2-Step) */
 const PAINT_CORRECTION_ADDON_IDS = ["engine_bay", "headlight_restore", "ceramic_3yr", "ultimate_interior", "wheel_ceramic"];
 /** Cargo cleaning tiers — mutually exclusive, only shown when vehicleSize === "xl" */
