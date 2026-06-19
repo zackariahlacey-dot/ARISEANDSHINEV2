@@ -34,7 +34,7 @@ export default async function MembershipPage() {
             Pay ${MEMBERSHIP_PRICE_USD}. Get ${MEMBERSHIP_CREDIT_USD}.
           </h1>
           <p className="text-zinc-400 mt-3 text-sm max-w-lg mx-auto leading-relaxed">
-            One annual price gets you a credit balance to spend on whatever you need — Full Details, Salt Recovery,
+            One annual price gets you a credit balance to spend on whatever you need — Basic Interior + Exterior details, Salt Recovery,
             Ultimate packages, ceramic coatings, you name it.
           </p>
         </div>
@@ -80,7 +80,7 @@ export default async function MembershipPage() {
 
                 <ul className="space-y-3 mb-6">
                   {[
-                    { strong: `Spend on anything`, rest: "Full Details, Ultimate, Salt Recovery, ceramic coatings, any add-on" },
+                    { strong: `Spend on anything`, rest: "Basic Interior + Exterior, Ultimate, Salt Recovery, ceramic coatings, any add-on" },
                     { strong: `Use over 12 months`, rest: "no monthly commitments, no rush — spend the credit at your pace" },
                     { strong: `Cover multiple vehicles`, rest: "the credit is yours — use it on the family car, the work van, the kids' rides" },
                     { strong: `No auto-renew`, rest: "you decide each year whether to renew" },
@@ -123,7 +123,7 @@ export default async function MembershipPage() {
                 <div className="flex justify-between"><span>Buy membership</span><span className="tabular-nums">−${MEMBERSHIP_PRICE_USD}</span></div>
                 <div className="flex justify-between text-[#D4AF37]"><span className="font-bold">Credit added</span><span className="tabular-nums font-bold">+${MEMBERSHIP_CREDIT_USD}</span></div>
                 <div className="border-t border-white/[0.08] pt-2 mt-2"></div>
-                <div className="flex justify-between"><span>Book Full Detail (mid)</span><span className="tabular-nums">−$255</span></div>
+                <div className="flex justify-between"><span>Book Basic Interior + Exterior (mid)</span><span className="tabular-nums">−$255</span></div>
                 <div className="flex justify-between"><span>+ Engine bay add-on</span><span className="tabular-nums">−$60</span></div>
                 <div className="flex justify-between"><span>Book Exterior Detail</span><span className="tabular-nums">−$135</span></div>
                 <div className="flex justify-between"><span>Book Ultimate Int+Ext (sedan)</span><span className="tabular-nums">−$365</span></div>

@@ -54,7 +54,7 @@ const SERVICE_TYPES = [
 const AUTO_SERVICES = [
   { label: "Exterior Detail",                    price: "$130–$170",  desc: "Hand wash, wheels, tires & 3-mo ceramic sealant"          },
   { label: "Interior Detail",                    price: "$150–$185",  desc: "Full vacuum, wipe-down, mats & interior glass"            },
-  { label: "Full Detail",                        price: "$240–$280",  desc: "Interior + exterior combined"                             },
+  { label: "Basic Interior + Exterior",          price: "$240–$280",  desc: "Interior + exterior combined"                             },
   { label: "Ultimate Interior Reset",            price: "$240–$270",  desc: "Hot water extraction, steam sanitation & salt removal"    },
   { label: "Ultimate Interior + Exterior Reset", price: "$350–$400",  desc: "Full decontamination, clay bar & 6-mo ceramic spray"     },
   { label: "Not sure yet",                       price: "",           desc: "We'll figure it out together"                             },

@@ -135,7 +135,7 @@ export default function RootLayout({
                 itemListElement: [
                   { "@type": "Offer", itemOffered: { "@type": "Service", name: "Interior Detailing" } },
                   { "@type": "Offer", itemOffered: { "@type": "Service", name: "Exterior Detailing" } },
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Full Detail" } },
+                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Basic Interior + Exterior" } },
                   { "@type": "Offer", itemOffered: { "@type": "Service", name: "Boat Detailing" } },
                   { "@type": "Offer", itemOffered: { "@type": "Service", name: "RV Detailing" } },
                   { "@type": "Offer", itemOffered: { "@type": "Service", name: "Paint Correction" } },

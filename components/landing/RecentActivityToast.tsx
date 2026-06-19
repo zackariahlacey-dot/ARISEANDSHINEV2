@@ -7,12 +7,12 @@ import { Car, Anchor, Truck, Star } from "lucide-react";
 type EntryType = "auto" | "boat" | "rv" | "club";
 
 const ENTRIES: { city: string; action: string; type: EntryType }[] = [
-  { city: "Williston",       action: "Full Detail booked",            type: "auto" },
+  { city: "Williston",       action: "Basic Interior + Exterior booked", type: "auto" },
   { city: "Burlington",      action: "Interior Detail booked",        type: "auto" },
   { city: "Essex",           action: "Exterior Detail booked",        type: "auto" },
-  { city: "South Burlington",action: "Full Detail booked",            type: "auto" },
+  { city: "South Burlington",action: "Basic Interior + Exterior booked", type: "auto" },
   { city: "Colchester",      action: "Interior Detail booked",        type: "auto" },
-  { city: "Shelburne",       action: "Full Detail booked",            type: "auto" },
+  { city: "Shelburne",       action: "Basic Interior + Exterior booked", type: "auto" },
   { city: "Stowe",           action: "Exterior Detail booked",        type: "auto" },
   { city: "Hinesburg",       action: "Exterior Detail booked",        type: "auto" },
   { city: "Essex Jct",       action: "Interior Detail booked",        type: "auto" },

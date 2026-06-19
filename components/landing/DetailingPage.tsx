@@ -15,6 +15,7 @@ import type { SuccessModalData } from "./SuccessModal";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { SiteHeader } from "./SiteHeader";
 import { BuildYourPackage } from "./BuildYourPackage";
+import { getServiceDisplayName } from "@/lib/serviceDisplay";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -27,7 +28,7 @@ const SuccessModal = dynamic(
 
 const DETAIL_ORDER = ["Interior Detail", "Full Detail", "Exterior Detail"];
 
-// What's unique per service — Full Detail just references the others
+// What's unique per service — Basic Interior + Exterior just references the others
 const CORE_FEATURES: Record<string, { icon: React.ElementType; items: string[] }> = {
   "Interior Detail": {
     icon: Sofa,
@@ -61,7 +62,7 @@ const ULTIMATE_CARDS = [
     badge: "Best for Families",
     badgeIcon: Star,
     features: [
-      "Everything in Full Detail",
+      "Everything in Basic Interior + Exterior",
       "Hot water extraction & shampooing (carpets & seats)",
       "High-pressure steam sanitation (vents, cup holders, crevices)",
       "Vermont road salt & calcium neutralization",
@@ -289,7 +290,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
                             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">Most Popular</span>
                           </div>
                         )}
-                        <h3 className="text-lg font-black text-white tracking-tight">{service.name}</h3>
+                        <h3 className="text-lg font-black text-white tracking-tight">{getServiceDisplayName(service.name)}</h3>
                         {service.description && (
                           <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{service.description}</p>
                         )}

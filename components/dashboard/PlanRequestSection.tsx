@@ -31,7 +31,7 @@ const PLANS = [
   },
   {
     id: "full_detail" as PlanType,
-    label:         "Full Detail",
+    label:         "Basic Interior + Exterior",
     price:         125,
     ultimatePrice: 185,
     icon:          "🏆",

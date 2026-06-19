@@ -13,6 +13,7 @@ import {
 import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import { SiteHeader } from "./SiteHeader";
+import { getServiceDisplayName } from "@/lib/serviceDisplay";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -32,7 +33,7 @@ const ULTIMATE_CARDS = [
     priceNormal: 240, priceLarge: 270,
     badge: { label: "Best for Families", icon: "star" as const },
     features: [
-      "Everything in Full Detail",
+      "Everything in Basic Interior + Exterior",
       "Hot Water Extraction & Shampooing (Carpets & Seats)",
       "High-Pressure Steam Sanitation (Vents, Cup Holders, Crevices)",
       "Vermont Road Salt & Calcium Neutralization",
@@ -85,7 +86,7 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 
 const FAQ = [
   { q: "Do you come to my location?", a: "Yes — we're 100% mobile. We come to your home, office, or anywhere in Vermont. No shop visit needed." },
-  { q: "How long does a detail take?", a: "Interior typically takes 1.5–2 hours, Exterior 1–1.5 hours, Full Detail 2–2.5 hours. Ultimate Interior Reset runs 2.5–3.5 hours; Ultimate Interior + Exterior Reset runs 3.5–4.5 hours." },
+  { q: "How long does a detail take?", a: "Interior typically takes 1.5–2 hours, Exterior 1–1.5 hours, Basic Interior + Exterior 2–2.5 hours. Ultimate Interior Reset runs 2.5–3.5 hours; Ultimate Interior + Exterior Reset runs 3.5–4.5 hours." },
   { q: "What products do you use?", a: "We use professional-grade, eco-friendly products including pH-neutral soaps, ceramic-grade protectants, and premium interior dressings — safe for all surfaces." },
   { q: "What's the cancellation policy?", a: "Cancellations must be made at least 24 hours in advance. Same-day cancellations may incur a $50 fee. We'll never charge you if we reschedule due to weather." },
 ];
@@ -189,7 +190,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
         className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="w-full max-w-7xl mx-auto">
-          <SectionHeader eyebrow="Auto Detailing" title="Interior, Exterior & Full Detail" subtitle="Our core mobile detailing packages — Interior, Exterior, and Full Detail — delivered anywhere in Vermont." />
+          <SectionHeader eyebrow="Auto Detailing" title="Interior, Exterior & Basic Interior + Exterior" subtitle="Our core mobile detailing packages — Interior, Exterior, and Basic Interior + Exterior — delivered anywhere in Vermont." />
           {detailingServices.length === 0 ? (
             <div className="text-center py-20 text-zinc-600">
               <Car size={40} className="mx-auto mb-4 opacity-30" />
@@ -307,7 +308,7 @@ function ServiceCard({ service, onBook }: { service: Service; onBook: () => void
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">Most Popular</span>
             </div>
           )}
-          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{service.name}</h3>
+          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{getServiceDisplayName(service.name)}</h3>
           {service.description && <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{service.description}</p>}
         </div>
         <div className={`flex rounded-xl mb-7 overflow-hidden border ${isPopular ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>

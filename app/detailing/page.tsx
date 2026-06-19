@@ -6,9 +6,9 @@ import type { Service } from "@/app/page";
 import { AUTO_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
-  title: "Mobile Auto Detailing Vermont | Interior, Exterior & Full Detail | Arise & Shine VT",
+  title: "Mobile Auto Detailing Vermont | Interior, Exterior & Basic Interior + Exterior | Arise & Shine VT",
   description:
-    "Professional mobile car detailing services in Vermont — Interior Detail, Exterior Detail, and Full Detail packages. We come to your home or office. Transparent pricing, easy booking.",
+    "Professional mobile car detailing services in Vermont — Interior Detail, Exterior Detail, and Basic Interior + Exterior packages. We come to your home or office. Transparent pricing, easy booking.",
   keywords: [
     "mobile car detailing Vermont",
     "auto detailing Burlington VT",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Mobile Auto Detailing Vermont | Arise & Shine VT",
-    description: "Interior, Exterior & Full Detail — we come to you, anywhere in Vermont.",
+    description: "Interior, Exterior & Basic Interior + Exterior — we come to you, anywhere in Vermont.",
     url: "https://ariseandshinevt.com/detailing",
     siteName: "Arise & Shine VT",
     locale: "en_US",

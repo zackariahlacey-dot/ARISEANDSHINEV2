@@ -20,7 +20,7 @@ const SIZE_LABELS: Record<SizeKey, string> = {
 const SERVICE_TIERS = [
   { id: "Exterior Detail",                       label: "Exterior Detail",          tagline: "Hand wash, wax, exterior glass" },
   { id: "Interior Detail",                       label: "Interior Detail",          tagline: "Vacuum, wipe-down, glass, mats" },
-  { id: "Full Detail",                           label: "Full Detail",              tagline: "Interior + Exterior combined" },
+  { id: "Full Detail",                           label: "Basic Interior + Exterior", tagline: "Interior + Exterior combined" },
   { id: "Ultimate Interior Reset",               label: "Ultimate Interior Reset",  tagline: "Hot water extraction, deep clean, UV protect" },
   { id: "Ultimate Interior + Exterior Reset",    label: "Ultimate Full Reset",      tagline: "Inside + out, ceramic spray, the works" },
 ] as const;

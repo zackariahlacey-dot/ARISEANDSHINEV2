@@ -68,6 +68,7 @@ import { ServiceComparisonTable } from "./ServiceComparisonTable";
 import { NewsletterSignup } from "./NewsletterSignup";
 import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
+import { getServiceDisplayName } from "@/lib/serviceDisplay";
 
 const sectionViewport = { once: true, margin: "-100px" };
 const sectionVariants = {
@@ -86,7 +87,7 @@ const staggerItem = {
 const HERO_SCROLL_THRESHOLD = 0.8; // Show sticky CTA after 80% of viewport scrolled
 
 const SERVICE_LINKS = [
-  { href: "/detailing", label: "Vehicle Detailing", icon: Car, desc: "Interior, Exterior & Full Detail" },
+  { href: "/detailing", label: "Vehicle Detailing", icon: Car, desc: "Interior, Exterior & Basic Interior + Exterior" },
   { href: "/boat-detailing", label: "Boat Detailing", icon: Anchor, desc: "Marine interior, exterior & full detail" },
   { href: "/rv-detailing", label: "RV Detailing", icon: Truck, desc: "Per-foot pricing for motorhomes & trailers" },
 ];
@@ -97,7 +98,7 @@ const REVIEWS = [
       "I was blown away by how easy it was. They came right to my driveway in Williston while I worked from home. My SUV looked better than the day I bought it. The whole thing took maybe two hours and I didn't have to move a muscle.",
     name: "Sarah M.",
     location: "Williston, VT",
-    service: "Full Detail",
+    service: "Basic Interior + Exterior",
   },
   {
     review:
@@ -1273,7 +1274,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
 
                     {/* Sample savings — concrete dollar value */}
                     <div className="hidden md:block mt-3 pt-3 border-t border-white/[0.05] w-full">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Save on Full Detail</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Save on Basic Interior + Exterior</p>
                       <p className={`text-base font-black tabular-nums ${textColor}`}>${sample}</p>
                     </div>
                   </div>
@@ -1285,11 +1286,11 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             <div className="md:hidden mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-white/[0.06] bg-zinc-900/40 px-4 py-2.5 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Member saves</p>
-                <p className="text-sm font-black tabular-nums text-zinc-200">$12 / Full Detail</p>
+                <p className="text-sm font-black tabular-nums text-zinc-200">$12 / Basic Interior + Exterior</p>
               </div>
               <div className="rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/[0.06] px-4 py-2.5 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]/70">VIP saves</p>
-                <p className="text-sm font-black tabular-nums text-[#D4AF37]">$48 / Full Detail</p>
+                <p className="text-sm font-black tabular-nums text-[#D4AF37]">$48 / Basic Interior + Exterior</p>
               </div>
             </div>
           </div>
@@ -1300,7 +1301,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               style={{ background: "radial-gradient(ellipse 60% 80% at 50% 50%, rgba(212,175,55,0.04) 0%, transparent 70%)" }} />
             <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-0 md:divide-x divide-white/[0.06]">
               {[
-                { step: "01", icon: Sparkles, title: "Book any car detail",        sub: "Interior, Exterior, Full Detail, or Ultimate" },
+                { step: "01", icon: Sparkles, title: "Book any car detail",        sub: "Interior, Exterior, Basic Interior + Exterior, or Ultimate" },
                 { step: "02", icon: Zap,      title: "Climb the ladder",            sub: "Each detail counts — automatic, no apps" },
                 { step: "03", icon: Crown,    title: "Save more, every time",       sub: "Discount auto-applies forever at checkout" },
               ].map(({ step, icon: Icon, title, sub }) => (
@@ -1483,7 +1484,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Interior 2–3 hrs · Exterior 1.5–2 hrs · Full Detail 3–4 hrs · Ultimate 4–6 hrs.
+              Interior 2–3 hrs · Exterior 1.5–2 hrs · Basic Interior + Exterior 3–4 hrs · Ultimate 4–6 hrs.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1862,7 +1863,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           <p>
             All Monthly Maintenance Club subscriptions require a one-time{" "}
             <strong className="text-zinc-200">Deep Clean &amp; Reset Detail</strong>{" "}
-            ($75 for Interior, $100 for Full Detail) before the recurring monthly service begins. This fee is{" "}
+            ($75 for Interior, $100 for Basic Interior + Exterior) before the recurring monthly service begins. This fee is{" "}
             <strong className="text-zinc-200">non-refundable</strong>{" "}
             once the initial detail has been completed. Subscriptions may be cancelled at any time before the next billing cycle with no further charges.
           </p>
@@ -2014,7 +2015,7 @@ function ServiceCard({
               </div>
             )}
             <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
-              {service.name}
+              {getServiceDisplayName(service.name)}
             </h3>
             {service.description && (
               <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{service.description}</p>

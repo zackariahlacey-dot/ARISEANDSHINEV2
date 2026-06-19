@@ -242,7 +242,7 @@ export const TOWNS: TownContent[] = [
       },
       {
         q: "Can you handle the salt and grime my truck picks up from the launch ramps?",
-        a: "Yes. Our Full Detail and Exterior Detail packages target exactly the kind of buildup that boat-tow trucks accumulate from the bay's launch ramps. Wheel wells, undercarriage spray-down, and salt-neutralizing wash all included.",
+        a: "Yes. Our Basic Interior + Exterior and Exterior Detail packages target exactly the kind of buildup that boat-tow trucks accumulate from the bay's launch ramps. Wheel wells, undercarriage spray-down, and salt-neutralizing wash all included.",
       },
     ],
   },
@@ -328,7 +328,7 @@ export const TOWNS: TownContent[] = [
     localFaq: [
       {
         q: "Do you handle Vermont mud-season cleanup?",
-        a: "Yes — that's exactly what our Full Detail and Exterior Detail packages are built for. Wheel wells, undercarriage, fender liners, and salt-neutralizing wash all included.",
+        a: "Yes — that's exactly what our Basic Interior + Exterior and Exterior Detail packages are built for. Wheel wells, undercarriage, fender liners, and salt-neutralizing wash all included.",
       },
       {
         q: "Can you reach properties on long dirt driveways?",

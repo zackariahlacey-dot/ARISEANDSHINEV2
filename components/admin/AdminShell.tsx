@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Calendar, Users, Briefcase, Search } from "lucide-react";
+import { Home, Calendar, Users, Briefcase, Search, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/admin/Toast";
 import { GlobalSearch } from "@/components/admin/GlobalSearch";
@@ -22,6 +22,7 @@ const TABS = [
   { label: "Today",    href: "/admin",          icon: Home,      subroutes: [] as string[] },
   { label: "Schedule", href: "/admin/schedule", icon: Calendar,  subroutes: ["/admin/squeeze"] },
   { label: "People",   href: "/admin/clients",  icon: Users,     subroutes: ["/admin/monthly", "/admin/contractors"] },
+  { label: "Fleet",    href: "/admin/fleet",    icon: Building2, subroutes: [] as string[] },
   { label: "Business", href: "/admin/money",    icon: Briefcase, subroutes: ["/admin/email", "/admin/settings"] },
 ];
 

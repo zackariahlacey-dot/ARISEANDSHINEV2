@@ -1,21 +1,11 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { listFleetInquiries } from "@/app/actions/adminFleetActions";
 import { FleetInquiryAdminClient } from "./_client";
 
+// Auth is handled by the parent admin layout — no need to re-gate here.
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAIL = "zackariahlacey@gmail.com";
-
 export default async function AdminFleetPage() {
-  // Admin gate — same pattern as other admin pages
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.email !== ADMIN_EMAIL) {
-    redirect("/");
-  }
-
   const inquiries = await listFleetInquiries();
   return (
     <Suspense>

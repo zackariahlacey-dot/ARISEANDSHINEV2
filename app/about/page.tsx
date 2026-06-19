@@ -25,7 +25,7 @@ const VALUES = [
 const SERVICES_OFFERED = [
   { label: "Interior Detailing",        href: "/detailing" },
   { label: "Exterior Detailing",        href: "/detailing" },
-  { label: "Full Detail Packages",      href: "/detailing" },
+  { label: "Basic Interior + Exterior Packages", href: "/detailing" },
   { label: "Boat & Marine Detailing",   href: "/boat-detailing" },
   { label: "RV & Motorhome Detailing",  href: "/rv-detailing" },
   { label: "Monthly Plans",             href: "/protected" },

@@ -7,7 +7,7 @@ import type { Service } from "@/app/page";
 export const metadata: Metadata = {
   title: "Detailing Services & Pricing | Arise & Shine VT",
   description:
-    "Browse all mobile auto detailing services in Vermont — Interior, Exterior, Full Detail, Ultimate Series, and Monthly Maintenance Club. Transparent pricing, easy online booking.",
+    "Browse all mobile auto detailing services in Vermont — Interior, Exterior, Basic Interior + Exterior, Ultimate Series, and Monthly Maintenance Club. Transparent pricing, easy online booking.",
   keywords: [
     "Vermont auto detailing",
     "mobile car detailing Vermont",

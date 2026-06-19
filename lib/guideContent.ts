@@ -69,7 +69,7 @@ export const GUIDES: Guide[] = [
         bullets: [
           "**Exterior Detail** — $130 to $200 depending on size. Includes wash, wheels, tires, exterior windows, and surface sealant.",
           "**Interior Detail** — $150 to $220. Includes vacuum, deep wipe-down, glass, leather/vinyl conditioning, and basic stain treatment.",
-          "**Full Detail** — $240 to $320. Combined interior + exterior, typically discounted versus booking them separately.",
+          "**Basic Interior + Exterior** — $240 to $320. Combined interior + exterior, typically discounted versus booking them separately.",
           "**Ultimate / Premium Tier** — $350 to $450+. Includes everything above plus deep extraction, headliner work, leather restoration, and a longer-lasting protectant.",
         ],
       },
@@ -196,12 +196,12 @@ export const GUIDES: Guide[] = [
       {
         heading: "If you've already let it go too long",
         paragraphs: [
-          "If you're reading this in March or April and realizing your car has been salt-coated since December, a Full Detail will do most of the repair — a neutralizing wash, deep wheel and underbody work, salt-stain extraction from carpets, and a fresh layer of ceramic spray sealant to carry you into spring.",
+          "If you're reading this in March or April and realizing your car has been salt-coated since December, a Basic Interior + Exterior detail will do most of the repair — a neutralizing wash, deep wheel and underbody work, salt-stain extraction from carpets, and a fresh layer of ceramic spray sealant to carry you into spring.",
           "Left alone, salt damage compounds — what's surface staining now becomes deep rust pitting next winter. The intervention is much cheaper than the repair.",
         ],
       },
     ],
-    primaryCta: { label: "Book a Full Detail", href: "/detailing" },
+    primaryCta: { label: "Book a Basic Interior + Exterior Detail", href: "/detailing" },
     relatedSlugs: ["best-time-to-detail-car-vermont", "detailing-vs-car-wash"],
   },
   {
