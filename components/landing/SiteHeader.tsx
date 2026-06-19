@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Phone, Menu, X, Sparkles, Anchor, Truck,
+  Phone, Menu, X, Sparkles, Anchor, Truck, Building2,
   LogIn, LogOut, LayoutDashboard, Gift, User,
   HelpCircle, MapPin, CalendarSearch, ChevronRight, Home, BookOpen,
 } from "lucide-react";
@@ -32,6 +32,7 @@ const SERVICE_LINKS = [
   { href: "/detailing",        label: "Auto Detailing",   icon: Sparkles, desc: "Cars, trucks & SUVs"          },
   { href: "/boat-detailing",   label: "Boat Detailing",   icon: Anchor,   desc: "Per-foot · Lake Champlain"    },
   { href: "/rv-detailing",     label: "RV Detailing",     icon: Truck,    desc: "Per-foot · motorhomes & 5ers" },
+  { href: "/fleet",            label: "Fleet Quotes",     icon: Building2,desc: "4+ vehicles · up to 20% off"  },
 ];
 
 const MORE_LINKS = [

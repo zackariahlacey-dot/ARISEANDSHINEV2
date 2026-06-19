@@ -57,38 +57,55 @@ export type BookedSlot = {
 /** Returns booked slots for a date with all info needed for the admin timeline view. */
 export async function getBookedSlotsAction(date: string): Promise<BookedSlot[]> {
   const supabase = createAdminClient();
-  // FK-disambiguated embed — bookings has 4 FKs to profiles (user_id, assigned_by,
-  // assigned_to, photo_reviewed_by). Pin to user_id explicitly.
+  // Slimmed-down query: customer_name lives on the booking row directly, so
+  // there's no need for the FK-disambiguated profile join here. Dropping it
+  // makes the query robust against changing FK names and removes a class of
+  // silent-empty-result failures the admin timeline was suffering from.
+  // services(name) is included as a fallback for older bookings where the
+  // direct service_name column might not have been populated.
   const { data, error } = await supabase
     .from("bookings")
     .select(`
       id, booking_time, service_name, vehicle_size, customer_name, customer_phone,
       service_address, vehicle_year, vehicle_make, vehicle_model, total_price,
-      duration_override,
-      profiles:user_id!bookings_user_id_fkey(first_name, last_name, phone)
+      duration_override, additional_vehicles_json,
+      services(name)
     `)
     .eq("booking_date", date)
     .neq("status", "cancelled");
 
   if (error) {
-    console.error("[getBookedSlotsAction]", error.message);
+    console.error("[getBookedSlotsAction] supabase error:", error.message, error.details, error.hint);
     return [];
   }
   return (data ?? []).map(r => {
-    const svcName = (r as any).service_name ?? "";
+    const directName = (r as any).service_name as string | null;
+    const joined = (r as any).services;
+    const joinedName: string | null = Array.isArray(joined)
+      ? (joined[0]?.name ?? null)
+      : (joined?.name ?? null);
+    const svcName = directName ?? joinedName ?? "";
     const vSize   = (r as any).vehicle_size ?? "medium";
     const override = (r as any).duration_override;
-    const dur = override != null ? override : (SERVICE_DURATIONS[svcName]?.[vSize] ?? 180);
-    const profile = (r as any).profiles;
-    const profileName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
-    const custName = ((r as any).customer_name ?? profileName) || "Client";
+    // Include additional vehicles in the slot duration so the timeline blocks
+    // the full appointment window, not just the primary vehicle's time.
+    const primaryDur = override != null ? override : (SERVICE_DURATIONS[svcName]?.[vSize] ?? 180);
+    const addlJson = (r as any).additional_vehicles_json;
+    const addlDur = Array.isArray(addlJson) ? addlJson.reduce((sum: number, av: any) => {
+      const name = av.serviceName ?? av.sn ?? "";
+      const size = av.vehicleSize ?? av.sz ?? "sedan";
+      const base = SERVICE_DURATIONS[name]?.[size] ?? 180;
+      return sum + Math.max(30, base - 30);
+    }, 0) : 0;
+    const dur = override != null ? primaryDur : (primaryDur + addlDur);
+    const custName = ((r as any).customer_name as string | null) || "Client";
     return {
       id:              String((r as any).id ?? ""),
       booking_time:    String(r.booking_time ?? ""),
       service_name:    svcName || null,
       vehicle_size:    vSize || null,
       customer_name:   custName,
-      customer_phone:  (r as any).customer_phone ?? profile?.phone ?? null,
+      customer_phone:  (r as any).customer_phone ?? null,
       service_address: (r as any).service_address ?? null,
       vehicle_year:    (r as any).vehicle_year ?? null,
       vehicle_make:    (r as any).vehicle_make ?? null,
