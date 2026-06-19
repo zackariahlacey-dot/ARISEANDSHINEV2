@@ -64,6 +64,7 @@ import { Button } from "@/components/ui/button";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { LegalModal, LegalSection, LegalList } from "./LegalModal";
 import { BeforeAfterGallery } from "./BeforeAfterGallery";
+import { ServiceComparisonTable } from "./ServiceComparisonTable";
 import { NewsletterSignup } from "./NewsletterSignup";
 import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
@@ -914,6 +915,9 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             </div>
           </div>
           )}
+
+          {/* ── Service Comparison Table — "which one do I need?" ── */}
+          <ServiceComparisonTable />
 
           {/* View More Services */}
           <div className="mt-10 text-center">
