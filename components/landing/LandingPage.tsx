@@ -67,6 +67,7 @@ import { BeforeAfterGallery } from "./BeforeAfterGallery";
 // ServiceComparisonTable lives on /services now — it's research content, not
 // conversion. Removed from the homepage to reduce scroll depth before booking.
 // The "Not sure which tier?" link below routes researchy customers there.
+import { FleetQuoteCalculator } from "@/components/fleet/FleetQuoteCalculator";
 import { NewsletterSignup } from "./NewsletterSignup";
 import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
@@ -952,6 +953,12 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           expands. Once expanded the customer sees the same compact icon
           + name + CTA cards. */}
       <MoreServicesDisclosure />
+
+      {/* ─── Fleet Quote Calculator — homepage embed ─────────────────────────
+          Live slider that lets visitors play with the per-vehicle math
+          without leaving the homepage. Same component used on /fleet —
+          the inquiry modal it opens captures the same data either way. */}
+      <FleetCalloutWithSlider />
 
       {/* Legacy expanded-card block — preserved below behind a `false` gate so the
           state shape + inline booking flow remain referenced by the rest of the
@@ -1992,6 +1999,7 @@ function ServiceCard({
   const isPopular = service.name === "Full Detail";
   const inclusions = SERVICE_INCLUSIONS[service.name] ?? [];
   const Icon = SERVICE_CARD_ICONS[service.name] ?? Sparkles;
+  const [showInclusions, setShowInclusions] = useState(false);
 
   return (
     <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1.5 group ${
@@ -2052,21 +2060,32 @@ function ServiceCard({
         </div>
       </div>
 
-      {/* Inclusions */}
-      {inclusions.length > 0 && (
-        <div className="px-7 pb-6 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mb-3">What&apos;s Included</p>
-          <ul className="space-y-2.5">
-            {inclusions.map((item) => (
-              <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-400 leading-snug">
-                <CheckCircle size={14} className="shrink-0 mt-[1px] text-[#D4AF37]/70" strokeWidth={2} />
-                {item}
-              </li>
-            ))}
-          </ul>
+      {/* Inclusions — collapsible disclosure to keep card compact at idle */}
+      {inclusions.length > 0 ? (
+        <div className="px-7 pb-5 flex-1">
+          <button
+            type="button"
+            onClick={() => setShowInclusions(s => !s)}
+            aria-expanded={showInclusions}
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 hover:text-[#D4AF37] transition-colors group/disc"
+          >
+            {showInclusions ? "Hide" : `What's Included (${inclusions.length})`}
+            <ChevronDown size={12} className={`transition-transform duration-200 ${showInclusions ? "rotate-180" : ""}`} />
+          </button>
+          {showInclusions && (
+            <ul className="space-y-2.5 mt-3">
+              {inclusions.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-400 leading-snug">
+                  <CheckCircle size={14} className="shrink-0 mt-[1px] text-[#D4AF37]/70" strokeWidth={2} />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+      ) : (
+        <div className="flex-1" />
       )}
-      {inclusions.length === 0 && <div className="flex-1" />}
 
       {/* CTA */}
       <div className="px-7 pb-7">
@@ -2131,6 +2150,66 @@ const ULTIMATE_CARDS = [
     isFlagship: true,
   },
 ] as const;
+
+// ─── Fleet Quote Calculator — homepage section ─────────────────────────────
+// Embeds the same FleetQuoteCalculator that lives on /fleet, wrapped in a
+// landing-page-styled section. Collapsed by default to keep the homepage
+// short — a single CTA expands the live slider + quote tool.
+function FleetCalloutWithSlider() {
+  const [open, setOpen] = useState(false);
+  return (
+    <motion.section
+      initial="hidden"
+      whileInView="visible"
+      viewport={sectionViewport}
+      variants={sectionVariants}
+      className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06] relative overflow-hidden"
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(212,175,55,0.06) 0%, transparent 65%)" }}
+      />
+      <div className="relative w-full max-w-3xl mx-auto">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] border border-[#D4AF37]/30 rounded-full px-4 py-2 mb-4">
+            <LayoutDashboard size={11} className="shrink-0" />Fleet & Group Quotes
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
+            Got 4+ Vehicles?
+          </h2>
+          <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
+            Dealership lot, rental fleet, company cars, or a Saturday-morning
+            detailing day for your coworkers — get an instant ballpark with our
+            live quote slider.
+          </p>
+        </div>
+
+        {!open ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="w-full sm:w-auto sm:mx-auto block py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black font-black text-sm hover:opacity-95 active:scale-[0.98] transition-all shadow-[0_4px_24px_rgba(212,175,55,0.35)] mx-auto"
+          >
+            Open Fleet Quote Calculator
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5 sm:p-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <FleetQuoteCalculator />
+            <div className="text-center mt-4 pt-4 border-t border-white/[0.05]">
+              <Link
+                href="/fleet"
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-400 hover:text-[#D4AF37] transition-colors"
+              >
+                See full fleet info page <ChevronRight size={12} />
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.section>
+  );
+}
 
 // ─── More Services disclosure ──────────────────────────────────────────────
 // Auto detailing is the primary funnel; Boat / RV / Fleet sit behind a

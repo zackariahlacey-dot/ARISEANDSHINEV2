@@ -114,46 +114,58 @@ async function Dashboard() {
 
         <div className="max-w-2xl mx-auto px-4 pt-32 sm:pt-28 pb-20">
 
-          {/* ── Hero strip ─────────────────────────────────────────────── */}
-          <div className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/20 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-950 p-5 mb-5">
+          {/* ── Hero strip — Ultimate-card aesthetic ─────────────────────── */}
+          <div
+            className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/40 shadow-[0_0_60px_rgba(212,175,55,0.12)] p-6 sm:p-7 mb-6"
+            style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
+          >
+            {/* Top accent stripe */}
+            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37]/80 to-transparent" />
+            {/* Inner gold glow */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -top-12 -right-12 w-44 h-44 rounded-full"
-              style={{ background: "radial-gradient(circle, rgba(212,175,55,0.18) 0%, transparent 70%)" }}
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(ellipse 110% 45% at 50% 0%, rgba(212,175,55,0.14) 0%, transparent 65%)" }}
             />
-            <div className="relative flex items-start justify-between gap-4">
+
+            <div className="relative flex items-start justify-between gap-4 mb-6">
               <div className="min-w-0">
-                <p className="text-[10px] font-black tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1">My Dashboard</p>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white truncate">
-                  Hey, {firstName}
+                <p className="text-[11px] font-black tracking-[0.22em] uppercase text-[#D4AF37] mb-2">My Dashboard</p>
+                <h1
+                  className="text-3xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-br from-white via-zinc-100 to-[#D4AF37] bg-clip-text text-transparent truncate"
+                  style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.18))" }}
+                >
+                  Welcome, {firstName}
                 </h1>
-                <p className="text-[11px] text-zinc-600 mt-0.5 truncate">{user.email}</p>
+                <p className="text-xs text-zinc-500 mt-1.5 truncate">{user.email}</p>
               </div>
               {currentTier && (
-                <div className="shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-2xl bg-zinc-900/80 border border-[#D4AF37]/30">
-                  {currentTier.label === "VIP" ? <Trophy size={16} className="text-[#D4AF37]" />
-                    : currentTier.label === "Gold" ? <Zap size={16} className="text-[#D4AF37]" />
-                    : currentTier.label === "Silver" ? <ShieldCheck size={16} className="text-zinc-300" />
-                    : <Sparkles size={16} className="text-zinc-400" />}
-                  <span className="text-[9px] font-black tracking-wider uppercase text-[#D4AF37]">{currentTier.label}</span>
-                  <span className="text-[10px] font-black text-white tabular-nums">{discountPct}% off</span>
+                <div className="shrink-0 flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/[0.06] border border-[#D4AF37]/40 shadow-[0_0_18px_rgba(212,175,55,0.18)]">
+                  {currentTier.label === "VIP" ? <Trophy size={18} className="text-[#D4AF37]" fill="currentColor" />
+                    : currentTier.label === "Gold" ? <Crown size={18} className="text-[#D4AF37]" fill="currentColor" />
+                    : currentTier.label === "Silver" ? <ShieldCheck size={18} className="text-zinc-200" />
+                    : <Sparkles size={18} className="text-zinc-300" />}
+                  <span className="text-[10px] font-black tracking-[0.18em] uppercase text-[#D4AF37]">{currentTier.label}</span>
+                  <span className="text-sm font-black text-white tabular-nums">{discountPct}% off</span>
                 </div>
               )}
             </div>
 
-            <div className="relative grid grid-cols-3 gap-2 mt-4">
-              <div className="rounded-xl bg-zinc-900/60 border border-white/[0.04] px-3 py-2">
-                <p className="text-[9px] text-zinc-600 uppercase tracking-wider">Bookings</p>
-                <p className="text-lg font-black text-zinc-100 tabular-nums">{totalBookings}</p>
-              </div>
-              <div className="rounded-xl bg-zinc-900/60 border border-white/[0.04] px-3 py-2">
-                <p className="text-[9px] text-zinc-600 uppercase tracking-wider">Details</p>
-                <p className="text-lg font-black text-[#D4AF37] tabular-nums">{completedCount}</p>
-              </div>
-              <div className="rounded-xl bg-zinc-900/60 border border-white/[0.04] px-3 py-2">
-                <p className="text-[9px] text-zinc-600 uppercase tracking-wider">Offers</p>
-                <p className="text-lg font-black text-emerald-400 tabular-nums">{maintenanceOffers.length}</p>
-              </div>
+            {/* Stat tiles — bigger, more confident, with icons */}
+            <div className="relative grid grid-cols-3 gap-3">
+              {[
+                { label: "Bookings", value: totalBookings,     color: "text-white",         icon: CalendarDays },
+                { label: "Details",  value: completedCount,    color: "text-[#D4AF37]",     icon: Sparkles     },
+                { label: "Offers",   value: maintenanceOffers.length, color: "text-emerald-300", icon: Zap     },
+              ].map(({ label, value, color, icon: Icon }) => (
+                <div key={label} className="rounded-2xl bg-zinc-950/60 border border-white/[0.06] px-3 py-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Icon size={11} className={color} />
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-[0.16em] font-bold">{label}</p>
+                  </div>
+                  <p className={`text-3xl font-black tabular-nums leading-none ${color}`}>{value}</p>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -182,77 +194,89 @@ async function Dashboard() {
           {/* ── Saved vehicles ─────────────────────────────────────────── */}
           <SavedVehiclesSection vehicles={savedVehicles} />
 
-          {/* ── Loyalty Tier (compact card) ────────────────────────────── */}
+          {/* ── Loyalty Tier — aspirational, not flat ────────────────────── */}
           <div
-            className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/15 p-5 mb-5"
-            style={{ background: "linear-gradient(135deg, rgba(212,175,55,0.07) 0%, rgba(24,24,27,0.95) 60%)" }}
+            className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 shadow-[0_0_40px_rgba(212,175,55,0.08)] p-6 mb-6"
+            style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
           >
+            {/* Top accent stripe + inner glow — matches the Ultimate cards */}
+            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -bottom-10 -right-10 w-44 h-44 rounded-full"
-              style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)" }}
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(ellipse 110% 35% at 50% 0%, rgba(212,175,55,0.07) 0%, transparent 65%)" }}
             />
 
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <p className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-1.5">
-                  Loyalty Tier
-                </p>
+            <div className="relative flex items-start justify-between gap-4 mb-5">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-2">
+                  <Crown size={9} className="text-[#D4AF37]" fill="currentColor" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Loyalty Tier</span>
+                </div>
                 {currentTier ? (
-                  <div className="flex items-baseline gap-1.5">
+                  <div className="flex items-baseline gap-2 flex-wrap">
                     <span
-                      className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
-                      style={{ filter: "drop-shadow(0 2px 12px rgba(212,175,55,0.25))" }}
+                      className="text-5xl font-black bg-gradient-to-br from-white via-zinc-100 to-[#D4AF37] bg-clip-text text-transparent leading-none"
+                      style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.25))" }}
                     >
                       {discountPct}%
                     </span>
-                    <span className="text-sm font-semibold text-zinc-500">off, forever</span>
+                    <span className="text-sm font-semibold text-zinc-400">off every detail</span>
                   </div>
                 ) : (
-                  <p className="text-base font-black text-zinc-400">Book your first detail to start earning</p>
+                  <p className="text-base font-black text-zinc-300">Book your first detail to start earning rewards</p>
                 )}
               </div>
             </div>
 
             {toNext ? (
-              <div className="mb-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] text-zinc-600 uppercase tracking-wider">
-                    {toNext} more detail{toNext === 1 ? "" : "s"} to next tier
+              <div className="relative mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-zinc-400 font-semibold">
+                    <span className="text-white font-black">{toNext}</span> more detail{toNext === 1 ? "" : "s"} to next tier
                   </span>
-                  <span className="text-[10px] font-semibold text-[#D4AF37]">
-                    {completedCount} done
+                  <span className="text-xs font-black text-[#D4AF37] tabular-nums">
+                    {completedCount} / {nextThresh}
                   </span>
                 </div>
-                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-zinc-900/80 border border-white/[0.04] rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-700"
+                    className="h-full rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(212,175,55,0.45)]"
                     style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #92700a, #D4AF37, #F3E5AB)" }}
                   />
                 </div>
               </div>
             ) : (
-              <p className="text-[11px] text-[#D4AF37] font-bold mb-3">🎉 VIP — 20% off forever</p>
+              <div className="relative mb-5 px-3 py-2 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/[0.05] flex items-center gap-2 justify-center">
+                <Trophy size={13} className="text-[#D4AF37]" fill="currentColor" />
+                <p className="text-xs font-black text-[#D4AF37] tracking-wide">VIP — 20% off, forever</p>
+              </div>
             )}
 
-            <div className="grid grid-cols-4 gap-1.5 pt-3 border-t border-white/[0.05]">
+            {/* Tier ladder — bigger cells, locked tiers stay readable */}
+            <div className="relative grid grid-cols-4 gap-2 pt-4 border-t border-white/[0.06]">
               {LOYALTY_TIERS.slice().reverse().map((tier) => {
                 const unlocked = completedCount >= tier.minDetails;
+                const isCurrent = currentTier?.label === tier.label;
                 return (
                   <div
                     key={tier.label}
-                    className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl border transition-all ${
-                      unlocked ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.06]" : "border-white/[0.04] bg-white/[0.02] opacity-40"
+                    className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border transition-all ${
+                      isCurrent
+                        ? "border-[#D4AF37]/60 bg-[#D4AF37]/[0.12] shadow-[0_0_14px_rgba(212,175,55,0.18)] -translate-y-0.5"
+                        : unlocked
+                          ? "border-[#D4AF37]/25 bg-[#D4AF37]/[0.04]"
+                          : "border-white/[0.06] bg-zinc-950/40"
                     }`}
                   >
-                    <span className={`text-xs font-black ${unlocked ? "text-[#D4AF37]" : "text-zinc-600"}`}>
+                    <span className={`text-base font-black tabular-nums ${unlocked ? "text-[#D4AF37]" : "text-zinc-600"}`}>
                       {tier.pct}%
                     </span>
-                    <span className={`text-[8px] font-bold uppercase tracking-wider ${unlocked ? "text-zinc-400" : "text-zinc-700"}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${unlocked ? "text-zinc-200" : "text-zinc-500"}`}>
                       {tier.label}
                     </span>
-                    <span className={`text-[8px] ${unlocked ? "text-zinc-600" : "text-zinc-800"}`}>
-                      {tier.minDetails}{tier.minDetails === 1 ? " detail" : "+ details"}
+                    <span className={`text-[9px] ${unlocked ? "text-zinc-500" : "text-zinc-600"}`}>
+                      {tier.minDetails === 1 ? "1 detail" : `${tier.minDetails}+ details`}
                     </span>
                   </div>
                 );

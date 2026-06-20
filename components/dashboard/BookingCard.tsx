@@ -135,15 +135,18 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
     const sizeLabel = b.vehicle_size ? (VEHICLE_SIZE_LABELS[b.vehicle_size] ?? b.vehicle_size) : null;
     const isCompleted = b.status === "completed";
     return (
-      <div className="rounded-2xl border border-white/[0.04] bg-zinc-900/40 overflow-hidden">
+      <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 overflow-hidden group hover:border-white/[0.12] transition-colors">
+        {/* Subtle gold accent bar — matches upcoming card pattern but quieter */}
+        <div className={`h-0.5 ${isCompleted ? "bg-gradient-to-r from-emerald-500/40 via-emerald-500/20 to-transparent" : "bg-white/[0.04]"}`} />
+
         {/* Date / status strip */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04] bg-zinc-900/30">
           <div className="flex items-center gap-1.5 min-w-0">
-            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? "bg-emerald-400" : "bg-zinc-600"}`} />
-            <span className="text-[10px] font-medium text-zinc-500 truncate">{formatDate(b.booking_date)}</span>
-            {formattedTime && <span className="text-[10px] text-zinc-700 shrink-0">· {formattedTime}</span>}
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" : "bg-zinc-600"}`} />
+            <span className="text-xs font-semibold text-zinc-400 truncate">{formatDate(b.booking_date)}</span>
+            {formattedTime && <span className="text-xs text-zinc-600 shrink-0">· {formattedTime}</span>}
           </div>
-          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ml-2 ${statusStyle.className}`}>
+          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ml-2 ${statusStyle.className}`}>
             {statusStyle.label}
           </span>
         </div>
@@ -151,29 +154,39 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
         {/* Body */}
         <div className="p-4">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="font-bold text-zinc-100 text-sm leading-tight">{b.service_name ?? "Detailing Service"}</p>
-            <p className="text-base font-black text-[#D4AF37] shrink-0">${b.total_price.toFixed(0)}</p>
+            <p className="font-black text-zinc-100 text-[15px] leading-tight">{b.service_name ?? "Detailing Service"}</p>
+            <p className="text-lg font-black text-[#D4AF37] shrink-0 tabular-nums">${b.total_price.toFixed(0)}</p>
           </div>
 
           {vehicleLabel && (
             <div className="flex items-center gap-1.5 mb-1">
-              <Car size={10} className="text-zinc-600 shrink-0" />
-              <p className="text-xs text-zinc-500 truncate">
+              <Car size={11} className="text-zinc-500 shrink-0" />
+              <p className="text-xs text-zinc-400 truncate font-medium">
                 {vehicleLabel}
-                {sizeLabel && <span className="text-zinc-700"> · {sizeLabel}</span>}
+                {sizeLabel && <span className="text-zinc-600 font-normal"> · {sizeLabel}</span>}
               </p>
             </div>
           )}
 
           {b.service_address && (
             <div className="flex items-center gap-1.5 mb-2">
-              <MapPin size={10} className="text-zinc-600 shrink-0" />
-              <p className="text-xs text-zinc-600 truncate">{b.service_address}</p>
+              <MapPin size={11} className="text-zinc-500 shrink-0" />
+              <p className="text-xs text-zinc-500 truncate">{b.service_address}</p>
             </div>
           )}
 
+          {/* Additional vehicles — show them on history cards too */}
+          {b.additional_vehicles && b.additional_vehicles.length > 0 && (
+            <p className="text-[10px] text-zinc-500 mb-2">
+              <span className="text-[#D4AF37]/70 font-bold">+ {b.additional_vehicles.length}</span> additional vehicle{b.additional_vehicles.length === 1 ? "" : "s"} on this booking
+            </p>
+          )}
+
           {isCompleted && (
-            <p className="text-[10px] text-emerald-500/60 mb-2">✓ Counted toward your loyalty progress</p>
+            <p className="text-[11px] text-emerald-400/70 font-semibold mb-2 flex items-center gap-1">
+              <span className="inline-block w-1 h-1 rounded-full bg-emerald-400" />
+              Counted toward your loyalty progress
+            </p>
           )}
 
           {showRebook && (
@@ -184,9 +197,9 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
                 try { sessionStorage.setItem("draftBooking", JSON.stringify(draft)); } catch {}
                 window.location.href = "/?restore_booking=1";
               }}
-              className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-[#D4AF37] transition-colors mt-1"
+              className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-[#D4AF37] transition-colors mt-1.5 group/btn"
             >
-              <RotateCcw size={10} /> Book this service again
+              <RotateCcw size={11} className="group-hover/btn:rotate-[-180deg] transition-transform duration-300" /> Book this service again
             </button>
           )}
         </div>
@@ -240,6 +253,30 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
               </span>
             </div>
           </div>
+
+          {/* Additional vehicles — only shown when the booking includes 2+ vehicles */}
+          {b.additional_vehicles && b.additional_vehicles.length > 0 && (
+            <div className="mb-3 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] px-3 py-2">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]/70 mb-1.5">
+                + {b.additional_vehicles.length} more vehicle{b.additional_vehicles.length === 1 ? "" : "s"}
+              </p>
+              <ul className="space-y-1">
+                {b.additional_vehicles.map((av, i) => {
+                  const vLabel = [av.vehicleYear, av.vehicleMake, av.vehicleModel].filter(Boolean).join(" ").trim();
+                  return (
+                    <li key={i} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-zinc-400 truncate flex items-center gap-1.5 min-w-0">
+                        <Car size={10} className="text-zinc-600 shrink-0" />
+                        <span className="truncate">{vLabel || "Vehicle"}</span>
+                        {av.serviceName && <span className="text-zinc-600 truncate">· {av.serviceName}</span>}
+                      </span>
+                      <span className="text-[#D4AF37]/80 font-bold tabular-nums shrink-0">${av.servicePrice.toFixed(0)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {/* Date / time / location chips */}
           <div className="flex flex-wrap gap-2 mb-3">

@@ -29,28 +29,40 @@ export async function getBookingsByPhone(phone: string): Promise<{
 
   const { data } = await supabase
     .from("bookings")
-    .select("id, booking_date, booking_time, status, total_price, service_id, service_name, vehicle_year, vehicle_make, vehicle_model, vehicle_size, service_address, stripe_checkout_session_id, customer_phone, user_id")
+    .select("id, booking_date, booking_time, status, total_price, service_id, service_name, vehicle_year, vehicle_make, vehicle_model, vehicle_size, service_address, stripe_checkout_session_id, customer_phone, user_id, additional_vehicles_json")
     .or(conditions)
     .neq("status", "cancelled")
     .order("booking_date", { ascending: false });
 
   if (!data || data.length === 0) return { found: false, upcoming: [], past: [] };
 
-  const bookings: ClientBooking[] = data.map((b: any) => ({
-    id: b.id,
-    booking_date: b.booking_date,
-    booking_time: b.booking_time,
-    status: b.status,
-    total_price: Number(b.total_price) || 0,
-    service_id: b.service_id ?? null,
-    service_name: b.service_name,
-    vehicle_year: b.vehicle_year,
-    vehicle_make: b.vehicle_make,
-    vehicle_model: b.vehicle_model,
-    vehicle_size: b.vehicle_size,
-    service_address: b.service_address,
-    stripe_checkout_session_id: b.stripe_checkout_session_id ?? null,
-  }));
+  const bookings: ClientBooking[] = data.map((b: any) => {
+    const raw = Array.isArray(b.additional_vehicles_json) ? b.additional_vehicles_json : [];
+    const additional = raw.map((av: any) => ({
+      vehicleYear:  av.vehicleYear  ?? av.vy ?? null,
+      vehicleMake:  av.vehicleMake  ?? av.vm ?? null,
+      vehicleModel: av.vehicleModel ?? av.vd ?? null,
+      vehicleSize:  av.vehicleSize  ?? av.sz ?? null,
+      serviceName:  av.serviceName  ?? av.sn ?? null,
+      servicePrice: Number(av.servicePrice ?? av.sp ?? 0),
+    }));
+    return {
+      id: b.id,
+      booking_date: b.booking_date,
+      booking_time: b.booking_time,
+      status: b.status,
+      total_price: Number(b.total_price) || 0,
+      service_id: b.service_id ?? null,
+      service_name: b.service_name,
+      vehicle_year: b.vehicle_year,
+      vehicle_make: b.vehicle_make,
+      vehicle_model: b.vehicle_model,
+      vehicle_size: b.vehicle_size,
+      service_address: b.service_address,
+      stripe_checkout_session_id: b.stripe_checkout_session_id ?? null,
+      additional_vehicles: additional,
+    };
+  });
 
   const upcoming = bookings.filter((b) => b.booking_date >= today).reverse();
   const past = bookings.filter((b) => b.booking_date < today);

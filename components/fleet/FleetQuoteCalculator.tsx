@@ -35,17 +35,17 @@ const PER_VEHICLE_PRICE: Record<ServiceTierId, Record<SizeKey, number>> = {
   "Ultimate Interior + Exterior Reset":      { sedan: 350, suv: 375, xl: 400 },
 };
 
-// Fleet discount tiers
-function fleetDiscountPct(count: number): number {
-  if (count >= 50) return 20;
-  if (count >= 20) return 15;
-  if (count >= 10) return 10;
-  if (count >= 4)  return 5;
-  return 0;
-}
-
 const MIN_VEHICLES = 4;
 const MAX_VEHICLES = 100;
+const MAX_FLEET_DISCOUNT_PCT = 20;
+const PCT_PER_VEHICLE = 2;
+
+// Fleet discount — 2% off the total per vehicle, capped at 20%.
+// 4 vehicles = 8% · 5 = 10% · 10+ = 20% (max).
+function fleetDiscountPct(count: number): number {
+  if (count < MIN_VEHICLES) return 0;
+  return Math.min(MAX_FLEET_DISCOUNT_PCT, count * PCT_PER_VEHICLE);
+}
 
 // ── Component ──────────────────────────────────────────────────────────────
 export function FleetQuoteCalculator() {
@@ -117,12 +117,13 @@ export function FleetQuoteCalculator() {
     return { actual, discount, pct, finalTotal, totalVehicles, perVehicleAvg, lowEnd, highEnd };
   }, [sedanCount, suvCount, xlCount, serviceTier]);
 
+  // With the linear 2%-per-vehicle formula, every additional vehicle bumps
+  // the discount by 2% until it caps at MAX_FLEET_DISCOUNT_PCT. We only
+  // surface the "add more" hint while the customer is still below the cap.
   const nextDiscountTier = useMemo(() => {
     const cur = quote.totalVehicles;
-    if (cur < 10) return { needed: 10 - cur, pct: 10 };
-    if (cur < 20) return { needed: 20 - cur, pct: 15 };
-    if (cur < 50) return { needed: 50 - cur, pct: 20 };
-    return null;
+    if (cur >= MAX_FLEET_DISCOUNT_PCT / PCT_PER_VEHICLE) return null;
+    return { needed: 1, pct: Math.min(MAX_FLEET_DISCOUNT_PCT, (cur + 1) * PCT_PER_VEHICLE) };
   }, [quote.totalVehicles]);
 
   return (
@@ -281,7 +282,7 @@ export function FleetQuoteCalculator() {
           </div>
           {nextDiscountTier && (
             <div className="mt-3 px-3 py-2 rounded-lg bg-zinc-900/60 border border-white/[0.06] text-[11px] text-zinc-400">
-              <span className="text-emerald-300 font-bold">Add {nextDiscountTier.needed} more vehicle{nextDiscountTier.needed > 1 ? "s" : ""}</span> to unlock the <span className="text-[#D4AF37] font-bold">{nextDiscountTier.pct}% fleet tier</span>.
+              <span className="text-emerald-300 font-bold">+1 vehicle</span> → <span className="text-[#D4AF37] font-bold">{nextDiscountTier.pct}% off</span> ({PCT_PER_VEHICLE}% per vehicle, max {MAX_FLEET_DISCOUNT_PCT}%).
             </div>
           )}
         </div>
