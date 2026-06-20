@@ -46,7 +46,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior + Exterior Reset",
     tagline: "Showroom quality — every surface, inside and out. No polishing required.",
-    priceNormal: 350, priceLarge: 400,
+    priceNormal: 335, priceLarge: 375,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Everything in Ultimate Interior Reset",

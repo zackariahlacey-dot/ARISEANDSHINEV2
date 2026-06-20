@@ -10,7 +10,7 @@ const COLUMNS: { id: ColId; name: string; subtitle: string; priceFrom: number; p
   { id: "interior", name: "Interior Detail",                     subtitle: "Just the inside",      priceFrom: 150, priceTo: 185, bookHref: "/detailing" },
   { id: "full",     name: "Basic Interior + Exterior",           subtitle: "Inside + outside",     priceFrom: 240, priceTo: 280, bookHref: "/detailing" },
   { id: "ultInt",   name: "Ultimate Interior",                   subtitle: "Deep premium interior",priceFrom: 240, priceTo: 270, premium: true, bookHref: "/?book=ultimate" },
-  { id: "ultFull",  name: "Ultimate Full Reset",                 subtitle: "The whole package",    priceFrom: 350, priceTo: 400, premium: true, flagship: true, bookHref: "/?book=ultimate" },
+  { id: "ultFull",  name: "Ultimate Full Reset",                 subtitle: "The whole package",    priceFrom: 335, priceTo: 375, premium: true, flagship: true, bookHref: "/?book=ultimate" },
 ];
 
 type Cell = boolean | "partial" | "premium";

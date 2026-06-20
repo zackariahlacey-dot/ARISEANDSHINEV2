@@ -32,7 +32,7 @@ const PER_VEHICLE_PRICE: Record<ServiceTierId, Record<SizeKey, number>> = {
   "Interior Detail":                         { sedan: 150, suv: 170, xl: 185 },
   "Full Detail":                             { sedan: 240, suv: 260, xl: 280 },
   "Ultimate Interior Reset":                 { sedan: 240, suv: 255, xl: 270 },
-  "Ultimate Interior + Exterior Reset":      { sedan: 350, suv: 375, xl: 400 },
+  "Ultimate Interior + Exterior Reset":      { sedan: 335, suv: 355, xl: 375 },
 };
 
 const MIN_VEHICLES = 4;

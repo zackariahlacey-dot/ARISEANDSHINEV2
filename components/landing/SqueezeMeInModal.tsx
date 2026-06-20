@@ -56,7 +56,7 @@ const AUTO_SERVICES = [
   { label: "Interior Detail",                    price: "$150–$185",  desc: "Full vacuum, wipe-down, mats & interior glass"            },
   { label: "Basic Interior + Exterior",          price: "$240–$280",  desc: "Interior + exterior combined"                             },
   { label: "Ultimate Interior Reset",            price: "$240–$270",  desc: "Hot water extraction, steam sanitation & salt removal"    },
-  { label: "Ultimate Interior + Exterior Reset", price: "$350–$400",  desc: "Full decontamination, clay bar & 6-mo ceramic spray"     },
+  { label: "Ultimate Interior + Exterior Reset", price: "$335–$375",  desc: "Full decontamination, clay bar & 6-mo ceramic spray"     },
   { label: "Not sure yet",                       price: "",           desc: "We'll figure it out together"                             },
 ];
 const BOAT_SERVICES = [
