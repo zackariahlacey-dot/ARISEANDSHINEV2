@@ -102,7 +102,7 @@ export default function PayClient({ booking }: PayClientProps) {
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-3">
             <Sparkles size={18} className="text-amber-500" />
           </div>
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-white">Arise &amp; Shine VT</p>
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-white">Arise And Shine Detailing</p>
           <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-600">Premium Mobile Detailing</p>
         </div>
 

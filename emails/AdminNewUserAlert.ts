@@ -1,6 +1,6 @@
 /**
  * Admin notification when a new user signs up.
- * Midnight & Champagne theme: "New User Joined Arise And Shine VT" with Name and Email.
+ * Midnight & Champagne theme: "New User Joined Arise And Shine Detailing" with Name and Email.
  */
 
 import { getEmailLayoutHtml } from "./Layout";
@@ -34,8 +34,8 @@ export function getAdminNewUserAlertHtml(options: AdminNewUserAlertOptions): str
   `;
 
   return getEmailLayoutHtml({
-    title: "New User — Arise And Shine VT",
-    headline: "New User Joined Arise And Shine VT",
+    title: "New User — Arise And Shine Detailing",
+    headline: "New User Joined Arise And Shine Detailing",
     bodyHtml,
   });
 }

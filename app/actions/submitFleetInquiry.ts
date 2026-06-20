@@ -28,8 +28,8 @@ export type FleetInquiryResult =
  *  every other admin email in the system. ADMIN_EMAIL env var overrides. */
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
 /** Public-facing inbox CC'd on every inquiry so the team has a shared record. */
-const PUBLIC_INBOX_CC = "contact@ariseandshinevt.com";
-const FROM_EMAIL  = "Arise & Shine VT <noreply@ariseandshinevt.com>";
+const PUBLIC_INBOX_CC = "contact@ariseandshinedetailing.com";
+const FROM_EMAIL  = "Arise And Shine Detailing <noreply@ariseandshinedetailing.com>";
 
 function formatPhone(raw: string): string {
   const d = raw.replace(/\D/g, "");
@@ -107,7 +107,7 @@ export async function submitFleetInquiry(payload: FleetInquiryPayload): Promise<
             ${payload.notes ? `<p style="margin:8px 0 0;color:#444;"><strong>Notes:</strong> ${payload.notes}</p>` : ""}
 
             <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#888;">
-              Review and respond in the admin portal: <a href="https://www.ariseandshinevt.com/admin/fleet" style="color:#D4AF37;">/admin/fleet</a>
+              Review and respond in the admin portal: <a href="https://www.ariseandshinedetailing.com/admin/fleet" style="color:#D4AF37;">/admin/fleet</a>
             </div>
           </div>
         </div>

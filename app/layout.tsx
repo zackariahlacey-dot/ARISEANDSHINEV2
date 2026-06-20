@@ -23,10 +23,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.ariseandshinevt.com"),
+  metadataBase: new URL("https://www.ariseandshinedetailing.com"),
   title: {
-    default: "Mobile Auto Detailing in Burlington & Williston, VT | Arise & Shine VT",
-    template: "%s | Arise & Shine VT",
+    default: "Mobile Auto Detailing in Burlington & Williston, VT | Arise And Shine Detailing",
+    template: "%s | Arise And Shine Detailing",
   },
   description:
     "Vermont's #1 mobile detailing service — we come to you in Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County. Auto, boat, and RV detailing.",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Arise & Shine VT",
+    title: "Arise And Shine Detailing",
   },
   formatDetection: {
     telephone: false,
@@ -55,18 +55,18 @@ export const metadata: Metadata = {
     apple: "/aasbanner.png",
   },
   openGraph: {
-    title: "Mobile Auto Detailing in Burlington & Williston, VT | Arise & Shine VT",
+    title: "Mobile Auto Detailing in Burlington & Williston, VT | Arise And Shine Detailing",
     description:
       "Vermont's #1 mobile detailing service — we come to you in Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County.",
     type: "website",
-    url: "https://www.ariseandshinevt.com",
-    siteName: "Arise & Shine VT",
-    images: [{ url: "/aasbanner.png", width: 1200, height: 630, alt: "Arise & Shine VT Mobile Detailing" }],
+    url: "https://www.ariseandshinedetailing.com",
+    siteName: "Arise And Shine Detailing",
+    images: [{ url: "/aasbanner.png", width: 1200, height: 630, alt: "Arise And Shine Detailing Mobile Detailing" }],
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Mobile Auto Detailing in Burlington & Williston, VT | Arise & Shine VT",
+    title: "Mobile Auto Detailing in Burlington & Williston, VT | Arise And Shine Detailing",
     description:
       "Vermont's #1 mobile detailing service — we come to you anywhere in Chittenden County.",
     images: ["/aasbanner.png"],
@@ -93,14 +93,14 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "LocalBusiness",
-              "@id": "https://www.ariseandshinevt.com",
-              name: "Arise & Shine VT",
+              "@id": "https://www.ariseandshinedetailing.com",
+              name: "Arise And Shine Detailing",
               description: "Vermont's premier mobile auto, boat, and RV detailing service. Fully self-contained — we come to you anywhere in Vermont.",
-              url: "https://www.ariseandshinevt.com",
+              url: "https://www.ariseandshinedetailing.com",
               telephone: "+18025855563",
-              email: "contact@ariseandshinevt.com",
-              image: "https://www.ariseandshinevt.com/aasbanner.png",
-              logo: "https://www.ariseandshinevt.com/aasbanner.png",
+              email: "contact@ariseandshinedetailing.com",
+              image: "https://www.ariseandshinedetailing.com/aasbanner.png",
+              logo: "https://www.ariseandshinedetailing.com/aasbanner.png",
               priceRange: "$$",
               currenciesAccepted: "USD",
               paymentAccepted: "Cash, Credit Card",

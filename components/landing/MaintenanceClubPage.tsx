@@ -298,7 +298,7 @@ export function MaintenanceClubPage({ services }: { services: Service[] }) {
 
       <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-          <span>© 2025 Arise And Shine VT · Maintenance Club · Vermont</span>
+          <span>© 2025 Arise And Shine Detailing · Maintenance Club · Vermont</span>
           <a href="/" className="hover:text-[#D4AF37] transition-colors">← Back to Home</a>
         </div>
       </footer>

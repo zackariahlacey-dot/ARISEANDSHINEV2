@@ -18,6 +18,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://www.ariseandshinevt.com/sitemap.xml",
+    sitemap: "https://www.ariseandshinedetailing.com/sitemap.xml",
   };
 }

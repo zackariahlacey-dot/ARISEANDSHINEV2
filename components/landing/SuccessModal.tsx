@@ -110,7 +110,7 @@ function buildGoogleCalendarUrl(data: SuccessModalData): string {
     action: "TEMPLATE",
     text: `Auto Detailing — ${data.serviceName}`,
     dates: `${fmt(year, month, day, startH, startM)}/${fmt(year, month, day, endH, endM)}`,
-    details: "Your Arise & Shine VT mobile detailing appointment.",
+    details: "Your Arise And Shine Detailing mobile detailing appointment.",
     ...(data.serviceAddress ? { location: data.serviceAddress } : {}),
   });
 
@@ -132,13 +132,13 @@ function downloadIcs(data: SuccessModalData) {
   const fmt = (y: number, mo: number, d: number, h: number, mi: number) =>
     `${y}${pad(mo)}${pad(d)}T${pad(h)}${pad(mi)}00`;
 
-  const uid = `${data.confirmationId || Date.now()}@ariseandshinevt.com`;
+  const uid = `${data.confirmationId || Date.now()}@ariseandshinedetailing.com`;
   const now = fmt(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate(), new Date().getHours(), new Date().getMinutes());
 
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Arise & Shine VT//EN",
+    "PRODID:-//Arise And Shine Detailing//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
@@ -147,7 +147,7 @@ function downloadIcs(data: SuccessModalData) {
     `DTSTART:${fmt(year, month, day, startH, startM)}`,
     `DTEND:${fmt(year, month, day, endH, endM)}`,
     `SUMMARY:Auto Detailing — ${data.serviceName}`,
-    "DESCRIPTION:Your Arise & Shine VT mobile detailing appointment.",
+    "DESCRIPTION:Your Arise And Shine Detailing mobile detailing appointment.",
     ...(data.serviceAddress ? [`LOCATION:${data.serviceAddress}`] : []),
     "END:VEVENT",
     "END:VCALENDAR",

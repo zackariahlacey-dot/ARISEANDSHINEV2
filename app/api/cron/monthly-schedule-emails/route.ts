@@ -15,8 +15,8 @@ import { signScheduleToken } from "@/lib/monthlyToken";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM   = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const SITE   = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+const FROM   = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const SITE   = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -88,9 +88,9 @@ export async function GET(req: NextRequest) {
       const { error: emailErr } = await resend.emails.send({
         from:    FROM,
         to:      sub.customer_email,
-        subject: `Pick your ${monthName} detail date — Arise & Shine VT`,
+        subject: `Pick your ${monthName} detail date — Arise And Shine Detailing`,
         html:    getMonthlyScheduleReminderHtml(firstName, sub.plan_name, monthStr, scheduleLink),
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
       });
 
       if (emailErr) {

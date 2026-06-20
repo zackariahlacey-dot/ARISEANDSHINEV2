@@ -36,7 +36,7 @@ export function getMonthlyScheduleReminderHtml(
           </td></tr>
 
           <tr><td align="center" style="padding:40px 32px 8px;">
-            <img src="${LOGO_URL}" alt="Arise &amp; Shine VT" width="72" height="72"
+            <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="72" height="72"
               style="display:block;margin:0 auto;width:72px;height:72px;border-radius:50%;border:2px solid #1f1f23;" />
           </td></tr>
 
@@ -95,13 +95,13 @@ export function getMonthlyScheduleReminderHtml(
           <tr><td style="padding:0 40px;"><div style="height:1px;background-color:#1f1f23;"></div></td></tr>
 
           <tr><td align="center" style="padding:24px 40px 32px;">
-            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;">Arise &amp; Shine VT</p>
+            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;">Arise And Shine Detailing</p>
             <p style="margin:0 0 12px;font-size:11px;color:#3f3f46;letter-spacing:0.1em;text-transform:uppercase;">Premium Mobile Detailing &middot; Vermont</p>
             <table border="0" cellspacing="0" cellpadding="0" align="center" role="presentation">
               <tr>
                 <td style="padding:0 8px;"><a href="tel:8025855563" style="font-size:11px;color:#52525b;text-decoration:none;">802-585-5563</a></td>
                 <td style="color:#3f3f46;font-size:11px;">&middot;</td>
-                <td style="padding:0 8px;"><a href="https://www.ariseandshinevt.com" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinevt.com</a></td>
+                <td style="padding:0 8px;"><a href="https://www.ariseandshinedetailing.com" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinedetailing.com</a></td>
               </tr>
             </table>
             <p style="margin:14px 0 0;font-size:10px;color:#27272a;line-height:1.6;">

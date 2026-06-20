@@ -12,19 +12,19 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const guide = getGuideBySlug(slug);
-  if (!guide) return { title: "Guide | Arise & Shine VT" };
+  if (!guide) return { title: "Guide | Arise And Shine Detailing" };
   return {
-    title: `${guide.title} | Arise & Shine VT`,
+    title: `${guide.title} | Arise And Shine Detailing`,
     description: guide.description,
     keywords: guide.keywords,
     openGraph: {
       title: guide.title,
       description: guide.description,
-      url: `https://www.ariseandshinevt.com/guides/${guide.slug}`,
+      url: `https://www.ariseandshinedetailing.com/guides/${guide.slug}`,
       type: "article",
       publishedTime: guide.publishedDate,
     },
-    alternates: { canonical: `https://www.ariseandshinevt.com/guides/${guide.slug}` },
+    alternates: { canonical: `https://www.ariseandshinedetailing.com/guides/${guide.slug}` },
   };
 }
 
@@ -150,7 +150,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2026 Arise And Shine VT · Vermont</span>
+            <span>© 2026 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/guides" className="hover:text-[#D4AF37] transition-colors">All Guides</Link>
               <Link href="/faq" className="hover:text-[#D4AF37] transition-colors">FAQ</Link>

@@ -27,7 +27,7 @@ const TEMPLATES = [
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
     subject: "20% off your next detail! 🎁",
-    body: "Hi {name},\n\nIt's been a while since we saw your {vehicle}! We're running a special promotion this month.\n\nBook your next detail using code SUMMER20 to get 20% off any service.\n\nBook here: https://ariseandshinevt.com\n\nHope to see you soon!\nZack"
+    body: "Hi {name},\n\nIt's been a while since we saw your {vehicle}! We're running a special promotion this month.\n\nBook your next detail using code SUMMER20 to get 20% off any service.\n\nBook here: https://ariseandshinedetailing.com\n\nHope to see you soon!\nZack"
   },
   {
     id: "fpf",
@@ -45,7 +45,7 @@ const TEMPLATES = [
     color: "text-violet-500",
     bg: "bg-violet-500/10",
     subject: "Time for a maintenance detail?",
-    body: "Hi {name},\n\nCan you believe it's been over 6 months since we last detailed your {vehicle}? To keep your paint protected and interior fresh, we recommend a maintenance detail every 4-6 months.\n\nLet's get you on the schedule!\nhttps://ariseandshinevt.com\n\nBest,\nZack"
+    body: "Hi {name},\n\nCan you believe it's been over 6 months since we last detailed your {vehicle}? To keep your paint protected and interior fresh, we recommend a maintenance detail every 4-6 months.\n\nLet's get you on the schedule!\nhttps://ariseandshinedetailing.com\n\nBest,\nZack"
   },
   {
     id: "thankyou",

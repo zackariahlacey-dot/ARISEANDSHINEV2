@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Arise & Shine VT",
+    name: "Arise And Shine Detailing",
     short_name: "A&S VT",
     description: "Vermont's premier mobile auto, boat, and RV detailing service. We come to you.",
     start_url: "/",

@@ -8,7 +8,7 @@ import { getCategoryMeta, formatMiles } from "@/lib/mileage";
 function exportCombinedCsv(report: TaxReportData, year: number) {
   // Just the summary as CSV
   const rows: string[][] = [
-    ["Arise & Shine VT — Tax Summary", String(year)],
+    ["Arise And Shine Detailing — Tax Summary", String(year)],
     [],
     ["MILEAGE", ""],
     ["Total Miles (one-way per trip)", formatMiles(report.mileage.totalMiles)],
@@ -92,8 +92,8 @@ export function TaxReportTab() {
         <div className="space-y-4 print:space-y-6">
           {/* Print header (hidden on screen) */}
           <div className="hidden print:block mb-6">
-            <p className="text-lg font-bold">Arise & Shine VT — Tax Summary {year}</p>
-            <p className="text-sm text-zinc-500">209 Porterwood Dr, Williston, VT · ariseandshinevt.com</p>
+            <p className="text-lg font-bold">Arise And Shine Detailing — Tax Summary {year}</p>
+            <p className="text-sm text-zinc-500">209 Porterwood Dr, Williston, VT · ariseandshinedetailing.com</p>
           </div>
 
           {/* Mileage section */}

@@ -18,7 +18,7 @@ export default function Loading() {
                      bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
           style={{ filter: "drop-shadow(0 0 28px rgba(212,175,55,0.35))" }}
         >
-          Arise &amp; Shine
+          Arise And Shine Detailing
         </p>
 
         {/* Thin loading track */}

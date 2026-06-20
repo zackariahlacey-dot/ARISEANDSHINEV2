@@ -36,13 +36,13 @@ export function getMonthlyPlanConfirmationHtml(
           </td></tr>
 
           <tr><td align="center" style="padding:40px 32px 8px;">
-            <img src="${LOGO_URL}" alt="Arise &amp; Shine VT" width="72" height="72"
+            <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="72" height="72"
               style="display:block;margin:0 auto;width:72px;height:72px;border-radius:50%;border:2px solid #1f1f23;" />
           </td></tr>
 
           <tr><td align="center" style="padding:0 32px 28px;">
             <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#52525b;">
-              ARISE &amp; SHINE &nbsp;&middot;&nbsp; VERMONT
+              ARISE AND SHINE DETAILING
             </p>
           </td></tr>
 
@@ -127,7 +127,7 @@ export function getMonthlyPlanConfirmationHtml(
           <tr><td style="padding:0 40px;"><div style="height:1px;background-color:#1f1f23;"></div></td></tr>
 
           <tr><td align="center" style="padding:24px 40px 32px;">
-            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;">Arise &amp; Shine VT</p>
+            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;">Arise And Shine Detailing</p>
             <p style="margin:0;font-size:11px;color:#3f3f46;letter-spacing:0.1em;text-transform:uppercase;">Premium Mobile Detailing &middot; Vermont</p>
           </td></tr>
 

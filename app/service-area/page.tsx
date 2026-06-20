@@ -6,11 +6,11 @@ import { TOWNS } from "@/lib/townContent";
 
 export const metadata: Metadata = {
   title: "Mobile Detailing Service Area | Burlington, Williston & Chittenden County, VT",
-  description: "Arise & Shine VT serves Burlington, Williston, South Burlington, Shelburne, Essex, Colchester, Winooski, Milton, Hinesburg, and all of Vermont within 1.5 hours of Williston. We come to you.",
+  description: "Arise And Shine Detailing serves Burlington, Williston, South Burlington, Shelburne, Essex, Colchester, Winooski, Milton, Hinesburg, and all of Vermont within 1.5 hours of Williston. We come to you.",
   openGraph: {
     title: "Mobile Detailing Service Area | Burlington, Williston & Chittenden County, VT",
     description: "We serve all of Chittenden County and beyond — Burlington, Williston, South Burlington, Shelburne, Essex, Colchester, and more.",
-    url: "https://www.ariseandshinevt.com/service-area",
+    url: "https://www.ariseandshinedetailing.com/service-area",
   },
 };
 
@@ -145,7 +145,7 @@ export default function ServiceAreaPage() {
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2025 Arise And Shine VT · Vermont</span>
+            <span>© 2025 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/faq" className="hover:text-[#D4AF37] transition-colors">FAQ</Link>
               <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>

@@ -8,7 +8,7 @@ import { SiteHeader } from "@/components/landing/SiteHeader";
 import { Crown, Check, Lock, Wallet } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Premium Annual Membership | Arise & Shine VT",
+  title: "Premium Annual Membership | Arise And Shine Detailing",
   description: `Pay $${MEMBERSHIP_PRICE_USD}, get $${MEMBERSHIP_CREDIT_USD} in service credit to spend on any combination of details and add-ons over 12 months.`,
 };
 

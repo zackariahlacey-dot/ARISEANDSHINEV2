@@ -43,7 +43,7 @@ export function UpdatePasswordForm({
         {/* Branding header */}
         <div className="mb-8">
           <p className="text-xs font-semibold tracking-widest uppercase text-[#D4AF37] mb-2">
-            Arise And Shine VT
+            Arise And Shine Detailing
           </p>
           <h2 className="text-2xl font-black tracking-tight text-white">
             Set New Password

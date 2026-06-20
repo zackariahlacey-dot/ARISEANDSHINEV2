@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import PayClient from "./PayClient";
 
 export const metadata: Metadata = {
-  title: "Pay Your Invoice — Arise & Shine VT",
+  title: "Pay Your Invoice — Arise And Shine Detailing",
   robots: { index: false, follow: false },
 };
 

@@ -109,7 +109,7 @@ function SuccessContent() {
           </button>
           
           <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
-            Arise & Shine VT • Premium Detailing
+            Arise And Shine Detailing • Premium Detailing
           </p>
         </motion.div>
       </motion.div>

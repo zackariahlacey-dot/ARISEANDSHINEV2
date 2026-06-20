@@ -53,7 +53,7 @@ export function EarningsShell() {
           <p className="text-[10px] font-black tracking-[0.22em] uppercase text-amber-500/70 mb-1">My Earnings</p>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">{range.label}</h1>
           <p className="text-[11px] text-zinc-600 mt-1">
-            Arise &amp; Shine processes actual payments off-platform. This is what's owed based on your completed jobs.
+            Arise And Shine Detailing processes actual payments off-platform. This is what's owed based on your completed jobs.
           </p>
         </div>
 
@@ -88,10 +88,10 @@ export function EarningsShell() {
             <DollarSign size={11} className="text-amber-500" /> How earnings appear here
           </p>
           <ul className="text-[11px] text-zinc-400 leading-relaxed space-y-1.5 list-disc list-inside">
-            <li>Each completed job shows your <strong className="text-zinc-200">base commission</strong> (your tier % of the job total), plus any tip the customer left, plus any positive or negative adjustment Arise &amp; Shine made — every adjustment includes a written reason you can read.</li>
+            <li>Each completed job shows your <strong className="text-zinc-200">base commission</strong> (your tier % of the job total), plus any tip the customer left, plus any positive or negative adjustment Arise And Shine Detailing made — every adjustment includes a written reason you can read.</li>
             <li><strong className="text-emerald-400">Tips are 100% yours</strong>, no commission split.</li>
             <li>Jobs awaiting photo review are shown in amber and their commission isn't locked yet. Once approved, they turn emerald and the amount is final.</li>
-            <li>This screen reports what's owed; Arise &amp; Shine pays you off-platform.</li>
+            <li>This screen reports what's owed; Arise And Shine Detailing pays you off-platform.</li>
           </ul>
         </div>
 

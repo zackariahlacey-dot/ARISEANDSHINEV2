@@ -24,7 +24,7 @@ export function getBookerAccountInviteHtml(params: {
     </p>
   `;
   return getEmailLayoutHtml({
-    title: "Create your account — Arise And Shine VT",
+    title: "Create your account — Arise And Shine Detailing",
     headline: "Link your booking to your account",
     bodyHtml,
     primaryButton: {

@@ -130,7 +130,7 @@ export function OnboardingShell({ initialStatus }: { initialStatus: OnboardingSt
                 <div className="px-4 pb-4 border-t border-white/[0.05]">
                   {signed ? (
                     <div className="pt-4 text-[11px] text-zinc-400">
-                      Your signed copy of this document is on file. If you need to review it, contact Arise &amp; Shine VT and we&apos;ll send you the exact text you agreed to.
+                      Your signed copy of this document is on file. If you need to review it, contact Arise And Shine Detailing and we&apos;ll send you the exact text you agreed to.
                     </div>
                   ) : (
                     <AgreementSign
@@ -151,7 +151,7 @@ export function OnboardingShell({ initialStatus }: { initialStatus: OnboardingSt
             <ShieldCheck size={28} className="mx-auto text-emerald-400 mb-2" />
             <p className="text-base font-black text-emerald-300">All three documents signed.</p>
             <p className="text-[11px] text-emerald-200/80 mt-1 max-w-md mx-auto leading-relaxed">
-              Your onboarding is complete. Arise &amp; Shine will activate your account and assignments will start appearing here.
+              Your onboarding is complete. Arise And Shine Detailing will activate your account and assignments will start appearing here.
             </p>
           </div>
         )}

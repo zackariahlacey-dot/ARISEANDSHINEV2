@@ -6,8 +6,8 @@ import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 import { logError } from "@/app/actions/logError";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
-const FROM_ADDR   = process.env.EMAIL_FROM  ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const REPLY_TO    = "contact@ariseandshinevt.com";
+const FROM_ADDR   = process.env.EMAIL_FROM  ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const REPLY_TO    = "contact@ariseandshinedetailing.com";
 
 /**
  * Send a Resend email with retry-on-failure.
@@ -153,7 +153,7 @@ export async function createSqueezeRequest(input: {
           ${input.notes ? row("Notes", `<span style="color:#555">${input.notes}</span>`) : ""}
         </table>
         <div style="margin-top:24px;display:flex;gap:12px">
-          <a href="https://ariseandshinevt.com/admin/schedule" style="display:inline-block;background:#D4AF37;color:#000;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">
+          <a href="https://ariseandshinedetailing.com/admin/schedule" style="display:inline-block;background:#D4AF37;color:#000;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">
             Open Schedule →
           </a>
           <a href="tel:${input.phone}" style="display:inline-block;background:#f5f5f5;color:#333;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px">
@@ -188,7 +188,7 @@ export async function createSqueezeRequest(input: {
     from:    FROM_ADDR,
     to:      input.email,
     replyTo: REPLY_TO,
-    subject: "We got your request — Arise & Shine VT",
+    subject: "We got your request — Arise And Shine Detailing",
     html: `
       <div style="font-family:sans-serif;max-width:480px;color:#111;background:#fff;padding:24px;border-radius:8px">
         <h2 style="color:#D4AF37;margin:0 0 12px">Got it, ${input.name.split(" ")[0]}!</h2>
@@ -201,7 +201,7 @@ export async function createSqueezeRequest(input: {
           In the meantime, feel free to call or text directly at
           <a href="tel:8025855563" style="color:#D4AF37;font-weight:600">802-585-5563</a>.
         </p>
-        <p style="color:#999;font-size:13px;margin:0">— Zack<br/>Arise &amp; Shine VT</p>
+        <p style="color:#999;font-size:13px;margin:0">— Zack<br/>Arise And Shine Detailing</p>
       </div>
     `,
   };

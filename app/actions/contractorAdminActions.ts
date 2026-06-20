@@ -165,7 +165,7 @@ export async function inviteContractor(args: InviteContractorArgs): Promise<{ ok
 
   // 3. If no user yet, send Supabase invite which creates user + emails them
   if (!userId) {
-    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(cleanEmail, {
       redirectTo: `${siteOrigin}/auth/confirm?next=/protected/onboarding`,
       data: {
@@ -209,11 +209,11 @@ export async function inviteContractor(args: InviteContractorArgs): Promise<{ ok
   try {
     if (process.env.RESEND_API_KEY) {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+      const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
       await resend.emails.send({
-        from: process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>",
+        from: process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>",
         to: cleanEmail,
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
         subject: "Welcome to Arise & Shine — finish your contractor setup",
         html: contractorWelcomeHtml({ firstName, siteOrigin }),
       });
@@ -232,12 +232,12 @@ function contractorWelcomeHtml({ firstName, siteOrigin }: { firstName: string; s
   <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
     <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
       <tr><td style="background:#0a0a0a;padding:28px 32px;border-radius:14px 14px 0 0;text-align:center;">
-        <p style="color:#d4af37;font-size:13px;font-weight:900;margin:0;letter-spacing:0.18em;text-transform:uppercase;">Arise &amp; Shine VT</p>
+        <p style="color:#d4af37;font-size:13px;font-weight:900;margin:0;letter-spacing:0.18em;text-transform:uppercase;">Arise And Shine Detailing</p>
         <h1 style="color:#fff;font-size:22px;font-weight:900;margin:8px 0 0;">Welcome aboard, ${firstName}.</h1>
       </td></tr>
       <tr><td style="background:#fff;padding:28px 32px;border-radius:0 0 14px 14px;">
         <p style="font-size:14px;color:#333;line-height:1.65;margin:0 0 16px;">
-          You've been invited to join Arise &amp; Shine VT as an <strong>independent contractor</strong>. Before you can pick up jobs, we need you to read and electronically sign three short documents — how you get paid, what you can't do, and what you're responsible for. Takes about 10 minutes total.
+          You've been invited to join Arise And Shine Detailing as an <strong>independent contractor</strong>. Before you can pick up jobs, we need you to read and electronically sign three short documents — how you get paid, what you can't do, and what you're responsible for. Takes about 10 minutes total.
         </p>
         <p style="font-size:13px;color:#555;line-height:1.65;margin:0 0 20px;">
           You should also receive a separate email from Supabase with a one-time link to set your password. Use that link first, then come back to the dashboard.
@@ -246,7 +246,7 @@ function contractorWelcomeHtml({ firstName, siteOrigin }: { firstName: string; s
           <a href="${siteOrigin}/protected/onboarding" style="display:inline-block;background:#d4af37;color:#000;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;padding:14px 32px;border-radius:8px;text-decoration:none;">Open my onboarding</a>
         </p>
         <p style="font-size:11px;color:#888;text-align:center;margin:16px 0 0;">
-          Questions? Email <a href="mailto:contact@ariseandshinevt.com" style="color:#d4af37;">contact@ariseandshinevt.com</a>
+          Questions? Email <a href="mailto:contact@ariseandshinedetailing.com" style="color:#d4af37;">contact@ariseandshinedetailing.com</a>
         </p>
       </td></tr>
     </table>

@@ -6,7 +6,7 @@ import type { Service } from "@/app/page";
 import { RV_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
-  title: "Mobile RV Detailing Vermont | Per-Foot Pricing | Arise & Shine VT",
+  title: "Mobile RV Detailing Vermont | Per-Foot Pricing | Arise And Shine Detailing",
   description:
     "Mobile RV, motorhome, and travel trailer detailing in Vermont. RV Exterior $15/ft · RV Interior $25/ft · RV Full Detail $38/ft. We come to your campsite, storage facility, or driveway statewide.",
   keywords: [
@@ -27,14 +27,14 @@ export const metadata: Metadata = {
     "Class A motorhome detailing Vermont",
   ],
   openGraph: {
-    title: "Mobile RV Detailing Vermont | Arise & Shine VT",
+    title: "Mobile RV Detailing Vermont | Arise And Shine Detailing",
     description: "Per-foot RV detailing — Exterior $15/ft · Interior $25/ft · Full Detail $38/ft. We come to your campsite, dealer lot, or driveway statewide.",
-    url: "https://ariseandshinevt.com/rv-detailing",
-    siteName: "Arise & Shine VT",
+    url: "https://ariseandshinedetailing.com/rv-detailing",
+    siteName: "Arise And Shine Detailing",
     locale: "en_US",
     type: "website",
   },
-  alternates: { canonical: "https://ariseandshinevt.com/rv-detailing" },
+  alternates: { canonical: "https://ariseandshinedetailing.com/rv-detailing" },
 };
 
 async function DataProvider() {

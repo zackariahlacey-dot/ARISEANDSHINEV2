@@ -10,11 +10,11 @@ export async function sendTestReviewEmail(): Promise<{ success: boolean; error?:
     const html = getReviewRequestHtml("Zack", "Full Interior & Exterior Detail");
 
     const { error } = await resend.emails.send({
-      from: "Arise & Shine VT <bookings@ariseandshinevt.com>",
+      from: "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>",
       to: "zackariahlacey@gmail.com",
-      subject: "[TEST] How's the shine holding up? ✨ — Arise & Shine VT",
+      subject: "[TEST] How's the shine holding up? ✨ — Arise And Shine Detailing",
       html,
-      replyTo: "contact@ariseandshinevt.com",
+      replyTo: "contact@ariseandshinedetailing.com",
     });
 
     if (error) throw error;

@@ -22,7 +22,7 @@ const PAIRS: BeforeAfterPair[] = [
     beforeSrc: "/2018-jeep-grand-cherokee-interior-detail-before-williston-vt.jpg",
     afterSrc:  "/2018-jeep-grand-cherokee-interior-detail-after-williston-vt.jpg",
     beforeAlt: "Heavily soiled 2018 Jeep Grand Cherokee interior — before mobile auto detail in Williston, VT",
-    afterAlt:  "Restored 2018 Jeep Grand Cherokee interior with conditioned leather — after Arise & Shine VT mobile detail in Williston, VT",
+    afterAlt:  "Restored 2018 Jeep Grand Cherokee interior with conditioned leather — after Arise And Shine Detailing mobile detail in Williston, VT",
     caption:   "2018 Jeep Grand Cherokee · Interior Detail · Williston, VT",
     service:   "Interior Detail",
   },
@@ -30,7 +30,7 @@ const PAIRS: BeforeAfterPair[] = [
     beforeSrc: "/2024-ford-bronco-exterior-detail-before-burlington-vt.jpg",
     afterSrc:  "/2024-ford-bronco-exterior-detail-after-burlington-vt.jpg",
     beforeAlt: "2024 Ford Bronco with dirt and road grime — before exterior mobile detail in Burlington, VT",
-    afterAlt:  "Restored 2024 Ford Bronco paint and finish — after Arise & Shine VT exterior detail in Burlington, VT",
+    afterAlt:  "Restored 2024 Ford Bronco paint and finish — after Arise And Shine Detailing exterior detail in Burlington, VT",
     caption:   "2024 Ford Bronco · Exterior Detail · Burlington, VT",
     service:   "Exterior Detail",
   },
@@ -38,7 +38,7 @@ const PAIRS: BeforeAfterPair[] = [
     beforeSrc: "/2024-ford-bronco-interior-detail-before-burlington-vt.jpg",
     afterSrc:  "/2024-ford-bronco-interior-detail-after-burlington-vt.jpg",
     beforeAlt: "2024 Ford Bronco interior with dust and debris — before mobile interior detail in Burlington, VT",
-    afterAlt:  "Spotless 2024 Ford Bronco interior — after Arise & Shine VT mobile interior detail in Burlington, VT",
+    afterAlt:  "Spotless 2024 Ford Bronco interior — after Arise And Shine Detailing mobile interior detail in Burlington, VT",
     caption:   "2024 Ford Bronco · Interior Detail · Burlington, VT",
     service:   "Interior Detail",
   },
@@ -46,7 +46,7 @@ const PAIRS: BeforeAfterPair[] = [
     beforeSrc: "/2021-subaru-outback-interior-detail-before-burlington-vt.jpg",
     afterSrc:  "/2021-subaru-outback-interior-detail-after-burlington-vt.jpg",
     beforeAlt: "2021 Subaru Outback interior with everyday mess — before mobile detail in Burlington, VT",
-    afterAlt:  "Spotless 2021 Subaru Outback interior — after Arise & Shine VT mobile detail in Burlington, VT",
+    afterAlt:  "Spotless 2021 Subaru Outback interior — after Arise And Shine Detailing mobile detail in Burlington, VT",
     caption:   "2021 Subaru Outback · Interior Detail · Burlington, VT",
     service:   "Interior Detail",
   },
@@ -185,7 +185,7 @@ export function BeforeAfterGallery({ onBookUltimate }: Props = {}) {
             Visible <span className="text-zinc-500">Perfection.</span>
           </h2>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Slide to reveal the Arise &amp; Shine difference. Real cars, real work, all done in driveways across Vermont.
+            Slide to reveal the Arise And Shine Detailing difference. Real cars, real work, all done in driveways across Vermont.
           </p>
         </div>
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Auto Detailing Gift Cards | Arise & Shine VT — Burlington, VT",
+  title: "Auto Detailing Gift Cards | Arise And Shine Detailing — Burlington, VT",
   description:
     "Give the gift of a spotless vehicle. Digital gift cards from $10 — delivered by email instantly. Redeemable on any mobile auto, boat, or RV detailing service in Vermont.",
   keywords: [
@@ -12,15 +12,15 @@ export const metadata: Metadata = {
     "detailing gift idea Vermont",
   ],
   openGraph: {
-    title: "Auto Detailing Gift Cards | Arise & Shine VT",
+    title: "Auto Detailing Gift Cards | Arise And Shine Detailing",
     description:
       "Digital gift cards from $10. Delivered by email instantly. Redeemable on any detail.",
-    url: "https://www.ariseandshinevt.com/gift-cards",
-    siteName: "Arise & Shine VT",
+    url: "https://www.ariseandshinedetailing.com/gift-cards",
+    siteName: "Arise And Shine Detailing",
     locale: "en_US",
     type: "website",
   },
-  alternates: { canonical: "https://www.ariseandshinevt.com/gift-cards" },
+  alternates: { canonical: "https://www.ariseandshinedetailing.com/gift-cards" },
 };
 
 export default function GiftCardsLayout({ children }: { children: React.ReactNode }) {

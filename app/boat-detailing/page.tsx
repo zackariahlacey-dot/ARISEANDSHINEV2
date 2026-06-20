@@ -6,7 +6,7 @@ import type { Service } from "@/app/page";
 import { BOAT_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
-  title: "Mobile Boat Detailing Vermont | Lake Champlain Specialists | Arise & Shine VT",
+  title: "Mobile Boat Detailing Vermont | Lake Champlain Specialists | Arise And Shine Detailing",
   description:
     "Mobile boat detailing in Vermont — dockside on Lake Champlain, Mallets Bay, Shelburne Bay & statewide. Boat Interior $15/ft · Boat Exterior $16/ft · Boat Full Detail $28/ft. Lake-safe products, no trailering required.",
   keywords: [
@@ -29,12 +29,12 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Mobile Boat Detailing Vermont | Lake Champlain Specialists",
     description: "Dockside boat detailing — Interior $15/ft · Exterior $16/ft · Full Detail $28/ft. We come to your slip or driveway. Lake-safe products, statewide service.",
-    url: "https://ariseandshinevt.com/boat-detailing",
-    siteName: "Arise & Shine VT",
+    url: "https://ariseandshinedetailing.com/boat-detailing",
+    siteName: "Arise And Shine Detailing",
     locale: "en_US",
     type: "website",
   },
-  alternates: { canonical: "https://ariseandshinevt.com/boat-detailing" },
+  alternates: { canonical: "https://ariseandshinedetailing.com/boat-detailing" },
 };
 
 async function DataProvider() {

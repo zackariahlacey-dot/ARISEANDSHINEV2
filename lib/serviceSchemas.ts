@@ -5,10 +5,10 @@
  */
 
 const BUSINESS = {
-  name: "Arise & Shine VT",
-  url: "https://www.ariseandshinevt.com",
+  name: "Arise And Shine Detailing",
+  url: "https://www.ariseandshinedetailing.com",
   telephone: "+18025855563",
-  image: "https://www.ariseandshinevt.com/aasbanner.png",
+  image: "https://www.ariseandshinedetailing.com/aasbanner.png",
 };
 
 const AREA_SERVED = [
@@ -92,7 +92,7 @@ export const AUTO_DETAILING_SCHEMA = buildServiceSchema({
   name: "Mobile Auto Detailing",
   description:
     "Professional mobile car detailing in Vermont — Interior, Exterior, and Basic Interior + Exterior packages. We come to your home, office, or driveway anywhere in Chittenden County and beyond.",
-  url: "https://www.ariseandshinevt.com/detailing",
+  url: "https://www.ariseandshinedetailing.com/detailing",
   lowPrice: 130,
   highPrice: 400,
   serviceType: "Auto Detailing",
@@ -102,7 +102,7 @@ export const BOAT_DETAILING_SCHEMA = buildServiceSchema({
   name: "Mobile Boat Detailing",
   description:
     "Per-foot marine detailing in Vermont — interior, exterior, and full boat detailing using lake-safe products. Dockside on Lake Champlain, Mallets Bay, Shelburne Bay, and statewide. We come to your slip, marina, or driveway.",
-  url: "https://www.ariseandshinevt.com/boat-detailing",
+  url: "https://www.ariseandshinedetailing.com/boat-detailing",
   lowPrice: 15,
   highPrice: 28,
   unitCode: "FOT",
@@ -113,7 +113,7 @@ export const RV_DETAILING_SCHEMA = buildServiceSchema({
   name: "Mobile RV Detailing",
   description:
     "Per-foot RV and motorhome detailing in Vermont — full exterior wash & seal, full interior reset, and complete inside-and-out detailing. We come to your campsite, dealer lot, or driveway statewide.",
-  url: "https://www.ariseandshinevt.com/rv-detailing",
+  url: "https://www.ariseandshinedetailing.com/rv-detailing",
   lowPrice: 15,
   highPrice: 38,
   unitCode: "FOT",

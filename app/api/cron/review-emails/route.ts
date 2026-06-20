@@ -16,8 +16,8 @@ import { Resend } from "resend";
 import { getReviewRequestHtml } from "@/emails/ReviewRequest";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const SUBJECT = "How's the shine holding up? ✨ — Arise & Shine VT";
+const FROM = "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const SUBJECT = "How's the shine holding up? ✨ — Arise And Shine Detailing";
 
 export async function GET(req: NextRequest) {
   // ── Auth: only Vercel cron (or manual calls with the secret) ─────────────
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
         to: toEmail,
         subject: SUBJECT,
         html,
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
       });
 
       if (sendErr) throw sendErr;

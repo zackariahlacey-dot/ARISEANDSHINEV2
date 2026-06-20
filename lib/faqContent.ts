@@ -2,7 +2,7 @@ export const FAQ_SECTIONS = [
   {
     category: "Booking & Scheduling",
     items: [
-      { q: "How do I book an appointment?", a: "Book online anytime at ariseandshinevt.com — pick your service, choose a date and time, and pay online or at arrival. You'll get a confirmation email right away with all your appointment details." },
+      { q: "How do I book an appointment?", a: "Book online anytime at ariseandshinedetailing.com — pick your service, choose a date and time, and pay online or at arrival. You'll get a confirmation email right away with all your appointment details." },
       { q: "How much notice do I need?", a: "We typically have openings within the same week. The online calendar shows real-time availability, so you can book as soon as tonight for an upcoming slot — or plan ahead weeks in advance." },
       { q: "Can I cancel or reschedule?", a: "Yes. You can reschedule directly from your account dashboard, or reach out to us by phone or email. We just ask for as much notice as possible so we can fill the slot." },
       { q: "Do I need an account to book?", a: "Nope — you can book as a guest using just your phone number and email. Creating a free account lets you track your loyalty tier, view all your bookings, and request a monthly plan." },
@@ -23,7 +23,7 @@ export const FAQ_SECTIONS = [
     items: [
       { q: "How is pricing determined?", a: "Standard vehicle pricing is based on vehicle size — compact/sedan, mid-size SUV, full-size SUV/truck, or oversized. Boat and RV pricing is per linear foot with a minimum. All pricing is shown upfront before you book — no surprises." },
       { q: "What forms of payment do you accept?", a: "All major credit and debit cards online via Stripe. If you prefer, you can also pay cash or card in person at arrival — just select 'Pay at Arrival' when booking." },
-      { q: "Do you offer gift cards?", a: "Yes! Gift cards are available in any amount at ariseandshinevt.com/gift-cards. Perfect for birthdays, Father's Day, or anyone who deserves a clean vehicle." },
+      { q: "Do you offer gift cards?", a: "Yes! Gift cards are available in any amount at ariseandshinedetailing.com/gift-cards. Perfect for birthdays, Father's Day, or anyone who deserves a clean vehicle." },
       { q: "Are there any travel fees?", a: "For locations within our primary service area, there's no travel fee. Longer-distance appointments may include a small travel charge — this is calculated and shown at checkout before you confirm." },
     ],
   },

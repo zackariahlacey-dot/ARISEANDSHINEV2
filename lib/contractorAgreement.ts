@@ -43,7 +43,7 @@ export type AgreementContext = {
   contractorLegalName: string;
   contractorEmail: string;
   effectiveDate: string;              // YYYY-MM-DD
-  businessName?: string;              // default "Arise & Shine VT"
+  businessName?: string;              // default "Arise And Shine Detailing"
   businessAddress?: string;
   governingState?: string;            // default "Vermont"
   nonSolicitationMonths?: number;     // default 24
@@ -271,7 +271,7 @@ function disclaimerBanner(ctx: AgreementContext): string {
 }
 
 function preamble(def: DocDefinition, ctx: AgreementContext): string {
-  const business = esc(ctx.businessName ?? "Arise & Shine VT");
+  const business = esc(ctx.businessName ?? "Arise And Shine Detailing");
   const address  = ctx.businessAddress ? `, located at ${esc(ctx.businessAddress)}` : "";
   const name     = esc(ctx.contractorLegalName);
   const email    = esc(ctx.contractorEmail);

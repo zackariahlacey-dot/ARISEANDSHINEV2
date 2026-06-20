@@ -520,7 +520,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
       {/* Footer */}
       <footer className="border-t border-white/[0.04] py-6 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600">
-          <span>© 2025 Arise And Shine VT · Mobile Detailing · Vermont</span>
+          <span>© 2025 Arise And Shine Detailing · Mobile Detailing · Vermont</span>
           <Link href="/" className="hover:text-[#D4AF37] transition-colors">← Back to Home</Link>
         </div>
       </footer>

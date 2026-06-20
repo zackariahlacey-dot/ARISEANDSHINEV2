@@ -35,7 +35,7 @@ export async function purchaseGiftCard(input: PurchaseGiftCardInput): Promise<
             currency: "usd",
             unit_amount: Math.round(input.amount * 100),
             product_data: {
-              name: `Arise & Shine VT Gift Card — $${input.amount}`,
+              name: `Arise And Shine Detailing Gift Card — $${input.amount}`,
               description: input.recipientName
                 ? `Gift for ${input.recipientName}`
                 : "Can be applied at checkout for any detailing service",

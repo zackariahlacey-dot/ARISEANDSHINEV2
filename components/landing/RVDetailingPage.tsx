@@ -707,7 +707,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
       {/* Footer */}
       <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-28 md:pb-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 text-xs text-zinc-600 text-center sm:text-left">
-          <span>© 2025 Arise And Shine VT · Vermont</span>
+          <span>© 2025 Arise And Shine Detailing · Vermont</span>
           <Link href="/" className="hover:text-[#D4AF37] transition-colors">← Back to Home</Link>
         </div>
       </footer>

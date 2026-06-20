@@ -74,7 +74,7 @@ export function AgreementPrintShell({ agreementHtml, meta }: { agreementHtml: st
       <div className="print-sheet max-w-3xl mx-auto bg-white text-zinc-900 px-10 py-10 rounded shadow-xl border border-zinc-300" style={{ fontFamily: "ui-serif, Georgia, serif" }}>
         {/* Header — visible both on screen and in print */}
         <div className="text-center pb-6 mb-6 border-b-2 border-zinc-900">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">Arise & Shine VT</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">Arise And Shine Detailing</p>
           <h1 className="text-xl font-black uppercase tracking-wider">{docTitle}</h1>
           <p className="text-[11px] text-zinc-600 mt-1">
             Template {meta.version}
@@ -106,7 +106,7 @@ export function AgreementPrintShell({ agreementHtml, meta }: { agreementHtml: st
             </tbody>
           </table>
           <p className="mt-5 text-[10px] text-zinc-500 leading-relaxed">
-            Electronic signature recorded under the federal Electronic Signatures in Global and National Commerce Act (E-SIGN) and Vermont's Uniform Electronic Transactions Act (UETA). The contractor named above typed their full legal name into the signature field on Arise &amp; Shine's contractor portal and submitted the signing form, indicating intent to be bound by the terms above. This record is retained as evidence of acceptance.
+            Electronic signature recorded under the federal Electronic Signatures in Global and National Commerce Act (E-SIGN) and Vermont's Uniform Electronic Transactions Act (UETA). The contractor named above typed their full legal name into the signature field on Arise And Shine Detailing's contractor portal and submitted the signing form, indicating intent to be bound by the terms above. This record is retained as evidence of acceptance.
           </p>
         </div>
       </div>

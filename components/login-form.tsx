@@ -55,7 +55,7 @@ export function LoginForm({
         <div className="text-center mb-8">
           <Image
             src="/e.png"
-            alt="Arise and Shine VT"
+            alt="Arise And Shine Detailing"
             width={54}
             height={54}
             className="mx-auto mb-6 drop-shadow-2xl"

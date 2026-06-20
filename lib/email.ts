@@ -6,12 +6,12 @@ import { getTier, detailsToNextTier } from "@/lib/loyalty";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const BUSINESS_EMAIL = "contact@ariseandshinevt.com";
+const BUSINESS_EMAIL = "contact@ariseandshinedetailing.com";
 
-/** Verified "from" sender — must use verified domain (ariseandshinevt.com) in Resend; production API key in RESEND_API_KEY */
+/** Verified "from" sender — must use verified domain (ariseandshinedetailing.com) in Resend; production API key in RESEND_API_KEY */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const REPLY_TO = "contact@ariseandshinevt.com";
+  process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const REPLY_TO = "contact@ariseandshinedetailing.com";
 
 /** Owner inbox for new booking notifications. Override with ADMIN_EMAIL env var. */
 const OWNER_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
@@ -132,11 +132,11 @@ const logo = `
   <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 14px auto;">
     <tr>
       <td align="center">
-        <img src="${LOGO_URL}" alt="Arise And Shine VT" width="120" height="120" style="display:block;margin:0 auto;width:120px;height:auto;max-width:120px;" />
+        <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="120" height="120" style="display:block;margin:0 auto;width:120px;height:auto;max-width:120px;" />
       </td>
     </tr>
   </table>
-  <p style="color:#d4af37;font-size:17px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine VT</p>
+  <p style="color:#d4af37;font-size:17px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine Detailing</p>
   <p style="color:#a1a1aa;font-size:11px;margin:5px 0 0;letter-spacing:0.2em;text-transform:uppercase;">Premium Mobile Auto Detailing</p>
 `;
 
@@ -144,14 +144,14 @@ const footer = `
   <tr>
     <td style="padding:32px 16px;text-align:center;background-color:#18181b;border-top:1px solid #27272a;">
       <p style="font-size:12px;color:#fafafa;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:0.1em;">
-        Arise And Shine VT
+        Arise And Shine Detailing
       </p>
       <p style="font-size:11px;color:#71717a;margin:6px 0 0;text-transform:uppercase;letter-spacing:0.05em;">
         Mobile Auto Detailing &middot; Serving all of Vermont
       </p>
       <div style="margin:20px 0;height:1px;background-color:#27272a;width:60px;display:inline-block;"></div>
       <p style="font-size:11px;color:#52525b;margin:0;">
-        &copy; 2026 Arise And Shine VT. All rights reserved.
+        &copy; 2026 Arise And Shine Detailing. All rights reserved.
         <br/>
         <a href="mailto:${BUSINESS_EMAIL}" style="color:#d4af37;text-decoration:none;font-weight:700;">${BUSINESS_EMAIL}</a>
       </p>
@@ -195,7 +195,7 @@ function customerEmailHtml(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Your Arise And Shine VT Booking is Confirmed</title>
+  <title>Your Arise And Shine Detailing Booking is Confirmed</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -251,7 +251,7 @@ function customerEmailHtml(
                 Hi ${firstName},
               </p>
               <p style="font-size:14px;color:#666666;margin:0 0 32px;line-height:1.7;">
-                Thanks for choosing Arise And Shine VT! Your booking is locked in
+                Thanks for choosing Arise And Shine Detailing! Your booking is locked in
                 and we can't wait to take care of your vehicle. Here's a full summary
                 of your appointment.
               </p>
@@ -454,7 +454,7 @@ function adminEmailHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>New Booking — Arise And Shine VT</title>
+  <title>New Booking — Arise And Shine Detailing</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -572,7 +572,7 @@ function onMyWayHtml(data: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>On My Way — Arise And Shine VT</title>
+  <title>On My Way — Arise And Shine Detailing</title>
 </head>
 <body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#09090b;">
@@ -581,7 +581,7 @@ function onMyWayHtml(data: {
         <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#18181b;border:1px solid #d4af37;border-radius:12px;overflow:hidden;">
           <tr>
             <td style="padding:28px 32px 16px;text-align:center;">
-              <img src="${LOGO_URL}" alt="Arise And Shine VT" width="80" height="80" style="display:block;margin:0 auto;" />
+              <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="80" height="80" style="display:block;margin:0 auto;" />
             </td>
           </tr>
           <tr>
@@ -625,7 +625,7 @@ export async function sendOnMyWayEmailNotification(data: {
     from: FROM_ADDRESS,
     to: data.customerEmail,
     replyTo: REPLY_TO,
-    subject: `On My Way! 🚗 — Arise And Shine VT`,
+    subject: `On My Way! 🚗 — Arise And Shine Detailing`,
     html: onMyWayHtml(data),
   });
 }
@@ -648,7 +648,7 @@ function customerCancellationHtml(data: CancellationEmailData, formattedDate: st
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Booking Cancelled — Arise And Shine VT</title>
+  <title>Booking Cancelled — Arise And Shine Detailing</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -679,7 +679,7 @@ function customerCancellationHtml(data: CancellationEmailData, formattedDate: st
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f7f7;border-radius:12px;">
                 <tr>
                   <td style="padding:24px;text-align:center;">
-                    <a href="mailto:${BUSINESS_EMAIL}" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:700;padding:11px 28px;border-radius:8px;text-decoration:none;">Contact Arise And Shine VT</a>
+                    <a href="mailto:${BUSINESS_EMAIL}" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:700;padding:11px 28px;border-radius:8px;text-decoration:none;">Contact Arise And Shine Detailing</a>
                   </td>
                 </tr>
               </table>
@@ -701,7 +701,7 @@ function adminCancellationHtml(customerName: string, formattedDate: string): str
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Booking Cancelled — Arise And Shine VT Admin</title>
+  <title>Booking Cancelled — Arise And Shine Detailing Admin</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -729,7 +729,7 @@ function adminCancellationHtml(customerName: string, formattedDate: string): str
 
 /**
  * Sends customer cancellation email and admin notification.
- * From: notifications@ariseandshinevt.com. Failures are logged but do not throw.
+ * From: notifications@ariseandshinedetailing.com. Failures are logged but do not throw.
  */
 export async function sendBookingCancellationEmails(data: CancellationEmailData): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
@@ -745,7 +745,7 @@ export async function sendBookingCancellationEmails(data: CancellationEmailData)
           from: FROM_ADDRESS,
           to: data.customerEmail,
           replyTo: REPLY_TO,
-          subject: `Your Arise And Shine VT Booking Has Been Cancelled — ${formattedDate}`,
+          subject: `Your Arise And Shine Detailing Booking Has Been Cancelled — ${formattedDate}`,
           html: customerCancellationHtml(data, formattedDate),
         })
       : Promise.resolve(null),
@@ -801,7 +801,7 @@ function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Booking Updated — Arise And Shine VT</title>
+  <title>Booking Updated — Arise And Shine Detailing</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -844,7 +844,7 @@ function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f7f7;border-radius:12px;">
                 <tr>
                   <td style="padding:24px;text-align:center;">
-                    <a href="mailto:${BUSINESS_EMAIL}" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:700;padding:11px 28px;border-radius:8px;text-decoration:none;">Contact Arise And Shine VT</a>
+                    <a href="mailto:${BUSINESS_EMAIL}" style="display:inline-block;background-color:#111111;color:#ffffff;font-size:13px;font-weight:700;padding:11px 28px;border-radius:8px;text-decoration:none;">Contact Arise And Shine Detailing</a>
                   </td>
                 </tr>
               </table>
@@ -861,7 +861,7 @@ function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string
 
 /**
  * Sends "Updated Booking" email to customer after reschedule.
- * From: notifications@ariseandshinevt.com
+ * From: notifications@ariseandshinedetailing.com
  */
 export async function sendUpdatedBookingEmail(data: UpdatedBookingEmailData): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
@@ -874,7 +874,7 @@ export async function sendUpdatedBookingEmail(data: UpdatedBookingEmailData): Pr
     from: FROM_ADDRESS,
     to: data.customerEmail,
     replyTo: REPLY_TO,
-    subject: `Arise And Shine VT — Your booking has been updated: ${formattedDate} at ${data.newTime}`,
+    subject: `Arise And Shine Detailing — Your booking has been updated: ${formattedDate} at ${data.newTime}`,
     html: updatedBookingHtml(data, formattedDate),
   });
   if (result.error) {
@@ -897,7 +897,7 @@ function adminDeletionAuditHtml(data: DeletionAuditData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Booking Permanently Deleted — Arise And Shine VT</title>
+  <title>Booking Permanently Deleted — Arise And Shine Detailing</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -910,7 +910,7 @@ function adminDeletionAuditHtml(data: DeletionAuditData): string {
           <tr>
             <td style="background-color:#27272a;padding:28px 40px;border-radius:0 0 16px 16px;">
               <p style="color:#e4e4e7;font-size:14px;margin:0 0 12px;line-height:1.6;">
-                <strong style="color:#fafafa;">Arise And Shine VT</strong> — Security &amp; audit notification
+                <strong style="color:#fafafa;">Arise And Shine Detailing</strong> — Security &amp; audit notification
               </p>
               <p style="color:#e4e4e7;font-size:16px;margin:0;line-height:1.6;">
                 The booking record for <strong style="color:#fafafa;">${esc(data.customerName)}</strong> (Ref: #${esc(data.bookingId.slice(0, 8))}, ${esc(data.bookingDate)}) has been permanently removed from the database. This action was taken from the admin dashboard. The record has been wiped for security and audit purposes.
@@ -928,7 +928,7 @@ function adminDeletionAuditHtml(data: DeletionAuditData): string {
 
 /**
  * Sends admin audit email after a booking is permanently deleted.
- * To: zackariahlacey@gmail.com. From: Arise And Shine VT notifications.
+ * To: zackariahlacey@gmail.com. From: Arise And Shine Detailing notifications.
  */
 export async function sendBookingDeletionAuditEmail(data: DeletionAuditData): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
@@ -939,7 +939,7 @@ export async function sendBookingDeletionAuditEmail(data: DeletionAuditData): Pr
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: OWNER_EMAIL,
-    subject: `Arise And Shine VT — Booking permanently deleted: ${data.customerName}`,
+    subject: `Arise And Shine Detailing — Booking permanently deleted: ${data.customerName}`,
     html: adminDeletionAuditHtml(data),
   });
   if (result.error) {
@@ -1017,7 +1017,7 @@ function jobCompletedHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Service Completed — Arise And Shine VT</title>
+  <title>Service Completed — Arise And Shine Detailing</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1069,7 +1069,7 @@ function jobCompletedHtml(
               </p>
               <p style="font-size:14px;color:#666666;margin:0 0 32px;line-height:1.7;">
                 Your <strong>${esc(data.serviceName)}</strong> is complete! We hope you love the results. 
-                Thank you for choosing Arise And Shine VT for your detailing needs. 
+                Thank you for choosing Arise And Shine Detailing for your detailing needs. 
                 Below is your receipt for the service.
               </p>
 
@@ -1157,7 +1157,7 @@ export async function sendJobCompletedEmail(data: {
     from: FROM_ADDRESS,
     to: data.customerEmail,
     replyTo: REPLY_TO,
-    subject: `Service Completed — Your Arise And Shine VT Receipt`,
+    subject: `Service Completed — Your Arise And Shine Detailing Receipt`,
     html: jobCompletedHtml(data),
   });
   if (result.error) {
@@ -1179,7 +1179,7 @@ export async function sendReviewFollowupEmail(data: {
     from: FROM_ADDRESS,
     to: data.customerEmail,
     replyTo: REPLY_TO,
-    subject: `How's the shine holding up? ✨ — Arise And Shine VT`,
+    subject: `How's the shine holding up? ✨ — Arise And Shine Detailing`,
     html: getReviewRequestHtml(data.customerName),
   });
 }
@@ -1218,7 +1218,7 @@ function reminderEmailHtml(data: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${headline} — Arise And Shine VT</title>
+  <title>${headline} — Arise And Shine Detailing</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1336,7 +1336,7 @@ function giftCardEmailHtml(data: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Your Arise And Shine VT Gift Card</title>
+  <title>Your Arise And Shine Detailing Gift Card</title>
 </head>
 <body style="${base}">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -1355,7 +1355,7 @@ function giftCardEmailHtml(data: {
                 You've Got a Gift Card!
               </h1>
               <p style="color:#999999;font-size:14px;margin:0;line-height:1.5;">
-                <strong style="color:#ffffff;">$${esc(data.amount)}</strong> toward any Arise &amp; Shine VT detailing service
+                <strong style="color:#ffffff;">$${esc(data.amount)}</strong> toward any Arise And Shine Detailing detailing service
               </p>
             </td>
           </tr>
@@ -1365,7 +1365,7 @@ function giftCardEmailHtml(data: {
               <p style="font-size:14px;color:#666666;margin:0 0 28px;line-height:1.7;">
                 You've received a gift card from <strong>${esc(data.purchaserEmail)}</strong>
                 — good for <strong>$${esc(data.amount)}</strong> toward any mobile auto detailing
-                service with Arise &amp; Shine VT. Use it at checkout!
+                service with Arise And Shine Detailing. Use it at checkout!
               </p>
 
               <!-- Gift card code display -->
@@ -1391,7 +1391,7 @@ function giftCardEmailHtml(data: {
               </table>
 
               <p style="font-size:13px;color:#888888;margin:0 0 28px;line-height:1.6;text-align:center;">
-                Enter this code at checkout when booking on ariseandshinevt.com.<br/>
+                Enter this code at checkout when booking on ariseandshinedetailing.com.<br/>
                 Gift cards never expire and can be partially redeemed.
               </p>
 
@@ -1399,7 +1399,7 @@ function giftCardEmailHtml(data: {
                      style="background-color:#f7f7f7;border-radius:12px;margin-bottom:0;">
                 <tr>
                   <td style="padding:24px;text-align:center;">
-                    <a href="https://ariseandshinevt.com/#services"
+                    <a href="https://ariseandshinedetailing.com/#services"
                        style="display:inline-block;background-color:#d4af37;color:#111111;
                               font-size:14px;font-weight:900;padding:13px 32px;
                               border-radius:8px;text-decoration:none;letter-spacing:0.3px;">
@@ -1443,7 +1443,7 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<void> 
     from: FROM_ADDRESS,
     to: data.toEmail,
     replyTo: REPLY_TO,
-    subject: `Your $${data.amount} Arise & Shine VT Gift Card — Code Inside`,
+    subject: `Your $${data.amount} Arise And Shine Detailing Gift Card — Code Inside`,
     html: giftCardEmailHtml({
       recipientName: data.recipientName,
       purchaserEmail: data.purchaserEmail,
@@ -1485,7 +1485,7 @@ export async function sendBookingEmails(
           from: FROM_ADDRESS,
           to: data.customerEmail,
           replyTo: REPLY_TO,
-          subject: `Your Arise And Shine VT Booking is Confirmed — ${formattedDate}`,
+          subject: `Your Arise And Shine Detailing Booking is Confirmed — ${formattedDate}`,
           html: customerEmailHtml(data, formattedDate, shortRef),
         })
       : Promise.resolve(null),
@@ -1737,7 +1737,7 @@ function paymentOwnerHtml(data: PaymentReceivedData, formattedDate: string, shor
 
           <tr>
             <td style="background-color:#0a0a0a;border-radius:16px 16px 0 0;padding:24px 40px;text-align:center;">
-              <p style="color:#d4af37;font-size:11px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;margin:0;">Arise &amp; Shine VT</p>
+              <p style="color:#d4af37;font-size:11px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;margin:0;">Arise And Shine Detailing</p>
             </td>
           </tr>
 
@@ -1981,13 +1981,13 @@ export async function sendPriceUpdatedEmail(data: {
 
   const html = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Price Update — Arise & Shine VT</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Price Update — Arise And Shine Detailing</title></head>
 <body style="margin:0;padding:0;background-color:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr><td align="center" style="padding:40px 16px;">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
         <tr><td style="background:#0a0a0a;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
-          <span style="color:#f59e0b;font-size:22px;font-weight:900;letter-spacing:-0.5px;">Arise &amp; Shine VT</span>
+          <span style="color:#f59e0b;font-size:22px;font-weight:900;letter-spacing:-0.5px;">Arise And Shine Detailing</span>
         </td></tr>
         <tr><td style="background:#111;padding:32px 40px;text-align:center;border-bottom:1px solid #1e1e1e;">
           <h1 style="color:#fff;font-size:22px;font-weight:900;margin:0 0 6px;">Price Updated</h1>
@@ -2059,7 +2059,7 @@ const WINBACK_COPY: Record<30 | 60 | 90, { subject: string; headline: string; su
 function winbackEmailHtml(name: string, days: 30 | 60 | 90): string {
   const copy = WINBACK_COPY[days];
   const n = esc(name);
-  const bookingUrl = "https://ariseandshinevt.com";
+  const bookingUrl = "https://ariseandshinedetailing.com";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

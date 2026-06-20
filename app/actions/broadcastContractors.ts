@@ -5,7 +5,7 @@ import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const FROM = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const FROM = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 
 async function requireAdmin(): Promise<{ ok: true; userId: string; ip: string | null } | { ok: false; error: string }> {
   const sb = await createClient();
@@ -95,7 +95,7 @@ export async function broadcastToContractors(args: {
       const res = await resend.emails.send({
         from: FROM,
         to: r.email,
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
         subject: cleanSubject,
         html,
       });
@@ -144,13 +144,13 @@ function broadcastHtml({ firstName, bodyText }: { firstName: string; bodyText: s
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td style="background:#0a0a0a;padding:24px 28px;border-radius:14px 14px 0 0;">
-          <p style="color:#d4af37;font-size:13px;font-weight:900;margin:0;letter-spacing:0.18em;text-transform:uppercase;">Arise &amp; Shine VT</p>
+          <p style="color:#d4af37;font-size:13px;font-weight:900;margin:0;letter-spacing:0.18em;text-transform:uppercase;">Arise And Shine Detailing</p>
           <p style="color:#888;font-size:10px;margin:4px 0 0;letter-spacing:0.15em;text-transform:uppercase;">Contractor update</p>
         </td></tr>
         <tr><td style="background:#fff;padding:26px 28px;border-radius:0 0 14px 14px;">
           <p style="font-size:14px;color:#333;margin:0 0 14px;">Hi ${escName},</p>
           <div style="font-size:14px;color:#333;line-height:1.65;">${escaped}</div>
-          <p style="font-size:12px;color:#666;margin:24px 0 0;">— Arise &amp; Shine VT</p>
+          <p style="font-size:12px;color:#666;margin:24px 0 0;">— Arise And Shine Detailing</p>
         </td></tr>
       </table>
     </td></tr></table>

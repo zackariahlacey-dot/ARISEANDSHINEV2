@@ -124,7 +124,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   const data = event.data
     ? event.data.json()
-    : { title: 'Arise & Shine VT', body: 'You have a new notification.' };
+    : { title: 'Arise And Shine Detailing', body: 'You have a new notification.' };
 
   event.waitUntil(
     self.registration.showNotification(data.title, {

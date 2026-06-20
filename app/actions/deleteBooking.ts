@@ -9,7 +9,7 @@ export async function deleteBooking(bookingId: string): Promise<{
   customerName?: string;
 }> {
   if (!bookingId?.trim()) {
-    return { success: false, error: "Arise And Shine VT: Booking ID is required." };
+    return { success: false, error: "Arise And Shine Detailing: Booking ID is required." };
   }
 
   const supabase = createAdminClient();
@@ -24,7 +24,7 @@ export async function deleteBooking(bookingId: string): Promise<{
 
   if (fetchError || !booking) {
     console.error("[deleteBooking] fetch:", fetchError);
-    return { success: false, error: "Arise And Shine VT: Booking not found." };
+    return { success: false, error: "Arise And Shine Detailing: Booking not found." };
   }
 
   const profile = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
@@ -44,7 +44,7 @@ export async function deleteBooking(bookingId: string): Promise<{
 
   if (deleteError) {
     console.error("[deleteBooking] delete:", deleteError);
-    return { success: false, error: "Arise And Shine VT: Failed to delete booking." };
+    return { success: false, error: "Arise And Shine Detailing: Failed to delete booking." };
   }
 
   await sendBookingDeletionAuditEmail({

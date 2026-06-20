@@ -28,7 +28,7 @@ export async function createPayCheckout(params: {
     if (base <= 0) return { error: "Invalid booking amount." };
 
     const tip = Math.max(0, Math.round(tipAmount * 100)) / 100;
-    const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+    const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
 
     const vehicleStr = [booking.vehicle_year, booking.vehicle_make, booking.vehicle_model].filter(Boolean).join(" ");
 

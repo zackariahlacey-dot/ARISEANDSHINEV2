@@ -12,7 +12,7 @@ export default function NotFound() {
     >
       <Image
         src={LOGO_URL}
-        alt="Arise And Shine VT"
+        alt="Arise And Shine Detailing"
         width={120}
         height={120}
         className="mb-8 object-contain"

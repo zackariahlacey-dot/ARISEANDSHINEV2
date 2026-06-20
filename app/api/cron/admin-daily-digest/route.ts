@@ -22,7 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const FROM = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const FROM = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 
 function ownerEmail(): string {
   return (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com")
@@ -224,7 +224,7 @@ function digestHtml(data: {
         <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:14px;overflow:hidden;">
 
           <tr><td style="padding:24px 28px;text-align:center;background:#000;border-bottom:1px solid #2a2a2a;">
-            <p style="margin:0;color:#d4af37;font-size:11px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;">Arise &amp; Shine VT</p>
+            <p style="margin:0;color:#d4af37;font-size:11px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;">Arise And Shine Detailing</p>
             <h1 style="margin:6px 0 0;color:#fff;font-size:18px;font-weight:900;">Daily Digest — ${esc(data.todayLabel)}</h1>
           </td></tr>
 
@@ -298,7 +298,7 @@ function digestHtml(data: {
             ).join("") : ""}
 
             <tr><td style="padding:22px 0 0;border-top:1px solid #2a2a2a;text-align:center;">
-              <a href="${(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "")}/admin" style="display:inline-block;padding:12px 28px;background:#d4af37;color:#000;font-size:12px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;border-radius:8px;">Open admin</a>
+              <a href="${(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "")}/admin" style="display:inline-block;padding:12px 28px;background:#d4af37;color:#000;font-size:12px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;border-radius:8px;">Open admin</a>
               <p style="margin:14px 0 0;font-size:10px;color:#555;">You're receiving this because you're the owner. To turn off, set ADMIN_DIGEST_DISABLED=true.</p>
             </td></tr>
 

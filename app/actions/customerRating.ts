@@ -18,7 +18,7 @@ function genToken(): string {
 }
 
 function siteOrigin(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
 }
 
 /**
@@ -112,9 +112,9 @@ export async function sendRatingEmail(ratingId: string): Promise<{ ok: boolean; 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await resend.emails.send({
-        from: process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>",
+        from: process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>",
         to: email,
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
         subject: `How did we do, ${firstName}? Plus $${COUPON_VALUE_DOLLARS} off your next detail`,
         html,
       });
@@ -343,7 +343,7 @@ async function sendLowRatingAlert(args: { ratingId: string; overall: number; att
   </body></html>`;
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>",
+    from: process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>",
     to: ownerEmail,
     subject,
     html,
@@ -357,7 +357,7 @@ function ratingEmailHtml({ firstName, vehicle, link, couponValue }: { firstName:
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td style="background:#0a0a0a;padding:28px 32px;border-radius:14px 14px 0 0;text-align:center;">
-          <p style="color:#d4af37;font-size:13px;font-weight:900;margin:0;letter-spacing:0.18em;text-transform:uppercase;">Arise &amp; Shine VT</p>
+          <p style="color:#d4af37;font-size:13px;font-weight:900;margin:0;letter-spacing:0.18em;text-transform:uppercase;">Arise And Shine Detailing</p>
           <h1 style="color:#fff;font-size:22px;font-weight:900;margin:8px 0 0;">How did we do, ${firstName}?</h1>
         </td></tr>
         <tr><td style="background:#fff;padding:28px 32px;border-radius:0 0 14px 14px;">

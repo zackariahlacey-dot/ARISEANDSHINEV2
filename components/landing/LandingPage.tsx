@@ -1592,13 +1592,13 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             <div className="flex items-center gap-3">
               <Image
                 src="/e.png"
-                alt="Arise And Shine VT Logo"
+                alt="Arise And Shine Detailing Logo"
                 width={40}
                 height={40}
                 className="object-contain drop-shadow-md shrink-0"
               />
               <div>
-                <div className="font-semibold text-sm">Arise And Shine VT</div>
+                <div className="font-semibold text-sm">Arise And Shine Detailing</div>
                 <div className="text-xs text-zinc-500">
                   Premium Mobile Auto Detailing
                 </div>
@@ -1608,10 +1608,10 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             <div className="text-sm text-zinc-500 text-center">
               Serving all of Vermont &middot;{" "}
               <a
-                href="mailto:contact@ariseandshinevt.com"
+                href="mailto:contact@ariseandshinedetailing.com"
                 className="hover:text-white transition-colors"
               >
-                contact@ariseandshinevt.com
+                contact@ariseandshinedetailing.com
               </a>
               {" "}&middot;{" "}
               <a
@@ -1623,7 +1623,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             </div>
 
             <div className="text-xs text-zinc-700">
-              &copy; 2026 Arise And Shine VT. All rights reserved.
+              &copy; 2026 Arise And Shine Detailing. All rights reserved.
             </div>
           </div>
 
@@ -1767,7 +1767,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         onClose={() => setLegalModal(null)}
         title="Privacy Policy"
       >
-        <p className="text-zinc-500 text-xs">Last updated: March 2026 &nbsp;·&nbsp; Arise And Shine VT</p>
+        <p className="text-zinc-500 text-xs">Last updated: March 2026 &nbsp;·&nbsp; Arise And Shine Detailing</p>
 
         <LegalSection title="1. Information We Collect">
           <p className="mb-2">When you book a service or contact us, we collect the following information solely for the purpose of providing and improving our detailing services:</p>
@@ -1792,7 +1792,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         <LegalSection title="3. Payment Information">
           <p>
             All payments are securely processed by <span className="text-zinc-200 font-medium">Stripe</span>, a PCI-DSS compliant payment processor.{" "}
-            <strong className="text-zinc-200">Arise And Shine VT does not store, log, or have access to your full card number, CVV, or other sensitive payment data.</strong>{" "}
+            <strong className="text-zinc-200">Arise And Shine Detailing does not store, log, or have access to your full card number, CVV, or other sensitive payment data.</strong>{" "}
             Stripe&apos;s privacy policy governs how payment data is handled.
           </p>
         </LegalSection>
@@ -1807,7 +1807,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </LegalSection>
 
         <LegalSection title="5. Data Retention">
-          <p>We retain your booking and profile information for up to 3 years to maintain service history and loyalty rewards. You may request deletion of your data at any time by emailing us at <span className="text-zinc-200">contact@ariseandshinevt.com</span>.</p>
+          <p>We retain your booking and profile information for up to 3 years to maintain service history and loyalty rewards. You may request deletion of your data at any time by emailing us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span>.</p>
         </LegalSection>
 
         <LegalSection title="6. Cookies & Analytics">
@@ -1815,7 +1815,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </LegalSection>
 
         <LegalSection title="7. Contact Us">
-          <p>If you have questions about this Privacy Policy, please contact us at <span className="text-zinc-200">contact@ariseandshinevt.com</span> or by phone at <span className="text-zinc-200">802-585-5563</span>.</p>
+          <p>If you have questions about this Privacy Policy, please contact us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span> or by phone at <span className="text-zinc-200">802-585-5563</span>.</p>
         </LegalSection>
       </LegalModal>
 
@@ -1825,11 +1825,11 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         onClose={() => setLegalModal(null)}
         title="Terms of Service"
       >
-        <p className="text-zinc-500 text-xs">Last updated: March 2026 &nbsp;·&nbsp; Arise And Shine VT</p>
-        <p>By booking a service with Arise And Shine VT, you agree to the following terms. Please read them carefully.</p>
+        <p className="text-zinc-500 text-xs">Last updated: March 2026 &nbsp;·&nbsp; Arise And Shine Detailing</p>
+        <p>By booking a service with Arise And Shine Detailing, you agree to the following terms. Please read them carefully.</p>
 
         <LegalSection title="1. Services Provided">
-          <p>Arise And Shine VT is a mobile auto detailing service operating throughout Vermont. All services are performed at the customer&apos;s specified location. We are not a brick-and-mortar shop. Services are subject to availability.</p>
+          <p>Arise And Shine Detailing is a mobile auto detailing service operating throughout Vermont. All services are performed at the customer&apos;s specified location. We are not a brick-and-mortar shop. Services are subject to availability.</p>
         </LegalSection>
 
         <LegalSection title="2. Site Requirements">
@@ -1841,7 +1841,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </LegalSection>
 
         <LegalSection title="3. Pre-Existing Damage & Liability">
-          <p className="mb-2">Arise And Shine VT is not liable for:</p>
+          <p className="mb-2">Arise And Shine Detailing is not liable for:</p>
           <LegalList items={[
             "Pre-existing scratches, swirl marks, chips, dents, or rust present before our service",
             "Damage resulting from faulty, peeling, or compromised clear coats or paint",
@@ -1882,7 +1882,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </LegalSection>
 
         <LegalSection title="9. Contact Us">
-          <p>Questions about these terms? Reach us at <span className="text-zinc-200">contact@ariseandshinevt.com</span> or <span className="text-zinc-200">802-585-5563</span>.</p>
+          <p>Questions about these terms? Reach us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span> or <span className="text-zinc-200">802-585-5563</span>.</p>
         </LegalSection>
       </LegalModal>
 

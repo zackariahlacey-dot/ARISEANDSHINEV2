@@ -147,9 +147,9 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image src="/e.png" alt="Arise And Shine VT" width={34} height={34} className="object-contain drop-shadow-md shrink-0" priority />
+            <Image src="/e.png" alt="Arise And Shine Detailing" width={34} height={34} className="object-contain drop-shadow-md shrink-0" priority />
             <span className="font-semibold tracking-wide text-[13px] hidden sm:block text-white/90 whitespace-nowrap">
-              Arise And Shine VT
+              Arise And Shine Detailing
             </span>
           </Link>
 
@@ -283,7 +283,7 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2.5">
             <Image src="/e.png" alt="" width={26} height={26} className="object-contain" />
-            <span className="text-[13px] font-semibold text-white/70 tracking-wide">Arise And Shine VT</span>
+            <span className="text-[13px] font-semibold text-white/70 tracking-wide">Arise And Shine Detailing</span>
           </div>
           <button type="button" onClick={closeMobile} aria-label="Close menu"
             className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors">

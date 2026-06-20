@@ -29,7 +29,7 @@ export function getConfirmEmailHtml(options: ConfirmEmailOptions): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Confirm your account — Arise And Shine VT</title>
+  <title>Confirm your account — Arise And Shine Detailing</title>
 </head>
 <body style="margin:0;padding:0;background-color:#09090b;font-family:Georgia,'Times New Roman',serif;-webkit-text-size-adjust:100%;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#09090b;">
@@ -39,7 +39,7 @@ export function getConfirmEmailHtml(options: ConfirmEmailOptions): string {
           <!-- Logo -->
           <tr>
             <td style="padding:32px 32px 24px;text-align:center;">
-              <img src="${LOGO_URL}" alt="Arise And Shine VT" width="150" height="150" style="display:block;margin:0 auto;width:150px;height:auto;max-width:150px;" />
+              <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="150" height="150" style="display:block;margin:0 auto;width:150px;height:auto;max-width:150px;" />
             </td>
           </tr>
           <!-- Heading: WELCOME TO THE SHINE -->

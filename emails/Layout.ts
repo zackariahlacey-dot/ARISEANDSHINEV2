@@ -9,8 +9,8 @@ export const LOGO_URL =
 export const PHONE = "802-585-5563";
 export const PHONE_LINK = "tel:8025855563";
 export const FOOTER_LINKS = `
-  <a href="https://www.ariseandshinevt.com" style="color:#d4af37;text-decoration:none;">Website</a> &nbsp;·&nbsp; 
-  <a href="https://www.ariseandshinevt.com/dashboard" style="color:#d4af37;text-decoration:none;">Rewards Dashboard</a>
+  <a href="https://www.ariseandshinedetailing.com" style="color:#d4af37;text-decoration:none;">Website</a> &nbsp;·&nbsp; 
+  <a href="https://www.ariseandshinedetailing.com/dashboard" style="color:#d4af37;text-decoration:none;">Rewards Dashboard</a>
 `;
 
 export type EmailLayoutOptions = {
@@ -39,7 +39,7 @@ function esc(s: string): string {
  * Returns full HTML for an email using the Arise & Shine layout.
  */
 export function getEmailLayoutHtml(options: EmailLayoutOptions): string {
-  const { title = "Arise And Shine VT", headline, bodyHtml, primaryButton } = options;
+  const { title = "Arise And Shine Detailing", headline, bodyHtml, primaryButton } = options;
   const safeHeadline = esc(headline);
 
   const buttonHtml = primaryButton
@@ -69,7 +69,7 @@ export function getEmailLayoutHtml(options: EmailLayoutOptions): string {
           <!-- Logo -->
           <tr>
             <td style="padding:28px 32px 16px;text-align:center;">
-              <img src="${LOGO_URL}" alt="Arise And Shine VT" width="150" height="150" style="display:block;margin:0 auto;width:150px;height:auto;max-width:150px;" />
+              <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="150" height="150" style="display:block;margin:0 auto;width:150px;height:auto;max-width:150px;" />
             </td>
           </tr>
           <!-- Headline -->

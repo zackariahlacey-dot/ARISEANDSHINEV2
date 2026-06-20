@@ -4,18 +4,18 @@ import { Shield, Star, Leaf, Sparkles, Phone, Mail, MapPin, Heart, Award, Extern
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
-  title: "About Arise & Shine VT | Owner-Operated Mobile Detailing in Vermont",
-  description: "Arise & Shine VT is Vermont's owner-operated mobile detailing service. Fully insured, eco-conscious products, 5-star rated — serving Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County.",
+  title: "About Arise And Shine Detailing | Owner-Operated Mobile Detailing in Vermont",
+  description: "Arise And Shine Detailing is Vermont's owner-operated mobile detailing service. Fully insured, eco-conscious products, 5-star rated — serving Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County.",
   openGraph: {
-    title: "About Arise & Shine VT | Owner-Operated Mobile Detailing in Vermont",
+    title: "About Arise And Shine Detailing | Owner-Operated Mobile Detailing in Vermont",
     description: "Vermont's owner-operated mobile detailing service. Fully insured, eco-conscious products, 5-star rated.",
-    url: "https://www.ariseandshinevt.com/about",
+    url: "https://www.ariseandshinedetailing.com/about",
   },
 };
 
 const VALUES = [
   { icon: Star,    title: "Quality Over Speed",     desc: "We don't cut corners. Every job gets the same attention to detail whether it's a daily driver or a show vehicle." },
-  { icon: Heart,   title: "Owner-Operated",          desc: "When you book with Arise & Shine VT, you're working directly with the owner — not a franchise, not a sub-contractor." },
+  { icon: Heart,   title: "Owner-Operated",          desc: "When you book with Arise And Shine Detailing, you're working directly with the owner — not a franchise, not a sub-contractor." },
   { icon: Leaf,    title: "Eco-Conscious Products",  desc: "We use professional-grade, environmentally responsible products — including lake-safe formulas for all marine work in Vermont." },
   { icon: Shield,  title: "Fully Insured",           desc: "We carry full liability insurance so you can have complete peace of mind when we're working on your vehicle, boat, or RV." },
   { icon: MapPin,  title: "100% Mobile",             desc: "We bring everything to you — fully self-contained with our own water, power, and equipment. No drop-off, no waiting room." },
@@ -48,7 +48,7 @@ export default function AboutPage() {
           <div className="text-center">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">Our Story</p>
             <h1 className="text-3xl sm:text-4xl font-black text-white mb-5 tracking-tight leading-tight">
-              Hi, I&apos;m Zackariah.<br className="hidden sm:block" /> I started Arise &amp; Shine VT.
+              Hi, I&apos;m Zackariah.<br className="hidden sm:block" /> I started Arise And Shine Detailing.
             </h1>
             <p className="text-zinc-400 text-base leading-relaxed max-w-2xl mx-auto">
               Back in July 2025, I started this business with $400 and an idea — bring real, professional-grade
@@ -77,7 +77,7 @@ export default function AboutPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4AF37] mb-4">My Story</p>
                 <div className="space-y-4 text-zinc-400 text-sm leading-relaxed">
                   <p>
-                    I&apos;m Zackariah, the guy who shows up. When you book with Arise &amp; Shine VT, you&apos;re
+                    I&apos;m Zackariah, the guy who shows up. When you book with Arise And Shine Detailing, you&apos;re
                     not getting a rotating crew, a franchise driver, or a subcontractor — you&apos;re getting me,
                     with professional equipment and a real commitment to leaving your vehicle looking better
                     than the day you bought it.
@@ -117,9 +117,9 @@ export default function AboutPage() {
                       <Phone size={13} className="text-[#D4AF37]" />
                       802-585-5563
                     </a>
-                    <a href="mailto:contact@ariseandshinevt.com" className="flex items-center justify-center gap-2.5 text-sm text-zinc-300 hover:text-white transition-colors">
+                    <a href="mailto:contact@ariseandshinedetailing.com" className="flex items-center justify-center gap-2.5 text-sm text-zinc-300 hover:text-white transition-colors">
                       <Mail size={13} className="text-[#D4AF37]" />
-                      contact@ariseandshinevt.com
+                      contact@ariseandshinedetailing.com
                     </a>
                     <span className="flex items-center justify-center gap-2.5 text-sm text-zinc-500">
                       <MapPin size={13} className="text-[#D4AF37]" />
@@ -170,7 +170,7 @@ export default function AboutPage() {
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2025 Arise And Shine VT · Vermont</span>
+            <span>© 2025 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/faq" className="hover:text-[#D4AF37] transition-colors">FAQ</Link>
               <Link href="/contact" className="hover:text-[#D4AF37] transition-colors">Contact</Link>

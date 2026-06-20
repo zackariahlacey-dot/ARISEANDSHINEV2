@@ -16,9 +16,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ city: string }> }): Promise<Metadata> {
   const { city } = await params;
   const town = getTownBySlug(city);
-  if (!town) return { title: "Service Area | Arise & Shine VT" };
+  if (!town) return { title: "Service Area | Arise And Shine Detailing" };
 
-  const title = `Mobile Auto Detailing in ${town.shortName}, VT | Arise & Shine VT`;
+  const title = `Mobile Auto Detailing in ${town.shortName}, VT | Arise And Shine Detailing`;
   const description = `Mobile auto, boat, and RV detailing in ${town.shortName}, Vermont. We come to your driveway, marina, or office — fully self-contained equipment, transparent pricing, easy online booking. ${town.driveTimeMin === 0 ? "Our home base." : `About ${town.driveTimeMin} minutes from our Williston base.`}`;
 
   return {
@@ -35,12 +35,12 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
     openGraph: {
       title,
       description,
-      url: `https://www.ariseandshinevt.com/service-area/${town.slug}`,
-      siteName: "Arise & Shine VT",
+      url: `https://www.ariseandshinedetailing.com/service-area/${town.slug}`,
+      siteName: "Arise And Shine Detailing",
       locale: "en_US",
       type: "website",
     },
-    alternates: { canonical: `https://www.ariseandshinevt.com/service-area/${town.slug}` },
+    alternates: { canonical: `https://www.ariseandshinedetailing.com/service-area/${town.slug}` },
   };
 }
 
@@ -207,7 +207,7 @@ export default async function TownPage({ params }: { params: Promise<{ city: str
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2026 Arise And Shine VT · Vermont</span>
+            <span>© 2026 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/faq" className="hover:text-[#D4AF37] transition-colors">FAQ</Link>
               <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>

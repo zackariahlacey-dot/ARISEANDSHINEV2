@@ -89,7 +89,7 @@ export default function FAQPage() {
                 <Phone size={14} className="text-[#D4AF37]" />
                 802-585-5563
               </a>
-              <a href="mailto:contact@ariseandshinevt.com"
+              <a href="mailto:contact@ariseandshinedetailing.com"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#D4AF37] text-zinc-950 font-bold text-sm hover:bg-[#F3E5AB] transition-colors"
               >
                 <Mail size={14} />
@@ -102,7 +102,7 @@ export default function FAQPage() {
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2025 Arise And Shine VT · Vermont</span>
+            <span>© 2025 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>
               <Link href="/contact" className="hover:text-[#D4AF37] transition-colors">Contact</Link>

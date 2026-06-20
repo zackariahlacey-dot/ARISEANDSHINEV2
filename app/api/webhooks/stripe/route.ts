@@ -65,13 +65,13 @@ export async function POST(req: NextRequest) {
           const { Resend } = await import("resend");
           const resend = new Resend(process.env.RESEND_API_KEY);
           const firstName = (sub.customer_name ?? "there").split(" ")[0];
-          const FROM_ADDR = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+          const FROM_ADDR = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
           resend.emails.send({
             from:    FROM_ADDR,
             to:      sub.customer_email,
-            subject: "Action needed: monthly plan payment failed — Arise & Shine VT",
-            html: `<p>Hi ${firstName},</p><p>We weren't able to process your monthly detail plan payment. Please update your payment method to keep your plan active.</p><p>Reply to this email or call 802-585-5563 and we'll get it sorted.</p><p>— Arise &amp; Shine VT</p>`,
-            replyTo: "contact@ariseandshinevt.com",
+            subject: "Action needed: monthly plan payment failed — Arise And Shine Detailing",
+            html: `<p>Hi ${firstName},</p><p>We weren't able to process your monthly detail plan payment. Please update your payment method to keep your plan active.</p><p>Reply to this email or call 802-585-5563 and we'll get it sorted.</p><p>— Arise And Shine Detailing</p>`,
+            replyTo: "contact@ariseandshinedetailing.com",
           }).catch(err => console.error("[webhooks/stripe] payment_failed email error:", err));
         }
       }

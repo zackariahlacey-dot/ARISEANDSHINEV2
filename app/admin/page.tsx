@@ -345,7 +345,7 @@ export default function TodayPage() {
       const firstName = bName(b).split(" ")[0] || "there";
       const total = Number(b.total_price).toFixed(2);
       const body =
-        `Hi ${firstName}, thanks again from Arise & Shine VT! ` +
+        `Hi ${firstName}, thanks again from Arise And Shine Detailing! ` +
         `Here's your secure payment link for $${total}` +
         (b.service_name ? ` (${b.service_name})` : "") + `:\n\n${url}`;
       const cleanPhone = phone.replace(/\D/g, "");

@@ -95,7 +95,7 @@ export default function GiftCardsPage() {
         <div className="mb-8">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-1.5">Arise &amp; Shine VT</p>
+              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-1.5">Arise And Shine Detailing</p>
               <h1 className="text-3xl font-black tracking-tight text-zinc-100">Gift Cards</h1>
               <p className="text-sm text-zinc-500 mt-1">Give the gift of a spotless vehicle. Codes are delivered by email instantly after purchase.</p>
             </div>

@@ -624,7 +624,7 @@ function IssueModal({
             <X size={14} />
           </button>
         </div>
-        <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Urgent alert sent to Arise &amp; Shine right away. Use this for safety issues, damage discovered, customer not present, etc.</p>
+        <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Urgent alert sent to Arise And Shine Detailing right away. Use this for safety issues, damage discovered, customer not present, etc.</p>
 
         <label className="block mb-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block mb-1">Category</span>

@@ -84,7 +84,7 @@ async function batchGetDistances(addresses: string[]): Promise<(number | null)[]
     units:        "imperial",
   });
 
-  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
   try {
     const res  = await fetch(

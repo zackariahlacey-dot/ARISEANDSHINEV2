@@ -205,7 +205,7 @@ export function SignUpForm({
 
           <Image
             src="/e.png"
-            alt="Arise and Shine VT"
+            alt="Arise And Shine Detailing"
             width={54}
             height={54}
             className="mx-auto mb-6 drop-shadow-2xl"
@@ -218,7 +218,7 @@ export function SignUpForm({
             {state === "SIGN_UP_PASSWORD" && "Set Password"}
           </motion.h2>
           <motion.p layout className="text-[10px] font-black text-[#D4AF37]/80 uppercase tracking-[0.3em] mt-2">
-            {state === "IDLE" && "Arise & Shine VT"}
+            {state === "IDLE" && "Arise And Shine Detailing"}
             {state === "SIGN_IN" && "Sign in to rewards"}
             {state === "SIGN_UP_DETAILS" && "Join loyalty rewards"}
             {state === "SIGN_UP_VERIFY" && `Sent to ${email}`}

@@ -4,7 +4,7 @@ import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Thank You — Arise & Shine VT",
+  title: "Thank You — Arise And Shine Detailing",
   robots: { index: false, follow: false },
 };
 
@@ -35,7 +35,7 @@ export default async function PaySuccessPage({ params }: { params: Promise<{ boo
       <div className="w-full max-w-md space-y-6 text-center">
 
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-500">Arise &amp; Shine VT</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-500">Arise And Shine Detailing</p>
         </div>
 
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] px-6 py-8 space-y-3">
@@ -77,7 +77,7 @@ export default async function PaySuccessPage({ params }: { params: Promise<{ boo
               Call Us
             </a>
             <a
-              href="mailto:contact@ariseandshinevt.com"
+              href="mailto:contact@ariseandshinedetailing.com"
               className="px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider hover:bg-white/[0.07] transition-all active:scale-95"
             >
               Email Us
@@ -89,7 +89,7 @@ export default async function PaySuccessPage({ params }: { params: Promise<{ boo
           href="/"
           className="inline-block text-[10px] font-black uppercase tracking-widest text-zinc-700 hover:text-amber-500 transition-colors mt-4"
         >
-          ← Back to Arise &amp; Shine VT
+          ← Back to Arise And Shine Detailing
         </Link>
 
       </div>

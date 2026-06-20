@@ -21,7 +21,7 @@ export function getOtpEmailHtml({ otpCode }: OtpEmailProps) {
           <!-- Header -->
           <tr>
             <td align="center" style="padding:40px 40px 20px 40px;">
-              <img src="${LOGO_URL}" alt="Arise & Shine VT" width="80" style="display:block;margin-bottom:24px;">
+              <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="80" style="display:block;margin-bottom:24px;">
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:800;letter-spacing:-0.02em;text-align:center;">
                 Verification <span style="color:#d4af37;">Code</span>
               </h1>

@@ -7,8 +7,8 @@ import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder
 import { getMonthlyAppointmentConfirmationHtml } from "@/emails/MonthlyAppointmentConfirmation";
 import Stripe from "stripe";
 
-const FROM  = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const SITE  = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+const FROM  = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const SITE  = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
 // ── Fetch all monthly subscribers ────────────────────────────────────────────
 
@@ -202,9 +202,9 @@ export async function sendManualScheduleReminder(
   const { error } = await resend.emails.send({
     from:    FROM,
     to:      sub.customer_email,
-    subject: `Pick your ${monthName} detail date — Arise & Shine VT`,
+    subject: `Pick your ${monthName} detail date — Arise And Shine Detailing`,
     html:    getMonthlyScheduleReminderHtml(firstName, sub.plan_name, monthStr, scheduleLink),
-    replyTo: "contact@ariseandshinevt.com",
+    replyTo: "contact@ariseandshinedetailing.com",
   });
 
   if (error) return { ok: false, error: error.message };
@@ -312,7 +312,7 @@ export async function adminSetSchedulePick(params: {
     resend.emails.send({
       from:    FROM,
       to:      sub.customer_email,
-      subject: `Confirmed: ${dateFormatted} at ${params.time12} — Arise & Shine VT`,
+      subject: `Confirmed: ${dateFormatted} at ${params.time12} — Arise And Shine Detailing`,
       html:    getMonthlyAppointmentConfirmationHtml({
         firstName,
         planName:       sub.plan_name,
@@ -322,7 +322,7 @@ export async function adminSetSchedulePick(params: {
         paymentMethod:  sub.payment_method === "cash" ? "cash" : "stripe",
         reschedulePath: "/protected",
       }),
-      replyTo: "contact@ariseandshinevt.com",
+      replyTo: "contact@ariseandshinedetailing.com",
     }).catch(err => console.error("[adminSetSchedulePick] confirmation email error:", err));
   }
 

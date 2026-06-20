@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getOtpEmailHtml } from "@/emails/OtpEmail";
 import { sendAdminNewUserAlert } from "./sendAdminNewUserAlert";
 
-const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 
 /**
  * Step 1: Generate and send a 6-digit OTP via Resend.

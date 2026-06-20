@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
-const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 const OWNER_EMAIL  = process.env.ADMIN_EMAIL  ?? "zackariahlacey@gmail.com";
 
 export async function logError(opts: {
@@ -75,7 +75,7 @@ export async function logError(opts: {
               <p style="color:#fcd34d;font-size:13px;margin:0;">${opts.message} <span style="color:#71717a;">(${opts.source})</span></p>
             </div>
 
-            <p style="color:#3f3f46;font-size:11px;text-align:center;margin-top:24px;">Arise &amp; Shine VT · Admin Alert</p>
+            <p style="color:#3f3f46;font-size:11px;text-align:center;margin-top:24px;">Arise And Shine Detailing · Admin Alert</p>
           </div>
         `,
       });

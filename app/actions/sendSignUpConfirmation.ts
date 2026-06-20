@@ -5,14 +5,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfirmEmailHtml } from "@/emails/ConfirmEmail";
 import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
 
-/** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
+/** Must match verified sender domain (ariseandshinedetailing.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const REPLY_TO = "contact@ariseandshinevt.com";
+  process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const REPLY_TO = "contact@ariseandshinedetailing.com";
 
 /** Where Supabase redirects after email verification — never localhost in production */
 const CONFIRM_REDIRECT_BASE =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com";
 
 /**
  * After signUp: generate a signup confirmation link via Supabase Admin, send custom
@@ -51,7 +51,7 @@ export async function sendSignUpConfirmationEmails(
       return;
     }
 
-    // Point Confirm button to our confirm route (user requested: ariseandshinevt.com/auth/confirm?token_hash=...&type=signup)
+    // Point Confirm button to our confirm route (user requested: ariseandshinedetailing.com/auth/confirm?token_hash=...&type=signup)
     const tokenHash = encodeURIComponent(linkData.properties.hashed_token);
     const confirmUrl = `${CONFIRM_REDIRECT_BASE}/auth/confirm?token_hash=${tokenHash}&type=signup&next=/protected`;
 
@@ -66,7 +66,7 @@ export async function sendSignUpConfirmationEmails(
         from: FROM_ADDRESS,
         to: email.trim(),
         replyTo: REPLY_TO,
-        subject: "Confirm your account — Arise And Shine VT",
+        subject: "Confirm your account — Arise And Shine Detailing",
         html,
       });
       if (result.error) {

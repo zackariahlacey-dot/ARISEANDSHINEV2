@@ -175,7 +175,7 @@ export async function createAdminBooking(
     if (!stripeKey) {
       return { success: false, error: "Stripe is not configured. Use Pay at Arrival." };
     }
-    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com";
     const stripe = new Stripe(stripeKey, { apiVersion: "2026-02-25.clover" });
     let invoiceUrl: string | undefined;
     try {
@@ -208,7 +208,7 @@ export async function createAdminBooking(
 
     if (payload.email?.trim() && invoiceUrl) {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const from = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+      const from = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
       const html = `
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
@@ -217,7 +217,7 @@ export async function createAdminBooking(
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#18181b;border-radius:12px;overflow:hidden;border:1px solid #d4af37;">
         <tr><td style="padding:32px 24px;">
-          <p style="color:#fff;font-size:18px;font-weight:700;margin:0 0 8px;">Arise And Shine VT</p>
+          <p style="color:#fff;font-size:18px;font-weight:700;margin:0 0 8px;">Arise And Shine Detailing</p>
           <p style="color:#a1a1aa;font-size:14px;margin:0 0 24px;">Your detailing appointment has been scheduled!</p>
           <p style="color:#e4e4e7;font-size:15px;line-height:1.6;margin:0 0 24px;">Please pay your invoice to secure your spot.</p>
           <p style="text-align:center;margin:24px 0 0;">
@@ -232,7 +232,7 @@ export async function createAdminBooking(
       await resend.emails.send({
         from,
         to: payload.email.trim(),
-        subject: `Your Arise And Shine VT Appointment — Please Pay Your Invoice`,
+        subject: `Your Arise And Shine Detailing Appointment — Please Pay Your Invoice`,
         html,
       }).catch((err) => console.error("[createAdminBooking] invoice email:", err));
     }

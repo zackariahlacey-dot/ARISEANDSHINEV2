@@ -5,16 +5,16 @@ import { SiteHeader } from "@/components/landing/SiteHeader";
 import { GUIDES } from "@/lib/guideContent";
 
 export const metadata: Metadata = {
-  title: "Detailing Guides | Tips, Cost & Care for Vermont Drivers | Arise & Shine VT",
+  title: "Detailing Guides | Tips, Cost & Care for Vermont Drivers | Arise And Shine Detailing",
   description:
     "Real, useful guides about auto, boat, and RV detailing in Vermont — what it costs, when to do it, how to prep your vehicle for the seasons, and how to maximize resale value.",
   openGraph: {
-    title: "Detailing Guides | Arise & Shine VT",
+    title: "Detailing Guides | Arise And Shine Detailing",
     description:
       "Evergreen guides about detailing your car, boat, or RV in Vermont — from a Vermont detailer.",
-    url: "https://www.ariseandshinevt.com/guides",
+    url: "https://www.ariseandshinedetailing.com/guides",
   },
-  alternates: { canonical: "https://www.ariseandshinevt.com/guides" },
+  alternates: { canonical: "https://www.ariseandshinedetailing.com/guides" },
 };
 
 export default function GuidesHubPage() {
@@ -88,7 +88,7 @@ export default function GuidesHubPage() {
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2026 Arise And Shine VT · Vermont</span>
+            <span>© 2026 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/faq" className="hover:text-[#D4AF37] transition-colors">FAQ</Link>
               <Link href="/service-area" className="hover:text-[#D4AF37] transition-colors">Service Area</Link>

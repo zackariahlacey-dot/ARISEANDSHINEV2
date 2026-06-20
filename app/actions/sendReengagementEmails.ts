@@ -53,13 +53,13 @@ export async function sendReengagementEmails({ testOnly }: { testOnly: boolean }
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const from = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+  const from = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
   let sent = 0;
   let skipped = 0;
 
   if (testOnly) {
     // Send to admin
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "contact@ariseandshinevt.com";
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "contact@ariseandshinedetailing.com";
     await sendSingleReengagement(resend, from, adminEmail, "Admin (Test)");
     return { success: true, sent: 1, msg: `Test sent to admin.` };
   }
@@ -85,13 +85,13 @@ async function sendSingleReengagement(resend: Resend, from: string, to: string, 
           <tr><td style="padding:40px;text-align:center;">
             <h1 style="color:#111111;font-size:24px;font-weight:900;margin:0 0 16px;">Time for a refresh? ✨</h1>
             <p style="color:#555555;font-size:16px;line-height:1.6;margin:0 0 24px;">
-              Hi ${firstName}, it's been a little while since your last detail with Arise And Shine VT. 
+              Hi ${firstName}, it's been a little while since your last detail with Arise And Shine Detailing. 
               Keep your vehicle protected and looking its best!
             </p>
             <p style="color:#555555;font-size:16px;line-height:1.6;margin:0 0 32px;">
               Use code <strong style="color:#D4AF37;">REFRESH10</strong> for 10% off your next booking.
             </p>
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://ariseandshinevt.com'}" style="display:inline-block;background-color:#D4AF37;color:#111111;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;">
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://ariseandshinedetailing.com'}" style="display:inline-block;background-color:#D4AF37;color:#111111;font-size:16px;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none;">
               Book Your Detail
             </a>
           </td></tr>
@@ -101,7 +101,7 @@ async function sendSingleReengagement(resend: Resend, from: string, to: string, 
   `;
 
   const finalHtml = getEmailLayoutHtml({
-    title: "Time for a refresh? - Arise And Shine VT",
+    title: "Time for a refresh? - Arise And Shine Detailing",
     headline: "We've missed you!",
     bodyHtml
   });

@@ -69,7 +69,7 @@ function InvalidLink({ reason, loginCta }: { reason: string; loginCta?: boolean 
               Please check your email for a valid scheduling link, or contact us to get a new one.
             </p>
             <a
-              href="mailto:contact@ariseandshinevt.com"
+              href="mailto:contact@ariseandshinedetailing.com"
               className="inline-block mt-2 bg-[#D4AF37] text-black font-black text-sm uppercase tracking-wider px-6 py-3 rounded-xl"
             >
               Email Us

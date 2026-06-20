@@ -48,7 +48,7 @@ export type BookingConfirmationDetails = {
 
 // ── "Add to Calendar" helpers ─────────────────────────────────────────────────
 
-const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
 
 /** Parses bookingTime strings like "9:00 AM", "10:30 PM", or "14:00". */
 function parseBookingTime(time: string): { h: number; m: number } {
@@ -90,7 +90,7 @@ function buildCalendarUrls(d: BookingConfirmationDetails): { google: string; out
   const dur = d.durationMins && d.durationMins > 0 ? d.durationMins : 150;
   const start = buildLocalTimestamp(d.bookingDate, d.bookingTime, 0);
   const end   = buildLocalTimestamp(d.bookingDate, d.bookingTime, dur);
-  const title = `Arise & Shine VT — ${d.serviceName}`;
+  const title = `Arise And Shine Detailing — ${d.serviceName}`;
   const vehicle = `${d.vehicleYear} ${d.vehicleMake} ${d.vehicleModel}`.trim();
   const details = `${vehicle ? vehicle + "\n" : ""}Confirmation: ${PHONE} · ${BUSINESS_EMAIL}`;
   const location = d.serviceAddress ?? "";
@@ -206,7 +206,7 @@ function getDisplayServiceName(serviceName: string, type: ServiceType): string {
 
 // ── Shared pieces ─────────────────────────────────────────────────────────────
 
-const BUSINESS_EMAIL = "contact@ariseandshinevt.com";
+const BUSINESS_EMAIL = "contact@ariseandshinedetailing.com";
 const PHONE = "802-585-5563";
 
 function detailRow(label: string, value: string, isLast = false): string {
@@ -303,10 +303,10 @@ function stepRow(n: number, text: string): string {
 }
 
 const logoBlock = `
-  <img src="${LOGO_URL}" alt="Arise And Shine VT" width="110"
+  <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="110"
        style="display:block;margin:0 auto 10px auto;width:110px;height:auto;" />
   <p style="color:#d4af37;font-size:15px;font-weight:900;margin:0;
-             letter-spacing:0.08em;text-transform:uppercase;">Arise And Shine VT</p>`;
+             letter-spacing:0.08em;text-transform:uppercase;">Arise And Shine Detailing</p>`;
 
 const emailFooter = `
   <tr>
@@ -314,7 +314,7 @@ const emailFooter = `
                background-color:#f9f9f9;border-top:1px solid #eeeeee;
                border-radius:0 0 16px 16px;">
       <p style="font-size:12px;font-weight:700;color:#333333;margin:0 0 4px;
-                text-transform:uppercase;letter-spacing:0.08em;">Arise And Shine VT</p>
+                text-transform:uppercase;letter-spacing:0.08em;">Arise And Shine Detailing</p>
       <p style="font-size:11px;color:#999999;margin:0 0 12px;">
         Mobile Detailing &middot; Serving all of Vermont
       </p>
@@ -324,7 +324,7 @@ const emailFooter = `
         <a href="mailto:${BUSINESS_EMAIL}" style="color:#d4af37;text-decoration:none;font-weight:700;">${BUSINESS_EMAIL}</a>
       </p>
       <p style="font-size:10px;color:#bbbbbb;margin:10px 0 0;">
-        &copy; 2026 Arise And Shine VT. All rights reserved.
+        &copy; 2026 Arise And Shine Detailing. All rights reserved.
       </p>
     </td>
   </tr>`;
@@ -387,7 +387,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your Detail is Confirmed — Arise And Shine VT</title></head>
+<title>Your Detail is Confirmed — Arise And Shine Detailing</title></head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:36px 16px;">
@@ -421,7 +421,7 @@ function vehicleCustomerHtml(d: BookingConfirmationDetails, date: string): strin
 
         <p style="font-size:17px;font-weight:700;color:#111111;margin:0 0 6px;">Hi ${firstName},</p>
         <p style="font-size:14px;color:#666666;margin:0 0 28px;line-height:1.7;">
-          Thanks for booking with Arise And Shine VT! We're looking forward to bringing your
+          Thanks for booking with Arise And Shine Detailing! We're looking forward to bringing your
           <strong>${vehicleLabel}</strong> back to showroom condition.
           Here's everything you need for your upcoming appointment.
         </p>
@@ -531,7 +531,7 @@ function boatCustomerHtml(d: BookingConfirmationDetails, date: string): string {
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your Boat Detail is Confirmed — Arise And Shine VT</title></head>
+<title>Your Boat Detail is Confirmed — Arise And Shine Detailing</title></head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:36px 16px;">
@@ -674,7 +674,7 @@ function rvCustomerHtml(d: BookingConfirmationDetails, date: string): string {
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your RV Detail is Confirmed — Arise And Shine VT</title></head>
+<title>Your RV Detail is Confirmed — Arise And Shine Detailing</title></head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:36px 16px;">

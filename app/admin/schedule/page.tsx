@@ -1525,7 +1525,7 @@ export default function SchedulePage() {
       const firstName = bName(b).split(" ")[0] || "there";
       const total = Number(b.total_price).toFixed(2);
       const body =
-        `Hi ${firstName}, thanks again from Arise & Shine VT! ` +
+        `Hi ${firstName}, thanks again from Arise And Shine Detailing! ` +
         `Here's your secure payment link for $${total}` +
         (b.service_name ? ` (${b.service_name})` : "") + `:\n\n${url}`;
       const cleanPhone = phone.replace(/\D/g, "");
@@ -1560,7 +1560,7 @@ export default function SchedulePage() {
       "VERSION:3.0",
       `N:${vEsc(lastRaw)};${vEsc(first)};;;`,
       `FN:${vEsc(fn)}`,
-      "ORG:Arise & Shine VT — Client",
+      "ORG:Arise And Shine Detailing — Client",
     ];
     if (cleanPhone) lines.push(`TEL;TYPE=CELL:${cleanPhone}`);
     if (email) lines.push(`EMAIL;TYPE=INTERNET:${vEsc(email)}`);

@@ -4,10 +4,10 @@ import { Resend } from "resend";
 import { getBookingConfirmationHtml, type BookingConfirmationDetails } from "@/emails/BookingConfirmation";
 import { getBookerAccountInviteHtml } from "@/emails/BookerAccountInvite";
 
-/** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
+/** Must match verified sender domain (ariseandshinedetailing.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const REPLY_TO = "contact@ariseandshinevt.com";
+  process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const REPLY_TO = "contact@ariseandshinedetailing.com";
 
 export type SendBookingEmailParams = {
   customerEmail: string;
@@ -58,7 +58,7 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
       from: FROM_ADDRESS,
       to: customerEmail.trim(),
       replyTo: REPLY_TO,
-      subject: `${subjectPrefix} — Arise And Shine VT`,
+      subject: `${subjectPrefix} — Arise And Shine Detailing`,
       html,
     });
 
@@ -75,7 +75,7 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
 }
 
 function siteOrigin(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
 }
 
 /**
@@ -110,7 +110,7 @@ export async function sendBookerAccountInviteEmail(params: {
       from: FROM_ADDRESS,
       to: customerEmail,
       replyTo: REPLY_TO,
-      subject: "Create your account — see your booking & rewards — Arise And Shine VT",
+      subject: "Create your account — see your booking & rewards — Arise And Shine Detailing",
       html,
     });
 

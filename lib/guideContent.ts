@@ -387,24 +387,24 @@ export function getGuideSlugs(): string[] {
 
 /** Schema.org Article JSON-LD for a single guide. */
 export function buildArticleSchema(guide: Guide) {
-  const url = `https://www.ariseandshinevt.com/guides/${guide.slug}`;
+  const url = `https://www.ariseandshinedetailing.com/guides/${guide.slug}`;
   return {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: guide.title,
     description: guide.description,
-    image: "https://www.ariseandshinevt.com/aasbanner.png",
+    image: "https://www.ariseandshinedetailing.com/aasbanner.png",
     datePublished: guide.publishedDate,
     dateModified: guide.publishedDate,
     author: {
       "@type": "Organization",
-      name: "Arise & Shine VT",
-      url: "https://www.ariseandshinevt.com",
+      name: "Arise And Shine Detailing",
+      url: "https://www.ariseandshinedetailing.com",
     },
     publisher: {
       "@type": "Organization",
-      name: "Arise & Shine VT",
-      logo: { "@type": "ImageObject", url: "https://www.ariseandshinevt.com/aasbanner.png" },
+      name: "Arise And Shine Detailing",
+      logo: { "@type": "ImageObject", url: "https://www.ariseandshinedetailing.com/aasbanner.png" },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };

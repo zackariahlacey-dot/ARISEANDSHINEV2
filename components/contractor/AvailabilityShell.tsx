@@ -64,7 +64,7 @@ export function AvailabilityShell() {
           <p className="text-[10px] font-black tracking-[0.22em] uppercase text-amber-500/70 mb-1">My availability</p>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">Days I'm not available</h1>
           <p className="text-[12px] text-zinc-400 mt-2 leading-relaxed">
-            Mark off any day you can't take jobs. Arise &amp; Shine&apos;s auto-assign will skip you on those dates. You can clear days from this list anytime as long as no booking has already been assigned to you for that day.
+            Mark off any day you can't take jobs. Arise And Shine Detailing&apos;s auto-assign will skip you on those dates. You can clear days from this list anytime as long as no booking has already been assigned to you for that day.
           </p>
         </div>
 
@@ -154,7 +154,7 @@ export function AvailabilityShell() {
           <ul className="text-[11px] text-zinc-400 leading-relaxed list-disc list-inside space-y-1">
             <li>Auto-assign skips you on any day in your list.</li>
             <li>You can mark off as many future days as you want, including the same day.</li>
-            <li>If you're already assigned a job for a day, marking that day off doesn't unassign you — talk to Arise &amp; Shine to reassign.</li>
+            <li>If you're already assigned a job for a day, marking that day off doesn't unassign you — talk to Arise And Shine Detailing to reassign.</li>
             <li>You don't have to set anything if you're always available; the list is opt-in.</li>
           </ul>
         </div>

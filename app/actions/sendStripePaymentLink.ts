@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function getPaymentLinkUrl(bookingId: string): Promise<string> {
-  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
   return `${origin}/pay/${bookingId}`;
 }
 
@@ -49,7 +49,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
       return { error: "Invalid price for this booking." };
     }
 
-    const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinevt.com").replace(/\/$/, "");
+    const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
     const payUrl = `${origin}/pay/${bookingId}`;
 
     let emailSent = false;
@@ -58,7 +58,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
       if (key) {
         try {
           const resend = new Resend(key);
-          const fromAddr = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+          const fromAddr = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
           const firstName = customerName?.split(" ")[0] || "there";
           const vehicleStr = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(" ");
 
@@ -72,14 +72,14 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
         <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#18181b;border-radius:12px;overflow:hidden;">
           <tr>
             <td style="padding:24px 32px;text-align:center;border-bottom:1px solid #27272a;">
-              <p style="color:#d4af37;font-size:15px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine VT</p>
+              <p style="color:#d4af37;font-size:15px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine Detailing</p>
               <p style="color:#71717a;font-size:10px;margin:4px 0 0;letter-spacing:0.15em;text-transform:uppercase;">Premium Mobile Auto Detailing</p>
             </td>
           </tr>
           <tr>
             <td style="padding:28px 32px;">
               <p style="font-size:20px;font-weight:900;color:#ffffff;margin:0 0 8px;">Your Payment Link is Ready</p>
-              <p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;line-height:1.6;">Hi ${firstName}, your Arise &amp; Shine VT invoice is ready. Click below to pay securely.</p>
+              <p style="font-size:14px;color:#a1a1aa;margin:0 0 20px;line-height:1.6;">Hi ${firstName}, your Arise And Shine Detailing invoice is ready. Click below to pay securely.</p>
               <table cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td style="padding:12px 0;border-bottom:1px solid #27272a;">
@@ -110,7 +110,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
           <tr>
             <td style="padding:20px 32px;text-align:center;border-top:1px solid #27272a;">
               <p style="font-size:11px;color:#52525b;margin:0;">Questions? Call <a href="tel:8025855563" style="color:#d4af37;text-decoration:none;">802-585-5563</a> or reply to this email.</p>
-              <p style="font-size:11px;color:#52525b;margin:4px 0 0;">&copy; 2026 Arise And Shine VT. All rights reserved.</p>
+              <p style="font-size:11px;color:#52525b;margin:4px 0 0;">&copy; 2026 Arise And Shine Detailing. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -123,7 +123,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
           await resend.emails.send({
             from: fromAddr,
             to: customerEmail,
-            replyTo: "contact@ariseandshinevt.com",
+            replyTo: "contact@ariseandshinedetailing.com",
             subject: `Your Payment Link — ${serviceName} · $${totalPrice}`,
             html,
           });

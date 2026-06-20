@@ -47,13 +47,13 @@ export async function GET(req: NextRequest) {
     return new NextResponse("invalid start/end", { status: 400 });
   }
 
-  const uid = `${start}-${Math.random().toString(36).slice(2, 10)}@ariseandshinevt.com`;
+  const uid = `${start}-${Math.random().toString(36).slice(2, 10)}@ariseandshinedetailing.com`;
   const dtstamp = utcStamp(new Date());
 
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Arise And Shine VT//Booking Confirmation//EN",
+    "PRODID:-//Arise And Shine Detailing//Booking Confirmation//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

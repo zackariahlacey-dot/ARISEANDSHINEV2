@@ -9,7 +9,7 @@ export async function GET() {
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY;
   if (!key) return NextResponse.json({ error: "No API key found in env" });
 
-  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
   const params = new URLSearchParams({
     origins:      "209 Porterwood Dr, Williston, VT",

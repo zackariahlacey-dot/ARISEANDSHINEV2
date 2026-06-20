@@ -1,6 +1,6 @@
 /**
  * 24-Hour Review Request Email
- * Dark luxury aesthetic matching the Arise & Shine VT brand.
+ * Dark luxury aesthetic matching the Arise And Shine Detailing brand.
  */
 
 export const LOGO_URL =
@@ -35,7 +35,7 @@ export function getReviewRequestHtml(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark" />
-  <title>How's the shine holding up? — Arise &amp; Shine VT</title>
+  <title>How's the shine holding up? — Arise And Shine Detailing</title>
 </head>
 <body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-text-size-adjust:100%;mso-line-height-rule:exactly;">
 
@@ -53,14 +53,14 @@ export function getReviewRequestHtml(
 
           <!-- Logo -->
           <tr><td align="center" style="padding:40px 32px 8px;">
-            <img src="${LOGO_URL}" alt="Arise &amp; Shine VT" width="72" height="72"
+            <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="72" height="72"
               style="display:block;margin:0 auto;width:72px;height:72px;border-radius:50%;border:2px solid #1f1f23;" />
           </td></tr>
 
           <!-- Brand name -->
           <tr><td align="center" style="padding:0 32px 28px;">
             <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#52525b;">
-              ARISE &amp; SHINE &nbsp;&middot;&nbsp; VERMONT
+              ARISE AND SHINE DETAILING
             </p>
           </td></tr>
 
@@ -134,7 +134,7 @@ export function getReviewRequestHtml(
               </td></tr>
               <tr><td style="padding:8px 24px 0;">
                 <p style="margin:0;font-size:13px;color:#a1a1aa;line-height:1.7;">
-                  Front Porch Forum is where most of our Vermont neighbors find us. If you&rsquo;d recommend Arise &amp; Shine VT to your community, a quick post or recommendation means the world to us.
+                  Front Porch Forum is where most of our Vermont neighbors find us. If you&rsquo;d recommend Arise And Shine Detailing to your community, a quick post or recommendation means the world to us.
                 </p>
               </td></tr>
 
@@ -149,7 +149,7 @@ export function getReviewRequestHtml(
                     </p>
                     <p style="margin:8px 0 0;font-size:13px;color:#a1a1aa;line-height:1.6;">
                       Send us an email at
-                      <a href="mailto:contact@ariseandshinevt.com" style="color:#d4af37;text-decoration:none;">contact@ariseandshinevt.com</a>
+                      <a href="mailto:contact@ariseandshinedetailing.com" style="color:#d4af37;text-decoration:none;">contact@ariseandshinedetailing.com</a>
                       with screenshots of both and we&rsquo;ll personally send you a
                       <strong style="color:#fafafa;">20% off coupon</strong> for your next detail. We really appreciate the support!
                     </p>
@@ -168,7 +168,7 @@ export function getReviewRequestHtml(
           <!-- Footer -->
           <tr><td align="center" style="padding:28px 40px 36px;">
             <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;letter-spacing:0.05em;">
-              Arise &amp; Shine VT
+              Arise And Shine Detailing
             </p>
             <p style="margin:0 0 14px;font-size:11px;color:#3f3f46;letter-spacing:0.1em;text-transform:uppercase;">
               Premium Mobile Detailing &middot; Chittenden County, VT
@@ -180,7 +180,7 @@ export function getReviewRequestHtml(
                 </td>
                 <td style="color:#3f3f46;font-size:11px;">&middot;</td>
                 <td style="padding:0 10px;">
-                  <a href="https://www.ariseandshinevt.com" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinevt.com</a>
+                  <a href="https://www.ariseandshinedetailing.com" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinedetailing.com</a>
                 </td>
               </tr>
             </table>

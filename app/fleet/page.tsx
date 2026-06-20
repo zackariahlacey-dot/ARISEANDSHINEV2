@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/landing/SiteHeader";
 import { FleetQuoteCalculator } from "@/components/fleet/FleetQuoteCalculator";
 
 export const metadata: Metadata = {
-  title: "Fleet & Corporate Detailing Quotes Vermont | Arise & Shine VT",
+  title: "Fleet & Corporate Detailing Quotes Vermont | Arise And Shine Detailing",
   description:
     "Get an instant fleet detailing quote for 4+ vehicles in Vermont. Mobile detailing for dealerships, rental companies, corporate fleets, and group bookings. Fleet discounts up to 20%. We come to you statewide.",
   keywords: [
@@ -20,14 +20,14 @@ export const metadata: Metadata = {
     "group car detailing Burlington",
   ],
   openGraph: {
-    title: "Fleet Detailing Quotes Vermont | Arise & Shine VT",
+    title: "Fleet Detailing Quotes Vermont | Arise And Shine Detailing",
     description: "Instant fleet quotes for 4+ vehicles. Up to 20% off · we come to your location · serving all of Vermont.",
-    url: "https://ariseandshinevt.com/fleet",
-    siteName: "Arise & Shine VT",
+    url: "https://ariseandshinedetailing.com/fleet",
+    siteName: "Arise And Shine Detailing",
     locale: "en_US",
     type: "website",
   },
-  alternates: { canonical: "https://ariseandshinevt.com/fleet" },
+  alternates: { canonical: "https://ariseandshinedetailing.com/fleet" },
 };
 
 export default function FleetPage() {
@@ -140,8 +140,8 @@ export default function FleetPage() {
               className="btn-primary-gold-shimmer h-14 px-8 rounded-xl font-bold tracking-wide bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden inline-flex items-center gap-2 text-base">
               <Phone size={15} /><span className="relative z-[1]">802-585-5563</span>
             </a>
-            <a href="mailto:contact@ariseandshinevt.com" className="text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm">
-              contact@ariseandshinevt.com
+            <a href="mailto:contact@ariseandshinedetailing.com" className="text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm">
+              contact@ariseandshinedetailing.com
             </a>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function FleetPage() {
 
       <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-28 md:pb-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 text-xs text-zinc-600 text-center sm:text-left">
-          <span>© 2025 Arise And Shine VT · Vermont Mobile Detailing</span>
+          <span>© 2025 Arise And Shine Detailing · Vermont Mobile Detailing</span>
           <Link href="/" className="hover:text-[#D4AF37] transition-colors inline-flex items-center gap-1">
             <ChevronLeft size={12} /> Back to Home
           </Link>

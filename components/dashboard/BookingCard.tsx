@@ -14,9 +14,9 @@ function buildGoogleCalendarUrl(b: ClientBooking): string {
     start.setHours(h, m, 0, 0);
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
-    const title = encodeURIComponent(`${b.service_name ?? "Auto Detail"} — Arise & Shine VT`);
+    const title = encodeURIComponent(`${b.service_name ?? "Auto Detail"} — Arise And Shine Detailing`);
     const loc = encodeURIComponent(b.service_address ?? "");
-    const details = encodeURIComponent("Mobile detailing by Arise & Shine VT · ariseandshinevt.com");
+    const details = encodeURIComponent("Mobile detailing by Arise And Shine Detailing · ariseandshinedetailing.com");
     return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&location=${loc}&details=${details}`;
   } catch {
     return "#";

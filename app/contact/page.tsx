@@ -4,12 +4,12 @@ import { Phone, Mail, MapPin, Clock, Sparkles, Anchor, Truck, MessageCircle, Cal
 import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
-  title: "Contact Arise & Shine VT | Mobile Detailing in Burlington & Williston, VT",
-  description: "Call or text Arise & Shine VT at 802-585-5563 — Vermont's mobile auto, boat, and RV detailing service. Book online or reach us by phone or email.",
+  title: "Contact Arise And Shine Detailing | Mobile Detailing in Burlington & Williston, VT",
+  description: "Call or text Arise And Shine Detailing at 802-585-5563 — Vermont's mobile auto, boat, and RV detailing service. Book online or reach us by phone or email.",
   openGraph: {
-    title: "Contact Arise & Shine VT | Mobile Detailing in Burlington & Williston, VT",
+    title: "Contact Arise And Shine Detailing | Mobile Detailing in Burlington & Williston, VT",
     description: "Call or text 802-585-5563 — we serve Burlington, Williston, South Burlington, and all of Chittenden County.",
-    url: "https://www.ariseandshinevt.com/contact",
+    url: "https://www.ariseandshinedetailing.com/contact",
   },
 };
 
@@ -45,7 +45,7 @@ export default function ContactPage() {
           <div className="text-center">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">Get In Touch</p>
             <h1 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
-              Contact Arise &amp; Shine VT
+              Contact Arise And Shine Detailing
             </h1>
             <p className="text-zinc-400 text-base max-w-xl mx-auto leading-relaxed">
               Questions about a service, want to get a quote, or just need to talk to a real person?
@@ -81,7 +81,7 @@ export default function ContactPage() {
             </a>
 
             {/* Email */}
-            <a href="mailto:contact@ariseandshinevt.com"
+            <a href="mailto:contact@ariseandshinedetailing.com"
               className="group rounded-2xl border border-white/[0.06] bg-zinc-900/60 backdrop-blur-sm p-6 flex flex-col items-center text-center hover:border-[#D4AF37]/30 hover:bg-zinc-900/80 transition-all"
             >
               <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center mb-4">
@@ -89,7 +89,7 @@ export default function ContactPage() {
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-1">Email Us</p>
               <p className="text-white font-bold text-sm mb-1 group-hover:text-[#D4AF37] transition-colors break-all">
-                contact@ariseandshinevt.com
+                contact@ariseandshinedetailing.com
               </p>
               <p className="text-zinc-500 text-xs">We typically respond within a few hours</p>
             </a>
@@ -155,7 +155,7 @@ export default function ContactPage() {
 
         <footer className="border-t border-white/[0.04] py-8 px-4 sm:px-6 pb-16">
           <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-            <span>© 2025 Arise And Shine VT · Vermont</span>
+            <span>© 2025 Arise And Shine Detailing · Vermont</span>
             <div className="flex items-center gap-4">
               <Link href="/faq" className="hover:text-[#D4AF37] transition-colors">FAQ</Link>
               <Link href="/about" className="hover:text-[#D4AF37] transition-colors">About</Link>

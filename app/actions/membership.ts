@@ -69,7 +69,7 @@ export async function createMembershipCheckout(input: {
             currency: "usd",
             unit_amount: MEMBERSHIP_PRICE_CENTS,
             product_data: {
-              name: "Arise & Shine VT — Premium Annual Membership",
+              name: "Arise And Shine Detailing — Premium Annual Membership",
               description: `$${MEMBERSHIP_CREDIT_USD} service credit for $${MEMBERSHIP_PRICE_USD} · Use on any service or add-on · Valid 12 months`,
             },
           },

@@ -74,7 +74,7 @@ export const TOWNS: TownContent[] = [
     oneLineHook: "Mobile detailing in our home town",
     neighborhoodCallouts: ["Maple Tree Place", "Taft Corners", "U-Mall area", "Williston Village", "Old Stage Road"],
     intro:
-      "Williston is home base for Arise & Shine VT. We've detailed cars in nearly every subdivision in town — from the family neighborhoods off Mountain View Road to the larger lots along Old Stage. If you live or work in Williston, we're often able to fit you in same-week, and on quick-turn requests we can frequently get to you within 24-48 hours.",
+      "Williston is home base for Arise And Shine Detailing. We've detailed cars in nearly every subdivision in town — from the family neighborhoods off Mountain View Road to the larger lots along Old Stage. If you live or work in Williston, we're often able to fit you in same-week, and on quick-turn requests we can frequently get to you within 24-48 hours.",
     commonVehicles:
       "Williston's mix leans toward family vehicles — full-size SUVs, three-row crossovers, and trucks — but we handle a steady rotation of work trucks and commuter cars for residents near Taft Corners and the office complexes along Industrial Avenue.",
     serviceNotes:

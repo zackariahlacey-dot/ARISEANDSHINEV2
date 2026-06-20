@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getTownSlugs } from "@/lib/townContent";
 import { getGuideSlugs } from "@/lib/guideContent";
 
-const BASE = "https://www.ariseandshinevt.com";
+const BASE = "https://www.ariseandshinedetailing.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

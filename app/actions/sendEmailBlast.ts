@@ -3,10 +3,10 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-/** Must match verified sender domain (ariseandshinevt.com) in Resend dashboard */
+/** Must match verified sender domain (ariseandshinedetailing.com) in Resend dashboard */
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM ?? "Arise & Shine VT <notifications@ariseandshinevt.com>";
-const REPLY_TO = "contact@ariseandshinevt.com";
+  process.env.EMAIL_FROM ?? "Arise And Shine Detailing <notifications@ariseandshinedetailing.com>";
+const REPLY_TO = "contact@ariseandshinedetailing.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
 
 /** Recipient with email + profile data for personalization */
@@ -62,7 +62,7 @@ function buildBlastHtml(subject: string, body: string): string {
                   <td width="40" height="40" style="background:#ffffff;border-radius:8px;text-align:center;vertical-align:middle;font-size:11px;font-weight:900;color:#000000;">A&amp;S</td>
                 </tr>
               </table>
-              <p style="color:#ffffff;font-size:16px;font-weight:700;margin:0;">Arise And Shine VT</p>
+              <p style="color:#ffffff;font-size:16px;font-weight:700;margin:0;">Arise And Shine Detailing</p>
               <p style="color:#666666;font-size:12px;margin:4px 0 0;">Premium Mobile Auto Detailing</p>
             </td>
           </tr>
@@ -83,7 +83,7 @@ function buildBlastHtml(subject: string, body: string): string {
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="center">
-                    <a href="https://ariseandshinevt.com"
+                    <a href="https://ariseandshinedetailing.com"
                        style="display:inline-block;background-color:#D4AF37;color:#0a0a0a;
                               font-size:13px;font-weight:800;padding:12px 32px;
                               border-radius:9px;text-decoration:none;letter-spacing:0.3px;">
@@ -99,11 +99,11 @@ function buildBlastHtml(subject: string, body: string): string {
           <tr>
             <td style="padding:24px 16px;text-align:center;">
               <p style="font-size:12px;color:#999999;margin:0;">
-                Arise And Shine VT &middot; Mobile Auto Detailing &middot; Vermont
+                Arise And Shine Detailing &middot; Mobile Auto Detailing &middot; Vermont
               </p>
               <p style="font-size:11px;color:#bbbbbb;margin:6px 0 0;">
-                &copy; 2026 Arise And Shine VT &bull;
-                <a href="mailto:contact@ariseandshinevt.com" style="color:#999999;text-decoration:none;">contact@ariseandshinevt.com</a>
+                &copy; 2026 Arise And Shine Detailing &bull;
+                <a href="mailto:contact@ariseandshinedetailing.com" style="color:#999999;text-decoration:none;">contact@ariseandshinedetailing.com</a>
               </p>
             </td>
           </tr>

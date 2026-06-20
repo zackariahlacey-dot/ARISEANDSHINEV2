@@ -140,10 +140,10 @@ function paymentLabel(method: AdminBookingAlertOptions["paymentMethod"], totalPr
 }
 
 const logoBlock = `
-  <img src="${LOGO_URL}" alt="Arise And Shine VT" width="90"
+  <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="90"
        style="display:block;margin:0 auto 8px auto;width:90px;height:auto;" />
   <p style="color:#d4af37;font-size:14px;font-weight:900;margin:0;
-             letter-spacing:0.08em;text-transform:uppercase;">Arise And Shine VT</p>`;
+             letter-spacing:0.08em;text-transform:uppercase;">Arise And Shine Detailing</p>`;
 
 // ── Shared: additional vehicles rows ──────────────────────────────────────────
 
@@ -196,7 +196,7 @@ function vehicleAdminHtml(o: AdminBookingAlertOptions): string {
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${alertTitle} — Arise And Shine VT</title></head>
+<title>${alertTitle} — Arise And Shine Detailing</title></head>
 <body style="${base}">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:32px 16px;">
@@ -294,7 +294,7 @@ function boatAdminHtml(o: AdminBookingAlertOptions): string {
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>New Boat Booking — Arise And Shine VT</title></head>
+<title>New Boat Booking — Arise And Shine Detailing</title></head>
 <body style="${base}">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:32px 16px;">
@@ -412,7 +412,7 @@ function rvAdminHtml(o: AdminBookingAlertOptions): string {
 
   return `<!DOCTYPE html><html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>New RV Booking — Arise And Shine VT</title></head>
+<title>New RV Booking — Arise And Shine Detailing</title></head>
 <body style="${base}">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
   <tr><td align="center" style="padding:32px 16px;">

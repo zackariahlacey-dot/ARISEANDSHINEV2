@@ -139,7 +139,7 @@ export function ContractorDashboard({ data }: { data: ContractorDashboardData })
             <ChevronRight size={12} />
           </summary>
           <div className="px-4 pb-4 text-[12px] text-zinc-400 leading-relaxed space-y-2">
-            <p>Your commission is <strong className="text-amber-400">{data.profile.commissionPct}%</strong> of each job's total price. Earnings shown here are estimates — Arise &amp; Shine processes actual payments off-platform.</p>
+            <p>Your commission is <strong className="text-amber-400">{data.profile.commissionPct}%</strong> of each job's total price. Earnings shown here are estimates — Arise And Shine Detailing processes actual payments off-platform.</p>
             <p><strong className="text-emerald-400">Tips are 100% yours</strong> — when a customer adds a tip on the payment link, it lands in your weekly total above with no commission split.</p>
             <p>Commission can be <strong>reduced</strong> if photos are rejected or quality issues are documented, and <strong>increased</strong> to credit a tip received outside the app. Any adjustment includes a written reason you can see in your job history.</p>
           </div>
@@ -326,7 +326,7 @@ function TierLadder({ data }: { data: ContractorDashboardData }) {
             <> + <strong className="text-amber-400">{data.tierProgress.ratingNeededForNext}★</strong> avg</>
           )}
           .{" "}
-          <span className="text-zinc-600">Promotion is always Arise &amp; Shine&apos;s call.</span>
+          <span className="text-zinc-600">Promotion is always Arise And Shine Detailing&apos;s call.</span>
         </div>
       )}
       {data.tierProgress.nextTier == null && (

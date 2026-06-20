@@ -52,7 +52,7 @@ export async function getTravelFee(
     units: "imperial",
   });
 
-  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
   try {
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?${params.toString()}`;

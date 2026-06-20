@@ -13,7 +13,7 @@ async function RatingPage({ token }: { token: string }) {
       <div className="max-w-md mx-auto px-4 pt-10 pb-20">
 
         <div className="text-center mb-6">
-          <p className="text-[10px] font-black tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-2">Arise & Shine VT</p>
+          <p className="text-[10px] font-black tracking-[0.22em] uppercase text-[#D4AF37]/70 mb-2">Arise And Shine Detailing</p>
           <h1 className="text-2xl font-black tracking-tight">How did we do, {r.customerFirstName}?</h1>
           {r.vehicleLabel && (
             <p className="text-[12px] text-zinc-400 mt-1">Your {r.vehicleLabel}</p>
@@ -24,7 +24,7 @@ async function RatingPage({ token }: { token: string }) {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 text-center">
             <p className="text-sm font-black text-zinc-300">This rating link has expired</p>
             <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-              Sorry — rating links are valid for 30 days. Send us a note at <a href="mailto:contact@ariseandshinevt.com" className="text-[#D4AF37]">contact@ariseandshinevt.com</a> and we&apos;ll still love your feedback.
+              Sorry — rating links are valid for 30 days. Send us a note at <a href="mailto:contact@ariseandshinedetailing.com" className="text-[#D4AF37]">contact@ariseandshinedetailing.com</a> and we&apos;ll still love your feedback.
             </p>
           </div>
         ) : r.alreadyUsed ? (

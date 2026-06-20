@@ -6,8 +6,8 @@ import { getMonthlyPlanInviteHtml } from "@/emails/MonthlyPlanInvite";
 import { getMonthlyPlanConfirmationHtml } from "@/emails/MonthlyPlanConfirmation";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
 
-const FROM  = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
-const SITE  = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+const FROM  = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
+const SITE  = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
 export type TestEmailType = "invite" | "confirmation" | "reminder";
 
@@ -32,9 +32,9 @@ export async function sendTestMonthlyEmail(
       const { error } = await resend.emails.send({
         from:    FROM,
         to:      toEmail,
-        subject: "[TEST] You're invited to join the Monthly Detail Club — Arise & Shine VT",
+        subject: "[TEST] You're invited to join the Monthly Detail Club — Arise And Shine Detailing",
         html:    getMonthlyPlanInviteHtml(DEMO_FIRST, link),
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
       });
       if (error) return { ok: false, error: error.message };
     }
@@ -45,7 +45,7 @@ export async function sendTestMonthlyEmail(
         to:      toEmail,
         subject: `[TEST] You're in — ${DEMO_PLAN} monthly plan confirmed!`,
         html:    getMonthlyPlanConfirmationHtml(DEMO_FIRST, DEMO_PLAN, DEMO_PRICE, "stripe", DEMO_MAKE, DEMO_MODEL),
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
       });
       if (error) return { ok: false, error: error.message };
     }
@@ -58,9 +58,9 @@ export async function sendTestMonthlyEmail(
       const { error } = await resend.emails.send({
         from:    FROM,
         to:      toEmail,
-        subject: "[TEST] Pick your May detail date — Arise & Shine VT",
+        subject: "[TEST] Pick your May detail date — Arise And Shine Detailing",
         html:    getMonthlyScheduleReminderHtml(DEMO_FIRST, DEMO_PLAN, DEMO_MONTH, link),
-        replyTo: "contact@ariseandshinevt.com",
+        replyTo: "contact@ariseandshinedetailing.com",
       });
       if (error) return { ok: false, error: error.message };
     }

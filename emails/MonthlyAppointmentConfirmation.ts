@@ -17,7 +17,7 @@ export function getMonthlyAppointmentConfirmationHtml(params: {
   reschedulePath: string; // e.g. "/protected" or a schedule URL
 }): string {
   const { firstName, planName, date, time, serviceAddress, paymentMethod, reschedulePath } = params;
-  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+  const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
   return `
 <!DOCTYPE html>
@@ -26,7 +26,7 @@ export function getMonthlyAppointmentConfirmationHtml(params: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark" />
-  <title>Appointment confirmed — Arise &amp; Shine VT</title>
+  <title>Appointment confirmed — Arise And Shine Detailing</title>
 </head>
 <body style="margin:0;padding:0;background-color:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 
@@ -44,14 +44,14 @@ export function getMonthlyAppointmentConfirmationHtml(params: {
 
           <!-- Logo -->
           <tr><td align="center" style="padding:36px 32px 8px;">
-            <img src="${LOGO_URL}" alt="Arise &amp; Shine VT" width="64" height="64"
+            <img src="${LOGO_URL}" alt="Arise And Shine Detailing" width="64" height="64"
               style="display:block;margin:0 auto;width:64px;height:64px;border-radius:50%;border:2px solid #1f1f23;" />
           </td></tr>
 
           <!-- Brand name -->
           <tr><td align="center" style="padding:0 32px 24px;">
             <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#52525b;">
-              ARISE &amp; SHINE &nbsp;&middot;&nbsp; VERMONT
+              ARISE AND SHINE DETAILING
             </p>
           </td></tr>
 
@@ -147,7 +147,7 @@ export function getMonthlyAppointmentConfirmationHtml(params: {
 
           <!-- Footer -->
           <tr><td align="center" style="padding:24px 40px 32px;">
-            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;">Arise &amp; Shine VT</p>
+            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#71717a;">Arise And Shine Detailing</p>
             <p style="margin:0 0 14px;font-size:11px;color:#3f3f46;letter-spacing:0.1em;text-transform:uppercase;">
               Premium Mobile Detailing &middot; Chittenden County, VT
             </p>
@@ -158,7 +158,7 @@ export function getMonthlyAppointmentConfirmationHtml(params: {
                 </td>
                 <td style="color:#3f3f46;font-size:11px;">&middot;</td>
                 <td style="padding:0 10px;">
-                  <a href="${SITE}" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinevt.com</a>
+                  <a href="${SITE}" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinedetailing.com</a>
                 </td>
               </tr>
             </table>

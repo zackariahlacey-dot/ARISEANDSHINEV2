@@ -11,9 +11,9 @@ import { getMonthlyPlanConfirmationHtml } from "@/emails/MonthlyPlanConfirmation
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
 import { getMonthlyAppointmentConfirmationHtml } from "@/emails/MonthlyAppointmentConfirmation";
 
-const FROM  = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const FROM  = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 const OWNER = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
-const SITE  = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinevt.com").replace(/\/$/, "");
+const SITE  = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,9 +51,9 @@ export async function sendMonthlyPlanInvite(profileId: string): Promise<{ ok: bo
   const { error } = await resend.emails.send({
     from: FROM,
     to: profile.email,
-    subject: "You're invited to join the Monthly Detail Club — Arise & Shine VT",
+    subject: "You're invited to join the Monthly Detail Club — Arise And Shine Detailing",
     html: getMonthlyPlanInviteHtml(firstName, link),
-    replyTo: "contact@ariseandshinevt.com",
+    replyTo: "contact@ariseandshinedetailing.com",
   });
 
   if (error) return { ok: false, error: error.message };
@@ -361,7 +361,7 @@ async function sendSubscriptionConfirmationEmails(params: {
       to:      params.customerEmail,
       subject: `You're in — ${params.planName} monthly plan confirmed!`,
       html:    getMonthlyPlanConfirmationHtml(firstName, params.planName, params.planPrice, params.paymentMethod, params.vehicleMake, params.vehicleModel),
-      replyTo: "contact@ariseandshinevt.com",
+      replyTo: "contact@ariseandshinedetailing.com",
     }),
     // Owner alert
     resend.emails.send({
@@ -398,9 +398,9 @@ async function sendFirstMonthScheduleReminder(
     await resend.emails.send({
       from:    FROM,
       to:      customerEmail,
-      subject: `Pick your ${monthName} detail date — Arise & Shine VT`,
+      subject: `Pick your ${monthName} detail date — Arise And Shine Detailing`,
       html:    getMonthlyScheduleReminderHtml(firstName, planName, monthStr, scheduleLink),
-      replyTo: "contact@ariseandshinevt.com",
+      replyTo: "contact@ariseandshinedetailing.com",
     });
 
     // Record reminder sent
@@ -737,7 +737,7 @@ export async function submitSchedulePick(params: {
     resend.emails.send({
       from:    FROM,
       to:      sub.customer_email,
-      subject: `Confirmed: ${dateFormatted} at ${params.time12} — Arise & Shine VT`,
+      subject: `Confirmed: ${dateFormatted} at ${params.time12} — Arise And Shine Detailing`,
       html:    getMonthlyAppointmentConfirmationHtml({
         firstName,
         planName:       sub.plan_name,
@@ -747,7 +747,7 @@ export async function submitSchedulePick(params: {
         paymentMethod:  sub.payment_method === "cash" ? "cash" : "stripe",
         reschedulePath: "/protected",
       }),
-      replyTo: "contact@ariseandshinevt.com",
+      replyTo: "contact@ariseandshinedetailing.com",
     }).catch(err => console.error("[submitSchedulePick] confirmation email error:", err));
   }
 

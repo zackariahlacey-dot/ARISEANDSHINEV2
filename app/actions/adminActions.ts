@@ -1076,7 +1076,7 @@ export async function sendCustomEmailAction(
   if (!key) return { success: false, error: "RESEND_API_KEY not set" };
 
   const resend = new Resend(key);
-  const fromAddr = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+  const fromAddr = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 
   // Wrap plain text in a simple branded HTML template
   const html = `
@@ -1090,7 +1090,7 @@ export async function sendCustomEmailAction(
         <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#18181b;border-radius:12px;overflow:hidden;">
           <tr>
             <td style="padding:24px 32px;text-align:center;border-bottom:1px solid #27272a;">
-              <p style="color:#d4af37;font-size:15px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine VT</p>
+              <p style="color:#d4af37;font-size:15px;font-weight:900;margin:0;letter-spacing:0.05em;text-transform:uppercase;">Arise And Shine Detailing</p>
               <p style="color:#71717a;font-size:10px;margin:4px 0 0;letter-spacing:0.15em;text-transform:uppercase;">Premium Mobile Auto Detailing</p>
             </td>
           </tr>
@@ -1101,9 +1101,9 @@ export async function sendCustomEmailAction(
           </tr>
           <tr>
             <td style="padding:20px 32px;text-align:center;border-top:1px solid #27272a;">
-              <p style="font-size:11px;color:#52525b;margin:0;">&copy; 2026 Arise And Shine VT. All rights reserved.</p>
+              <p style="font-size:11px;color:#52525b;margin:0;">&copy; 2026 Arise And Shine Detailing. All rights reserved.</p>
               <p style="font-size:11px;color:#52525b;margin:4px 0 0;">
-                <a href="mailto:contact@ariseandshinevt.com" style="color:#d4af37;text-decoration:none;">contact@ariseandshinevt.com</a>
+                <a href="mailto:contact@ariseandshinedetailing.com" style="color:#d4af37;text-decoration:none;">contact@ariseandshinedetailing.com</a>
               </p>
             </td>
           </tr>
@@ -1118,7 +1118,7 @@ export async function sendCustomEmailAction(
     await resend.emails.send({
       from: fromAddr,
       to,
-      replyTo: "contact@ariseandshinevt.com",
+      replyTo: "contact@ariseandshinedetailing.com",
       subject,
       html,
     });

@@ -1140,7 +1140,7 @@ function NewSubscriberModal({
                 {copied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Link</>}
               </button>
               <a
-                href={`sms:${phone}&body=${encodeURIComponent(`Hi ${name.split(" ")[0]}, here's your Arise & Shine VT monthly plan payment link: ${checkoutUrl}`)}`}
+                href={`sms:${phone}&body=${encodeURIComponent(`Hi ${name.split(" ")[0]}, here's your Arise And Shine Detailing monthly plan payment link: ${checkoutUrl}`)}`}
                 className="flex items-center justify-center gap-2 py-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400 text-sm font-black uppercase tracking-wider active:scale-95 transition-all"
               >
                 <Phone size={14} /> Text Link

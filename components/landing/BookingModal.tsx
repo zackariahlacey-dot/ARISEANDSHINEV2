@@ -4496,8 +4496,8 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         802-585-5563
                       </a>
                       {" "}or{" "}
-                      <a href="mailto:contact@ariseandshinevt.com" className="font-semibold text-white hover:text-zinc-200 transition-colors">
-                        contact@ariseandshinevt.com
+                      <a href="mailto:contact@ariseandshinedetailing.com" className="font-semibold text-white hover:text-zinc-200 transition-colors">
+                        contact@ariseandshinedetailing.com
                       </a>
                     </div>
 

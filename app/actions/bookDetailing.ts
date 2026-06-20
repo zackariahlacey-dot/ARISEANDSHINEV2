@@ -537,7 +537,7 @@ export async function bookDetailing(
       payload.successUrl ??
       payload.cancelUrl ??
       process.env.NEXT_PUBLIC_SITE_URL ??
-      "https://ariseandshinevt.com"
+      "https://ariseandshinedetailing.com"
     ).replace(/\/$/, "");
     const stripe = new Stripe(stripeKey, { apiVersion: "2026-02-25.clover" });
     const isSubscription = payload.serviceName.toLowerCase().includes("monthly");

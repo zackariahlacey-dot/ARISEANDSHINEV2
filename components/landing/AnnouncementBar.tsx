@@ -68,7 +68,7 @@ function buildSegments(data: AnnouncementData | null): Segment[] {
     node: (
       <span className="inline-flex items-center gap-2">
         <span className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500">
-          Arise &amp; Shine VT
+          Arise And Shine Detailing
         </span>
         <span className="w-px h-2.5 bg-zinc-700 rounded-full" />
         <span className="text-zinc-500 font-medium">Vermont&apos;s Premier Mobile Detailing</span>

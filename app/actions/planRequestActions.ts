@@ -44,9 +44,9 @@ export interface PlanRequest {
   updated_at: string;
 }
 
-const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise & Shine VT <bookings@ariseandshinevt.com>";
+const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 const ADMIN_EMAIL  = "zackariahlacey@gmail.com";
-const SITE_URL     = "https://www.ariseandshinevt.com";
+const SITE_URL     = "https://www.ariseandshinedetailing.com";
 
 const PLAN_LABELS: Record<PlanType, string> = {
   interior_only: "Interior Only",
@@ -168,8 +168,8 @@ async function sendPlanRequestEmails(p: {
   </table>`;
 
   await resend.emails.send({
-    from: FROM_ADDRESS, to: p.email, replyTo: "contact@ariseandshinevt.com",
-    subject: "Monthly Plan Request Received — Arise & Shine VT",
+    from: FROM_ADDRESS, to: p.email, replyTo: "contact@ariseandshinedetailing.com",
+    subject: "Monthly Plan Request Received — Arise And Shine Detailing",
     html: wrapHtml(`
       <p style="font-family:sans-serif;color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 8px">Monthly Plan Request</p>
       <h1 style="font-family:sans-serif;font-size:22px;font-weight:900;color:#fff;margin:0 0 6px">We got your request, ${p.name.split(" ")[0]}!</h1>
@@ -256,8 +256,8 @@ async function sendScheduleConfirmationEmail(pr: PlanRequest) {
        </p>`;
 
   await resend.emails.send({
-    from: FROM_ADDRESS, to: pr.customer_email, replyTo: "contact@ariseandshinevt.com",
-    subject: "Your recurring schedule is set — Arise & Shine VT",
+    from: FROM_ADDRESS, to: pr.customer_email, replyTo: "contact@ariseandshinedetailing.com",
+    subject: "Your recurring schedule is set — Arise And Shine Detailing",
     html: wrapHtml(`
       <p style="font-family:sans-serif;color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 8px">Schedule Confirmed</p>
       <h1 style="font-family:sans-serif;font-size:22px;font-weight:900;color:#fff;margin:0 0 6px">You're all locked in, ${firstName}!</h1>
@@ -313,8 +313,8 @@ export async function adminSendMonthlyReminder(
   const month = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   const { error } = await resend.emails.send({
-    from: FROM_ADDRESS, to: pr.customer_email, replyTo: "contact@ariseandshinevt.com",
-    subject: `Pick your ${month} detail day — Arise & Shine VT`,
+    from: FROM_ADDRESS, to: pr.customer_email, replyTo: "contact@ariseandshinedetailing.com",
+    subject: `Pick your ${month} detail day — Arise And Shine Detailing`,
     html: wrapHtml(`
       <p style="font-family:sans-serif;color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 8px">Monthly Scheduling</p>
       <h1 style="font-family:sans-serif;font-size:22px;font-weight:900;color:#fff;margin:0 0 6px">Time to pick your ${month} day, ${firstName}!</h1>
@@ -380,10 +380,10 @@ async function sendResponseEmail(pr: PlanRequest, decision: "approved" | "declin
   const accent     = isApproved ? "#22c55e" : "#ef4444";
 
   await resend.emails.send({
-    from: FROM_ADDRESS, to: pr.customer_email, replyTo: "contact@ariseandshinevt.com",
+    from: FROM_ADDRESS, to: pr.customer_email, replyTo: "contact@ariseandshinedetailing.com",
     subject: isApproved
       ? "Monthly Plan Approved — Set Up Your Schedule"
-      : "Monthly Plan Request Update — Arise & Shine VT",
+      : "Monthly Plan Request Update — Arise And Shine Detailing",
     html: wrapHtml(`
       <p style="font-family:sans-serif;color:${accent};font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 8px">
         Monthly Plan ${isApproved ? "Approved" : "Update"}
