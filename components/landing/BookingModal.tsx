@@ -3557,11 +3557,16 @@ export function BookingSection({
                                       </p>
                                     </div>
 
-                                    {/* Price — shows discounted price next to original when a discount is active */}
+                                    {/* Price — only shows the discounted strikethrough when
+                                        this specific row is selected AND a bundle/premium
+                                        discount is actively reducing its price. Unselected rows
+                                        always show their full base price so customers aren't
+                                        confused by phantom discounts on items they haven't
+                                        added yet. */}
                                     {(() => {
                                       const base = getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides);
                                       const discounted = addonDiscountedPrice(addon.id, base, bundlePct);
-                                      const isDiscounted = bundlePct > 0 && discounted < base;
+                                      const isDiscounted = isSelected && bundlePct > 0 && discounted < base;
                                       return (
                                         <div className={`shrink-0 flex items-baseline gap-1.5 tabular-nums`}>
                                           {isDiscounted && (
@@ -3570,7 +3575,7 @@ export function BookingSection({
                                           <span className={`text-sm font-black ${
                                             isDiscounted ? "text-emerald-300" : isSelected ? "text-white" : "text-[#D4AF37]"
                                           }`}>
-                                            +${discounted}
+                                            +${isDiscounted ? discounted : base}
                                           </span>
                                         </div>
                                       );
@@ -3888,8 +3893,14 @@ export function BookingSection({
                                               {subLabel}
                                             </div>
                                             {(() => {
+                                              // Only show ceramic strikethrough when this tile
+                                              // is selected AND the package tier ladder has
+                                              // unlocked a real discount on it. Unselected
+                                              // tiles always render at full price so customers
+                                              // aren't confused by phantom discounts on items
+                                              // they haven't picked yet.
                                               const discountedPrice = ceramicPct > 0 ? Math.round(price * (1 - ceramicPct)) : price;
-                                              const isDiscounted = ceramicPct > 0 && discountedPrice < price;
+                                              const isDiscounted = isSelected && ceramicPct > 0 && discountedPrice < price;
                                               return (
                                                 <div className="mt-1.5 tabular-nums">
                                                   {isDiscounted && (
@@ -3898,7 +3909,7 @@ export function BookingSection({
                                                   <div className={`text-sm font-black leading-none mt-0.5 ${
                                                     isDiscounted ? "text-emerald-300" : isSelected ? "text-white" : "text-[#D4AF37]"
                                                   }`}>
-                                                    ${discountedPrice}
+                                                    ${isDiscounted ? discountedPrice : price}
                                                   </div>
                                                 </div>
                                               );
