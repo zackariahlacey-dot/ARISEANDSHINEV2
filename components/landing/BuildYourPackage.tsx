@@ -16,6 +16,7 @@ import {
 } from "@/lib/bundleDiscount";
 import type { AddonOverrideMap } from "@/app/actions/addonPricing";
 import { BuildForMeQuiz } from "./BuildForMeQuiz";
+import { matchPackage, describeIncludedAddons } from "@/lib/packageMatcher";
 
 // ─── Foundation services ──────────────────────────────────────────────────
 type FoundationId = "interior" | "exterior" | "full";
@@ -489,6 +490,44 @@ export function BuildYourPackage({
     foundationPrice
     + (addonsSubtotal - addonsBundleSavings)
     + (ceramicSubtotal - ceramicSavings);
+
+  // ── Predefined-package match detection ───────────────────────────────────
+  // When the customer's build maps cleanly onto one of our named packages
+  // (Ultimate Interior Reset / Ultimate Full Reset / etc.), surface a hint
+  // so they can switch with one tap instead of paying à la carte for
+  // features the named package already includes.
+  const pkgMatch = useMemo(() => {
+    if (!foundationId) return null;
+    return matchPackage({
+      foundation: foundationId,
+      selectedAddonIds,
+    });
+  }, [foundationId, selectedAddonIds]);
+
+  /** Switch the customer to the matched package — opens the booking modal
+   *  with the canonical service preselected and add-ons cleared (since
+   *  they're now bundled into the named package). */
+  const handleSwitchToMatchedPackage = () => {
+    if (!pkgMatch || !vehicleConfirmed) return;
+    onContinueToBooking({
+      serviceName: pkgMatch.serviceName,
+      addonIds: [], // matched package already includes them
+      vehicleSize,
+      vehicleMake: vehicleMake.trim(),
+      vehicleModel: vehicleModel.trim(),
+      vehicleYear: vehicleYear.trim(),
+      additionalVehicles: completedVehicles.length > 0
+        ? completedVehicles.map(v => ({
+            serviceName: v.serviceName,
+            vehicleSize: v.vehicleSize,
+            vehicleMake: v.vehicleMake,
+            vehicleModel: v.vehicleModel,
+            vehicleYear: v.vehicleYear,
+            addons: v.addons,
+          }))
+        : undefined,
+    });
+  };
 
   // Multi-vehicle math: roll completed vehicles into the running total and
   // apply the flat tier discount ($25 ≤ $500, $40 > $500) once 2+ vehicles
@@ -1309,6 +1348,12 @@ export function BuildYourPackage({
             transition={{ duration: 0.25 }}
             className="mt-6 max-w-md mx-auto lg:hidden"
           >
+            {/* Package-match hint — only shown when the build is close to a
+                named package. Single-tap to switch and stop overpaying. */}
+            {pkgMatch && (
+              <PackageMatchBanner pkgMatch={pkgMatch} onSwitch={handleSwitchToMatchedPackage} />
+            )}
+
             <div className="rounded-2xl border border-[#D4AF37]/45 bg-zinc-950/80 overflow-hidden">
               <div className="px-5 py-4 text-center">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
@@ -1420,6 +1465,11 @@ export function BuildYourPackage({
             )}
           </div>
           <div className="px-4 py-3 border-t border-white/[0.06] space-y-2">
+            {/* Package-match hint on the desktop sticky sidebar */}
+            {pkgMatch && canContinue && (
+              <PackageMatchBanner pkgMatch={pkgMatch} onSwitch={handleSwitchToMatchedPackage} compact />
+            )}
+
             {canContinue && (
               <button
                 type="button"
@@ -1439,7 +1489,7 @@ export function BuildYourPackage({
                   : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
               }`}
             >
-              {canContinue ? <>Pick Date & Time<ChevronRight size={15} /></> : !foundationId ? "Pick foundation" : !vehicleConfirmed ? "Confirm vehicle" : "Pick Date & Time"}
+              {canContinue ? <>Use This Build<ChevronRight size={15} /></> : !foundationId ? "Pick foundation" : !vehicleConfirmed ? "Confirm vehicle" : "Use This Build"}
             </button>
             <p className="text-[9px] text-zinc-600 text-center mt-2">
               <ShieldCheck size={9} className="inline -mt-0.5" /> Pay at Arrival or Pay Now next
@@ -1506,6 +1556,66 @@ export function BuildYourPackage({
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Package match banner ─────────────────────────────────────────────────
+// Surfaces inline when the customer's build maps cleanly onto one of our
+// named packages (Ultimate Interior Reset / Ultimate Full Reset). One tap
+// switches them to the named package — the booking modal opens with that
+// service preselected and add-ons cleared (since the package already
+// includes them).
+import type { PackageMatch } from "@/lib/packageMatcher";
+
+function PackageMatchBanner({
+  pkgMatch,
+  onSwitch,
+  compact = false,
+}: {
+  pkgMatch: PackageMatch;
+  onSwitch: () => void;
+  compact?: boolean;
+}) {
+  const includedLabels = describeIncludedAddons(pkgMatch.includedAddonIds);
+  const tone = pkgMatch.matchKind === "better" ? "strong" : "soft";
+  return (
+    <div
+      className={`relative rounded-2xl overflow-hidden mb-3 ${
+        tone === "strong"
+          ? "border border-[#D4AF37]/55 shadow-[0_0_18px_rgba(212,175,55,0.18)]"
+          : "border border-[#D4AF37]/25"
+      }`}
+      style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
+    >
+      <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/80 to-transparent" />
+      <div className={`${compact ? "px-3 py-2.5" : "px-4 py-3"}`}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Crown size={12} className="text-[#D4AF37] shrink-0" fill="currentColor" />
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#D4AF37]">
+            {tone === "strong" ? "This Matches a Package" : "Close to a Package"}
+          </p>
+        </div>
+        <p className={`font-black text-zinc-100 leading-tight ${compact ? "text-sm" : "text-base"}`}>
+          {pkgMatch.displayName}
+        </p>
+        {!compact && includedLabels.length > 0 && (
+          <p className="text-[11px] text-zinc-500 leading-snug mt-1">
+            Already includes: {includedLabels.slice(0, 3).join(" · ")}
+            {includedLabels.length > 3 && ` · +${includedLabels.length - 3} more`}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onSwitch}
+          className={`mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-xl font-black uppercase tracking-wider bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/[0.18] active:scale-[0.97] transition-all ${
+            compact ? "px-2.5 py-1.5 text-[10px]" : "px-3 py-2 text-xs"
+          }`}
+        >
+          Switch to {pkgMatch.displayName}
+          <ChevronRight size={compact ? 11 : 12} />
+        </button>
+      </div>
     </div>
   );
 }

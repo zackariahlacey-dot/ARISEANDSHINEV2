@@ -68,6 +68,8 @@ import { BeforeAfterGallery } from "./BeforeAfterGallery";
 // conversion. Removed from the homepage to reduce scroll depth before booking.
 // The "Not sure which tier?" link below routes researchy customers there.
 import { FleetQuoteCalculator } from "@/components/fleet/FleetQuoteCalculator";
+import { BuildForMeQuiz } from "./BuildForMeQuiz";
+import { matchPackage } from "@/lib/packageMatcher";
 // NewsletterSignup removed from homepage footer — "Detailing tips" block
 // gone per owner request. Component file kept in case it's used elsewhere.
 import { NextAvailableBanner } from "./NextAvailableBanner";
@@ -946,6 +948,30 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
 
         </div>
       </motion.section>
+
+      {/* ─── Build For Me Quiz — homepage section ───────────────────────────
+          Quick 3-step quiz (Interior or Exterior? · what's the worst part?
+          · how long since the last detail?) that picks a foundation +
+          recommended add-ons. When the customer hits "Use This Build" the
+          handoff routes through matchPackage so we automatically swap them
+          to a named Ultimate package when their build matches one. */}
+      <BuildForMeHomepageSection
+        services={services}
+        onUseBuild={(args) => {
+          // Detect if the quiz build matches one of our named packages and
+          // hand off to the canonical service if so — saves the customer
+          // money vs paying à la carte.
+          const matched = matchPackage({ foundation: args.foundation, selectedAddonIds: args.addonIds });
+          const serviceName = matched?.serviceName
+            ?? (args.foundation === "interior" ? "Interior Detail"
+               : args.foundation === "exterior" ? "Exterior Detail"
+               : "Full Detail");
+          const svc = services.find(s => s.name === serviceName) ?? null;
+          setSelectedService(svc);
+          setExpandedBookingId("ultimate");
+          setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+        }}
+      />
 
       {/* ─── Boat / RV / Fleet — collapsed under "More Services" button ──────
           Auto detailing is the primary funnel. Boat, RV, and Fleet are
@@ -2213,6 +2239,39 @@ function FleetCalloutWithSlider() {
 // ─── More Services disclosure ──────────────────────────────────────────────
 // Auto detailing is the primary funnel; Boat / RV / Fleet sit behind a
 // click so they don't compete with the Ultimate cards for attention.
+// ─── Build For Me Quiz — homepage section ─────────────────────────────────
+// Standalone "answer 3 questions and we pick the package for you" quiz.
+// Same component used inside BuildYourPackage on /detailing — here it's
+// surfaced directly on the homepage so visitors who don't want to think
+// about packages can get a recommendation in 30 seconds.
+function BuildForMeHomepageSection({
+  services,
+  onUseBuild,
+}: {
+  services: Service[];
+  onUseBuild: React.ComponentProps<typeof BuildForMeQuiz>["onUseBuild"];
+}) {
+  return (
+    <section className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]">
+      <div className="w-full max-w-3xl mx-auto">
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+            <Sparkles size={11} /> Not Sure Which Package?
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
+            Answer 3 questions, we&apos;ll pick for you.
+          </h2>
+          <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
+            Tell us what part of your car needs the most help and how rough it&apos;s
+            gotten — we&apos;ll recommend the right tier and you can book in one tap.
+          </p>
+        </div>
+        <BuildForMeQuiz services={services} onUseBuild={onUseBuild} />
+      </div>
+    </section>
+  );
+}
+
 function MoreServicesDisclosure() {
   const [open, setOpen] = useState(false);
   const TILES = [
