@@ -949,29 +949,27 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </div>
       </motion.section>
 
-      {/* ─── Build For Me Quiz — homepage section ───────────────────────────
-          Quick 3-step quiz (Interior or Exterior? · what's the worst part?
-          · how long since the last detail?) that picks a foundation +
-          recommended add-ons. When the customer hits "Use This Build" the
-          handoff routes through matchPackage so we automatically swap them
-          to a named Ultimate package when their build matches one. */}
-      <BuildForMeHomepageSection
-        services={services}
-        onUseBuild={(args) => {
-          // Detect if the quiz build matches one of our named packages and
-          // hand off to the canonical service if so — saves the customer
-          // money vs paying à la carte.
-          const matched = matchPackage({ foundation: args.foundation, selectedAddonIds: args.addonIds });
-          const serviceName = matched?.serviceName
-            ?? (args.foundation === "interior" ? "Interior Detail"
-               : args.foundation === "exterior" ? "Exterior Detail"
-               : "Full Detail");
-          const svc = services.find(s => s.name === serviceName) ?? null;
-          setSelectedService(svc);
-          setExpandedBookingId("ultimate");
-          setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-        }}
-      />
+      {/* Build For Me Quiz — hidden per owner request 2026-06.
+          Component + handler preserved below (gated behind `false`) so we
+          can re-enable in one line when ready. BuildForMeQuiz +
+          packageMatcher both still ship in the bundle but aren't rendered.
+          To turn back on: change the gate to `true` (or delete the wrapper). */}
+      {false && (
+        <BuildForMeHomepageSection
+          services={services}
+          onUseBuild={(args) => {
+            const matched = matchPackage({ foundation: args.foundation, selectedAddonIds: args.addonIds });
+            const serviceName = matched?.serviceName
+              ?? (args.foundation === "interior" ? "Interior Detail"
+                 : args.foundation === "exterior" ? "Exterior Detail"
+                 : "Full Detail");
+            const svc = services.find(s => s.name === serviceName) ?? null;
+            setSelectedService(svc);
+            setExpandedBookingId("ultimate");
+            setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+          }}
+        />
+      )}
 
       {/* ─── Boat / RV / Fleet — collapsed under "More Services" button ──────
           Auto detailing is the primary funnel. Boat, RV, and Fleet are

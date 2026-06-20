@@ -228,21 +228,27 @@ export function DetailingPage({ services }: { services: Service[] }) {
         </div>
       </section>
 
-      {/* ── Build Your Package (replaces the old 3-card Core Packages grid) ──── */}
-      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
-      >
-        <BuildYourPackage
-          services={services}
-          onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear, additionalVehicles }) => {
-            const svc = services.find(s => s.name === serviceName) ?? null;
-            setSelectedService(svc);
-            setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds, additionalVehicles });
-            setBookingOpen(true);
-            setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-          }}
-        />
-      </motion.section>
+      {/* Build Your Package — hidden per owner request 2026-06.
+          Component + handoff preserved below (gated behind `false`) so we
+          can re-enable in one line when ready. BuildYourPackage is still
+          imported and ships in the bundle but isn't rendered.
+          To turn back on: change the gate to `true`. */}
+      {false && (
+        <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+          className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
+        >
+          <BuildYourPackage
+            services={services}
+            onContinueToBooking={({ serviceName, addonIds, vehicleSize, vehicleMake, vehicleModel, vehicleYear, additionalVehicles }) => {
+              const svc = services.find(s => s.name === serviceName) ?? null;
+              setSelectedService(svc);
+              setBuilderPrefill({ vehicleMake, vehicleModel, vehicleYear, vehicleSize, addonIds, additionalVehicles });
+              setBookingOpen(true);
+              setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+            }}
+          />
+        </motion.section>
+      )}
 
       {/* ── Legacy core-package grid (hidden — superseded by Build Your Package) */}
       {false && (
