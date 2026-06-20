@@ -68,7 +68,8 @@ import { BeforeAfterGallery } from "./BeforeAfterGallery";
 // conversion. Removed from the homepage to reduce scroll depth before booking.
 // The "Not sure which tier?" link below routes researchy customers there.
 import { FleetQuoteCalculator } from "@/components/fleet/FleetQuoteCalculator";
-import { NewsletterSignup } from "./NewsletterSignup";
+// NewsletterSignup removed from homepage footer — "Detailing tips" block
+// gone per owner request. Component file kept in case it's used elsewhere.
 import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
@@ -1592,10 +1593,8 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         className="border-t border-white/[0.06] py-12 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-zinc-950/50"
       >
         <div className="w-full max-w-7xl mx-auto space-y-6">
-          {/* Newsletter signup — captures leads who aren't ready to book yet */}
-          <div className="mx-auto w-full max-w-md rounded-2xl border border-white/[0.06] bg-zinc-900/40 p-5 backdrop-blur-sm">
-            <NewsletterSignup source="footer" />
-          </div>
+          {/* Newsletter / "Detailing tips" signup removed per owner request —
+              wasn't earning its space at the bottom of the homepage. */}
 
           {/* Main row */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
