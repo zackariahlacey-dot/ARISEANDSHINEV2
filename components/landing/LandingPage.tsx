@@ -919,15 +919,8 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           </div>
           )}
 
-          {/* "Not sure which tier?" — single line that routes researchy
-              customers to the full comparison page without crowding the
-              homepage with a 4-column table. */}
-          <div className="mt-8 text-center">
-            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-400 hover:text-[#D4AF37] transition-colors group">
-              Not sure which tier? Compare side-by-side
-              <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
-            </Link>
-          </div>
+          {/* Comparison link removed from homepage — lives at /services for
+              customers in research mode (linked from the header More menu). */}
 
           {/* ── Inline booking for ultimate ── */}
           {mounted && expandedBookingId === "ultimate" && (
@@ -952,47 +945,13 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </div>
       </motion.section>
 
-      {/* ─── Boat / RV / Fleet Callouts — compact trio ─────────────────────────
-          Previously these were two full-pricing-table cards taking ~600px each.
-          Now they're a 3-up icon + name + CTA grid that lets the customer
-          recognize the option and click through, without rebuilding the full
-          /boat-detailing or /rv-detailing or /fleet page content here. */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={sectionViewport}
-        variants={sectionVariants}
-        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
-      >
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">More Services</p>
-            <div className="flex-1 h-px bg-white/[0.04]" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {[
-              { href: "/boat-detailing", Icon: Anchor,    title: "Boat Detailing",  blurb: "Dockside · Lake Champlain", priceHint: "from $15/ft" },
-              { href: "/rv-detailing",   Icon: Truck,     title: "RV Detailing",    blurb: "At your site · 20 ft min",  priceHint: "from $15/ft" },
-              { href: "/fleet",          Icon: LayoutDashboard, title: "Fleet Quotes", blurb: "4+ vehicles · up to 20% off", priceHint: "Custom quote" },
-            ].map(({ href, Icon, title, blurb, priceHint }) => (
-              <Link key={href} href={href}
-                className="group relative rounded-2xl overflow-hidden border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,175,55,0.12)] p-4 flex items-center gap-3.5"
-                style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}>
-                <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0 group-hover:bg-[#D4AF37]/15 transition-colors">
-                  <Icon size={18} className="text-[#D4AF37]" strokeWidth={1.75} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-white leading-tight group-hover:text-[#D4AF37] transition-colors">{title}</p>
-                  <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug truncate">{blurb}</p>
-                  <p className="text-[10px] font-bold text-[#D4AF37]/70 mt-0.5 tabular-nums">{priceHint}</p>
-                </div>
-                <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all shrink-0" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </motion.section>
+      {/* ─── Boat / RV / Fleet — collapsed under "More Services" button ──────
+          Auto detailing is the primary funnel. Boat, RV, and Fleet are
+          secondary and hidden behind a disclosure so they don't pull
+          attention from the Ultimate cards above. Click → tile grid
+          expands. Once expanded the customer sees the same compact icon
+          + name + CTA cards. */}
+      <MoreServicesDisclosure />
 
       {/* Legacy expanded-card block — preserved below behind a `false` gate so the
           state shape + inline booking flow remain referenced by the rest of the
@@ -2174,6 +2133,52 @@ const ULTIMATE_CARDS = [
   },
 ] as const;
 
+// ─── More Services disclosure ──────────────────────────────────────────────
+// Auto detailing is the primary funnel; Boat / RV / Fleet sit behind a
+// click so they don't compete with the Ultimate cards for attention.
+function MoreServicesDisclosure() {
+  const [open, setOpen] = useState(false);
+  const TILES = [
+    { href: "/boat-detailing", Icon: Anchor,          title: "Boat Detailing",  blurb: "Dockside · Lake Champlain",   priceHint: "from $15/ft" },
+    { href: "/rv-detailing",   Icon: Truck,           title: "RV Detailing",    blurb: "At your site · 20 ft min",    priceHint: "from $15/ft" },
+    { href: "/fleet",          Icon: LayoutDashboard, title: "Fleet Quotes",    blurb: "4+ vehicles · up to 20% off", priceHint: "Custom quote" },
+  ];
+  return (
+    <section className="py-8 md:py-10 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]">
+      <div className="w-full max-w-3xl mx-auto">
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/40 text-zinc-300 text-sm font-bold hover:border-[#D4AF37]/40 hover:text-[#D4AF37] active:scale-[0.99] transition-all"
+        >
+          {open ? "Hide other services" : "Also offering Boat · RV · Fleet"}
+          <ChevronDown size={14} className={`text-[#D4AF37] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+        {open && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            {TILES.map(({ href, Icon, title, blurb, priceHint }) => (
+              <Link key={href} href={href}
+                className="group relative rounded-2xl overflow-hidden border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,175,55,0.12)] p-4 flex items-center gap-3.5"
+                style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}>
+                <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0 group-hover:bg-[#D4AF37]/15 transition-colors">
+                  <Icon size={18} className="text-[#D4AF37]" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-white leading-tight group-hover:text-[#D4AF37] transition-colors">{title}</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug truncate">{blurb}</p>
+                  <p className="text-[10px] font-bold text-[#D4AF37]/70 mt-0.5 tabular-nums">{priceHint}</p>
+                </div>
+                <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // ─── Ultimate Service Card ─────────────────────────────────────────────────────
 
 function UltimateServiceCard({
@@ -2308,64 +2313,51 @@ function UltimateServiceCard({
         </div>
       </div>
 
-      {/* Features — collapsed by default; "What's Included" reveals the full list. */}
-      <div className="px-7 pb-6 flex-1">
-        <button
-          type="button"
-          onClick={() => setShowFeatures(s => !s)}
-          aria-expanded={showFeatures}
-          className="w-full flex items-center justify-between py-3 px-4 rounded-xl border-2 border-[#D4AF37]/40 bg-[#D4AF37]/[0.05] hover:bg-[#D4AF37]/[0.12] hover:border-[#D4AF37]/70 active:scale-[0.99] transition-all group"
-        >
-          <span className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#D4AF37]">
-            <CheckCircle size={12} strokeWidth={2.5} className="shrink-0" />
-            {showFeatures ? "Hide What's Included" : `See What's Included (${features.length})`}
-          </span>
-          <ChevronDown size={15} className={`text-[#D4AF37] transition-transform duration-200 ${showFeatures ? "rotate-180" : ""}`} />
-        </button>
+      {/* Top 3 highlights — always visible. Surfaces the differentiators
+          customers actually care about (deep clean / ceramic / etc.) without
+          forcing them to expand "What's Included". The full list still
+          available via the toggle below. */}
+      <div className="px-7 pb-4 flex-1">
+        <ul className="space-y-2.5 mb-4">
+          {features.slice(0, 3).map((item) => (
+            <li key={item} className="flex items-start gap-2.5 leading-snug">
+              <CheckCircle
+                size={14}
+                className={`shrink-0 mt-[1px] ${isFlagship ? "text-[#D4AF37]" : "text-[#D4AF37]/70"}`}
+                strokeWidth={2.5}
+              />
+              <span className={`text-[13px] leading-relaxed ${isFlagship ? "text-zinc-200" : "text-zinc-300"}`}>{item}</span>
+            </li>
+          ))}
+        </ul>
+
+        {/* "See full list" — subtle text link instead of a heavy button so the
+            visual focus stays on Book This Service below. */}
+        {features.length > 3 && (
+          <button
+            type="button"
+            onClick={() => setShowFeatures(s => !s)}
+            aria-expanded={showFeatures}
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-400 hover:text-[#D4AF37] transition-colors group"
+          >
+            {showFeatures ? "Hide" : `+ ${features.length - 3} more included`}
+            <ChevronDown size={12} className={`transition-transform duration-200 ${showFeatures ? "rotate-180" : ""}`} />
+          </button>
+        )}
         {showFeatures && (
-          <ul className="space-y-3 mt-4">
-            {features.map((item) => (
-              <li key={item} className="flex items-start gap-3 leading-snug">
+          <ul className="space-y-2.5 mt-3">
+            {features.slice(3).map((item) => (
+              <li key={item} className="flex items-start gap-2.5 leading-snug">
                 <CheckCircle
-                  size={15}
-                  className={`shrink-0 mt-[1px] ${isFlagship ? "text-[#D4AF37]" : "text-[#D4AF37]/65"}`}
-                  strokeWidth={2}
+                  size={14}
+                  className={`shrink-0 mt-[1px] ${isFlagship ? "text-[#D4AF37]" : "text-[#D4AF37]/70"}`}
+                  strokeWidth={2.5}
                 />
-                <span className={`text-sm ${isFlagship ? "text-zinc-200" : "text-zinc-300"}`}>{item}</span>
+                <span className={`text-[13px] leading-relaxed ${isFlagship ? "text-zinc-200" : "text-zinc-300"}`}>{item}</span>
               </li>
             ))}
           </ul>
         )}
-      </div>
-
-      {/* ── Premium Upgrade — Seat Removal Deep Clean ── */}
-      <div className="px-7 pb-4">
-        <div className="relative rounded-xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.06] via-zinc-950/40 to-zinc-950/40 overflow-hidden">
-          <div className="h-[1.5px] w-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
-          <div className="px-4 py-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Crown size={11} className="text-[#D4AF37]" fill="currentColor" />
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#D4AF37]">Premium Upgrade Available</p>
-            </div>
-            <p className="text-xs font-bold text-zinc-100 leading-snug mb-2">Seat Removal Deep Clean</p>
-            <p className="text-[11px] text-zinc-500 leading-snug mb-2.5">
-              Physically remove every seat for under-rail and seat-underside hot water extraction. The deepest clean we offer.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-white/[0.06] bg-zinc-950/60 px-2.5 py-2 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">2-Row</p>
-                <p className="text-base font-black tabular-nums text-[#D4AF37]">+$150</p>
-                <p className="text-[9px] text-emerald-400 font-bold mt-0.5">Save $55</p>
-              </div>
-              <div className="rounded-lg border border-white/[0.06] bg-zinc-950/60 px-2.5 py-2 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">3-Row</p>
-                <p className="text-base font-black tabular-nums text-[#D4AF37]">+$225</p>
-                <p className="text-[9px] text-emerald-400 font-bold mt-0.5">Save $75</p>
-              </div>
-            </div>
-            <p className="text-[10px] text-zinc-600 mt-2 text-center">Per-section à la carte from $60. Add at booking.</p>
-          </div>
-        </div>
       </div>
 
       {/* CTA */}
