@@ -250,10 +250,12 @@ export function DetailingPage({ services }: { services: Service[] }) {
         </motion.section>
       )}
 
-      {/* ── Legacy core-package grid (hidden — superseded by Build Your Package) */}
-      {false && (
+      {/* ── Core Packages — primary service grid for /detailing ───────────────
+          Re-enabled 2026-06 after Build Your Package was hidden. These three
+          cards (Interior / Exterior / Basic Interior + Exterior) are the
+          customer's main entry point into the booking flow. */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="hidden py-12 md:py-16 px-4 sm:px-6 lg:px-8"
+        className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-5xl mx-auto">
           <div className="mb-8 text-center">
@@ -357,12 +359,14 @@ export function DetailingPage({ services }: { services: Service[] }) {
           )}
         </div>
       </motion.section>
-      )}
 
-      {/* ── Ultimate Series (HIDDEN — superseded by Build Your Package) ──────── */}
-      {false && (
+      {/* ── Ultimate Series — premium upsell tier ─────────────────────────────
+          Re-enabled 2026-06 alongside Core Packages. These are the high-ticket
+          packages (Ultimate Interior Reset / Ultimate Full Reset) — same
+          cards customers see on the homepage, surfaced here too so /detailing
+          deep-links don't miss the premium option. */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
-        className="hidden py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
+        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
         <div className="max-w-5xl mx-auto">
           <div className="mb-8 text-center">
@@ -442,7 +446,6 @@ export function DetailingPage({ services }: { services: Service[] }) {
           </div>
         </div>
       </motion.section>
-      )}
 
       {/* ── Why Us ───────────────────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
@@ -484,7 +487,12 @@ export function DetailingPage({ services }: { services: Service[] }) {
               <p className="text-[11px] text-zinc-500 mt-1">Your build is locked in — Pay at Arrival or Pay Now after you choose a slot.</p>
             </div>
           )}
-          {mounted && bookingOpen && (builderPrefill || selectedService?.name?.toLowerCase().includes("paint")) && (
+          {/* Booking section renders whenever bookingOpen is true after the
+              customer clicks Book Now on any service card. The earlier
+              "only paint correction OR builder handoff" guard left the
+              page broken once the builder was hidden — every card click
+              should open the modal. */}
+          {mounted && bookingOpen && (
             <BookingSection
               isVisible={true}
               onClose={() => { setBookingOpen(false); setBuilderPrefill(null); }}
