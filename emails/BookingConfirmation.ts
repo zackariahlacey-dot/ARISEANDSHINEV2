@@ -192,10 +192,16 @@ const RV_DISPLAY: Record<string, string> = {
   "RV Full Detail":     "RV Full Detail",
 };
 
+/** Customer-facing friendly labels for auto services — keeps the DB key
+ *  "Full Detail" intact while customers see "Basic Interior + Exterior". */
+const AUTO_FRIENDLY_LABELS: Record<string, string> = {
+  "Full Detail": "Basic Interior + Exterior",
+};
+
 function getDisplayServiceName(serviceName: string, type: ServiceType): string {
   if (type === "boat") return BOAT_DISPLAY[serviceName] ?? serviceName;
   if (type === "rv") return RV_DISPLAY[serviceName] ?? serviceName;
-  return serviceName;
+  return AUTO_FRIENDLY_LABELS[serviceName] ?? serviceName;
 }
 
 // ── Shared pieces ─────────────────────────────────────────────────────────────

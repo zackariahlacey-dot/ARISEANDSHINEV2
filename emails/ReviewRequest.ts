@@ -14,12 +14,19 @@ const esc = (s: string | number): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+/** Customer-facing friendly labels for auto services. Boat/RV-specific
+ *  "Full Detail" SKUs (e.g. "Boat Full Detail") keep their full names. */
+const AUTO_FRIENDLY_LABELS: Record<string, string> = {
+  "Full Detail": "Basic Interior + Exterior",
+};
+
 export function getReviewRequestHtml(
   customerName: string,
   serviceName?: string
 ): string {
   const firstName = customerName.trim().split(/\s+/)[0] || "there";
-  const service = serviceName ? esc(serviceName) : "your detail";
+  const friendly = serviceName ? (AUTO_FRIENDLY_LABELS[serviceName] ?? serviceName) : null;
+  const service = friendly ? esc(friendly) : "your detail";
 
   return `
 <!DOCTYPE html>

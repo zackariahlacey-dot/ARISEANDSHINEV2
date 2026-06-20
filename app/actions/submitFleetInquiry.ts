@@ -24,7 +24,11 @@ export type FleetInquiryResult =
   | { status: "ok"; inquiryId: string }
   | { status: "error"; message: string };
 
-const ADMIN_EMAIL = "contact@ariseandshinevt.com";
+/** Owner's personal inbox for fleet inquiries — matches the same pattern as
+ *  every other admin email in the system. ADMIN_EMAIL env var overrides. */
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
+/** Public-facing inbox CC'd on every inquiry so the team has a shared record. */
+const PUBLIC_INBOX_CC = "contact@ariseandshinevt.com";
 const FROM_EMAIL  = "Arise & Shine VT <noreply@ariseandshinevt.com>";
 
 function formatPhone(raw: string): string {
@@ -112,6 +116,7 @@ export async function submitFleetInquiry(payload: FleetInquiryPayload): Promise<
       await resend.emails.send({
         from:    FROM_EMAIL,
         to:      ADMIN_EMAIL,
+        cc:      PUBLIC_INBOX_CC,
         subject: `[Fleet] ${payload.vehicleCount} vehicles · ${payload.businessName || payload.contactName}`,
         html,
         replyTo: payload.contactEmail,

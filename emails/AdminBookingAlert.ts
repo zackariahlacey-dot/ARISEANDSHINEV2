@@ -73,10 +73,18 @@ const RV_DISPLAY: Record<string, string> = {
   "RV Full Detail":     "RV Full Detail",
 };
 
+/** Auto service friendly-label map. Admin emails show both the friendly
+ *  customer-facing name and the internal DB key so the owner knows what
+ *  was booked at both levels. */
+const AUTO_FRIENDLY_LABELS: Record<string, string> = {
+  "Full Detail": "Basic Interior + Exterior",
+};
+
 function displayService(name: string, type: ServiceType): string {
   if (type === "boat") return BOAT_DISPLAY[name] ? `${BOAT_DISPLAY[name]} (${name})` : name;
   if (type === "rv") return RV_DISPLAY[name] ? `${RV_DISPLAY[name]} (${name})` : name;
-  return name;
+  const friendly = AUTO_FRIENDLY_LABELS[name];
+  return friendly ? `${friendly} (${name})` : name;
 }
 
 // ── Shared building blocks ────────────────────────────────────────────────────
