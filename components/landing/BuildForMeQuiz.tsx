@@ -96,8 +96,8 @@ const ADDON_LABELS: Record<string, string> = {
   salt_stain_removal: "Salt Stain Removal",
   clay_bar:           "Clay Bar Treatment",
   headlight_restore:  "Headlight Restoration",
-  ceramic_3yr:        "2-Year Ceramic — Body",
-  wheel_ceramic:      "2-Year Ceramic — Wheels",
+  ceramic_3yr:        "5-Year Gentech — Body",
+  wheel_ceramic:      "5-Year Gentech — Wheels",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────

@@ -6,36 +6,32 @@
  *     2 add-ons   → 10% off each
  *     3+ add-ons  → 15% off each
  *
- *   Premium-service bonus (Ultimate Interior Reset, Ultimate Full Reset):
- *     +10% off every basic add-on, automatically applied — stacks on top
- *     of the bundle tier.
- *     1 add-on @ premium  → 10%
- *     2 add-ons @ premium → 20%   (10% bundle + 10% premium)
- *     3+ add-ons @ premium → 25%  (15% bundle + 10% premium)
+ *   Premium add-on bonus (unlocked when ANY premium add-on is selected
+ *   — ceramic package member, seat removal, etc.):
+ *     +15% off every basic add-on, applied on top of the bundle tier.
+ *     2 basic + premium  → 25%  (10% bundle + 15% premium)
+ *     3+ basic + premium → 30%  (15% bundle + 15% premium)
+ *     1 basic + premium  → 15%  (premium only — bundle requires 2+)
  *
- * The body ceramic (`ceramic_3yr`) caps at $50 off max — even at the 25%
+ * The body coating (`ceramic_3yr`) caps at $50 off max — even at the top
  * tier its absolute discount can't exceed that. Protects margin on the
  * single most expensive add-on; everything else takes the full percentage.
  *
- * Seat Removal SKUs and Ceramic Package members are EXCLUDED from this
- * bundle math. Ceramic items get their own 15/25% package discount.
- * Seat Removal bundles already have savings baked into the bundle prices.
+ * Premium add-ons themselves (ceramic + seat removal) are EXCLUDED from
+ * the basic bundle math. Ceramic items get their own 15/25% package
+ * discount (tier-laddered separately). Seat Removal bundles have savings
+ * baked into the bundle SKU prices already.
  */
 
-/** The body ceramic capped at $50 off max regardless of tier. */
+/** The body coating capped at $50 off max regardless of tier. */
 export const CAPPED_ADDON_DISCOUNTS: Record<string, number> = {
   ceramic_3yr: 50,
 };
 
-/** Additional discount applied to basic add-ons when the booked service is a
- *  premium (Ultimate) package. Stacks additively with the bundle tier. */
-export const PREMIUM_SERVICE_BONUS_PCT = 0.10;
-
-/** True if the service name qualifies for the Premium add-on bonus. */
-export function isPremiumServiceName(serviceName: string | null | undefined): boolean {
-  if (!serviceName) return false;
-  return serviceName.toLowerCase().includes("ultimate");
-}
+/** Bonus applied to basic add-ons when the customer has at least one
+ *  Premium add-on selected (ceramic / seat removal). Stacks additively
+ *  with the basic bundle tier. */
+export const PREMIUM_ADDON_BONUS_PCT = 0.15;
 
 /** Bundle-tier percentage off each add-on for the given paid-add-on count. */
 export function bundlePctFor(qualifyingAddonCount: number): number {
@@ -44,13 +40,16 @@ export function bundlePctFor(qualifyingAddonCount: number): number {
   return 0.15;
 }
 
-/** Effective percentage including the Premium service bonus. */
+/** Effective percentage including the Premium add-on bonus.
+ *  @param qualifyingAddonCount paid basic add-ons (ceramic + seat removal excluded)
+ *  @param hasPremiumAddon true when ≥1 premium add-on (ceramic / seat removal) is picked
+ */
 export function effectiveBundlePctFor(
   qualifyingAddonCount: number,
-  isPremiumService: boolean,
+  hasPremiumAddon: boolean,
 ): number {
   const base = bundlePctFor(qualifyingAddonCount);
-  return isPremiumService ? base + PREMIUM_SERVICE_BONUS_PCT : base;
+  return hasPremiumAddon ? base + PREMIUM_ADDON_BONUS_PCT : base;
 }
 
 /** Dollar amount off ONE add-on, applying the cap when relevant. */

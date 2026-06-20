@@ -95,10 +95,10 @@ const EXTERIOR_ADDONS: AddonDefExt[] = [
   // ── 2-Year Ceramic Package members (rendered separately, not as
   // individual rows). Kept in this list so price math + booking handoff
   // still finds them. See CERAMIC_PACKAGE_IDS below.
-  { id: "ceramic_3yr",         label: "2-Year Ceramic — Body",      price: 250, desc: "Pro-grade 2-year ceramic sealant bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. Pricing scales by vehicle size.", side: "exterior", premium: true,
+  { id: "ceramic_3yr",         label: "5-Year Gentech — Body",      price: 250, desc: "Graphene-infused ceramic bonded to the paint — locks in gloss, repels water, protects against UV and contaminants. 5-year durability. Pricing scales by vehicle size.", side: "exterior", premium: true,
     sizedPrice: { sedan: 300, suv: 350, xl: 400 } },
-  { id: "wheel_ceramic",       label: "2-Year Ceramic — Wheels",    price: 125, desc: "Ceramic-coat all 4 wheels and brake calipers. Brake dust wipes off, salt and grime can't grip, gloss lasts 1-2 years.", side: "exterior", premium: true },
-  { id: "window_coat_all",     label: "2-Year Ceramic — Windows",   price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 2 full years.", side: "exterior", premium: true },
+  { id: "wheel_ceramic",       label: "5-Year Gentech — Wheels",    price: 125, desc: "Graphene coat all 4 wheels and brake calipers. Brake dust wipes off, salt and grime can't grip, gloss lasts 5 years.", side: "exterior", premium: true },
+  { id: "window_coat_all",     label: "5-Year Gentech — Windows",   price: 250, desc: "Full-vehicle graphene coating on every piece of glass — windshield, side windows, rear. Hydrophobic, anti-glare, 5 full years.", side: "exterior", premium: true },
 ];
 
 // ── 2-Year Ceramic Package ────────────────────────────────────────────────
@@ -1190,7 +1190,7 @@ export function BuildYourPackage({
                             <div className="flex items-center justify-between gap-2 mb-1.5">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <Sparkles size={13} className="text-cyan-400 shrink-0" />
-                                <span className="text-sm font-black text-white leading-tight">2-Year Ceramic Package</span>
+                                <span className="text-sm font-black text-white leading-tight">5-Year Gentech Graphene Coating</span>
                                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-wider shrink-0">
                                   <Crown size={8} fill="currentColor" />Premium
                                 </span>

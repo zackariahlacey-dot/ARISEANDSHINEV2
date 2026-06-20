@@ -63,7 +63,7 @@ export const ADDON_META: AddonMeta[] = [
     basePrice: 75, baseDuration: 30 },
   { id: "wheel_ceramic",      label: "Wheel & Caliper Ceramic Coating", side: "exterior",
     basePrice: 125, baseDuration: 60 },
-  { id: "ceramic_3yr",        label: "2-Year Pro Ceramic Sealant (Body)", side: "exterior",
+  { id: "ceramic_3yr",        label: "5-Year Gentech Graphene — Body", side: "exterior",
     basePrice:   { sedan: 300, suv: 350, xl: 400 },
     baseDuration:{ sedan: 90,  suv: 120, xl: 150 } },
   { id: "window_coat_windshield", label: "Graphene Window — Windshield Only", side: "exterior",

@@ -43,7 +43,7 @@ import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBooking
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import { todayInBusinessTz } from "@/lib/dates";
-import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, isPremiumServiceName, PREMIUM_SERVICE_BONUS_PCT } from "@/lib/bundleDiscount";
+import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, PREMIUM_ADDON_BONUS_PCT } from "@/lib/bundleDiscount";
 import {
   filterMakesByQuery,
   filterModelsByQuery,
@@ -96,7 +96,7 @@ const ALL_ADD_ONS = [
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
   // ── Paint Correction add-ons ─────────────────────────────────────────────
-  { id: "ceramic_3yr",       label: "2-Year Pro Ceramic Sealant",            price: 250, desc: "Upgrade from the included 6-month spray to a professional-grade 2-year ceramic sealant. Adds 1.5–2.5 hrs to the appointment. Pricing scales by size: $250 small · $300 mid · $350 large · $400 work van." },
+  { id: "ceramic_3yr",       label: "5-Year Gentech Graphene Coating",       price: 250, desc: "Pro-grade graphene-infused ceramic — 5 years of UV, salt, and water-spot protection. Hydrophobic, anti-static, locks in deep gloss. Adds 1.5–2.5 hrs to the appointment. Pricing scales by size: $250 sedan · $350 SUV · $400 3-row / work van." },
   { id: "ultimate_interior", label: "Ultimate Interior Add-on",              price: 175, desc: "Add the full Ultimate Interior service to your paint correction — hot water extraction, steam sanitation, salt neutralization. Adds 3 hrs to the appointment. Flat $175." },
   { id: "wheel_ceramic",     label: "Wheel & Caliper Ceramic Coating",       price: 125, desc: "Professional ceramic coating bonded to all 4 wheels and brake calipers. Brake dust wipes off, road grime can't grip, and the high-gloss finish lasts 2+ years. Flat $125 for all 4 wheels." },
   // ── 2-Year Graphene Ceramic Window Coating (flat-priced tiers) ───────────
@@ -1268,11 +1268,15 @@ export function BookingSection({
   // (their savings are baked into the 2-Row / 3-Row bundle pricing already).
   const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicPackageId(a.id) && !isSeatRemovalAddonId(a.id));
   const ceramicAddons    = selectedAddons.filter(a => isCeramicPackageId(a.id));
-  // Premium service bonus: Ultimate Interior Reset / Ultimate Full Reset get
-  // an extra +10% on every basic add-on. Stacks additively with bundle tier.
-  const isPremiumService = isPremiumServiceName(selectedService?.name);
+  // Premium add-on bonus: when the customer has selected ANY premium add-on
+  // (ceramic package member, seat removal — anything excluded from the basic
+  // bundle math), they unlock +15% off every basic add-on. Stacks on top of
+  // the basic bundle tier. Not tied to the SERVICE — tied to the add-on
+  // STACK, so a basic Interior Detail with one ceramic gets the bonus and
+  // an Ultimate booking without any premium add-ons doesn't.
+  const hasPremiumAddon = selectedAddons.some(a => isCeramicPackageId(a.id) || isSeatRemovalAddonId(a.id));
   const bundlePctRaw = bundlePctFor(qualifyingAddons.length);
-  const bundlePct = effectiveBundlePctFor(qualifyingAddons.length, isPremiumService);
+  const bundlePct = effectiveBundlePctFor(qualifyingAddons.length, hasPremiumAddon);
   const addonsBundleSavings = qualifyingAddons.reduce(
     (sum, a) => sum + addonDiscountAmount(a.id, a.price, bundlePct),
     0,
@@ -3436,19 +3440,21 @@ export function BookingSection({
                               </div>
                             )}
 
-                            {/* ── Live Discount Status Card — premium bonus + basic bundle tier ──
-                                Only renders when the customer has stacked enough add-ons to
-                                actually unlock a discount, OR has a Premium (Ultimate) service
-                                already booked. Cuts a ~150px card from the default add-ons
-                                screen so it doesn't feel premium-card-spammy at first paint. */}
-                            {(isPremiumService || qualifyingAddons.length >= 2) && (() => {
+                            {/* ── Live Discount Status Card — Premium bonus + basic bundle tier ──
+                                Only renders when the customer has stacked enough basic add-ons
+                                to unlock a bundle discount, OR has picked a Premium add-on
+                                (ceramic / seat removal) that activates the +15% Premium bonus
+                                on top of the bundle tier. Hidden at idle so the screen doesn't
+                                feel premium-card-spammy at first paint. */}
+                            {(hasPremiumAddon || qualifyingAddons.length >= 2) && (() => {
                               const count = qualifyingAddons.length;
                               const basicPct = bundlePctRaw;                                    // tier from add-on count alone
                               const totalPctNow = Math.round(bundlePct * 100);                  // includes premium
+                              const premiumBonusPct = Math.round(PREMIUM_ADDON_BONUS_PCT * 100);
                               const nextTierAtCount = count < 2 ? 2 : count < 3 ? 3 : null;
                               const nextTierBasicPct = nextTierAtCount === 2 ? 10 : nextTierAtCount === 3 ? 15 : null;
                               const nextTierTotalPct = nextTierBasicPct != null
-                                ? nextTierBasicPct + (isPremiumService ? Math.round(PREMIUM_SERVICE_BONUS_PCT * 100) : 0)
+                                ? nextTierBasicPct + (hasPremiumAddon ? premiumBonusPct : 0)
                                 : null;
                               return (
                                 <div className={`rounded-2xl border overflow-hidden mb-3 transition-all ${
@@ -3456,14 +3462,14 @@ export function BookingSection({
                                     ? "border-emerald-400/40 bg-gradient-to-br from-emerald-500/[0.07] via-zinc-950/40 to-zinc-950/40 shadow-[0_0_14px_rgba(16,185,129,0.10)]"
                                     : "border-white/[0.07] bg-zinc-950/40"
                                 }`}>
-                                  {/* Premium bonus row */}
-                                  {isPremiumService && (
+                                  {/* Premium bonus row — fires when ANY premium add-on is picked */}
+                                  {hasPremiumAddon && (
                                     <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-gradient-to-r from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.04] border-b border-white/[0.06]">
                                       <div className="flex items-center gap-2 min-w-0">
                                         <Crown size={11} className="text-[#D4AF37] shrink-0" fill="currentColor" />
-                                        <span className="text-[11px] font-bold text-[#F3E5AB] leading-tight">Ultimate bonus active</span>
+                                        <span className="text-[11px] font-bold text-[#F3E5AB] leading-tight">Premium bonus unlocked</span>
                                       </div>
-                                      <span className="text-[11px] font-black tabular-nums text-[#D4AF37]">+10% off all add-ons</span>
+                                      <span className="text-[11px] font-black tabular-nums text-[#D4AF37]">+{premiumBonusPct}% off all add-ons</span>
                                     </div>
                                   )}
                                   {/* Bundle tier row */}
@@ -3478,7 +3484,7 @@ export function BookingSection({
                                       {bundlePct > 0 ? (
                                         <p className="text-[11px] text-zinc-300 leading-snug">
                                           <span className="font-black text-white">{totalPctNow}% off</span> every basic add-on
-                                          {isPremiumService && <span className="text-zinc-500"> ({basicPct > 0 ? `${Math.round(basicPct * 100)}% bundle + 10% Ultimate` : "10% Ultimate bonus"})</span>}
+                                          {hasPremiumAddon && <span className="text-zinc-500"> ({basicPct > 0 ? `${Math.round(basicPct * 100)}% bundle + ${premiumBonusPct}% Premium` : `${premiumBonusPct}% Premium bonus`})</span>}
                                           {nextTierTotalPct != null && (
                                             <> · <span className="text-zinc-400">Add 1 more → <span className="text-emerald-300 font-bold">{nextTierTotalPct}% off</span></span></>
                                           )}
@@ -3486,10 +3492,10 @@ export function BookingSection({
                                       ) : nextTierTotalPct != null ? (
                                         <p className="text-[11px] text-zinc-400 leading-snug">
                                           Pick <span className="font-black text-white">{nextTierAtCount}</span> basic add-ons to unlock <span className="font-black text-emerald-300">{nextTierTotalPct}% off</span> each
-                                          {isPremiumService && <span className="text-zinc-500"> (Ultimate bonus stacks)</span>}
+                                          {hasPremiumAddon && <span className="text-zinc-500"> (Premium bonus stacks)</span>}
                                         </p>
                                       ) : (
-                                        <p className="text-[11px] text-zinc-500">Already at max basic discount. Add more if you'd like — pricing holds.</p>
+                                        <p className="text-[11px] text-zinc-500">Already at max basic discount. Add more if you&apos;d like — pricing holds.</p>
                                       )}
                                     </div>
                                     {/* Tier pill ladder */}
@@ -3826,7 +3832,7 @@ export function BookingSection({
                                     }`}>
                                       <div className="flex items-center gap-2">
                                         <Sparkles size={12} className="text-cyan-400 shrink-0" />
-                                        <p className="text-sm font-bold text-zinc-100 leading-tight">2-Year Ceramic Package</p>
+                                        <p className="text-sm font-bold text-zinc-100 leading-tight">5-Year Gentech Graphene Coating</p>
                                         <span className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
                                           Premium
                                         </span>
@@ -3834,7 +3840,7 @@ export function BookingSection({
                                       {ceramicCount > 0 && (
                                         <>
                                           <p className="text-[10px] text-zinc-500 leading-snug mt-1 mb-2">
-                                            Pro-grade ceramic. Mix &amp; match Body, Wheels, Windows.
+                                            Graphene-infused — 5-year hydrophobic protection. Mix &amp; match Body, Wheels, Windows.
                                           </p>
                                           <div className="flex items-center gap-1.5 text-[10px] font-bold">
                                             {[1, 2, 3].map(tier => {

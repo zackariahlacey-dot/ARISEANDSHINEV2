@@ -145,8 +145,8 @@ const ADMIN_ADDONS = [
   { id: "window_coat_windshield", label: "2-Year Graphene Window — Windshield",       price: 100 },
   { id: "window_coat_front",      label: "2-Year Graphene Window — Front 3 Windows",  price: 150 },
   { id: "window_coat_all",        label: "2-Year Graphene Window — All Windows",      price: 250 },
-  // 2-Year Pro Ceramic Sealant (size-tier priced; defaults to small tier)
-  { id: "ceramic_3yr",            label: "2-Year Pro Ceramic Sealant",                price: 250 },
+  // 5-Year Gentech Graphene Coating (size-tier priced; defaults to small tier)
+  { id: "ceramic_3yr",            label: "5-Year Gentech Graphene Coating",           price: 250 },
   // Wheel & Caliper Ceramic Coating (flat price)
   { id: "wheel_ceramic",          label: "Wheel & Caliper Ceramic Coating",           price: 125 },
   // Ultimate Interior add-on (flat — adds 3 hrs)

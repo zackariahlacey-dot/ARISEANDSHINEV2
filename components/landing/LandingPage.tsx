@@ -2104,7 +2104,6 @@ const ULTIMATE_CARDS = [
     features: [
       "Everything in Interior Detail",
       "UV Protection on All Interior Plastics & Surfaces",
-      "Full Interior Dressing (Dash, Doors, Trim)",
       "Hot Water Extraction & Deep Shampooing (Seats & Carpets)",
       "Dog Hair & Heavy Dirt Removal",
       "Standard Salt Stain Removal (Vermont winter survival)",
