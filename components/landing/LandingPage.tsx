@@ -64,7 +64,9 @@ import { Button } from "@/components/ui/button";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { LegalModal, LegalSection, LegalList } from "./LegalModal";
 import { BeforeAfterGallery } from "./BeforeAfterGallery";
-import { ServiceComparisonTable } from "./ServiceComparisonTable";
+// ServiceComparisonTable lives on /services now — it's research content, not
+// conversion. Removed from the homepage to reduce scroll depth before booking.
+// The "Not sure which tier?" link below routes researchy customers there.
 import { NewsletterSignup } from "./NewsletterSignup";
 import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
@@ -917,13 +919,12 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           </div>
           )}
 
-          {/* ── Service Comparison Table — "which one do I need?" ── */}
-          <ServiceComparisonTable />
-
-          {/* View More Services */}
-          <div className="mt-10 text-center">
-            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-bold text-[#D4AF37] hover:text-[#F3E5AB] transition-colors group">
-              View More Services
+          {/* "Not sure which tier?" — single line that routes researchy
+              customers to the full comparison page without crowding the
+              homepage with a 4-column table. */}
+          <div className="mt-8 text-center">
+            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-400 hover:text-[#D4AF37] transition-colors group">
+              Not sure which tier? Compare side-by-side
               <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
             </Link>
           </div>
@@ -951,20 +952,62 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </div>
       </motion.section>
 
-      {/* ─── Boat & RV Detailing Callouts ──────────────────────────────────────── */}
+      {/* ─── Boat / RV / Fleet Callouts — compact trio ─────────────────────────
+          Previously these were two full-pricing-table cards taking ~600px each.
+          Now they're a 3-up icon + name + CTA grid that lets the customer
+          recognize the option and click through, without rebuilding the full
+          /boat-detailing or /rv-detailing or /fleet page content here. */}
       <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={sectionViewport}
         variants={sectionVariants}
-        className="py-8 md:py-12 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
+        className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
         <div className="w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">More Services</p>
             <div className="flex-1 h-px bg-white/[0.04]" />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {[
+              { href: "/boat-detailing", Icon: Anchor,    title: "Boat Detailing",  blurb: "Dockside · Lake Champlain", priceHint: "from $15/ft" },
+              { href: "/rv-detailing",   Icon: Truck,     title: "RV Detailing",    blurb: "At your site · 20 ft min",  priceHint: "from $15/ft" },
+              { href: "/fleet",          Icon: LayoutDashboard, title: "Fleet Quotes", blurb: "4+ vehicles · up to 20% off", priceHint: "Custom quote" },
+            ].map(({ href, Icon, title, blurb, priceHint }) => (
+              <Link key={href} href={href}
+                className="group relative rounded-2xl overflow-hidden border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,175,55,0.12)] p-4 flex items-center gap-3.5"
+                style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}>
+                <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0 group-hover:bg-[#D4AF37]/15 transition-colors">
+                  <Icon size={18} className="text-[#D4AF37]" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-white leading-tight group-hover:text-[#D4AF37] transition-colors">{title}</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug truncate">{blurb}</p>
+                  <p className="text-[10px] font-bold text-[#D4AF37]/70 mt-0.5 tabular-nums">{priceHint}</p>
+                </div>
+                <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Legacy expanded-card block — preserved below behind a `false` gate so the
+          state shape + inline booking flow remain referenced by the rest of the
+          page, but the bloated UI is no longer rendered. Safe to remove entirely
+          in a future cleanup pass once we've confirmed nothing else hooks into
+          `expandedBookingId === "boat" / "rv"`. */}
+      {false && (
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        variants={sectionVariants}
+        className="hidden"
+      >
+        <div className="w-full max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* ── Boat / Marine Card ── */}
             <div
@@ -1134,6 +1177,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           </div>
         </div>
       </motion.section>
+      )}
 
       {/* ─── Loyalty Rewards (Premium Tier Ladder) ───────────────────── */}
       <motion.section

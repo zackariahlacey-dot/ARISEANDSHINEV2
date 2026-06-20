@@ -3436,8 +3436,12 @@ export function BookingSection({
                               </div>
                             )}
 
-                            {/* ── Live Discount Status Card — premium bonus + basic bundle tier ── */}
-                            {(isPremiumService || standAlone.length > 0) && (() => {
+                            {/* ── Live Discount Status Card — premium bonus + basic bundle tier ──
+                                Only renders when the customer has stacked enough add-ons to
+                                actually unlock a discount, OR has a Premium (Ultimate) service
+                                already booked. Cuts a ~150px card from the default add-ons
+                                screen so it doesn't feel premium-card-spammy at first paint. */}
+                            {(isPremiumService || qualifyingAddons.length >= 2) && (() => {
                               const count = qualifyingAddons.length;
                               const basicPct = bundlePctRaw;                                    // tier from add-on count alone
                               const totalPctNow = Math.round(bundlePct * 100);                  // includes premium
@@ -3613,20 +3617,25 @@ export function BookingSection({
                                       ? "border-[#D4AF37]/60 bg-gradient-to-br from-[#D4AF37]/[0.08] via-zinc-950/40 to-zinc-950/40 shadow-[0_0_18px_rgba(212,175,55,0.15)]"
                                       : "border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.02] via-zinc-900/40 to-zinc-900/40 hover:border-[#D4AF37]/50"
                                   }`}>
-                                    {/* Header */}
-                                    <div className={`px-4 pt-3 pb-2.5 border-b border-white/[0.06] ${
+                                    {/* Header — tightened: only show the description once
+                                        any seat is selected (eliminates the always-on prose
+                                        block that was eating ~36px of vertical space on a
+                                        screen already filled with premium cards). */}
+                                    <div className={`px-4 pt-2.5 pb-2 border-b border-white/[0.06] ${
                                       anySelected ? "bg-[#D4AF37]/[0.06]" : "bg-zinc-950/30"
                                     }`}>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <Crown size={13} className="text-[#D4AF37] shrink-0" fill="currentColor" />
-                                        <p className="text-sm font-bold text-zinc-100 leading-tight">Seat Removal Deep Clean</p>
-                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
-                                          <Crown size={8} fill="currentColor" />Premium
+                                      <div className="flex items-center gap-2">
+                                        <Crown size={12} className="text-[#D4AF37] shrink-0" fill="currentColor" />
+                                        <p className="text-sm font-bold text-zinc-100 leading-tight">Seat Removal — Deep Clean</p>
+                                        <span className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
+                                          Premium
                                         </span>
                                       </div>
-                                      <p className="text-[11px] text-zinc-500 leading-snug">
-                                        Seats physically removed for under-rail and seat-underside hot water extraction. Pick à la carte or bundle for the deepest clean we offer.
-                                      </p>
+                                      {anySelected && (
+                                        <p className="text-[10px] text-zinc-500 leading-snug mt-1">
+                                          Seats physically removed for under-rail extraction. Pick per-section or bundle.
+                                        </p>
+                                      )}
                                     </div>
 
                                     {/* Per-section options — grid like ceramic package.
@@ -3802,38 +3811,46 @@ export function BookingSection({
                                       ? "border-cyan-400/60 bg-gradient-to-br from-cyan-500/[0.08] via-zinc-950/40 to-zinc-950/40 shadow-[0_0_18px_rgba(34,211,238,0.14)]"
                                       : "border-[#D4AF37]/30 bg-gradient-to-br from-cyan-500/[0.02] via-zinc-900/40 to-zinc-900/40 hover:border-cyan-400/50"
                                   }`}>
-                                    {/* Header + tier ladder */}
-                                    <div className={`px-4 pt-3.5 pb-3 border-b border-white/[0.06] ${
+                                    {/* Header + tier ladder — tightened: description prose
+                                        only renders when at least one ceramic is picked, and
+                                        the tier ladder only renders when something IS picked
+                                        (it shows the "next tier to unlock" hint instead at
+                                        idle, which is what customers actually need). */}
+                                    <div className={`px-4 pt-2.5 pb-2.5 border-b border-white/[0.06] ${
                                       ceramicCount > 0 ? "bg-cyan-500/[0.05]" : "bg-zinc-950/30"
                                     }`}>
-                                      <div className="flex items-center gap-2 mb-1.5">
-                                        <Sparkles size={13} className="text-cyan-400 shrink-0" />
+                                      <div className="flex items-center gap-2">
+                                        <Sparkles size={12} className="text-cyan-400 shrink-0" />
                                         <p className="text-sm font-bold text-zinc-100 leading-tight">2-Year Ceramic Package</p>
-                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
-                                          <Crown size={8} fill="currentColor" />Premium
+                                        <span className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black text-[8px] font-black uppercase tracking-widest shrink-0">
+                                          Premium
                                         </span>
                                       </div>
-                                      <p className="text-[11px] text-zinc-500 leading-snug mb-2">
-                                        Pro-grade 2-year ceramic coating. Mix &amp; match Body, Wheels, and Windows — the more you pick, the more you save.
-                                      </p>
-                                      <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                                        {[1, 2, 3].map(tier => {
-                                          const reached = ceramicCount >= tier;
-                                          const tierPct = Math.round(ceramicPackagePct(tier) * 100);
-                                          return (
-                                            <div key={tier} className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md border transition-all ${
-                                              reached
-                                                ? tierPct === 0
-                                                  ? "border-zinc-500/40 bg-zinc-500/[0.08] text-zinc-400"
-                                                  : "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
-                                                : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
-                                            }`}>
-                                              {reached && <Check size={9} strokeWidth={3} />}
-                                              {tier} pick{tier > 1 ? "s" : ""} = {tierPct}% off
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
+                                      {ceramicCount > 0 && (
+                                        <>
+                                          <p className="text-[10px] text-zinc-500 leading-snug mt-1 mb-2">
+                                            Pro-grade ceramic. Mix &amp; match Body, Wheels, Windows.
+                                          </p>
+                                          <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                                            {[1, 2, 3].map(tier => {
+                                              const reached = ceramicCount >= tier;
+                                              const tierPct = Math.round(ceramicPackagePct(tier) * 100);
+                                              return (
+                                                <div key={tier} className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md border transition-all ${
+                                                  reached
+                                                    ? tierPct === 0
+                                                      ? "border-zinc-500/40 bg-zinc-500/[0.08] text-zinc-400"
+                                                      : "border-cyan-400/60 bg-cyan-500/[0.12] text-cyan-300"
+                                                    : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
+                                                }`}>
+                                                  {reached && <Check size={9} strokeWidth={3} />}
+                                                  {tier} pick{tier > 1 ? "s" : ""} = {tierPct}% off
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
 
                                     {/* 3 multi-pick sub-buttons */}

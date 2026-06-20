@@ -14,6 +14,7 @@ import type { Service } from "@/app/page";
 import type { SuccessModalData } from "./SuccessModal";
 import { SiteHeader } from "./SiteHeader";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
+import { ServiceComparisonTable } from "./ServiceComparisonTable";
 
 const BookingSection = dynamic(
   () => import("./BookingModal").then((m) => ({ default: m.BookingSection })),
@@ -206,7 +207,12 @@ export function ServicesPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ── 2. Ultimate Packages ── */}
+      {/* ── 2. Service Comparison Table (moved here from homepage) ── */}
+      <section id="service-comparison" className="border-t border-white/[0.06] pt-4">
+        <ServiceComparisonTable />
+      </section>
+
+      {/* ── 3. Ultimate Packages ── */}
       <motion.section id="ultimate-packages" initial="hidden" whileInView="visible" viewport={viewport} variants={sectionVariants}
         className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
