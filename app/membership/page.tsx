@@ -23,7 +23,9 @@ export default async function MembershipPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <SiteHeader />
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+      {/* SiteHeader is fixed at top-8 + h-16 → ~96px. Pad-top 32/40 gives the
+          hero room to breathe instead of slamming into the announcement bar. */}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-32 sm:pt-40 pb-12 sm:pb-16">
         {/* Hero */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-1.5 mb-3">

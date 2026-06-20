@@ -1,6 +1,7 @@
 "use server";
 
 import Stripe from "stripe";
+import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -11,6 +12,54 @@ import {
   MEMBERSHIP_TIER,
   type ActiveMembership,
 } from "@/lib/membership";
+
+const ADMIN_EMAIL  = process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com";
+const PUBLIC_INBOX = "contact@ariseandshinedetailing.com";
+const FROM_EMAIL   = "Arise And Shine Detailing <noreply@ariseandshinedetailing.com>";
+
+async function sendMembershipAdminAlert(args: {
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  amountPaidCents: number;
+  membershipId: string;
+  expiresAt: Date;
+}) {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+    const resend = new Resend(apiKey);
+    const html = `
+      <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#111;">
+        <div style="background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);padding:24px;color:#000;border-radius:10px 10px 0 0;">
+          <div style="font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;opacity:.75;">New Premium Member</div>
+          <div style="font-size:22px;font-weight:900;margin-top:4px;">$${(args.amountPaidCents / 100).toFixed(0)} Annual Membership</div>
+          <div style="font-size:13px;font-weight:600;margin-top:2px;opacity:.85;">$${MEMBERSHIP_CREDIT_USD} credit · expires ${args.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+        </div>
+        <div style="background:#fff;border:1px solid #eee;border-top:none;padding:24px;border-radius:0 0 10px 10px;">
+          <h2 style="font-size:13px;margin:0 0 8px;color:#666;text-transform:uppercase;letter-spacing:.1em;">Customer</h2>
+          <p style="margin:0 0 4px;"><strong>${args.customerName ?? "Unknown"}</strong></p>
+          ${args.customerEmail ? `<p style="margin:0 0 4px;">${args.customerEmail}</p>` : ""}
+          ${args.customerPhone ? `<p style="margin:0 0 4px;">${args.customerPhone}</p>` : ""}
+          <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#888;">
+            Membership ID: <code>${args.membershipId}</code>
+          </div>
+        </div>
+      </div>
+    `;
+    await resend.emails.send({
+      from:    FROM_EMAIL,
+      to:      ADMIN_EMAIL,
+      cc:      PUBLIC_INBOX,
+      subject: `[Membership] ${args.customerName ?? "New member"} · $${(args.amountPaidCents / 100).toFixed(0)}`,
+      html,
+      replyTo: args.customerEmail ?? undefined,
+    });
+  } catch (e) {
+    // Email failure shouldn't break the webhook — membership row is already saved.
+    console.error("[sendMembershipAdminAlert]", e);
+  }
+}
 
 /** Returns the current user's active membership (or null). */
 export async function getMyActiveMembership(): Promise<ActiveMembership | null> {
@@ -144,6 +193,30 @@ export async function createMembershipFromWebhook(input: {
   if (error || !data) {
     console.error("[createMembershipFromWebhook]", error);
     return { success: false, error: error?.message ?? "Insert failed" };
+  }
+
+  // Fire admin notification email (best-effort — failure doesn't block the
+  // webhook). Look up the buyer's name/email/phone for the alert.
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, phone")
+      .eq("id", input.profileId)
+      .maybeSingle();
+    const { data: authUser } = await supabase.auth.admin.getUserById(input.profileId);
+    const customerName = profile
+      ? [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() || null
+      : null;
+    await sendMembershipAdminAlert({
+      customerName,
+      customerEmail: authUser?.user?.email ?? null,
+      customerPhone: profile?.phone ?? null,
+      amountPaidCents: input.amountPaidCents || MEMBERSHIP_PRICE_CENTS,
+      membershipId: data.id,
+      expiresAt,
+    });
+  } catch (e) {
+    console.error("[createMembershipFromWebhook] admin alert lookup failed:", e);
   }
 
   return { success: true, membershipId: data.id };

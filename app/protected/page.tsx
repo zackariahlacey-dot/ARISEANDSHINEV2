@@ -9,6 +9,7 @@ import { getContractorDashboard } from "@/app/actions/contractorDashboard";
 import { ContractorDashboard } from "@/components/contractor/ContractorDashboard";
 import { getClientBookings } from "@/app/actions/getClientBookings";
 import { getMaintenanceOffers, getSavedVehicles } from "@/app/actions/getMaintenanceOffers";
+import { getMyActiveMembership } from "@/app/actions/membership";
 import { BookingCard } from "@/components/dashboard/BookingCard";
 import { SignOutButton } from "@/components/dashboard/SignOutButton";
 import { getUserPlanRequest } from "@/app/actions/planRequestActions";
@@ -68,16 +69,20 @@ async function Dashboard() {
   // Safe to run on every dashboard load (no-op when there's nothing to merge).
   await claimGuestBookings().catch(err => console.error("[dashboard] claimGuestBookings:", err));
 
-  const [profile, { upcoming, past }, planRequest, maintenanceOffers, savedVehicles] = await Promise.all([
+  const [profile, { upcoming, past }, planRequest, maintenanceOffers, savedVehicles, activeMembership] = await Promise.all([
     getAuthProfile(),
     getClientBookings(user.id),
     getUserPlanRequest(),
     getMaintenanceOffers(),
     getSavedVehicles(),
+    getMyActiveMembership(),
   ]);
 
   const completedCount = profile?.completedDetailCount ?? 0;
   const discountPct    = profile?.loyaltyDiscountPct ?? 0;
+  const membershipCreditDollars = activeMembership
+    ? Math.round(activeMembership.credit_balance_cents / 100)
+    : null;
 
   const firstName =
     (user.user_metadata?.first_name as string | undefined)?.trim() ||
@@ -151,13 +156,23 @@ async function Dashboard() {
               )}
             </div>
 
-            {/* Stat tiles — bigger, more confident, with icons */}
+            {/* Stat tiles — bigger, more confident, with icons. When the
+                customer has an active Premium Membership, the "Offers" tile
+                is replaced by a "Credit Left" tile that prominently shows
+                their remaining balance — most actionable stat for members. */}
             <div className="relative grid grid-cols-3 gap-3">
-              {[
-                { label: "Bookings", value: totalBookings,     color: "text-white",         icon: CalendarDays },
-                { label: "Details",  value: completedCount,    color: "text-[#D4AF37]",     icon: Sparkles     },
-                { label: "Offers",   value: maintenanceOffers.length, color: "text-emerald-300", icon: Zap     },
-              ].map(({ label, value, color, icon: Icon }) => (
+              {(membershipCreditDollars != null
+                ? [
+                    { label: "Bookings",    value: String(totalBookings),               color: "text-white",     icon: CalendarDays as typeof CalendarDays },
+                    { label: "Details",     value: String(completedCount),              color: "text-[#D4AF37]", icon: Sparkles as typeof CalendarDays     },
+                    { label: "Credit Left", value: `$${membershipCreditDollars}`,       color: "text-emerald-300", icon: Crown as typeof CalendarDays     },
+                  ]
+                : [
+                    { label: "Bookings", value: String(totalBookings),                  color: "text-white",     icon: CalendarDays as typeof CalendarDays },
+                    { label: "Details",  value: String(completedCount),                 color: "text-[#D4AF37]", icon: Sparkles as typeof CalendarDays     },
+                    { label: "Offers",   value: String(maintenanceOffers.length),       color: "text-emerald-300", icon: Zap as typeof CalendarDays       },
+                  ]
+              ).map(({ label, value, color, icon: Icon }) => (
                 <div key={label} className="rounded-2xl bg-zinc-950/60 border border-white/[0.06] px-3 py-3 backdrop-blur-sm">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Icon size={11} className={color} />
@@ -168,6 +183,10 @@ async function Dashboard() {
               ))}
             </div>
           </div>
+
+          {/* ── Membership Panel — moved up so members see their credit
+              balance right after the hero. Non-members see the upsell card. */}
+          <MembershipPanel />
 
           {/* ── Active Maintenance Offers ──────────────────────────────── */}
           <MaintenanceSection offers={maintenanceOffers} />
@@ -284,8 +303,8 @@ async function Dashboard() {
             </div>
           </div>
 
-          {/* ── Membership Panel ──────────────────────────────────────── */}
-          <MembershipPanel />
+          {/* MembershipPanel moved to the top of the dashboard (above
+              Maintenance offers) so members see their credit balance first. */}
 
           {/* ── Book Now CTA ──────────────────────────────────────────── */}
           <Link

@@ -14,8 +14,11 @@ export default function Loading() {
       {/* Wordmark */}
       <div className="relative flex flex-col items-center gap-6">
         <p
-          className="animate-pulse text-2xl font-black tracking-[0.25em] uppercase select-none
-                     bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent"
+          // text-indent equals tracking so the trailing per-character spacing
+          // doesn't push the optical center of the wordmark off to the left.
+          className="animate-pulse text-2xl font-black tracking-[0.25em] uppercase select-none text-center
+                     bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent
+                     [text-indent:0.25em]"
           style={{ filter: "drop-shadow(0 0 28px rgba(212,175,55,0.35))" }}
         >
           Arise And Shine Detailing
