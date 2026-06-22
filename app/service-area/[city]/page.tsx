@@ -13,13 +13,55 @@ export function generateStaticParams() {
   return getTownSlugs().map((city) => ({ city }));
 }
 
+/** Per-town metadata overrides. Towns listed here get hand-crafted SEO
+ *  titles/descriptions; everything else falls through to the templated
+ *  default. Hand-tuned for the high-ticket luxury markets where templated
+ *  metadata leaves SEO money on the table. */
+const TOWN_META_OVERRIDES: Record<string, { title: string; description: string }> = {
+  charlotte: {
+    title:       "Charlotte VT Luxury Mobile Detailing — Estate & Lake Champlain Specialists | Arise And Shine",
+    description: "Estate-class mobile detailing in Charlotte, Vermont. We come to Mt Philo Road, Greenbush, and Thompsons Point. Range Rovers, Porsches, G-Wagons, ceramic coatings, multi-vehicle estate visits. Lake Champlain shoreline specialists.",
+  },
+  stowe: {
+    title:       "Stowe Mobile Detailing — Ski-Season Salt Recovery & Sprinter Specialists | Arise And Shine",
+    description: "Mountain Road, Trapp Hill, Edson Hill — mobile detailing for Stowe second homes, Sprinter ski-loaders, Range Rovers, and resort fleets. Salt recovery, mud-season reset, 5-Year Gentech Graphene Coating.",
+  },
+  manchester: {
+    title:       "Manchester VT Mobile Detailing — Equinox & Stratton Second Homes | Arise And Shine",
+    description: "Luxury mobile detailing for Manchester, VT weekenders. Equinox Resort, Stratton Mountain second homes, fleet days for resort guests. Range Rover, Porsche, G-Wagon specialists.",
+  },
+  woodstock: {
+    title:       "Woodstock VT Mobile Detailing — Village & Country Estate Service | Arise And Shine",
+    description: "Mobile detailing for Woodstock village homes, Pomfret estates, and the Woodstock Inn. Classic and vintage vehicle safe. Range Rover, Mercedes wagon, vintage Porsche.",
+  },
+  norwich: {
+    title:       "Norwich VT Mobile Detailing — Dartmouth-Adjacent Luxury Service | Arise And Shine",
+    description: "Norwich, VT mobile detailing for Hanover-adjacent Dartmouth faculty and Upper Valley weekend homes. Range Rover, Audi, Lexus SUV specialists. 5-Year Gentech Graphene Coating available.",
+  },
+  killington: {
+    title:       "Killington Mobile Detailing — Ski Salt Recovery & Resort Fleet | Arise And Shine",
+    description: "Ski-season mobile detailing for Killington second homes, resort fleets, and condo owners. Heavy salt cleanup, Ultimate Interior + Exterior Reset, multi-vehicle discounts for full-week visits.",
+  },
+  stratton: {
+    title:       "Stratton Mountain Mobile Detailing — Second Home & Fleet Days | Arise And Shine",
+    description: "Mobile detailing for Stratton, VT second homes. Bondville, Winhall, Stratton Village. Range Rover, G-Wagon, Sprinter fleet days. Property manager friendly — we serve absentee owners.",
+  },
+  quechee: {
+    title:       "Quechee VT Mobile Detailing — Quechee Club & Lake Pinneo | Arise And Shine",
+    description: "Mobile detailing for Quechee Club members and Lake Pinneo homes. Range Rover, Lexus, Audi SUVs, vintage MGs and BMW E30s welcome. Fleet days available through Club office.",
+  },
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ city: string }> }): Promise<Metadata> {
   const { city } = await params;
   const town = getTownBySlug(city);
   if (!town) return { title: "Service Area | Arise And Shine Detailing" };
 
-  const title = `Mobile Auto Detailing in ${town.shortName}, VT | Arise And Shine Detailing`;
-  const description = `Mobile auto, boat, and RV detailing in ${town.shortName}, Vermont. We come to your driveway, marina, or office — fully self-contained equipment, transparent pricing, easy online booking. ${town.driveTimeMin === 0 ? "Our home base." : `About ${town.driveTimeMin} minutes from our Williston base.`}`;
+  const override = TOWN_META_OVERRIDES[town.slug];
+  const title = override?.title
+    ?? `Mobile Auto Detailing in ${town.shortName}, VT | Arise And Shine Detailing`;
+  const description = override?.description
+    ?? `Mobile auto, boat, and RV detailing in ${town.shortName}, Vermont. We come to your driveway, marina, or office — fully self-contained equipment, transparent pricing, easy online booking. ${town.driveTimeMin === 0 ? "Our home base." : `About ${town.driveTimeMin} minutes from our Williston base.`}`;
 
   return {
     title,
@@ -30,6 +72,9 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
       `mobile car detailing ${town.shortName}`,
       `auto detail near me ${town.shortName} VT`,
       `${town.shortName} car detailing`,
+      `luxury car detailing ${town.shortName} VT`,
+      `ceramic coating ${town.shortName} VT`,
+      `Range Rover detailing ${town.shortName}`,
       ...(town.waterfront ? [`boat detailing ${town.shortName} VT`, `marine detailing ${town.shortName}`] : []),
     ],
     openGraph: {
@@ -44,13 +89,74 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   };
 }
 
+/** Builds Schema.org LocalBusiness + Service structured data for a town
+ *  page. Google uses areaServed to rank local-intent searches like
+ *  "mobile detailing Charlotte VT". Pricing fields seed rich snippets. */
+function buildTownSchema(town: ReturnType<typeof getTownBySlug>) {
+  if (!town) return null;
+  const url = `https://www.ariseandshinedetailing.com/service-area/${town.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "LocalBusiness",
+        "@id":   `${url}#business`,
+        name:    "Arise And Shine Detailing",
+        url:     "https://www.ariseandshinedetailing.com",
+        telephone: "+18025855563",
+        email:     "contact@ariseandshinedetailing.com",
+        image:     "https://www.ariseandshinedetailing.com/aasbanner.png",
+        priceRange: "$$",
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Williston",
+          addressRegion:   "VT",
+          addressCountry:  "US",
+        },
+        areaServed: {
+          "@type": "City",
+          name:    `${town.shortName}, VT`,
+        },
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: "5.0",
+          reviewCount: "47",
+        },
+      },
+      {
+        "@type": "Service",
+        "@id":   `${url}#service`,
+        name:    `Mobile Auto Detailing in ${town.shortName}, VT`,
+        provider: { "@id": `${url}#business` },
+        serviceType: "Mobile Auto Detailing",
+        areaServed: {
+          "@type": "City",
+          name:    `${town.shortName}, VT`,
+        },
+        description: `Premium mobile auto detailing in ${town.shortName}, Vermont. Interior, Exterior, Basic Interior + Exterior, Ultimate Series, and 5-Year Gentech Graphene Coating. We come to you anywhere in ${town.shortName}.`,
+        offers: {
+          "@type": "AggregateOffer",
+          priceCurrency: "USD",
+          lowPrice:  "130",
+          highPrice: "400",
+          offerCount: "6",
+        },
+      },
+    ],
+  };
+}
+
 export default async function TownPage({ params }: { params: Promise<{ city: string }> }) {
   const { city } = await params;
   const town = getTownBySlug(city);
   if (!town) notFound();
 
-  // FAQPage schema for this town's local FAQ
+  // FAQPage + LocalBusiness/Service schema for this town. The town schema
+  // gives Google explicit signals for local-intent search rankings
+  // (areaServed = the specific city) and seeds rich snippets via the
+  // AggregateOffer pricing data.
   const faqSchema = buildFaqPageSchema([{ category: `${town.shortName} FAQ`, items: [...town.localFaq] }] as unknown as Parameters<typeof buildFaqPageSchema>[0]);
+  const townSchema = buildTownSchema(town);
 
   return (
     <div className="relative min-h-screen bg-zinc-950">
@@ -58,6 +164,12 @@ export default async function TownPage({ params }: { params: Promise<{ city: str
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
+      {townSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(townSchema) }}
+        />
+      )}
 
       <div aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px]"
         style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.07) 0%, transparent 65%)" }} />

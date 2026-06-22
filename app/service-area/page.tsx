@@ -4,6 +4,38 @@ import { MapPin, Car, Anchor, Truck, Phone, ArrowLeft, DollarSign, ChevronRight 
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { TOWNS } from "@/lib/townContent";
 
+/** Region grouping for town pages. Better than a flat alphabetical list —
+ *  matches how Vermonters actually think about the state, and lets us put
+ *  high-ticket markets (Stowe, Charlotte, Stratton) in their own visually-
+ *  distinct sections. Slug order within each region is curated by
+ *  drive-time/relevance. */
+const REGIONS: { id: string; label: string; subtitle: string; slugs: string[] }[] = [
+  {
+    id: "champlain",
+    label: "Chittenden County & Champlain Valley",
+    subtitle: "Our home turf — Williston, Burlington, and the surrounding lakeshore",
+    slugs: ["williston", "burlington", "south-burlington", "essex", "essex-junction", "winooski", "colchester", "shelburne", "charlotte", "hinesburg", "milton"],
+  },
+  {
+    id: "stowe",
+    label: "Stowe & Mountain Country",
+    subtitle: "Ski-season specialists for second homes and resort fleets",
+    slugs: ["stowe"],
+  },
+  {
+    id: "upper-valley",
+    label: "Upper Valley & Woodstock",
+    subtitle: "Hanover-adjacent luxury and weekend-home markets",
+    slugs: ["norwich", "woodstock", "quechee"],
+  },
+  {
+    id: "southern",
+    label: "Southern Vermont",
+    subtitle: "Manchester, Stratton, and Killington — by coordinated visit",
+    slugs: ["killington", "manchester", "stratton"],
+  },
+];
+
 export const metadata: Metadata = {
   title: "Mobile Detailing Service Area | Burlington, Williston & Chittenden County, VT",
   description: "Arise And Shine Detailing serves Burlington, Williston, South Burlington, Shelburne, Essex, Colchester, Winooski, Milton, Hinesburg, and all of Vermont within 1.5 hours of Williston. We come to you.",
@@ -71,31 +103,49 @@ export default function ServiceAreaPage() {
             ))}
           </div>
 
-          {/* Individual town landing pages */}
-          <section className="w-full flex flex-col gap-4">
+          {/* Individual town landing pages — grouped by region */}
+          <section className="w-full flex flex-col gap-6">
             <div className="text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#D4AF37] mb-2">Detailed coverage by city</p>
               <h2 className="text-xl sm:text-2xl font-black text-white">Pick your town</h2>
+              <p className="text-xs text-zinc-500 mt-1">{TOWNS.length} town pages and growing — most popular regions first.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {TOWNS.map((t) => (
-                <Link key={t.slug} href={`/service-area/${t.slug}`}
-                  className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/60 backdrop-blur-sm px-4 py-3 hover:border-[#D4AF37]/30 transition-all"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <MapPin size={14} className="text-[#D4AF37] shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-white truncate group-hover:text-[#D4AF37] transition-colors">{t.shortName}, VT</p>
-                      <p className="text-[11px] text-zinc-500 truncate">
-                        {t.driveTimeMin === 0 ? "Home base" : `~${t.driveTimeMin} min from base`}
-                        {t.waterfront && " · waterfront"}
-                      </p>
-                    </div>
+            {REGIONS.map((region) => {
+              const regionTowns = region.slugs
+                .map(slug => TOWNS.find(t => t.slug === slug))
+                .filter((t): t is NonNullable<typeof t> => !!t);
+              if (regionTowns.length === 0) return null;
+              return (
+                <div key={region.id} className="w-full">
+                  <div className="flex items-center gap-3 mb-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#D4AF37] shrink-0">
+                      {region.label}
+                    </p>
+                    <div className="flex-1 h-px bg-white/[0.05]" />
                   </div>
-                  <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all shrink-0" />
-                </Link>
-              ))}
-            </div>
+                  <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">{region.subtitle}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {regionTowns.map((t) => (
+                      <Link key={t.slug} href={`/service-area/${t.slug}`}
+                        className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/60 backdrop-blur-sm px-4 py-3 hover:border-[#D4AF37]/30 transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <MapPin size={14} className="text-[#D4AF37] shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-white truncate group-hover:text-[#D4AF37] transition-colors">{t.shortName}, VT</p>
+                            <p className="text-[11px] text-zinc-500 truncate">
+                              {t.driveTimeMin === 0 ? "Home base" : `~${t.driveTimeMin} min from base`}
+                              {t.waterfront && " · waterfront"}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </section>
 
           {/* Travel fee card — centered header, body text readable */}
@@ -106,13 +156,17 @@ export default function ServiceAreaPage() {
             <p className="text-sm font-bold text-white -mt-2">How Travel Fees Work</p>
             <div className="space-y-3 text-sm text-zinc-400 leading-relaxed">
               <p>
-                The first <span className="text-white font-semibold">10 miles</span> from our base in Williston are always free.
-                Beyond that, we charge <span className="text-white font-semibold">$0.50 per mile</span>, rounded up to the nearest dollar.
+                <span className="text-[#D4AF37] font-bold">Burlington, Williston, and South Burlington are always free</span> — no
+                travel fee regardless of address.
               </p>
               <p>
-                For example, a location 30 miles away would have a travel fee of{" "}
-                <span className="text-white font-semibold">$10</span>{" "}
-                (20 billable miles × $0.50).
+                Everywhere else: the first <span className="text-white font-semibold">7.5 miles</span> from our 209 Porterwood Dr base in Williston are free.
+                Beyond that, we charge <span className="text-white font-semibold">$1 per mile</span> of driving distance, rounded up to the nearest dollar.
+              </p>
+              <p>
+                For example, a location 20 miles away would have a travel fee of{" "}
+                <span className="text-white font-semibold">$13</span>{" "}
+                (12.5 billable miles × $1).
               </p>
               <p className="text-zinc-500">
                 The exact fee — if any — is calculated automatically and shown at checkout before you confirm. No surprises.

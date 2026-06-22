@@ -433,7 +433,44 @@ export function NewBookingForm({
   }, 0);
   const adminVehiclesSubtotal = basePrice + addonTotal + additionalVehiclesTotal;
   const adminMultiVehicleDiscount = getAdminMultiVehicleDiscount(adminVehiclesSubtotal, 1 + additionalVehicles.length);
-  const totalPrice  = priceOverride !== "" ? Number(priceOverride) : Math.max(0, adminVehiclesSubtotal - adminMultiVehicleDiscount);
+
+  // ── Travel fee — auto-fetch when address changes ─────────────────────────
+  // Mirrors the customer-side booking flow. Burlington/Williston/South
+  // Burlington always return $0; everywhere else gets $1/mile past 7.5mi
+  // from the 209 Porterwood Dr home base. Debounced 500ms so we don't
+  // hammer the Distance Matrix API on every keystroke.
+  const [adminTravelFee, setAdminTravelFee] = useState(0);
+  const [adminTravelMiles, setAdminTravelMiles] = useState<number | null>(null);
+  const [adminTravelFeeLoading, setAdminTravelFeeLoading] = useState(false);
+  useEffect(() => {
+    const addr = address.trim();
+    if (!addr || addr.length < 8) {
+      setAdminTravelFee(0);
+      setAdminTravelMiles(null);
+      return;
+    }
+    setAdminTravelFeeLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/travel-fee?address=${encodeURIComponent(addr)}`);
+        const data = await res.json();
+        if (res.ok && typeof data.travelFee === "number") {
+          setAdminTravelFee(data.travelFee);
+          setAdminTravelMiles(typeof data.distanceMiles === "number" ? data.distanceMiles : null);
+        }
+      } catch (e) {
+        // Silent — fee stays at last-known value
+        console.error("[admin travel fee]", e);
+      } finally {
+        setAdminTravelFeeLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [address]);
+
+  const totalPrice  = priceOverride !== ""
+    ? Number(priceOverride)
+    : Math.max(0, adminVehiclesSubtotal - adminMultiVehicleDiscount + adminTravelFee);
 
   useEffect(() => {
     if (step !== 4 || !bookingDate) return;
@@ -505,6 +542,11 @@ export function NewBookingForm({
             `${i + 2}. ${v.vehicleYear} ${v.vehicleMake} ${v.vehicleModel} — ${v.serviceName} ($${v.servicePrice})`
           ).join("; ")}${adminMultiVehicleDiscount > 0 ? `\n🚗 Multi-vehicle discount (${1 + additionalVehicles.length} vehicles): $${adminMultiVehicleDiscount.toFixed(2)} off` : ""}`
         : "";
+      // Travel fee note — matches the format the admin schedule sidebar
+      // parses for the line-item display: /🚗 Travel Fee:\s*\$(...)/
+      const travelFeeNote = adminTravelFee > 0 && priceOverride === ""
+        ? `\n🚗 Travel Fee: $${adminTravelFee.toFixed(2)}${adminTravelMiles ? ` (${adminTravelMiles} mi)` : ""}`
+        : "";
       const durationMins = durationOverride ? parseInt(durationOverride, 10) : undefined;
       const res = await adminQuickBookAction({
         name, phone, email, address,
@@ -515,7 +557,7 @@ export function NewBookingForm({
         totalPrice,
         allowOverlap,
         ...(durationMins && durationMins > 0 ? { durationOverrideMins: durationMins } : {}),
-        notes: [notes, footageNote, addonNote, addlVehicleNote].filter(Boolean).join(""),
+        notes: [notes, footageNote, addonNote, addlVehicleNote, travelFeeNote].filter(Boolean).join(""),
         ...(clientPrefill?.profileId ? { preferredProfileId: clientPrefill.profileId } : {}),
         ...(pathway === "vehicle" && existingVehicleId ? { existingVehicleId } : {}),
         ...(additionalVehicles.length > 0 ? {
@@ -970,6 +1012,19 @@ export function NewBookingForm({
               return a ? <SummaryRow key={id} label={a.label} value={`+$${getAdminAddonPrice(id, vehicleSize)}`} /> : null;
             })}
             {priceOverride !== "" && <SummaryRow label="Override" value={`$${priceOverride}`} />}
+            {/* Travel fee — admin-side mirror of customer flow */}
+            {address.trim().length >= 8 && priceOverride === "" && (
+              <SummaryRow
+                label={adminTravelFeeLoading ? "Travel fee…" : "Travel"}
+                value={
+                  adminTravelFeeLoading
+                    ? "…"
+                    : adminTravelFee === 0
+                      ? (adminTravelMiles === 0 ? "FREE (hometown)" : "FREE")
+                      : `+$${adminTravelFee}${adminTravelMiles ? ` · ${adminTravelMiles}mi` : ""}`
+                }
+              />
+            )}
             <div className="border-t border-white/[0.06] pt-1 mt-1 flex justify-between text-sm font-black">
               <span className="text-zinc-400">Total</span>
               <span className="text-amber-400">${totalPrice}</span>

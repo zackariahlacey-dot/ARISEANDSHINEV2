@@ -1,16 +1,51 @@
 /**
  * Travel fee from actual driving distance (Google Distance Matrix API).
- * First 10 miles free from home base; then $0.50 per mile beyond that, rounded up to nearest $1.
- * Fallback: flat fee if API fails so booking does not break.
+ *
+ * Rules (June 2026):
+ *   - Burlington, Williston, South Burlington → FREE regardless of distance
+ *     (we're here anyway, no reason to ding hometown / next-door customers).
+ *   - Everywhere else: $1/mile past 7.5 miles of driving distance from the
+ *     209 Porterwood Dr (Williston) home base. Rounded up to nearest $1.
+ *
+ * On Distance Matrix API failure or unroutable address, returns a flat
+ * fallback fee so booking can continue rather than blow up the flow.
  */
 
 const ORIGIN = "209 Porterwood Dr, Williston, VT";
 const DEFAULT_ORIGIN = ORIGIN;
 
-const FREE_RADIUS = 10;
-const RATE_PER_MILE = 0.5;
+const FREE_RADIUS = 7.5;
+const RATE_PER_MILE = 1;
 /** Flat fee (whole dollars) when Distance Matrix fails or address is unroutable */
 const FALLBACK_TRAVEL_FEE = 25;
+
+/** Towns where every customer gets a free travel fee. Match is loose — a
+ *  destination string anywhere containing the city + VT counts. Designed to
+ *  catch "123 Pine St, Burlington, VT 05401" and "123 Pine, Burlington" and
+ *  "Burlington VT 05401" all in one. */
+const FREE_TRAVEL_CITIES = ["burlington", "williston", "south burlington"];
+
+/** Returns true when the destination address resolves to a no-travel-fee
+ *  hometown match. Checks city + VT loosely, allowing flexible formatting. */
+function isFreeCity(dest: string): boolean {
+  const lower = dest.toLowerCase();
+  // VT or Vermont must appear — guards against random "Burlington, NC" hits
+  if (!lower.includes("vt") && !lower.includes("vermont")) return false;
+  for (const city of FREE_TRAVEL_CITIES) {
+    // Word-boundary-ish: require either start-of-string or comma/whitespace
+    // before the city name so "south burlington" matches both itself AND
+    // a "Burlington" check correctly (we test full FREE_TRAVEL_CITIES list).
+    const re = new RegExp(`(^|[\\s,])${city}(\\b|[,\\s])`, "i");
+    if (re.test(lower)) return true;
+  }
+  return false;
+}
+
+/** Exported helper for admin + tests so we can show "FREE — hometown" hints
+ *  in UIs without re-implementing the match logic. */
+export function isHometownAddress(address: string): boolean {
+  return isFreeCity(address.trim());
+}
 
 export type TravelFeeResult = {
   distanceMiles: number;
@@ -42,6 +77,12 @@ export async function getTravelFee(
   const dest = destinationAddress.trim();
   if (!dest) {
     return { ok: false, error: "Address required" };
+  }
+
+  // Hometown override — Burlington / Williston / South Burlington always
+  // get a $0 travel fee regardless of actual distance.
+  if (isFreeCity(dest)) {
+    return { ok: true, distanceMiles: 0, travelFee: 0 };
   }
 
   const origin = getOrigin();

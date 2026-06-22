@@ -302,7 +302,7 @@ export const TOWNS: TownContent[] = [
       },
       {
         q: "Can you handle the longer drive from Williston?",
-        a: "Yes — Milton is well within our standard service area. First 10 miles are travel-fee-free; beyond that it's $0.50/mile rounded up. The full fee is shown at checkout before you confirm.",
+        a: "Yes — Milton is well within our standard service area. First 7.5 miles from our Williston base are travel-fee-free; beyond that it's $1/mile rounded up. The full fee is shown at checkout before you confirm.",
       },
     ],
   },
@@ -333,6 +333,276 @@ export const TOWNS: TownContent[] = [
       {
         q: "Can you reach properties on long dirt driveways?",
         a: "Yes. Our vehicle is a standard work van with all-season tires — we get to long dirt and gravel driveways routinely. Mention any access concerns at booking so we can plan accordingly.",
+      },
+    ],
+  },
+
+  // ─── HIGH-TICKET LUXURY TOWNS (June 2026 SEO expansion) ─────────────────
+  // Hand-crafted for affluent markets — Charlotte estates, Stowe ski second-
+  // homes, Manchester/Woodstock weekend money, Norwich/Dartmouth wealth,
+  // Killington/Stratton resort fleets, Quechee Club retirees. Copy positions
+  // the brand for luxury vehicles, ceramic coatings, and on-site estate
+  // service rather than commuter Subarus. Each page has its own neighborhood
+  // callouts, target vehicles, and 3 location-specific FAQs.
+  {
+    slug: "charlotte",
+    name: "Charlotte, VT",
+    shortName: "Charlotte",
+    driveTimeMin: 25,
+    oneLineHook: "Estate mobile detailing on the Lake Champlain shoreline",
+    neighborhoodCallouts: ["Mt Philo Road", "Greenbush Road", "Thompsons Point", "Cedar Beach", "Lake Road", "Ferry Road"],
+    intro:
+      "Charlotte has the kind of waterfront estates and long shoreline driveways that mobile detailing was built for. We come right to your Mt Philo or Greenbush Road home, set up in your driveway, and detail one car or four without disrupting your day. Premium services like the 5-Year Gentech Graphene Coating and Ultimate Interior + Exterior Reset are particularly popular here — built for vehicles that earn their keep on Charlotte's mix of dirt roads, lake spray, and ski-season trips.",
+    commonVehicles:
+      "Charlotte skews toward Range Rovers, Audi SQ7/SQ8, Porsche Macan/Cayenne, Mercedes G-Wagon, and high-trim Tahoes and Suburbans — plus the occasional classic kept for summer driving along the lake.",
+    serviceNotes:
+      "Most Charlotte appointments are in private driveways with plenty of room to work — we frequently detail multiple vehicles in one visit at family compounds along Lake Road and Thompsons Point. Long gravel drives are no issue. Ferry Road clients sometimes have us meet at the dock when the boat detail and the SUV detail land on the same day.",
+    waterfront: true,
+    nearbyTowns: [
+      { slug: "shelburne", shortName: "Shelburne" },
+      { slug: "hinesburg", shortName: "Hinesburg" },
+      { slug: "south-burlington", shortName: "South Burlington" },
+    ],
+    localFaq: [
+      {
+        q: "Can you detail multiple vehicles at our Charlotte estate in one visit?",
+        a: "Yes — multi-vehicle visits are a huge part of what we do here. Each additional vehicle gets a discount (2% per vehicle, up to 20% off the total), and a full-day fleet visit covers 4-8 vehicles. Get an instant quote on /fleet or call 802-585-5563 to coordinate.",
+      },
+      {
+        q: "Do you do the 5-Year Gentech Graphene Coating on-site in Charlotte?",
+        a: "Yes — our Gentech Graphene application is fully mobile and we do it in your covered garage or in a shaded part of your driveway. Charlotte estates often have ideal conditions for a perfect cure. Body, wheels, and windows can each be coated for compounding value (2 picks = 15% off, 3 = 25% off).",
+      },
+      {
+        q: "Can you handle a Range Rover, Porsche, or Mercedes G-Wagon?",
+        a: "Of course. The Ultimate Interior + Exterior Reset is built around luxury SUVs — hot water extraction on leather, neutral-pH wash on the paint, plastic trim restoration on dark exterior trim. We carry coatings rated safe for matte/satin finishes when needed; mention your finish at booking.",
+      },
+    ],
+  },
+  {
+    slug: "stowe",
+    name: "Stowe, VT",
+    shortName: "Stowe",
+    driveTimeMin: 50,
+    oneLineHook: "Ski-country mobile detailing — second homes, fleets, and Sprinters",
+    neighborhoodCallouts: ["Mountain Road", "Trapp Hill Road", "Edson Hill", "West Hill", "Stowe Hollow", "Stowe Mountain Lodge area"],
+    intro:
+      "Stowe is a different planet for mobile detailing — the salt and sand from the winter season, the gravel from spring mud season, the dust from summer mountain biking, the trail mud from fall hikes. We come right to your Mountain Road condo, Trapp Hill chalet, or Edson Hill estate and reset whatever the season just put your vehicle through. Sprinter vans, ski-loader Tahoes, Range Rovers, and the occasional Defender or G-Wagon are our regulars here.",
+    commonVehicles:
+      "Stowe sees the heaviest concentration of Sprinter and Transit vans (rentals + private), Range Rover and G-Wagon, full-size Tahoe/Yukon family rigs, and a steady rotation of guest cars at the Lodge, Stowflake, and the Trapp Family Lodge — many of which we detail in the property lot.",
+    serviceNotes:
+      "Stowe second-home owners often have us cycle through their fleet 2-3 times a season — pre-Thanksgiving reset, post-presidents-week salt recovery, end-of-mud-season scrub. We can detail in heated garages, covered carports, or open driveways. Mountain Road condo owners frequently arrange detailing at the resort's day lot.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "williston", shortName: "Williston" },
+      { slug: "essex", shortName: "Essex" },
+    ],
+    localFaq: [
+      {
+        q: "Can you detail my Sprinter or ski-loader van in Stowe?",
+        a: "Yes — Sprinters and Transit vans are one of our most-detailed vehicle types in Stowe. We price as 3-row/work van. Interior service includes cargo area degrease, dog hair extraction, ski boot salt removal, and full driver's-area reset. Exterior includes the high-roof, ladders, and chrome stainless trim polishing.",
+      },
+      {
+        q: "Do you offer seasonal packages for ski-house owners?",
+        a: "Yes — most Stowe second-home clients book us for a Thanksgiving pre-season clean, a Presidents Day deep salt recovery, and an end-of-mud-season detail in May. We can pre-book all three at booking time. The 5-Year Gentech Graphene Coating dramatically reduces winter salt damage if applied in the fall.",
+      },
+      {
+        q: "How early in the season do you start coming up to Stowe?",
+        a: "We're up Mountain Road weekly from October through April for salt-season clients, and the rest of the year on request. Travel from our Williston base is about 50 minutes — a $42-50 travel fee at our $1/mile past 7.5mi rate. Bundled with a multi-vehicle visit, it's almost always worth it.",
+      },
+    ],
+  },
+  {
+    slug: "manchester",
+    name: "Manchester, VT",
+    shortName: "Manchester",
+    driveTimeMin: 165,
+    oneLineHook: "Mobile detailing for Equinox-area second homes & resort guests",
+    neighborhoodCallouts: ["Equinox Resort area", "Manchester Village", "Manchester Center", "Stratton Road", "Bromley Mountain area"],
+    intro:
+      "Manchester is southern Vermont's luxury hub — Equinox Resort weekenders from NYC and Boston, Stratton Mountain second-home owners, and a steady flow of high-end guest vehicles. We schedule trips down for groups of bookings rather than one-offs, so the per-vehicle travel cost stays reasonable. If you can coordinate a few neighbors or your resort group, we can make Manchester work as a regular stop.",
+    commonVehicles:
+      "Manchester clients almost universally drive luxury — Range Rover, Audi RS, Porsche Cayenne/Macan, Mercedes E/S-class, BMW X5/X7, plus the occasional Tesla Model X. Resort fleets sometimes include weekend rentals (G-Wagons, 911s) that need turnover detailing.",
+    serviceNotes:
+      "Manchester trips are typically reserved for group bookings of 3+ vehicles or a single full-day fleet appointment. Equinox Resort and several private clubs in the area have hosted us. We bring everything self-contained; no resort/club support required.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "stratton", shortName: "Stratton" },
+    ],
+    localFaq: [
+      {
+        q: "Do you actually travel to Manchester from Williston?",
+        a: "Yes — but it works best when bookings are coordinated. We schedule Manchester runs around clusters of 3+ vehicles so the per-vehicle travel cost drops to something reasonable. Travel fee is $1/mile past 7.5 miles, capped at the actual mileage. For a 4-vehicle visit, this typically lands at $30-50 per car.",
+      },
+      {
+        q: "Can the Equinox Resort or our club host you for the day?",
+        a: "Yes — we've worked out of property lots before. Bring our 1-vehicle setup; we just need a hose-or-no-hose corner of the lot to set up. Most resorts are happy to host because the service is invisible to other guests.",
+      },
+      {
+        q: "What services make sense for our weekend cars?",
+        a: "If the car only sees Manchester weekends, an Ultimate Interior + Exterior Reset twice a year is usually the right cadence — once at end of winter, once before the holidays. Add the 5-Year Gentech Graphene Coating in year one and it dramatically cuts your in-between maintenance.",
+      },
+    ],
+  },
+  {
+    slug: "woodstock",
+    name: "Woodstock, VT",
+    shortName: "Woodstock",
+    driveTimeMin: 105,
+    oneLineHook: "Mobile detailing for Woodstock village & estate clients",
+    neighborhoodCallouts: ["Woodstock Village", "Suicide Six area", "Pomfret", "South Woodstock", "The Woodstock Inn area"],
+    intro:
+      "Woodstock is one of Vermont's most photographed villages and one of its quietest luxury markets — long-tenured families, weekenders from Boston and NYC, and the Woodstock Inn's well-heeled guest flow. We bring mobile detailing right to the village's narrow side streets, the country estates beyond the green, and the resort lot itself when guests need turn-around service before driving home.",
+    commonVehicles:
+      "Woodstock skews older-luxury and classic — Range Rover, Mercedes wagons, Volvo XC90, restored vintage trucks and station wagons, plus the occasional Porsche garage-queen brought out for fall foliage drives.",
+    serviceNotes:
+      "Most Woodstock visits are by appointment for residents within the village or in Pomfret and South Woodstock. The Inn occasionally arranges fleet days for guest cars or staff vehicles. Long dirt-road approaches are normal here and we handle them routinely.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "norwich", shortName: "Norwich" },
+      { slug: "quechee", shortName: "Quechee" },
+    ],
+    localFaq: [
+      {
+        q: "Can you detail in Woodstock's narrow village streets?",
+        a: "Yes — we're a single work-van setup, no trailer required. We tuck into a driveway or pull-off and work from there. If your village home doesn't have a driveway, your neighbor's or a nearby pull-off usually solves it; we'll figure it out.",
+      },
+      {
+        q: "Do you handle classic / vintage vehicles?",
+        a: "Yes — our products are pH-neutral and safe for older clear coats, single-stage paint, and chrome. We use hand-washing only (no automated touchpoints, ever). For a fully-original classic, the basic Exterior Detail is usually right; we can step up to a 5-Year Gentech Graphene Coating on garage-queens that see only sunny-day driving.",
+      },
+      {
+        q: "Can the Woodstock Inn coordinate detailing for guests?",
+        a: "Yes — we've done arrival/departure detailing for resort guests in the Inn's main lot. Talk to the concierge or contact us directly and we'll quote the visit.",
+      },
+    ],
+  },
+  {
+    slug: "norwich",
+    name: "Norwich, VT",
+    shortName: "Norwich",
+    driveTimeMin: 110,
+    oneLineHook: "Hanover-adjacent luxury mobile detailing",
+    neighborhoodCallouts: ["Main Street", "Beaver Meadow Road", "Turnpike Road", "Norwich Inn area", "Hanover line"],
+    intro:
+      "Norwich is Hanover-adjacent professor money — Dartmouth faculty, alumni weekend homes, and a long-tail Upper Valley luxury market. We come right to Beaver Meadow Road estates and Main Street historic homes with full mobile setup. Range Rovers, Audis, and Lexus SUVs are the usual suspects, and Gentech Graphene Coating uptake is high here because clients understand the math on long-term paint protection.",
+    commonVehicles:
+      "Norwich runs Range Rover Sport/Velar, Lexus RX/LX, Audi Q7/Q8, plus a healthy contingent of garage-kept BMW and Mercedes sedans driven seasonally.",
+    serviceNotes:
+      "Most Norwich appointments are in residential driveways. Dartmouth-related weekend-home owners often book us during their visit windows — we'll coordinate timing with your stay if you're only here certain weekends. Long-distance travel fee applies but is offset by our 2%-per-vehicle multi-vehicle discount if you can coordinate with neighbors.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "woodstock", shortName: "Woodstock" },
+      { slug: "quechee", shortName: "Quechee" },
+    ],
+    localFaq: [
+      {
+        q: "Do you serve Dartmouth faculty / Hanover area regularly?",
+        a: "Yes — Norwich is one of our recurring Upper Valley stops. We schedule routes through Norwich + Woodstock + Quechee together so the trip pays for itself. If you're a faculty client with a regular schedule, ask about quarterly recurring visits.",
+      },
+      {
+        q: "What's the price difference for ceramic coating on a luxury SUV here?",
+        a: "5-Year Gentech Graphene Coating is $250 (sedan) / $350 (SUV) / $400 (3-row/work van) on the body, $125 flat on wheels, $250 on all glass. Pick 2 and save 15%; pick all 3 and save 25%. A full Range Rover treatment (body + wheels + windows) typically lands at $543 after the 25% discount.",
+      },
+      {
+        q: "Can you detail at our second home if we're not there?",
+        a: "Yes — we work all the time with second-home clients who give us a code or arrange driveway access. We text photos when we start and finish, and we don't need anyone on-site. Property managers are welcome to coordinate too.",
+      },
+    ],
+  },
+  {
+    slug: "killington",
+    name: "Killington, VT",
+    shortName: "Killington",
+    driveTimeMin: 100,
+    oneLineHook: "Ski-season mobile detailing for resort fleets & second homes",
+    neighborhoodCallouts: ["Killington Road", "East Mountain Road", "Pico area", "Killington Resort base", "Mendon"],
+    intro:
+      "Killington is brutal on vehicles — November to April salt, mud-season slop, and dirt roads year-round. We come to your Killington Road condo, your Mendon estate, or the resort lot itself to reset whatever ski-season just put on your truck. Big rigs are the norm here — 3-row SUVs, full-size Tahoes/Yukons, work-spec Tacomas and F-150s with ski racks.",
+    commonVehicles:
+      "Killington runs heavy on Tahoe/Yukon/Suburban (full-size 3-row), Toyota Tacoma/Tundra, Ford F-150/F-250, Jeep Wrangler/Gladiator, Subaru Ascent/Outback, and the occasional Sprinter ski-loader van.",
+    serviceNotes:
+      "Most Killington trips are by appointment for second-home owners or resort/restaurant fleet bookings. We can detail in resort base lots or your condo's parking area. Heavy salt cleanup is a Killington specialty — our Salt Stain Removal add-on is included in every Ultimate package and almost always recommended after Presidents Day weekend.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "woodstock", shortName: "Woodstock" },
+    ],
+    localFaq: [
+      {
+        q: "Can you handle the salt damage from a full Killington season?",
+        a: "Yes — that's exactly what the Ultimate Interior + Exterior Reset is built for. It includes Standard Salt Stain Removal, hot water extraction on carpets, undercarriage wheel-well degrease, and a 6-month ceramic spray seal. Most Killington clients book the Ultimate twice a year — pre-season in November and post-season in late April.",
+      },
+      {
+        q: "Do you detail at the resort or only at private homes?",
+        a: "Both. We've done condo lot details at Killington base, K-1 lot, and Snowshed area, plus private residences along Killington Road and into Mendon. Bring 1-vehicle setup; no resort hookup needed.",
+      },
+      {
+        q: "Can you detail multiple vehicles at our Killington house?",
+        a: "Yes — multi-vehicle is heavily discounted. Each additional vehicle adds 2% off the total, up to 20% off at 10+ vehicles. A 4-vehicle ski-week detail at $200 each before discount would be about $736 after discount instead of $800.",
+      },
+    ],
+  },
+  {
+    slug: "stratton",
+    name: "Stratton, VT",
+    shortName: "Stratton",
+    driveTimeMin: 160,
+    oneLineHook: "Stratton Mountain second-home mobile detailing",
+    neighborhoodCallouts: ["Stratton Mountain Road", "Stratton Village", "Bondville", "Winhall", "South Londonderry"],
+    intro:
+      "Stratton has the highest concentration of NYC/Boston weekend homes in southern Vermont and the corresponding luxury fleet — Range Rover, Porsche Cayenne, Mercedes G-Wagon, plus a healthy mix of work-spec Tahoes and Sprinters. We bring full mobile detailing to your Stratton Mountain Road home, the village, or the resort base lot. Like Manchester, Stratton works best when bookings cluster — multi-vehicle days make the trip pay off.",
+    commonVehicles:
+      "Stratton skews Range Rover, Audi Q8/SQ8, Porsche Cayenne/Macan, Mercedes G-Wagon, plus full-size Tahoes/Suburbans for family fleets and Sprinter vans for ski-loaders.",
+    serviceNotes:
+      "Stratton trips are typically reserved for fleet days (3+ vehicles) or coordinated weekends where multiple homeowners can be served on one visit. We come fully self-contained; no resort hookup needed. Travel fee applies but per-vehicle drops fast with each additional booking.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "manchester", shortName: "Manchester" },
+    ],
+    localFaq: [
+      {
+        q: "Will you come down to Stratton for a single car?",
+        a: "Generally we wait until we have a Stratton run booked (3+ cars or a fleet day) to keep the per-car travel reasonable. If you're booking a single luxury vehicle for a 5-Year Gentech Graphene Coating ($543 after discount for body+wheels+windows on an SUV), the trip math usually works on its own. Otherwise, ask your neighbors.",
+      },
+      {
+        q: "Can you handle ski-season salt and mud at our Stratton home?",
+        a: "Yes — our Ultimate Interior + Exterior Reset is built for this exact use case. Salt-neutralizing wash, hot water carpet extraction for boot mud, underbody cleanup. Apply 5-Year Gentech Graphene Coating in the fall and follow up with Ultimate reset in March, and your truck stays in showroom shape through a full Stratton winter.",
+      },
+      {
+        q: "Do you work directly with our property manager?",
+        a: "Yes — we coordinate with property managers all the time for absentee second-home owners. They give us access, we send photos before/during/after, and we bill the homeowner directly. Email contact@ariseandshinedetailing.com to set it up.",
+      },
+    ],
+  },
+  {
+    slug: "quechee",
+    name: "Quechee, VT",
+    shortName: "Quechee",
+    driveTimeMin: 100,
+    oneLineHook: "Quechee Club & Lakeland mobile detailing",
+    neighborhoodCallouts: ["Quechee Club", "Quechee Lakeland", "Lake Pinneo", "Quechee Gorge area", "Hartland Road"],
+    intro:
+      "Quechee is a quieter luxury market built around the Quechee Club and the lakefront homes along Lake Pinneo. Retirees with detailing budgets, second-home owners from Boston, and a steady summer mix of luxury SUVs, vintage convertibles, and Club golf carts that occasionally need attention too. We come right to your driveway or, by arrangement, into the Club lot.",
+    commonVehicles:
+      "Quechee runs Range Rover, Lexus LX, Audi Q7, Volvo XC90, Mercedes E-class, plus a small contingent of vintage Mercedes and Porsche kept seasonally. Vintage MGs and BMW E30s show up at Club events.",
+    serviceNotes:
+      "Most Quechee details happen in private driveways throughout the Club area and Lakeland. We've also worked in the Club lot by arrangement during quieter weekday windows. Long-distance travel fee applies; we coordinate Quechee/Norwich/Woodstock runs together to keep per-vehicle cost reasonable.",
+    waterfront: false,
+    nearbyTowns: [
+      { slug: "woodstock", shortName: "Woodstock" },
+      { slug: "norwich", shortName: "Norwich" },
+    ],
+    localFaq: [
+      {
+        q: "Do you work with the Quechee Club for member fleet days?",
+        a: "Yes — Club-coordinated fleet days are a great way to keep your travel cost spread across multiple members. Talk to the Club office or contact us directly and we'll arrange a half-day or full-day visit.",
+      },
+      {
+        q: "Can you detail a vintage Mercedes or BMW E30 here?",
+        a: "Yes — vintage and classic vehicles are our specialty. pH-neutral wash, hand-only contact, single-stage paint safe products, chrome polishing. For a fully-original car we typically recommend the basic Exterior Detail; for a restored car that's the show-car, we'd add 5-Year Gentech Graphene Coating to lock in the gloss.",
+      },
+      {
+        q: "How does the travel fee work at this distance?",
+        a: "It's $1 per mile past 7.5 miles of driving distance from our 209 Porterwood Dr (Williston) base. Quechee is about 100 miles round-trip, so the travel fee is around $185. We almost always coordinate Quechee bookings into Norwich/Woodstock visits to spread it across multiple stops — talk to us about timing.",
       },
     ],
   },

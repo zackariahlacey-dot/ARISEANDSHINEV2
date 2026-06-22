@@ -24,7 +24,7 @@ export const FAQ_SECTIONS = [
       { q: "How is pricing determined?", a: "Standard vehicle pricing is based on vehicle size — compact/sedan, mid-size SUV, full-size SUV/truck, or oversized. Boat and RV pricing is per linear foot with a minimum. All pricing is shown upfront before you book — no surprises." },
       { q: "What forms of payment do you accept?", a: "All major credit and debit cards online via Stripe. If you prefer, you can also pay cash or card in person at arrival — just select 'Pay at Arrival' when booking." },
       { q: "Do you offer gift cards?", a: "Yes! Gift cards are available in any amount at ariseandshinedetailing.com/gift-cards. Perfect for birthdays, Father's Day, or anyone who deserves a clean vehicle." },
-      { q: "Are there any travel fees?", a: "For locations within our primary service area, there's no travel fee. Longer-distance appointments may include a small travel charge — this is calculated and shown at checkout before you confirm." },
+      { q: "Are there any travel fees?", a: "Burlington, Williston, and South Burlington are always free — no travel fee regardless of address. Everywhere else: the first 7.5 miles from our Williston base are free, then $1 per mile of driving distance beyond that, rounded up to the nearest dollar. The exact fee — if any — is shown at checkout before you confirm." },
     ],
   },
   {
