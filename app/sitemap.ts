@@ -26,6 +26,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/detailing`,           lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/boat-detailing`,      lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/rv-detailing`,        lastModified: now, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${BASE}/truck-detailing`,     lastModified: now, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${BASE}/heavy-equipment-detailing`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/fleet`,               lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/service-area`,        lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/guides`,              lastModified: now, changeFrequency: "monthly", priority: 0.7 },

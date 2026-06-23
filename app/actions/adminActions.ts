@@ -341,7 +341,12 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
         vehicleModel: snapshotModel,
         bookingDate: payload.bookingDate,
         bookingTime: payload.bookingTime,
-        travelFee: 0,
+        // Travel fee — parsed out of the admin notes if present so the
+        // confirmation email shows the same line item as the admin sidebar.
+        travelFee: (() => {
+          const m = String(payload.notes || "").match(/🚗 Travel Fee:\s*\$(\d+(?:\.\d+)?)/);
+          return m ? Number(m[1]) : 0;
+        })(),
         totalPrice: payload.totalPrice,
         additionalVehicles: addlVehicles.length > 0 ? addlVehicles.map(av => ({
           vehicleYear: av.vehicleYear,
@@ -706,6 +711,8 @@ export async function updateBookingDetailsAction(id: string, updates: {
   total_price?: number;
   notes?: string;
   service_address?: string;
+  customer_phone?: string | null;
+  customer_email?: string | null;
 }, notifyPriceChange?: { oldPrice: number }) {
   const supabase = createAdminClient();
   // Fetch booking before update if we need to send email

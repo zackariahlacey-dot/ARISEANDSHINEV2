@@ -8,6 +8,7 @@ import {
   Phone, Menu, X, Sparkles, Anchor, Truck, Building2,
   LogIn, LogOut, LayoutDashboard, Gift, User,
   HelpCircle, MapPin, CalendarSearch, ChevronRight, Home, BookOpen,
+  Container, Tractor,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -21,18 +22,21 @@ const ADMIN_EMAIL = "zackariahlacey@gmail.com";
 
 const NAV_LINKS = [
   { href: "/",                 label: "Home"             },
-  { href: "/detailing",        label: "Auto Detailing"   },
-  { href: "/boat-detailing",   label: "Boat Detailing"   },
-  { href: "/rv-detailing",     label: "RV Detailing"     },
+  { href: "/detailing",        label: "Auto"             },
+  { href: "/boat-detailing",   label: "Boat"             },
+  { href: "/rv-detailing",     label: "RV"               },
+  { href: "/truck-detailing",  label: "Truck"            },
   { href: "/about",            label: "About"            },
   { href: "/contact",          label: "Contact"          },
 ];
 
 const SERVICE_LINKS = [
-  { href: "/detailing",        label: "Auto Detailing",   icon: Sparkles, desc: "Cars, trucks & SUVs"          },
-  { href: "/boat-detailing",   label: "Boat Detailing",   icon: Anchor,   desc: "Per-foot · Lake Champlain"    },
-  { href: "/rv-detailing",     label: "RV Detailing",     icon: Truck,    desc: "Per-foot · motorhomes & 5ers" },
-  { href: "/fleet",            label: "Fleet Quotes",     icon: Building2,desc: "4+ vehicles · up to 20% off"  },
+  { href: "/detailing",                  label: "Auto Detailing",        icon: Sparkles,  desc: "Cars, trucks & SUVs"           },
+  { href: "/boat-detailing",             label: "Boat Detailing",        icon: Anchor,    desc: "Per-foot · Lake Champlain"     },
+  { href: "/rv-detailing",               label: "RV Detailing",          icon: Truck,     desc: "Per-foot · motorhomes & 5ers"  },
+  { href: "/truck-detailing",            label: "Semi Truck Detailing",  icon: Container, desc: "Day cabs & sleepers · on-site" },
+  { href: "/heavy-equipment-detailing",  label: "Heavy Equipment",       icon: Tractor,   desc: "Cab interiors · excavators, loaders, log trucks" },
+  { href: "/fleet",                      label: "Fleet Quotes",          icon: Building2, desc: "4+ vehicles · up to 20% off"   },
 ];
 
 const MORE_LINKS = [

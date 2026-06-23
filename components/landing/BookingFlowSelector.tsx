@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Car, Anchor, Truck, Zap } from "lucide-react";
+import { X, Car, Anchor, Truck, Container, Tractor, Zap } from "lucide-react";
 
 const FLOWS = [
   {
@@ -34,6 +34,26 @@ const FLOWS = [
     iconColor: "text-emerald-400",
     iconBg: "bg-emerald-500/10",
     badge: "20 ft min",
+  },
+  {
+    href: "/truck-detailing",
+    icon: Container,
+    title: "My Semi Truck",
+    desc: "Day cabs, sleepers & owner-operator rigs — yard washes from $99, full details from $449",
+    border: "border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/[0.04]",
+    iconColor: "text-orange-400",
+    iconBg: "bg-orange-500/10",
+    badge: "On-site",
+  },
+  {
+    href: "/heavy-equipment-detailing",
+    icon: Tractor,
+    title: "Heavy Equipment",
+    desc: "Excavators, dozers, loaders, log & dump trucks — cab interiors from $175 or $95/hr on-site",
+    border: "border-yellow-500/20 hover:border-yellow-500/40 hover:bg-yellow-500/[0.04]",
+    iconColor: "text-yellow-400",
+    iconBg: "bg-yellow-500/10",
+    badge: "Cab interior",
   },
 ] as const;
 

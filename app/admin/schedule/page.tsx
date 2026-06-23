@@ -220,7 +220,7 @@ const RV_DISPLAY: Record<string, { name: string; sub: string }> = {
   "RV Full Detail": { name: "RV Full Detail", sub: "$50/ft · 20 ft min" },
 };
 
-type Pathway = "vehicle" | "boat" | "rv";
+type Pathway = "vehicle" | "boat" | "rv" | "truck" | "heavy_equipment";
 
 /** Prefill when opening quick-book from Admin → Clients (profile + garage) */
 export type ClientPrefillForBooking = {
@@ -370,13 +370,21 @@ export function NewBookingForm({
   }, [clientPrefill]);
 
   // Derived
+  const isTruckCat = (s: any) =>
+    s.category === "Truck" ||
+    /^truck |day cab|sleeper cab|premium exterior detail/i.test(s.name);
+  const isHeavyEqCat = (s: any) =>
+    s.category === "Heavy Equipment" || /^equipment /i.test(s.name);
   const vehicleServices = useMemo(() =>
     services.filter((s: any) => {
       const n = s.name.toLowerCase();
-      return !n.includes("boat") && !n.includes("rv") && !n.includes("motorhome") && !n.includes("maintenance");
+      return !n.includes("boat") && !n.includes("rv") && !n.includes("motorhome") &&
+             !n.includes("maintenance") && !isTruckCat(s) && !isHeavyEqCat(s);
     }), [services]);
-  const boatServices = useMemo(() => services.filter((s: any) => s.name.toLowerCase().includes("boat")), [services]);
-  const rvServices   = useMemo(() => services.filter((s: any) => { const n = s.name.toLowerCase(); return n.includes("rv") || n.includes("motorhome"); }), [services]);
+  const boatServices  = useMemo(() => services.filter((s: any) => s.name.toLowerCase().includes("boat")), [services]);
+  const rvServices    = useMemo(() => services.filter((s: any) => { const n = s.name.toLowerCase(); return n.includes("rv") || n.includes("motorhome"); }), [services]);
+  const truckServices = useMemo(() => services.filter((s: any) => isTruckCat(s)), [services]);
+  const heavyEqServices = useMemo(() => services.filter((s: any) => isHeavyEqCat(s)), [services]);
 
   const selectedService = services.find((s: any) => s.id === serviceId);
   const supportsAdminMultiVehicle = ADMIN_MULTI_VEHICLE_SERVICES.includes(selectedService?.name ?? "");
@@ -408,6 +416,8 @@ export function NewBookingForm({
     if (!pathway) return [];
     if (pathway === "boat") return ADMIN_ADDONS.filter(a => BOAT_ADDON_IDS.includes(a.id));
     if (pathway === "rv")   return ADMIN_ADDONS.filter(a => RV_ADDON_IDS.includes(a.id));
+    // Truck + heavy equipment services are flat-priced packages — no add-on tier (yet).
+    if (pathway === "truck" || pathway === "heavy_equipment") return [];
     return vehicleAddonsForServiceName(selectedService?.name ?? "");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathway, selectedService]);
@@ -420,6 +430,11 @@ export function NewBookingForm({
       const minFt = FOOTAGE_MIN[selectedService.name] ?? 15;
       const rate = FOOTAGE_RATES[selectedService.name] ?? 20;
       return Math.max(minFt, ft) * rate;
+    }
+    // Truck / heavy equipment are flat-priced regardless of "size" — all price_*
+    // columns are equal in Supabase, so price_small is the canonical source.
+    if (pathway === "truck" || pathway === "heavy_equipment") {
+      return Number(selectedService.price_small ?? selectedService.price_medium ?? 0);
     }
     const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize);
     const key = sizeEntry?.key ?? "price_medium";
@@ -551,7 +566,15 @@ export function NewBookingForm({
       const res = await adminQuickBookAction({
         name, phone, email, address,
         vehicleYear, vehicleMake, vehicleModel,
-        vehicleSize: pathway === "boat" ? `${footage || ""}ft` : vehicleSize,
+        vehicleSize:
+          pathway === "boat"             ? `${footage || ""}ft` :
+          // Truck + heavy-equipment cabs are sized as "extra_large" in the
+          // vehicles table. Real semis + machines need the biggest enum
+          // bucket so duration math, slot conflict checks, and reports keep
+          // a meaningful size (not "medium" by accident).
+          pathway === "truck"            ? "extra_large" :
+          pathway === "heavy_equipment"  ? "extra_large" :
+          vehicleSize,
         serviceId, serviceName: selectedService?.name ?? "",
         bookingDate, bookingTime: to12h(bookingTime),
         totalPrice,
@@ -596,9 +619,11 @@ export function NewBookingForm({
         </div>
         <div className="grid grid-cols-1 gap-3">
           {[
-            { id: "vehicle" as Pathway, emoji: "🚗", label: "Vehicle Detailing", sub: "Cars, trucks, SUVs, vans" },
-            { id: "boat"    as Pathway, emoji: "⛵", label: "Boat Detailing",     sub: "Dockside — Waterline Up" },
-            { id: "rv"      as Pathway, emoji: "🚐", label: "RV Detailing",       sub: "Motorhomes & travel trailers" },
+            { id: "vehicle" as Pathway,         emoji: "🚗", label: "Vehicle Detailing",      sub: "Cars, trucks, SUVs, vans" },
+            { id: "boat"    as Pathway,         emoji: "⛵", label: "Boat Detailing",          sub: "Dockside — Waterline Up" },
+            { id: "rv"      as Pathway,         emoji: "🚐", label: "RV Detailing",            sub: "Motorhomes & travel trailers" },
+            { id: "truck"   as Pathway,         emoji: "🚛", label: "Semi Truck Detailing",   sub: "Day cabs & sleepers — flat-rate" },
+            { id: "heavy_equipment" as Pathway, emoji: "🚜", label: "Heavy Equipment",         sub: "Excavators, dozers, log trucks" },
           ].map(p => (
             <button
               key={p.id}
@@ -618,7 +643,12 @@ export function NewBookingForm({
     );
   }
 
-  const pathwayLabel = pathway === "vehicle" ? "🚗 Vehicle" : pathway === "boat" ? "⛵ Boat" : "🚐 RV";
+  const pathwayLabel =
+    pathway === "vehicle"          ? "🚗 Vehicle" :
+    pathway === "boat"             ? "⛵ Boat" :
+    pathway === "rv"               ? "🚐 RV" :
+    pathway === "truck"            ? "🚛 Semi Truck" :
+    pathway === "heavy_equipment"  ? "🚜 Heavy Equipment" : "";
   const stepLabels   = ["Client", "Service", "Add-ons", "Time"];
   const totalSteps   = 4;
 
@@ -957,6 +987,91 @@ export function NewBookingForm({
               </div>
               <FieldLabel>Price Override (optional)</FieldLabel>
               <Input value={priceOverride} onChange={setPriceOverride} placeholder={`Auto: $${basePrice}`} type="number" />
+            </>
+          )}
+
+          {/* TRUCK pathway — semi truck / day cab / sleeper */}
+          {pathway === "truck" && (
+            <>
+              <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Truck Details</p>
+              <FieldLabel>Truck Make / Model (optional)</FieldLabel>
+              <div className="grid grid-cols-2 gap-2">
+                <Input value={vehicleMake} onChange={setVehicleMake} placeholder="Peterbilt" />
+                <Input value={vehicleModel} onChange={setVehicleModel} placeholder="389 Sleeper" />
+              </div>
+              <FieldLabel>Service *</FieldLabel>
+              <div className="space-y-2">
+                {truckServices.map((svc: any) => (
+                  <button key={svc.id} onClick={() => setServiceId(svc.id)}
+                    className={cn("w-full text-left px-3 py-3 rounded-xl border transition-all",
+                      serviceId === svc.id ? "bg-amber-500/10 border-amber-500/50" : "border-white/[0.07] bg-white/[0.02]"
+                    )}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className={cn("text-sm font-black", serviceId === svc.id ? "text-amber-400" : "text-zinc-200")}>{svc.name}</p>
+                        {svc.description && (
+                          <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">{svc.description}</p>
+                        )}
+                      </div>
+                      <p className="text-sm font-black text-amber-400 shrink-0">${svc.price_small}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <FieldLabel>Price Override (optional)</FieldLabel>
+              <Input value={priceOverride} onChange={setPriceOverride} placeholder={`Auto: $${basePrice}`} type="number" />
+              <FieldLabel>Duration Override — minutes (optional)</FieldLabel>
+              <Input
+                value={durationOverride}
+                onChange={setDurationOverride}
+                placeholder={`Auto: ${getDurationMins(selectedService?.name ?? "", "sedan")} min`}
+                type="number"
+              />
+            </>
+          )}
+
+          {/* HEAVY EQUIPMENT pathway */}
+          {pathway === "heavy_equipment" && (
+            <>
+              <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Equipment Details</p>
+              <FieldLabel>Equipment Type / Model (optional)</FieldLabel>
+              <div className="grid grid-cols-2 gap-2">
+                <Input value={vehicleMake} onChange={setVehicleMake} placeholder="Caterpillar" />
+                <Input value={vehicleModel} onChange={setVehicleModel} placeholder="320 Excavator" />
+              </div>
+              <FieldLabel>Service *</FieldLabel>
+              <div className="space-y-2">
+                {heavyEqServices.map((svc: any) => {
+                  const isHourly = /hourly/i.test(svc.name);
+                  return (
+                    <button key={svc.id} onClick={() => setServiceId(svc.id)}
+                      className={cn("w-full text-left px-3 py-3 rounded-xl border transition-all",
+                        serviceId === svc.id ? "bg-amber-500/10 border-amber-500/50" : "border-white/[0.07] bg-white/[0.02]"
+                      )}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className={cn("text-sm font-black", serviceId === svc.id ? "text-amber-400" : "text-zinc-200")}>{svc.name}</p>
+                          {svc.description && (
+                            <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">{svc.description}</p>
+                          )}
+                        </div>
+                        <p className="text-sm font-black text-amber-400 shrink-0">
+                          {isHourly ? "$95/hr" : `$${svc.price_small}`}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <FieldLabel>Price Override (optional)</FieldLabel>
+              <Input value={priceOverride} onChange={setPriceOverride} placeholder={`Auto: $${basePrice}`} type="number" />
+              <FieldLabel>Duration Override — minutes (optional)</FieldLabel>
+              <Input
+                value={durationOverride}
+                onChange={setDurationOverride}
+                placeholder={`Auto: ${getDurationMins(selectedService?.name ?? "", "sedan")} min`}
+                type="number"
+              />
             </>
           )}
 
@@ -1425,6 +1540,10 @@ export default function SchedulePage() {
   const [editNotesVal,  setEditNotesVal]    = useState("");
   const [editDurMode,   setEditDurMode]     = useState(false);
   const [editDurVal,    setEditDurVal]      = useState(0);
+  const [editPhoneMode, setEditPhoneMode]   = useState(false);
+  const [editPhoneVal,  setEditPhoneVal]    = useState("");
+  const [editEmailMode, setEditEmailMode]   = useState(false);
+  const [editEmailVal,  setEditEmailVal]    = useState("");
   const [savingDetails, setSavingDetails]   = useState(false);
   const [copied, setCopied]                 = useState<string | null>(null);
   const [blockingDay,   setBlockingDay]     = useState(false);
@@ -1673,6 +1792,41 @@ export default function SchedulePage() {
       setActiveBooking({ ...activeBooking, notes: editNotesVal });
       setEditNotesMode(false);
       toast("Notes saved!");
+      refetch();
+    } catch (e: any) { toast(e?.message ?? "Failed to save", "error"); }
+    setSavingDetails(false);
+  }
+  async function handleSavePhone() {
+    if (!activeBooking) return;
+    const digits = editPhoneVal.replace(/\D/g, "").slice(0, 11);
+    const normalized = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+    if (normalized && normalized.length !== 10) {
+      toast("Phone must be 10 digits", "error"); return;
+    }
+    setSavingDetails(true);
+    try {
+      const value = normalized || null;
+      await updateBookingDetailsAction(activeBooking.id, { customer_phone: value });
+      setActiveBooking({ ...activeBooking, customer_phone: value });
+      setEditPhoneMode(false);
+      toast("Phone updated!");
+      refetch();
+    } catch (e: any) { toast(e?.message ?? "Failed to save", "error"); }
+    setSavingDetails(false);
+  }
+  async function handleSaveEmail() {
+    if (!activeBooking) return;
+    const trimmed = editEmailVal.trim();
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast("Enter a valid email or leave blank", "error"); return;
+    }
+    setSavingDetails(true);
+    try {
+      const value = trimmed.toLowerCase() || null;
+      await updateBookingDetailsAction(activeBooking.id, { customer_email: value });
+      setActiveBooking({ ...activeBooking, customer_email: value });
+      setEditEmailMode(false);
+      toast("Email updated — payment link will go to the new address.");
       refetch();
     } catch (e: any) { toast(e?.message ?? "Failed to save", "error"); }
     setSavingDetails(false);
@@ -2387,7 +2541,7 @@ export default function SchedulePage() {
       </Modal>
 
       {/* ── Booking Detail / Action Sheet ────────────────────────────────── */}
-      <Modal open={!!activeBooking && !showReschedule} onClose={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); setEditDurMode(false); setPayChannelPick(false); }}>
+      <Modal open={!!activeBooking && !showReschedule} onClose={() => { setActiveBooking(null); setEditPriceMode(false); setEditNotesMode(false); setEditDurMode(false); setEditPhoneMode(false); setEditEmailMode(false); setPayChannelPick(false); }}>
         {activeBooking && (() => {
           const phone   = bPhone(activeBooking);
           const email   = bEmail(activeBooking);
@@ -2742,44 +2896,119 @@ export default function SchedulePage() {
               })()}
 
               {/* ── Contact rows ─────────────────────────────────────────── */}
-              {(phone || email || addr) && (
+              {/* Phone + email rows are now always rendered (even when blank)
+                  so the admin can add a contact onto a card that came in
+                  without one. The pencil flips into an inline edit field. */}
+              {(
                 <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] divide-y divide-white/[0.04] overflow-hidden">
-                  {phone && (
-                    <div className="flex items-center gap-3 px-4 py-3.5">
-                      <Phone size={15} className="text-zinc-600 shrink-0" />
-                      <span className="text-sm text-zinc-200 flex-1 truncate">{phone}</span>
-                      <div className="flex gap-2 shrink-0">
-                        <button onClick={() => copyToClipboard(phone, "phone")}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500 active:scale-90 transition-all">
-                          {copied === "phone" ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                        </button>
-                        <a href={`tel:${phone}`}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300 active:scale-90 transition-all">
-                          <Phone size={14} />
-                        </a>
-                        <a href={`sms:${phone}`}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-500/15 text-amber-400 active:scale-90 transition-all">
-                          <MessageSquare size={14} />
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {email && (
-                    <div className="flex items-center gap-3 px-4 py-3.5">
-                      <Mail size={15} className="text-zinc-600 shrink-0" />
-                      <span className="text-sm text-zinc-200 flex-1 truncate">{email}</span>
-                      <div className="flex gap-2 shrink-0">
-                        <button onClick={() => copyToClipboard(email, "email")}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500 active:scale-90 transition-all">
-                          {copied === "email" ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                        </button>
-                        <a href={`mailto:${email}`}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300 active:scale-90 transition-all">
-                          <Mail size={14} />
-                        </a>
-                      </div>
-                    </div>
-                  )}
+                  {/* ── Phone row (editable) ─────────────────────────── */}
+                  <div className="flex items-center gap-3 px-4 py-3.5">
+                    <Phone size={15} className="text-zinc-600 shrink-0" />
+                    {editPhoneMode ? (
+                      <>
+                        <input
+                          type="tel"
+                          value={editPhoneVal}
+                          onChange={(e) => setEditPhoneVal(e.target.value)}
+                          placeholder="802-555-1212"
+                          autoFocus
+                          className="text-sm text-zinc-100 flex-1 bg-white/[0.06] border border-amber-500/40 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500"
+                        />
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => setEditPhoneMode(false)} disabled={savingDetails}
+                            className="px-2.5 py-2 rounded-lg border border-white/[0.08] text-zinc-500 text-xs font-black">✕</button>
+                          <button onClick={handleSavePhone} disabled={savingDetails}
+                            className="px-3 py-2 rounded-lg bg-amber-500 text-black text-xs font-black flex items-center gap-1">
+                            {savingDetails ? <Loader2 size={12} className="animate-spin" /> : "Save"}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className={cn("text-sm flex-1 truncate", phone ? "text-zinc-200" : "italic text-zinc-600")}>
+                          {phone ? fmtPhone(phone) : "No phone on file"}
+                        </span>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => { setEditPhoneMode(true); setEditPhoneVal(phone ?? ""); }}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500 hover:text-amber-400 active:scale-90 transition-all"
+                            title={phone ? "Edit phone" : "Add phone"}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          {phone && (
+                            <button onClick={() => copyToClipboard(phone, "phone")}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500 active:scale-90 transition-all">
+                              {copied === "phone" ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                            </button>
+                          )}
+                          {phone && (
+                            <a href={`tel:${phone}`}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300 active:scale-90 transition-all">
+                              <Phone size={14} />
+                            </a>
+                          )}
+                          {phone && (
+                            <a href={`sms:${phone}`}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-500/15 text-amber-400 active:scale-90 transition-all">
+                              <MessageSquare size={14} />
+                            </a>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* ── Email row (editable — payment link & receipts go here) ── */}
+                  <div className="flex items-center gap-3 px-4 py-3.5">
+                    <Mail size={15} className="text-zinc-600 shrink-0" />
+                    {editEmailMode ? (
+                      <>
+                        <input
+                          type="email"
+                          value={editEmailVal}
+                          onChange={(e) => setEditEmailVal(e.target.value)}
+                          placeholder="client@example.com"
+                          autoFocus
+                          className="text-sm text-zinc-100 flex-1 bg-white/[0.06] border border-amber-500/40 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500"
+                        />
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => setEditEmailMode(false)} disabled={savingDetails}
+                            className="px-2.5 py-2 rounded-lg border border-white/[0.08] text-zinc-500 text-xs font-black">✕</button>
+                          <button onClick={handleSaveEmail} disabled={savingDetails}
+                            className="px-3 py-2 rounded-lg bg-amber-500 text-black text-xs font-black flex items-center gap-1">
+                            {savingDetails ? <Loader2 size={12} className="animate-spin" /> : "Save"}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className={cn("text-sm flex-1 truncate", email ? "text-zinc-200" : "italic text-zinc-600")}>
+                          {email ?? "No email on file"}
+                        </span>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => { setEditEmailMode(true); setEditEmailVal(email ?? ""); }}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500 hover:text-amber-400 active:scale-90 transition-all"
+                            title={email ? "Edit email" : "Add email"}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          {email && (
+                            <button onClick={() => copyToClipboard(email, "email")}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-500 active:scale-90 transition-all">
+                              {copied === "email" ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                            </button>
+                          )}
+                          {email && (
+                            <a href={`mailto:${email}`}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300 active:scale-90 transition-all">
+                              <Mail size={14} />
+                            </a>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   {addr && (
                     <div className="flex items-start gap-3 px-4 py-3.5">
                       <MapPin size={15} className="text-zinc-600 shrink-0 mt-0.5" />

@@ -169,12 +169,23 @@ function formatDate(dateStr: string): string {
   });
 }
 
-type ServiceType = "vehicle" | "boat" | "rv";
+type ServiceType = "vehicle" | "boat" | "rv" | "truck" | "heavy_equipment";
 
 function getServiceType(serviceName: string): ServiceType {
   const n = serviceName.toLowerCase();
   if (n.includes("boat")) return "boat";
   if (n.includes("rv") || n.includes("motorhome")) return "rv";
+  // Heavy equipment cab interiors — excavators, dozers, loaders, etc.
+  if (n.startsWith("equipment ")) return "heavy_equipment";
+  // Semi trucks — yard washes, exterior refresh, interior reset, complete bundles
+  if (
+    n.startsWith("truck ") ||
+    n.includes("day cab") ||
+    n.includes("sleeper cab") ||
+    (n.includes("premium exterior detail") && (n.includes("day cab") || n.includes("sleeper")))
+  ) {
+    return "truck";
+  }
   return "vehicle";
 }
 

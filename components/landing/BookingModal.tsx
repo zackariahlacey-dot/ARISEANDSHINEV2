@@ -26,6 +26,8 @@ import {
   Plus,
   X,
   Tag,
+  Container,
+  Tractor,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
@@ -49,6 +51,12 @@ import {
   filterModelsByQuery,
   sizeTierToSlug,
 } from "@/lib/vehicleDatabase";
+import {
+  filterTruckMakesByQuery,
+  filterTruckModelsByQuery,
+  filterHEMakesByQuery,
+  filterHEModelsByQuery,
+} from "@/lib/truckEquipmentDatabase";
 import { getAuthProfile } from "@/app/actions/getAuthProfile";
 import { getProfileByPhone } from "@/app/actions/getProfileByPhone";
 import { getMyActiveMembership } from "@/app/actions/membership";
@@ -115,6 +123,29 @@ const ALL_ADD_ONS = [
   { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",              price: 80,  desc: "UV-protective EPDM/TPO sealant applied to roof membrane. Extends life & prevents seam leaks." },
   { id: "rv_generator",      label: "Generator Bay Detail",                  price: 75,  desc: "Full degreasing & detailing of generator housing, exhaust housing & bay surrounds." },
   { id: "rv_step",           label: "Entry Step & Threshold Detail",         price: 30,  desc: "Deep scrub of all entry steps, grip treads & door threshold — the dirtiest spot on most rigs." },
+  // ── Semi Truck — Exterior add-ons ────────────────────────────────────────
+  { id: "truck_aluminum",      label: "Aluminum Tank / Stack / Wheel Polish", price: 99, desc: "Restore mirror finish on aluminum tanks, stacks, steps & wheel faces. From $99 — confirmed on-site." },
+  { id: "truck_engine_bay",    label: "Engine Bay Degrease & Steam",          price: 99, desc: "Full degreasing of the engine compartment, sensitive electronics protected. $99 flat." },
+  { id: "truck_wax_upgrade",   label: "Hand Wax / Sealant Upgrade",           price: 99, desc: "Move from 6-month spray sealant to hand-applied paste wax or ceramic-grade sealant. From $99." },
+  { id: "truck_trailer_wash",  label: "Trailer Washout",                      price: 80, desc: "Dry-van or reefer washout between loads — no food/biohazard contamination. From $80." },
+  { id: "truck_bug_tar",       label: "Bug & Tar Pre-Treat",                  price: 39, desc: "Heavy bug, tar, and rail-dust pre-treatment before main wash. $39 flat." },
+  // ── Semi Truck — Interior add-ons ────────────────────────────────────────
+  { id: "truck_seat_shampoo",  label: "Driver Seat Shampoo",                  price: 39, desc: "Hot-water extraction on the cloth driver / passenger seat. $39." },
+  { id: "truck_floor_shampoo", label: "Carpet / Floor Shampoo",               price: 39, desc: "Hot-water extraction on the full cab carpet. $39." },
+  { id: "truck_headliner",     label: "Headliner Deep Clean",                 price: 49, desc: "Spot extraction + odor neutralize on a stained headliner. $49." },
+  { id: "truck_fabric_protect",label: "Fabric / Leather Protection",          price: 49, desc: "UV + stain guard on seats and upholstery. $49." },
+  { id: "truck_ozone",         label: "Odor / Ozone Treatment",               price: 79, desc: "30-minute ozone treatment — kills smoke, biological, and grease odor at the source. $79." },
+  { id: "truck_biohazard",     label: "Biohazard / Bodily Fluid Removal",     price: 99, desc: "Spill, blood, vomit — sanitized, sealed, and ozone-treated. From $99 depending on scope." },
+  // ── Semi Truck — Sleeper-only add-ons ────────────────────────────────────
+  { id: "sleeper_mattress",    label: "Sleeper Mattress Deep Clean",          price: 49, desc: "Mattress vacuum + extraction + UV sanitize. Sleeper cab only. $49." },
+  { id: "sleeper_fridge",      label: "Sleeper Fridge / Cabinet Clean",       price: 49, desc: "Deep-clean fridge interior + sleeper storage cabinets. Sleeper cab only. From $49." },
+  // ── Heavy Equipment add-ons ──────────────────────────────────────────────
+  { id: "he_grime",            label: "Heavy-Grime / Mud Surcharge",          price: 49, desc: "Pre-treat and extraction for equipment coming straight off the job. From $49 depending on contamination level." },
+  { id: "he_seat_shampoo",     label: "Operator Seat Shampoo",                price: 39, desc: "Hot-water extraction on the cloth operator seat. $39." },
+  { id: "he_floor_shampoo",    label: "Floor / Mat Shampoo",                  price: 39, desc: "Hot-water extraction on the cab floor mats. $39." },
+  { id: "he_ozone",            label: "Odor / Ozone Treatment",               price: 79, desc: "30-minute ozone treatment — kills smoke, sweat, mildew, and fuel odor at the source. $79." },
+  { id: "he_biohazard",        label: "Biohazard / Bodily Fluid Removal",     price: 99, desc: "Sanitized, sealed, and ozone-treated. From $99 depending on scope." },
+  { id: "he_fabric_protect",   label: "Fabric / Leather Protection",          price: 49, desc: "UV + stain guard on the operator seat and upholstery. $49." },
 ] as const;
 
 type AddonItem = typeof ALL_ADD_ONS[number];
@@ -122,6 +153,15 @@ type AddonItem = typeof ALL_ADD_ONS[number];
 const FLOOR_ADDON_IDS    = ["floor_1", "floor_2", "floor_all"];
 const MARINE_ADDON_IDS   = ["marine_isinglass", "marine_engine_bay"];
 const RV_ADDON_IDS       = ["rv_awning", "rv_slide_seal", "rv_roof_coat", "rv_generator", "rv_step"];
+/** Semi truck add-ons. Sleeper-only items live in TRUCK_SLEEPER_ADDON_IDS and
+ *  surface in addition to TRUCK_ADDON_IDS when a sleeper service is booked. */
+const TRUCK_ADDON_IDS    = [
+  "truck_aluminum", "truck_engine_bay", "truck_wax_upgrade", "truck_trailer_wash", "truck_bug_tar",
+  "truck_seat_shampoo", "truck_floor_shampoo", "truck_headliner", "truck_fabric_protect", "truck_ozone", "truck_biohazard",
+];
+const TRUCK_SLEEPER_ADDON_IDS = ["sleeper_mattress", "sleeper_fridge"];
+/** Heavy equipment cab add-ons */
+const HE_ADDON_IDS       = ["he_grime", "he_seat_shampoo", "he_floor_shampoo", "he_ozone", "he_biohazard", "he_fabric_protect"];
 /** All seat-removal SKUs — premium specialty, excluded from the basic bundle discount math. */
 const SEAT_REMOVAL_ADDON_IDS = ["seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"] as const;
 const isSeatRemovalAddonId = (id: string): boolean =>
@@ -329,7 +369,25 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return seasonalFilter(ALL_ADD_ONS.filter(a => RV_ADDON_IDS.includes(a.id)));
   }
 
-  // ── Vehicle services below — never include marine or RV add-ons ──────────
+  // ── Heavy Equipment ─────────────────────────────────────────────────────
+  // Flat-priced cab interiors get their own add-on tier — grime, biohazard,
+  // operator-seat extraction, ozone, fabric protect. No car-detailing
+  // add-ons surface in this flow.
+  if (isHeavyEquipmentService(serviceName)) {
+    return seasonalFilter(ALL_ADD_ONS.filter(a => HE_ADDON_IDS.includes(a.id)));
+  }
+
+  // ── Semi Truck ───────────────────────────────────────────────────────────
+  // Truck-specific exterior + interior tier. Sleeper services additionally
+  // surface the sleeper-only add-ons (mattress, fridge). Day-cab services
+  // skip those — keeps the picker uncluttered when irrelevant.
+  if (isTruckService(serviceName)) {
+    const sleeperExtras = isSleeperCabService(serviceName) ? TRUCK_SLEEPER_ADDON_IDS : [];
+    const ids = [...TRUCK_ADDON_IDS, ...sleeperExtras];
+    return seasonalFilter(ALL_ADD_ONS.filter(a => ids.includes(a.id)));
+  }
+
+  // ── Vehicle services below — never include marine, RV, truck, or HE add-ons ──
 
   // Paint correction: clay bar already part of the process. Allow ceramic upgrade
   // and the Ultimate Interior add-on. Cargo cleaning surfaces only when the
@@ -388,6 +446,12 @@ function isFootageService(name: string): boolean {
   const n = name.toLowerCase();
   return n.includes("boat") || n.includes("rv") || n.includes("motorhome");
 }
+/** Returns true when a service is flat-priced and does not need a vehicle size
+ *  picker. Truck + heavy equipment services are flat-priced regardless of cab
+ *  configuration, so we skip the size step (which would block "Continue"). */
+function isFlatPriceService(name: string, category?: string | null): boolean {
+  return isTruckService(name, category) || isHeavyEquipmentService(name, category);
+}
 function isRVService(name: string): boolean {
   const n = name.toLowerCase();
   return n.includes("rv") || n.includes("motorhome");
@@ -395,6 +459,27 @@ function isRVService(name: string): boolean {
 // kept for backward compat with add-on filters
 function isBoatService(name: string): boolean {
   return name.toLowerCase().includes("boat");
+}
+/** Semi-truck services live in the Truck category in Supabase but a name match
+ *  keeps the modal robust even on legacy rows without a category column. */
+function isTruckService(name: string, category?: string | null): boolean {
+  if (category === "Truck") return true;
+  const n = name.toLowerCase();
+  return (
+    n.startsWith("truck ") ||
+    n.includes("day cab") ||
+    n.includes("sleeper cab") ||
+    (n.includes("premium exterior detail") && (n.includes("day cab") || n.includes("sleeper")))
+  );
+}
+function isHeavyEquipmentService(name: string, category?: string | null): boolean {
+  if (category === "Heavy Equipment") return true;
+  const n = name.toLowerCase();
+  return n.startsWith("equipment ");
+}
+/** Sleeper-cab services unlock the sleeper-only add-on tier (mattress, fridge). */
+function isSleeperCabService(name: string): boolean {
+  return name.toLowerCase().includes("sleeper");
 }
 
 /** Maps boat/RV footage to a size tier for duration lookups. */
@@ -419,6 +504,10 @@ function getServiceCategory(service: Service): { label: string; color: string } 
   if (n.includes("boat"))       return { label: "Marine Detailing",          color: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/20" };
   if (n.includes("rv") || n.includes("motorhome"))
                                 return { label: "RV Detailing",              color: "text-green-400 bg-green-500/10 border-green-500/20" };
+  if (isHeavyEquipmentService(service.name, (service as any).category))
+                                return { label: "Heavy Equipment",           color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20" };
+  if (isTruckService(service.name, (service as any).category))
+                                return { label: "Semi Truck Detailing",       color: "text-orange-400 bg-orange-500/10 border-orange-500/20" };
   return                               { label: "One-Time Detailing",         color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20" };
 }
 
@@ -896,6 +985,87 @@ export function ModelAutocomplete({
   );
 }
 
+// ─── Generic single-input Autocomplete (used for truck + HE makes/models) ───
+// Same UX as MakeAutocomplete / ModelAutocomplete but powered by a plain
+// `(query) => string[]` filter so we can reuse it for any flat catalog.
+// `disabled` blocks input + dropdown (used for "pick a make first" gate
+// on the model field).
+export function TextAutocomplete({
+  value,
+  onChange,
+  filter,
+  placeholder,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  filter: (query: string) => readonly string[];
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const options = disabled ? [] : filter(value);
+  const showDropdown = open && !disabled && options.length > 0;
+
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  // Close the dropdown whenever the input becomes disabled OR the value is
+  // cleared externally (e.g. parent clears the model field when the make
+  // changes). Prevents a stale dropdown lingering with the previous make's
+  // model list still visible underneath the input.
+  useEffect(() => {
+    if (disabled || !value) setOpen(false);
+  }, [disabled, value]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+          setHighlight(0);
+        }}
+        onFocus={() => !disabled && setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+        disabled={disabled}
+        className="w-full text-center bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+      {showDropdown && (
+        <div className="absolute top-full left-0 right-0 z-[70] mt-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
+          {options.slice(0, 16).map((opt, i) => (
+            <button
+              key={opt}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(opt);
+                setOpen(false);
+              }}
+              onMouseEnter={() => setHighlight(i)}
+              className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
+                i === highlight ? "bg-white/10 text-white" : "text-zinc-300 hover:bg-[#222] hover:text-white"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export interface BookingSuccessData {
@@ -944,7 +1114,7 @@ export interface DraftBooking {
   /** Step reached — used for full cross-reload persistence */
   step?: number;
   /** Category selected */
-  bookingCategory?: "vehicle" | "boat" | "rv" | null;
+  bookingCategory?: "vehicle" | "boat" | "rv" | "truck" | "heavy_equipment" | null;
   /** Additional vehicles state */
   additionalVehicleStates?: Array<{
     vehicleSize: VehicleSizeSlug | "";
@@ -988,7 +1158,7 @@ export interface BookingSectionProps {
   /** Called after draft has been applied so parent can clear initialDraft */
   onDraftRestored?: () => void;
   /** Pre-select a service category so the picker opens straight to that category */
-  initialCategory?: "vehicle" | "boat" | "rv";
+  initialCategory?: "vehicle" | "boat" | "rv" | "truck" | "heavy_equipment";
   /** Pre-fill the vehicle fields when the section opens. Used by inline marketing
    *  CTAs (e.g. landing-page paint correction picker) so the customer doesn't
    *  re-type their make/model after picking a service. Applied once per open.
@@ -1046,7 +1216,7 @@ export function BookingSection({
   /** True when a service was pre-selected from a card — shows the confirm-then-continue screen. */
   const [showServiceConfirm, setShowServiceConfirm] = useState(false);
   /** Which top-level category the user picked: null = show category picker */
-  const [bookingCategory, setBookingCategory] = useState<"vehicle" | "boat" | "rv" | null>(initialCategory ?? null);
+  const [bookingCategory, setBookingCategory] = useState<"vehicle" | "boat" | "rv" | "truck" | "heavy_equipment" | null>(initialCategory ?? null);
 
   // Step 1 — Vehicle
   const [vehicleSize, setVehicleSize] = useState<VehicleSizeSlug | "">("");
@@ -1230,6 +1400,8 @@ export function BookingSection({
           if (typeof boatLength !== "number" || boatLength < minFt) return null;
           return Math.max(Math.round(rate * minFt), Math.round(rate * boatLength));
         })()
+      : isFlatPriceService(selectedService.name, (selectedService as any).category)
+        ? Number(selectedService.price_small)
       : vehicleSize
         ? getPriceForSize(selectedService, vehicleSize)
         : null
@@ -2215,7 +2387,7 @@ export function BookingSection({
 
   // ── Pay at Arrival ───────────────────────────────────────────────────────
   const handlePayAtArrival = async () => {
-    if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize) || !canConfirm()) return;
+    if (!selectedService || (!isFootageService(selectedService.name) && !isFlatPriceService(selectedService.name, (selectedService as any).category) && !vehicleSize) || !canConfirm()) return;
     setIsSubmitting(true);
     setBookingResult(null);
     setStripeError(null);
@@ -2251,7 +2423,7 @@ export function BookingSection({
 
   // ── Save draft and redirect to sign up (keeps booking state for after auth) ─
   const handleCreateAccountClick = () => {
-    if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize)) return;
+    if (!selectedService || (!isFootageService(selectedService.name) && !isFlatPriceService(selectedService.name, (selectedService as any).category) && !vehicleSize)) return;
     const draft: DraftBooking = {
       serviceId: selectedService.id,
       vehicleSize: (isFootageService(selectedService.name) ? boatLengthToSize(boatLength) : vehicleSize) as VehicleSizeSlug,
@@ -2289,7 +2461,7 @@ export function BookingSection({
   const stripeAbortRef = useRef(false);
 
   const handlePayNow = async () => {
-    if (!selectedService || (!isFootageService(selectedService.name) && !vehicleSize) || !canConfirm()) return;
+    if (!selectedService || (!isFootageService(selectedService.name) && !isFlatPriceService(selectedService.name, (selectedService as any).category) && !vehicleSize) || !canConfirm()) return;
     stripeAbortRef.current = false;
     setIsStripeLoading(true);
     setStripeError(null);
@@ -2816,6 +2988,48 @@ export function BookingSection({
                       </div>
                     </div>
                   </button>
+
+                  {/* Semi Truck */}
+                  <button
+                    type="button"
+                    onClick={() => setBookingCategory("truck")}
+                    className="w-full p-5 rounded-2xl border border-[#252525] bg-zinc-900/40 hover:border-orange-400/50 hover:bg-orange-500/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                  >
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                        <Container size={20} className="text-orange-400" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white group-hover:text-orange-400 transition-colors">
+                          Semi Truck Detailing
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-0.5">
+                          Day cabs &amp; sleepers — yard washes from $99, premium details from $299
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Heavy Equipment */}
+                  <button
+                    type="button"
+                    onClick={() => setBookingCategory("heavy_equipment")}
+                    className="w-full p-5 rounded-2xl border border-[#252525] bg-zinc-900/40 hover:border-yellow-400/50 hover:bg-yellow-500/[0.04] active:scale-[0.99] transition-all duration-150 group"
+                  >
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                        <Tractor size={20} className="text-yellow-400" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white group-hover:text-yellow-400 transition-colors">
+                          Heavy Equipment
+                        </div>
+                        <div className="text-xs text-zinc-500 mt-0.5">
+                          Excavators, dozers, loaders, log &amp; dump trucks — cab interiors or $95/hr on-site
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 </div>
 
                 <button
@@ -2841,6 +3055,8 @@ export function BookingSection({
                 {bookingCategory === "vehicle" && (() => {
                   const isVehicleService = (s: Service) =>
                     !s.is_subscription && !isBoatService(s.name) && !isRVService(s.name) &&
+                    !isTruckService(s.name, (s as any).category) &&
+                    !isHeavyEquipmentService(s.name, (s as any).category) &&
                     !s.name.toLowerCase().includes("paint") && !s.name.toLowerCase().includes("correction");
                   const standard = services.filter(s => isVehicleService(s) && !s.name.toLowerCase().includes("ultimate"));
                   const ultimate = services.filter(s => isVehicleService(s) && s.name.toLowerCase().includes("ultimate"));
@@ -2996,6 +3212,152 @@ export function BookingSection({
                             </div>
                             {service.description && (
                               <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                {service.description}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {bookingCategory === "truck" && (() => {
+                  const truck = services.filter(s =>
+                    !s.is_subscription && isTruckService(s.name, (s as any).category)
+                  );
+                  // Group into exterior / interior / complete for clarity
+                  const exterior = truck.filter(s => /yard wash|exterior/i.test(s.name));
+                  const interior = truck.filter(s => /interior reset/i.test(s.name));
+                  const complete = truck.filter(s => /complete/i.test(s.name));
+                  return (
+                    <div>
+                      <h2 className="text-xl font-black text-white mb-1">Semi Truck Detailing</h2>
+                      <p className="text-sm text-zinc-500 mb-6">On-site service for day cabs &amp; sleepers — yard, terminal, or driveway</p>
+                      <div className="space-y-6">
+                        {exterior.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Container size={14} className="text-orange-400" />
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Exterior</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {exterior.map((service) => (
+                                <button
+                                  key={service.id}
+                                  type="button"
+                                  onClick={() => onSelectService(service)}
+                                  className="p-4 rounded-xl border border-orange-500/15 bg-orange-500/[0.02] text-left transition-all duration-150 hover:border-orange-500/40 hover:bg-orange-500/[0.06] active:scale-[0.99] group"
+                                >
+                                  <div className="font-bold text-sm text-white group-hover:text-orange-400 transition-colors">
+                                    {service.name}
+                                  </div>
+                                  <div className="text-[11px] text-orange-300/80 font-medium mt-0.5">
+                                    From ${service.price_small}
+                                  </div>
+                                  {service.description && (
+                                    <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-3 leading-relaxed">
+                                      {service.description}
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {interior.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Sparkles size={14} className="text-orange-400" />
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Interior</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {interior.map((service) => (
+                                <button
+                                  key={service.id}
+                                  type="button"
+                                  onClick={() => onSelectService(service)}
+                                  className="p-4 rounded-xl border border-orange-500/15 bg-orange-500/[0.02] text-left transition-all duration-150 hover:border-orange-500/40 hover:bg-orange-500/[0.06] active:scale-[0.99] group"
+                                >
+                                  <div className="font-bold text-sm text-white group-hover:text-orange-400 transition-colors">
+                                    {service.name}
+                                  </div>
+                                  <div className="text-[11px] text-orange-300/80 font-medium mt-0.5">
+                                    From ${service.price_small}
+                                  </div>
+                                  {service.description && (
+                                    <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-3 leading-relaxed">
+                                      {service.description}
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {complete.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Gem size={14} className="text-orange-400" />
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-orange-300">Complete Packages</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {complete.map((service) => (
+                                <button
+                                  key={service.id}
+                                  type="button"
+                                  onClick={() => onSelectService(service)}
+                                  className="relative p-4 rounded-xl border border-orange-400/30 bg-gradient-to-br from-orange-500/[0.06] to-orange-500/[0.02] text-left transition-all duration-150 hover:border-orange-400/60 hover:from-orange-500/[0.10] active:scale-[0.99] group overflow-hidden"
+                                >
+                                  <div className="font-bold text-sm text-white group-hover:text-orange-300 transition-colors">
+                                    {service.name}
+                                  </div>
+                                  <div className="text-sm text-orange-400 font-black mt-1">
+                                    From ${service.price_small}
+                                  </div>
+                                  {service.description && (
+                                    <div className="text-[11px] text-zinc-500 mt-1.5 line-clamp-3 leading-relaxed">
+                                      {service.description}
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {bookingCategory === "heavy_equipment" && (() => {
+                  const he = services.filter(s =>
+                    !s.is_subscription && isHeavyEquipmentService(s.name, (s as any).category)
+                  );
+                  return (
+                    <div>
+                      <h2 className="text-xl font-black text-white mb-1">Heavy Equipment Detailing</h2>
+                      <p className="text-sm text-zinc-500 mb-6">Excavators, dozers, loaders, skid steers, log &amp; dump trucks — on-site at your yard or job</p>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Tractor size={14} className="text-yellow-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Cab Interiors &amp; Hourly</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {he.map((service) => (
+                          <button
+                            key={service.id}
+                            type="button"
+                            onClick={() => onSelectService(service)}
+                            className="p-4 rounded-xl border border-yellow-500/15 bg-yellow-500/[0.02] text-left transition-all duration-150 hover:border-yellow-500/40 hover:bg-yellow-500/[0.06] active:scale-[0.99] group"
+                          >
+                            <div className="font-bold text-sm text-white group-hover:text-yellow-300 transition-colors">
+                              {service.name}
+                            </div>
+                            <div className="text-[11px] text-yellow-300/80 font-medium mt-0.5">
+                              {/equipment hourly/i.test(service.name) ? "$95/hr · 2 hr min" : `From $${service.price_small}`}
+                            </div>
+                            {service.description && (
+                              <div className="text-[11px] text-zinc-600 mt-1.5 line-clamp-3 leading-relaxed">
                                 {service.description}
                               </div>
                             )}
@@ -3282,55 +3644,113 @@ export function BookingSection({
                         );
                       })()
                     ) : (
-                      /* ── VEHICLE: year/make/model + size ── */
+                      /* ── VEHICLE / TRUCK / HEAVY EQUIPMENT: year + make + model
+                       *  Cars get the autocomplete-with-size-detect. Trucks and
+                       *  heavy equipment get plain text inputs with category-
+                       *  specific placeholders since their fleet/spec data
+                       *  doesn't live in the consumer vehicle DB. ── */
                       <>
-                      {/* Year, Make, Model — Make/Model autocomplete with size auto-select on pick */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
-                            Year
-                          </label>
-                          <input
-                            type="text"
-                            value={vehicleYear}
-                            onChange={(e) => setVehicleYear(e.target.value)}
-                            placeholder="2022"
-                            maxLength={4}
-                            className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
-                            Make
-                          </label>
-                          <MakeAutocomplete
-                            value={vehicleMake}
-                            onChange={setVehicleMake}
-                            onSelect={() => {
-                              setVehicleModel("");
-                              setAutoDetected(false);
-                            }}
-                            placeholder="Toyota"
-                          />
-                        </div>
-                        <div>
-                          <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
-                            Model
-                          </label>
-                          <ModelAutocomplete
-                            value={vehicleModel}
-                            onChange={setVehicleModel}
-                            make={vehicleMake}
-                            onSelect={(_, sizeSlug) => {
-                              setVehicleSize(sizeSlug);
-                              setAutoDetected(true);
-                            }}
-                            placeholder="Camry"
-                          />
-                        </div>
-                      </div>
+                      {(() => {
+                        const isTruck = !!selectedService && isTruckService(selectedService.name, (selectedService as any).category);
+                        const isHE    = !!selectedService && isHeavyEquipmentService(selectedService.name, (selectedService as any).category);
+                        const isFlat  = isTruck || isHE;
+                        const makeLabel  = isHE ? "Brand" : "Make";
+                        const modelLabel = isHE ? "Model / Type" : "Model";
+                        const yearPh    = isHE ? "2018" : "2022";
+                        const makePh    = isTruck ? "Peterbilt" : isHE ? "Caterpillar" : "Toyota";
+                        const modelPh   = isTruck ? "389 Sleeper" : isHE ? "320 Excavator" : "Camry";
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
+                                Year
+                              </label>
+                              <input
+                                type="text"
+                                value={vehicleYear}
+                                onChange={(e) => setVehicleYear(e.target.value)}
+                                placeholder={yearPh}
+                                maxLength={4}
+                                className="w-full min-h-[44px] bg-zinc-950/50 border border-white/10 focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 text-white rounded-xl px-4 py-3 outline-none transition-all placeholder:text-zinc-600 text-[16px] md:text-sm text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
+                                {makeLabel}
+                              </label>
+                              {isTruck ? (
+                                <TextAutocomplete
+                                  value={vehicleMake}
+                                  onChange={(v) => { setVehicleMake(v); setVehicleModel(""); }}
+                                  filter={filterTruckMakesByQuery}
+                                  placeholder={makePh}
+                                />
+                              ) : isHE ? (
+                                <TextAutocomplete
+                                  value={vehicleMake}
+                                  onChange={(v) => { setVehicleMake(v); setVehicleModel(""); }}
+                                  filter={filterHEMakesByQuery}
+                                  placeholder={makePh}
+                                />
+                              ) : (
+                                <MakeAutocomplete
+                                  value={vehicleMake}
+                                  onChange={setVehicleMake}
+                                  onSelect={() => {
+                                    setVehicleModel("");
+                                    setAutoDetected(false);
+                                  }}
+                                  placeholder={makePh}
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <label className="block tracking-wider uppercase text-xs font-semibold text-zinc-400 mb-2 text-center">
+                                {modelLabel}
+                              </label>
+                              {isTruck ? (
+                                <TextAutocomplete
+                                  value={vehicleModel}
+                                  onChange={setVehicleModel}
+                                  filter={(q) => filterTruckModelsByQuery(vehicleMake, q)}
+                                  placeholder={modelPh}
+                                  disabled={!vehicleMake.trim()}
+                                />
+                              ) : isHE ? (
+                                <TextAutocomplete
+                                  value={vehicleModel}
+                                  onChange={setVehicleModel}
+                                  filter={(q) => filterHEModelsByQuery(vehicleMake, q)}
+                                  placeholder={modelPh}
+                                  disabled={!vehicleMake.trim()}
+                                />
+                              ) : (
+                                <ModelAutocomplete
+                                  value={vehicleModel}
+                                  onChange={setVehicleModel}
+                                  make={vehicleMake}
+                                  onSelect={(_, sizeSlug) => {
+                                    setVehicleSize(sizeSlug);
+                                    setAutoDetected(true);
+                                  }}
+                                  placeholder={modelPh}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Vehicle Size — required for all vehicle services (Ultimate is now size-tiered) */}
+                      {/* Skip size picker entirely for flat-priced truck / heavy-equipment services
+                          and instead show a single fixed-price summary card. */}
+                      {selectedService && isFlatPriceService(selectedService.name, (selectedService as any).category) ? (
+                        <div className="w-full p-5 rounded-2xl border border-orange-400/40 bg-orange-500/[0.05] text-center">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70 mb-1">Flat Rate</p>
+                          <p className="text-3xl font-black text-orange-300 tabular-nums">${selectedService.price_small}</p>
+                          <p className="text-[11px] text-zinc-500 mt-1">Final price confirmed on-site. Add-on services and travel fees calculated at checkout.</p>
+                        </div>
+                      ) : (
                       <div>
                           <div className="flex flex-col items-center mb-3 gap-1">
                             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-widest">
@@ -3385,6 +3805,7 @@ export function BookingSection({
                             </p>
                           )}
                       </div>
+                      )}
 
                       {/* Enhance Your Detail (Smart per-service Add-ons) */}
                       {(() => {

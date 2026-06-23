@@ -119,3 +119,23 @@ export const RV_DETAILING_SCHEMA = buildServiceSchema({
   unitCode: "FOT",
   serviceType: "RV Detailing",
 });
+
+export const TRUCK_DETAILING_SCHEMA = buildServiceSchema({
+  name: "Mobile Semi Truck Detailing",
+  description:
+    "Mobile semi truck detailing for Vermont — day cab and sleeper service. Yard washes, exterior detail, interior reset, complete packages. Owner-operator and fleet pricing. Free travel within Chittenden County.",
+  url: "https://www.ariseandshinedetailing.com/truck-detailing",
+  lowPrice: 99,
+  highPrice: 649,
+  serviceType: "Semi Truck Detailing",
+});
+
+export const HEAVY_EQUIPMENT_DETAILING_SCHEMA = buildServiceSchema({
+  name: "Heavy Equipment Cab Detailing",
+  description:
+    "Mobile heavy equipment cab interior detailing in Vermont — excavators, dozers, loaders, skid steers, tractors, log trucks, dump trucks. On-site at your yard or job. Flat rate from $175 or $95/hr.",
+  url: "https://www.ariseandshinedetailing.com/heavy-equipment-detailing",
+  lowPrice: 95,
+  highPrice: 1000,
+  serviceType: "Heavy Equipment Detailing",
+});

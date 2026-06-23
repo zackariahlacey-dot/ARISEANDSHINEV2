@@ -10,8 +10,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function createPayCheckout(params: {
   bookingId: string;
   tipAmount: number;
+  /** Optional customer email entered on the pay page when no email is on file.
+   *  When provided AND the booking has no customer_email, we save it to the
+   *  booking row so Stripe + future receipts know where to deliver. */
+  email?: string;
 }): Promise<{ url: string } | { error: string }> {
-  const { bookingId, tipAmount } = params;
+  const { bookingId, tipAmount, email: enteredEmail } = params;
 
   try {
     const supabase = createAdminClient();
@@ -23,6 +27,22 @@ export async function createPayCheckout(params: {
 
     if (fetchErr || !booking) return { error: "Booking not found." };
     if (booking.status === "cancelled") return { error: "This booking has been cancelled." };
+
+    // Resolve the receipt email. Prefer the booking's stored email; otherwise
+    // accept what the customer just typed in on the pay page. Persist any
+    // freshly-entered address so receipts + future payment links work.
+    let receiptEmail = booking.customer_email?.trim() || null;
+    if (!receiptEmail && enteredEmail?.trim()) {
+      const candidate = enteredEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate)) {
+        return { error: "Please enter a valid email address." };
+      }
+      receiptEmail = candidate;
+      await supabase
+        .from("bookings")
+        .update({ customer_email: receiptEmail })
+        .eq("id", bookingId);
+    }
 
     const base = Number(booking.total_price) || 0;
     if (base <= 0) return { error: "Invalid booking amount." };
@@ -66,7 +86,7 @@ export async function createPayCheckout(params: {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      customer_email: booking.customer_email || undefined,
+      customer_email: receiptEmail || undefined,
       metadata: {
         booking_id: bookingId,
         source: "payment_page",

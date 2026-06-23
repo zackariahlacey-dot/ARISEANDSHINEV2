@@ -14,7 +14,7 @@ export default async function PayPage({ params }: { params: Promise<{ bookingId:
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, service_name, total_price, customer_name, vehicle_year, vehicle_make, vehicle_model, booking_date, booking_time, status, payment_method")
+    .select("id, service_name, total_price, customer_name, customer_email, vehicle_year, vehicle_make, vehicle_model, booking_date, booking_time, status, payment_method")
     .eq("id", bookingId)
     .single();
 
@@ -38,6 +38,7 @@ export default async function PayPage({ params }: { params: Promise<{ bookingId:
         service_name: booking.service_name,
         total_price: Number(booking.total_price),
         customer_name: booking.customer_name,
+        customer_email: booking.customer_email,
         vehicle_year: booking.vehicle_year,
         vehicle_make: booking.vehicle_make,
         vehicle_model: booking.vehicle_model,

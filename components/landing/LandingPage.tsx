@@ -34,6 +34,8 @@ import {
   Zap,
   Trophy,
   ChevronRight,
+  Container,
+  Tractor,
 } from "lucide-react";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -405,9 +407,17 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
   };
 
   // Auto-open booking when arriving with ?book=1 (used by town landing pages).
+  // Also captures ?category=truck|heavy_equipment so the BookingFlowSelector
+  // can deep-link straight into the right pathway.
+  const [heroInitialCategory, setHeroInitialCategory] =
+    useState<"vehicle" | "boat" | "rv" | "truck" | "heavy_equipment" | undefined>(undefined);
   useEffect(() => {
     if (!mounted) return;
     if (searchParams.get("book") !== "1") return;
+    const cat = searchParams.get("category");
+    if (cat === "truck" || cat === "heavy_equipment" || cat === "boat" || cat === "rv" || cat === "vehicle") {
+      setHeroInitialCategory(cat);
+    }
     setExpandedBookingId("hero");
     const path = window.location.pathname + (window.location.hash || "");
     window.history.replaceState(null, "", path || "/");
@@ -689,6 +699,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                 initialDraft={initialDraft}
                 onDraftRestored={() => setInitialDraft(null)}
                 onProgress={setBookingProgress}
+                initialCategory={heroInitialCategory}
               />
             </div>
           )}
@@ -2273,9 +2284,11 @@ function BuildForMeHomepageSection({
 function MoreServicesDisclosure() {
   const [open, setOpen] = useState(false);
   const TILES = [
-    { href: "/boat-detailing", Icon: Anchor,          title: "Boat Detailing",  blurb: "Dockside · Lake Champlain",   priceHint: "from $15/ft" },
-    { href: "/rv-detailing",   Icon: Truck,           title: "RV Detailing",    blurb: "At your site · 20 ft min",    priceHint: "from $15/ft" },
-    { href: "/fleet",          Icon: LayoutDashboard, title: "Fleet Quotes",    blurb: "4+ vehicles · up to 20% off", priceHint: "Custom quote" },
+    { href: "/boat-detailing",            Icon: Anchor,          title: "Boat Detailing",       blurb: "Dockside · Lake Champlain",     priceHint: "from $15/ft" },
+    { href: "/rv-detailing",              Icon: Truck,           title: "RV Detailing",         blurb: "At your site · 20 ft min",      priceHint: "from $15/ft" },
+    { href: "/truck-detailing",           Icon: Container,       title: "Semi Truck Detailing", blurb: "Day cabs & sleepers · on-site", priceHint: "from $99" },
+    { href: "/heavy-equipment-detailing", Icon: Tractor,         title: "Heavy Equipment",      blurb: "Cab interiors · excavators",    priceHint: "from $175" },
+    { href: "/fleet",                     Icon: LayoutDashboard, title: "Fleet Quotes",         blurb: "4+ vehicles · up to 20% off",   priceHint: "Custom quote" },
   ];
   return (
     <section className="py-8 md:py-10 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]">
@@ -2286,11 +2299,11 @@ function MoreServicesDisclosure() {
           aria-expanded={open}
           className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-white/[0.08] bg-zinc-900/40 text-zinc-300 text-sm font-bold hover:border-[#D4AF37]/40 hover:text-[#D4AF37] active:scale-[0.99] transition-all"
         >
-          {open ? "Hide other services" : "Also offering Boat · RV · Fleet"}
+          {open ? "Hide other services" : "Also offering Boat · RV · Truck · Heavy Equipment · Fleet"}
           <ChevronDown size={14} className={`text-[#D4AF37] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </button>
         {open && (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             {TILES.map(({ href, Icon, title, blurb, priceHint }) => (
               <Link key={href} href={href}
                 className="group relative rounded-2xl overflow-hidden border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,175,55,0.12)] p-4 flex items-center gap-3.5"

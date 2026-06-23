@@ -36,7 +36,7 @@ async function DataProvider() {
   const supabase = await createClient();
   const { data: services } = await supabase
     .from("services")
-    .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription")
+    .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription, category")
     .order("price_small", { ascending: true });
   const VEHICLE_NAMES = [
     "Interior Detail", "Exterior Detail", "Full Detail",

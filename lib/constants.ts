@@ -71,6 +71,55 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 480, medium: 480, large: 600, extra_large: 600,
     sedan: 480, suv: 600, xl: 600,
   },
+  // ── Semi Truck — flat-priced services (size dimension ignored) ──────
+  "Truck Yard Wash": {
+    small: 45, medium: 45, large: 45, extra_large: 45,
+    sedan: 45, suv: 45, xl: 45,
+  },
+  "Truck Exterior Refresh — Day Cab": {
+    small: 90, medium: 90, large: 90, extra_large: 90,
+    sedan: 90, suv: 90, xl: 90,
+  },
+  "Truck Exterior Refresh — Sleeper": {
+    small: 120, medium: 120, large: 120, extra_large: 120,
+    sedan: 120, suv: 120, xl: 120,
+  },
+  "Premium Exterior Detail — Day Cab": {
+    small: 180, medium: 180, large: 180, extra_large: 180,
+    sedan: 180, suv: 180, xl: 180,
+  },
+  "Premium Exterior Detail — Sleeper": {
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    sedan: 240, suv: 240, xl: 240,
+  },
+  "Day Cab Interior Reset": {
+    small: 150, medium: 150, large: 150, extra_large: 150,
+    sedan: 150, suv: 150, xl: 150,
+  },
+  "Sleeper Cab Interior Reset": {
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    sedan: 240, suv: 240, xl: 240,
+  },
+  "Day Cab Complete": {
+    // ~5.5 hr combined exterior + interior on a day cab
+    small: 330, medium: 330, large: 330, extra_large: 330,
+    sedan: 330, suv: 330, xl: 330,
+  },
+  "Sleeper Cab Complete": {
+    // ~8 hr — triggers whole-day reservation (WHOLE_DAY_THRESHOLD_MINS=480)
+    small: 480, medium: 480, large: 480, extra_large: 480,
+    sedan: 480, suv: 480, xl: 480,
+  },
+  // ── Heavy Equipment — cab interior + variable hourly ────────────────
+  "Equipment Cab Reset": {
+    small: 120, medium: 120, large: 120, extra_large: 120,
+    sedan: 120, suv: 120, xl: 120,
+  },
+  "Equipment Hourly Service": {
+    // 2 hr minimum default; admin overrides duration per job
+    small: 120, medium: 120, large: 120, extra_large: 120,
+    sedan: 120, suv: 120, xl: 120,
+  },
 };
 
 // Customer-facing sizes: 3 tiers only. "Sedan" now covers compacts,
