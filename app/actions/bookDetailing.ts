@@ -731,6 +731,64 @@ export async function bookDetailing(
     };
   }
 
+  // Seed booking_vehicles so the admin "Vehicles & Pricing" panel can render
+  // this booking. Without this, customer bookings show "No vehicles on this
+  // booking yet" — the panel reads from a separate first-class table added
+  // in the CRM overhaul migration. Errors are logged but don't fail the
+  // booking — the snapshot fields on bookings still keep the data discoverable.
+  try {
+    const addls = payload.additionalVehicles ?? [];
+    const addlLineTotals = addls.map((av) => {
+      const addons = Array.isArray(av.selectedAddons) ? av.selectedAddons : [];
+      const addonsSum = addons.reduce((s: number, a) => s + (Number(a?.price) || 0), 0);
+      return Number(av.servicePrice ?? 0) + addonsSum;
+    });
+    const addlSum = addlLineTotals.reduce((s, n) => s + n, 0);
+    const primaryLineTotal = Math.max(0, Number(bookingTotal ?? 0) - addlSum);
+    const primarySize = VEHICLE_SIZE_MAP[payload.vehicleSize] || "medium";
+
+    const rowsToInsert: any[] = [
+      {
+        booking_id:    booking.id,
+        vehicle_id:    vehicle.id,
+        position:      0,
+        make:          (payload.vehicleMake || "Unknown").trim(),
+        model:         (payload.vehicleModel || "Unknown").trim(),
+        year:          payload.vehicleYear ? (isNaN(parseInt(String(payload.vehicleYear), 10)) ? null : parseInt(String(payload.vehicleYear), 10)) : null,
+        size:          primarySize,
+        service_id:    payload.serviceId,
+        service_name:  payload.serviceName,
+        base_price:    primaryLineTotal,
+        addons_json:   payload.selectedAddons ?? [],
+        line_total:    primaryLineTotal,
+        status:        "pending",
+      },
+      ...addls.map((av, i) => {
+        const avYear = parseInt(String(av.vehicleYear), 10);
+        const avSize = VEHICLE_SIZE_MAP[av.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
+        return {
+          booking_id:    booking.id,
+          vehicle_id:    additionalVehicleDbIds[i] ?? null,
+          position:      i + 1,
+          make:          av.vehicleMake || null,
+          model:         av.vehicleModel || null,
+          year:          isNaN(avYear) ? null : avYear,
+          size:          avSize,
+          service_id:    av.serviceId ?? null,
+          service_name:  av.serviceName ?? null,
+          base_price:    Number(av.servicePrice ?? 0),
+          addons_json:   av.selectedAddons ?? [],
+          line_total:    addlLineTotals[i],
+          status:        "pending",
+        };
+      }),
+    ];
+    const { error: bvErr } = await adminSupabase.from("booking_vehicles").insert(rowsToInsert);
+    if (bvErr) console.error("[bookDetailing] booking_vehicles seed failed:", bvErr.message);
+  } catch (bvErr) {
+    console.error("[bookDetailing] booking_vehicles seed threw:", bvErr);
+  }
+
   // ── 3a-pre00. Maintenance offer lifecycle ───────────────────────────────
   // (a) If this booking is REDEEMING a maintenance offer, mark the offer
   //     consumed so it can't be used again.

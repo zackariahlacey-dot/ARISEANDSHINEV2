@@ -326,6 +326,66 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
 
   if (bookingErr) return { success: false, error: "Booking creation failed: " + bookingErr.message };
 
+  // 4b. Seed booking_vehicles so the admin "Vehicles & Pricing" panel renders.
+  // Without this, admin-created bookings show "No vehicles on this booking
+  // yet" because the BookingVehiclesPanel reads from booking_vehicles (a
+  // separate first-class table introduced in the CRM overhaul). The CRM
+  // migration backfilled existing bookings but every new booking needs an
+  // explicit insert here. Each additional vehicle gets its own row with its
+  // own line_total; the primary row absorbs whatever totalPrice is left over
+  // so the per-vehicle totals still add up to the booking total.
+  try {
+    const addlLineTotals = addlVehicles.map((av: any) => {
+      const addons = Array.isArray(av.selectedAddons) ? av.selectedAddons : [];
+      const addonsSum = addons.reduce((s: number, a: any) => s + (Number(a?.price) || 0), 0);
+      return Number(av.servicePrice ?? 0) + addonsSum;
+    });
+    const addlSum = addlLineTotals.reduce((s: number, n: number) => s + n, 0);
+    const primaryLineTotal = Math.max(0, Number(payload.totalPrice ?? 0) - addlSum);
+
+    const rowsToInsert: any[] = [
+      {
+        booking_id:    booking.id,
+        vehicle_id:    vehicle.id,
+        position:      0,
+        make:          snapshotMake,
+        model:         snapshotModel,
+        year:          isNaN(parseInt(snapshotYear, 10)) ? null : parseInt(snapshotYear, 10),
+        size:          dbVehicleSize,
+        service_id:    payload.serviceId,
+        service_name:  payload.serviceName,
+        base_price:    primaryLineTotal,
+        addons_json:   [],
+        line_total:    primaryLineTotal,
+        status:        "pending",
+      },
+      ...addlVehicles.map((av: any, i: number) => {
+        const avYear = parseInt(String(av.vehicleYear), 10);
+        const avDbSize = VEHICLE_SIZE_MAP[av.vehicleSize as keyof typeof VEHICLE_SIZE_MAP] || "medium";
+        const addons = Array.isArray(av.selectedAddons) ? av.selectedAddons : [];
+        return {
+          booking_id:    booking.id,
+          vehicle_id:    addlVehicleDbIds[i] ?? null,
+          position:      i + 1,
+          make:          av.vehicleMake || null,
+          model:         av.vehicleModel || null,
+          year:          isNaN(avYear) ? null : avYear,
+          size:          avDbSize,
+          service_id:    av.serviceId ?? null,
+          service_name:  av.serviceName ?? null,
+          base_price:    Number(av.servicePrice ?? 0),
+          addons_json:   addons,
+          line_total:    addlLineTotals[i],
+          status:        "pending",
+        };
+      }),
+    ];
+    const { error: bvErr } = await supabase.from("booking_vehicles").insert(rowsToInsert);
+    if (bvErr) console.error("[adminQuickBookAction] booking_vehicles seed failed:", bvErr.message);
+  } catch (bvErr) {
+    console.error("[adminQuickBookAction] booking_vehicles seed threw:", bvErr);
+  }
+
   // 5. Send Confirmation Emails
   if (email) {
     await sendBookingEmail({

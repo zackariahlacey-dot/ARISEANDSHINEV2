@@ -292,6 +292,27 @@ export async function adminSetSchedulePick(params: {
 
   if (bookingErr || !booking) return { ok: false, error: "Failed to create booking." };
 
+  // Seed booking_vehicles so the admin "Vehicles & Pricing" panel renders.
+  try {
+    await supabase.from("booking_vehicles").insert({
+      booking_id:   booking.id,
+      vehicle_id:   null,
+      position:     0,
+      make:         sub.vehicle_make,
+      model:        sub.vehicle_model,
+      year:         sub.vehicle_year ? (isNaN(parseInt(String(sub.vehicle_year), 10)) ? null : parseInt(String(sub.vehicle_year), 10)) : null,
+      size:         (["small","medium","large","extra_large"].includes(sub.vehicle_size) ? sub.vehicle_size : "medium"),
+      service_id:   null,
+      service_name: sub.plan_name,
+      base_price:   Number(sub.plan_price ?? 0),
+      addons_json:  [],
+      line_total:   Number(sub.plan_price ?? 0),
+      status:       "pending",
+    });
+  } catch (bvErr) {
+    console.error("[scheduleMonthlyBooking] booking_vehicles seed threw:", bvErr);
+  }
+
   // Upsert pick
   await supabase.from("monthly_schedule_picks").upsert({
     subscription_id: params.subscriptionId,
