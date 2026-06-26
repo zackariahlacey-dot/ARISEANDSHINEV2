@@ -27,6 +27,12 @@ export async function POST(req: NextRequest) {
     const sig = req.headers.get("stripe-signature");
     if (!sig || !WEBHOOK_SECRET) {
       console.warn("[webhooks/stripe] Missing signature or STRIPE_WEBHOOK_SECRET");
+      logError({
+        type: "webhook",
+        source: "stripe_webhook/config",
+        message: "Stripe webhook received with no signature or no STRIPE_WEBHOOK_SECRET env var",
+        details: { hasSig: !!sig, hasSecret: !!WEBHOOK_SECRET },
+      });
       return NextResponse.json({ error: "Webhook not configured" }, { status: 400 });
     }
 
@@ -35,7 +41,37 @@ export async function POST(req: NextRequest) {
       event = stripe.webhooks.constructEvent(body, sig, WEBHOOK_SECRET);
     } catch (err) {
       console.error("[webhooks/stripe] Signature verification failed:", err);
+      logError({
+        type: "webhook",
+        source: "stripe_webhook/signature",
+        message: err instanceof Error ? err.message : "Signature verification failed",
+        details: { sigPrefix: sig.slice(0, 16) },
+      });
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
+
+    // ── Stripe payment failure events — alert owner immediately ──────────
+    if (event.type === "checkout.session.async_payment_failed" ||
+        event.type === "payment_intent.payment_failed") {
+      const obj = event.data.object as Stripe.Checkout.Session | Stripe.PaymentIntent;
+      const lastErrMsg =
+        ("last_payment_error" in obj && obj.last_payment_error?.message) ||
+        ((obj as Stripe.Checkout.Session).payment_status ?? "Payment failed");
+      const bookingId = (obj.metadata as Record<string, string> | null | undefined)?.booking_id ?? null;
+      const customerEmail = ("customer_email" in obj ? obj.customer_email : null) ?? null;
+      logError({
+        type: "payment_failure",
+        source: `stripe_webhook/${event.type}`,
+        message: String(lastErrMsg),
+        details: {
+          stripeId: obj.id,
+          eventType: event.type,
+          bookingId,
+          customerEmail,
+          amount: "amount" in obj ? obj.amount : null,
+        },
+      });
+      return NextResponse.json({ received: true });
     }
 
     // ── Monthly subscription lifecycle events ────────────────────────────
@@ -582,8 +618,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error("[webhooks/stripe]", err);
+    const msg = err instanceof Error ? err.message : "Webhook handler failed";
+    logError({
+      type: "webhook",
+      source: "stripe_webhook/unhandled",
+      message: msg,
+      details: { stack: err instanceof Error ? err.stack?.slice(0, 1500) : null },
+    });
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Webhook handler failed" },
+      { error: msg },
       { status: 500 }
     );
   }

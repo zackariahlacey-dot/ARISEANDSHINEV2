@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logError } from "@/app/actions/logError";
 
 export async function getPaymentLinkUrl(bookingId: string): Promise<string> {
   const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
@@ -132,6 +133,12 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
           await markPaymentLinkSent(bookingId).catch(() => undefined);
         } catch (emailErr) {
           console.error("[sendStripePaymentLink] Email failed:", emailErr);
+          logError({
+            type: "payment_failure",
+            source: "sendStripePaymentLink/email",
+            message: emailErr instanceof Error ? emailErr.message : "Resend email failed",
+            details: { bookingId, customerEmail, serviceName, totalPrice },
+          });
         }
       }
     }
@@ -139,6 +146,13 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
     return { url: payUrl, emailSent };
   } catch (err) {
     console.error("[sendStripePaymentLink]", err);
-    return { error: err instanceof Error ? err.message : "Failed to send payment link." };
+    const msg = err instanceof Error ? err.message : "Failed to send payment link.";
+    logError({
+      type: "payment_failure",
+      source: "sendStripePaymentLink",
+      message: msg,
+      details: { bookingId, ...booking },
+    });
+    return { error: msg };
   }
 }

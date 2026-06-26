@@ -2,6 +2,7 @@
 
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logError } from "@/app/actions/logError";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
@@ -97,10 +98,25 @@ export async function createPayCheckout(params: {
       expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24 hours
     });
 
-    if (!session.url) return { error: "Failed to create checkout session." };
+    if (!session.url) {
+      logError({
+        type: "payment_failure",
+        source: "createPayCheckout/no_url",
+        message: "Stripe returned a session with no URL",
+        details: { bookingId, total: base + tip, sessionId: session.id },
+      });
+      return { error: "Failed to create checkout session." };
+    }
     return { url: session.url };
   } catch (err) {
     console.error("[createPayCheckout]", err);
-    return { error: err instanceof Error ? err.message : "Failed to create checkout." };
+    const msg = err instanceof Error ? err.message : "Failed to create checkout.";
+    logError({
+      type: "payment_failure",
+      source: "createPayCheckout",
+      message: msg,
+      details: { bookingId, tipAmount, enteredEmail: enteredEmail ?? null },
+    });
+    return { error: msg };
   }
 }
