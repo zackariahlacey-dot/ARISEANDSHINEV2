@@ -25,6 +25,10 @@
     {
       "path": "/api/cron/admin-daily-digest",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/cross-sell-to-exterior",
+      "schedule": "0 14 * * *"
     }
   ]
 }
