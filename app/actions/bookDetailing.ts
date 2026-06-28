@@ -95,6 +95,13 @@ export type BookingPayload = {
   maintenanceOfferId?: string;
   /** Customer-reported condition tier for a maintenance booking. */
   maintenanceCondition?: "showroom" | "lived_in" | "rough";
+  /** Cross-sell coupon issued by the sister exterior site (cross_sell_events
+   *  row). When set, redeemCrossSellCoupon() runs after the booking insert
+   *  succeeds and stamps redeemed_at + redeemed_booking_id on the event. */
+  crossSellEventId?: string;
+  crossSellCouponCode?: string;
+  crossSellDiscount?: number;
+  crossSellDiscountPct?: number;
 };
 
 export type BookingResult =
@@ -497,6 +504,9 @@ export async function bookDetailing(
       payload.couponDiscount != null && payload.couponDiscount > 0
         ? `🏷️ Promo code${payload.couponCode ? ` ${payload.couponCode}` : ""} applied: $${payload.couponDiscount.toFixed(2)} off`
         : null,
+      payload.crossSellEventId && payload.crossSellDiscount != null && payload.crossSellDiscount > 0
+        ? `🤝 Exterior site coupon${payload.crossSellCouponCode ? ` ${payload.crossSellCouponCode}` : ""} (${payload.crossSellDiscountPct ?? 0}%): $${payload.crossSellDiscount.toFixed(2)} off`
+        : null,
       payload.loyaltyDiscountAmount != null && payload.loyaltyDiscountAmount > 0
         ? `⭐ Loyalty discount (${payload.loyaltyDiscountPct ?? 0}% off): $${payload.loyaltyDiscountAmount.toFixed(2)} off`
         : null,
@@ -643,6 +653,12 @@ export async function bookDetailing(
             ).slice(0, 499),
           }),
           ...(payload.couponId ? { couponId: payload.couponId, couponCode: (payload.couponCode ?? "").slice(0, 50), couponDiscount: String(payload.couponDiscount ?? 0) } : {}),
+          ...(payload.crossSellEventId ? {
+            crossSellEventId: payload.crossSellEventId,
+            crossSellCouponCode: (payload.crossSellCouponCode ?? "").slice(0, 50),
+            crossSellDiscount: String(payload.crossSellDiscount ?? 0),
+            crossSellDiscountPct: String(payload.crossSellDiscountPct ?? 0),
+          } : {}),
           ...(payload.pointsToRedeem != null &&
             payload.pointsToRedeem > 0 && {
               pointsToRedeem: String(payload.pointsToRedeem),
@@ -787,6 +803,22 @@ export async function bookDetailing(
     if (bvErr) console.error("[bookDetailing] booking_vehicles seed failed:", bvErr.message);
   } catch (bvErr) {
     console.error("[bookDetailing] booking_vehicles seed threw:", bvErr);
+  }
+
+  // ── Cross-sell coupon redemption (exterior → detailing) ────────────────
+  // Stamp redeemed_at + redeemed_booking_id on the cross_sell_events row.
+  // Atomic guard inside the action handles double-redeem; we just fire
+  // and forget. Failure is logged but never blocks the confirmed booking.
+  if (payload.crossSellEventId) {
+    try {
+      const { redeemCrossSellCoupon } = await import("@/app/actions/crossSellCoupon");
+      const r = await redeemCrossSellCoupon(payload.crossSellEventId, booking.id);
+      if (!r.ok && !r.alreadyRedeemed) {
+        console.error("[bookDetailing] cross-sell redemption failed for event", payload.crossSellEventId);
+      }
+    } catch (csErr) {
+      console.error("[bookDetailing] cross-sell redemption threw:", csErr);
+    }
   }
 
   // ── 3a-pre00. Maintenance offer lifecycle ───────────────────────────────

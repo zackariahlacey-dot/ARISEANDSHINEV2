@@ -513,6 +513,23 @@ export async function POST(req: NextRequest) {
     const bookingId = booking.id;
     const totalPrice = Number(m.totalPrice) || 0;
 
+    // Cross-sell coupon redemption (exterior → detailing). Webhook is the
+    // canonical "payment confirmed" moment for pay-now bookings, so this
+    // is where we stamp redeemed_at + redeemed_booking_id on the
+    // cross_sell_events row. Idempotent via the IS NULL guard inside
+    // redeemCrossSellCoupon; safe on Stripe webhook retries.
+    if (m.crossSellEventId) {
+      try {
+        const { redeemCrossSellCoupon } = await import("@/app/actions/crossSellCoupon");
+        const r = await redeemCrossSellCoupon(m.crossSellEventId, bookingId);
+        if (!r.ok && !r.alreadyRedeemed) {
+          console.error("[webhooks/stripe] cross-sell redemption failed:", { eventId: m.crossSellEventId, bookingId });
+        }
+      } catch (csErr) {
+        console.error("[webhooks/stripe] cross-sell redemption threw:", csErr);
+      }
+    }
+
     // Auto-deactivate the coupon if this booking hit its max_uses limit.
     // Mirrors the logic in bookDetailing.ts for the pay-at-arrival path.
     if (m.couponId) {

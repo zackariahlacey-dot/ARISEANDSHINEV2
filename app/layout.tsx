@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import { PWARegistration } from "@/components/PWARegistration";
 import { PWALaunchRedirect } from "@/components/PWALaunchRedirect";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { CrossSellCouponCapture } from "@/components/landing/CrossSellCouponCapture";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -156,6 +158,11 @@ export default function RootLayout({
         />
         <PWARegistration />
         <PWALaunchRedirect />
+        {/* Capture inbound ?coupon=… cross-sell codes from the exterior site
+            into localStorage; the booking modal auto-applies on open. */}
+        <Suspense fallback={null}>
+          <CrossSellCouponCapture />
+        </Suspense>
         {/* InstallPrompt disabled per owner request — too pushy on landing visits. */}
         <ThemeProvider
           attribute="class"

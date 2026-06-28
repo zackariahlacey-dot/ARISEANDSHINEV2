@@ -40,6 +40,11 @@ import {
   validateCoupon,
   type CouponResult,
 } from "@/app/actions/validateCoupon";
+import { validateCrossSellCoupon } from "@/app/actions/crossSellCoupon";
+import {
+  getStoredCrossSellCoupon,
+  clearStoredCrossSellCoupon,
+} from "./CrossSellCouponCapture";
 import { validateGiftCard } from "@/app/actions/validateGiftCard";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
@@ -1391,6 +1396,20 @@ export function BookingSection({
     remainingBalance: number;
   } | null>(null);
 
+  // Cross-sell coupon (issued by the sister exterior site). Auto-loaded
+  // from localStorage on open — captured upstream by
+  // <CrossSellCouponCapture /> when the URL has ?coupon=DETAIL-XXXXX.
+  // Separate from the in-house promo `appliedCoupon` so a customer can
+  // stack both. Validated server-side via validateCrossSellCoupon().
+  const [crossSellCoupon, setCrossSellCoupon] = useState<{
+    eventId: string;
+    code: string;
+    discountPct: number;
+  } | null>(null);
+  const [crossSellNotice, setCrossSellNotice] = useState<
+    { kind: "applied" | "error"; message: string } | null
+  >(null);
+
   // Computed price
   const computedPrice = selectedService
     ? isFootageService(selectedService.name)
@@ -1521,11 +1540,23 @@ export function BookingSection({
     ? formatDurationRange(estimatedDuration.minMins, estimatedDuration.maxMins)
     : null;
 
+  // Cross-sell coupon discount: percentage off the pre-discount goods
+  // subtotal (services + addons + extra vehicles). Travel fee is excluded
+  // because it's a pass-through driving cost, not something we discount.
+  // Stacks WITH the in-house coupon — different program, different funder.
+  const crossSellGoodsBase = Math.max(
+    0,
+    servicePrice + addonsTotal + additionalVehiclesTotal - multiVehicleDiscount - couponDiscount,
+  );
+  const crossSellDiscount = crossSellCoupon
+    ? Math.round(crossSellGoodsBase * (crossSellCoupon.discountPct / 100) * 100) / 100
+    : 0;
+
   const giftCardDiscount = appliedGiftCard
     ? Math.min(appliedGiftCard.remainingBalance, servicePrice + addonsTotal + additionalVehiclesTotal + setupFee + travelFee)
     : 0;
   const totalWithTravel =
-    servicePrice - couponDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal - multiVehicleDiscount;
+    servicePrice - couponDiscount - crossSellDiscount - giftCardDiscount + setupFee + travelFee + addonsTotal + additionalVehiclesTotal - multiVehicleDiscount;
 
   // Loyalty discount: auto-applies for qualifying vehicle detail services
   const isLoyaltyEligible = loyaltyDiscountPct > 0 && !couponDiscount && (
@@ -1803,6 +1834,8 @@ export function BookingSection({
       setGiftCardCode("");
       setGiftCardError(null);
       setAppliedGiftCard(null);
+      setCrossSellCoupon(null);
+      setCrossSellNotice(null);
       setBookingResult(null);
       setIsSubmitting(false);
       setIsStripeLoading(false);
@@ -2011,6 +2044,50 @@ export function BookingSection({
       window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
     }, 100);
     return () => clearTimeout(t);
+  }, [isVisible]);
+
+  // ── Cross-sell coupon auto-apply ─────────────────────────────────────────
+  // When the modal opens, check for a stored exterior-site coupon and
+  // validate it. Success → silent banner so customer sees the discount
+  // before they hit Pay. Expired / already-used → show a polite banner
+  // and forget the code (don't block booking).
+  useEffect(() => {
+    if (!isVisible) return;
+    let cancelled = false;
+    (async () => {
+      const stored = getStoredCrossSellCoupon();
+      if (!stored) return;
+      const result = await validateCrossSellCoupon(stored);
+      if (cancelled) return;
+      if (result.ok) {
+        setCrossSellCoupon({
+          eventId:     result.eventId,
+          code:        result.code,
+          discountPct: result.discountPct,
+        });
+        setCrossSellNotice({
+          kind: "applied",
+          message: `Coupon ${result.code} applied — ${result.discountPct}% off your detail.`,
+        });
+      } else {
+        setCrossSellCoupon(null);
+        if (result.reason === "expired" || result.reason === "already_used") {
+          setCrossSellNotice({
+            kind: "error",
+            message: result.reason === "expired"
+              ? `Coupon ${stored} has expired — book without it or contact us.`
+              : `Coupon ${stored} has already been used.`,
+          });
+          clearStoredCrossSellCoupon();
+        } else if (result.reason === "not_found" || result.reason === "wrong_direction") {
+          // Stored code doesn't match anything — quietly drop it.
+          clearStoredCrossSellCoupon();
+          setCrossSellNotice(null);
+        }
+        // lookup_error: leave both as-is so a retry can succeed.
+      }
+    })();
+    return () => { cancelled = true; };
   }, [isVisible]);
 
   // Smooth scroll to top of booking module when user moves to a new step (Vehicle → Schedule → Confirm)
@@ -2363,6 +2440,12 @@ export function BookingSection({
         couponId: appliedCoupon.couponId,
         couponCode: appliedCoupon.code,
         couponDiscount,
+      }),
+      ...(crossSellCoupon && crossSellDiscount > 0 && {
+        crossSellEventId:    crossSellCoupon.eventId,
+        crossSellCouponCode: crossSellCoupon.code,
+        crossSellDiscount,
+        crossSellDiscountPct: crossSellCoupon.discountPct,
       }),
       ...(appliedGiftCard && giftCardDiscount > 0 && {
         giftCardId: appliedGiftCard.giftCardId,
@@ -2776,6 +2859,35 @@ export function BookingSection({
                 </div>
               )}
             </AnimatePresence>
+
+            {/* Cross-sell coupon banner — inline notice at the very top of
+                the booking flow when an exterior-site code is detected. */}
+            {crossSellNotice && (
+              <div className="px-4 sm:px-6 pt-4 -mb-2">
+                <div
+                  className={`rounded-xl border px-4 py-3 flex items-start justify-between gap-3 ${
+                    crossSellNotice.kind === "applied"
+                      ? "border-emerald-500/30 bg-emerald-500/[0.06] text-emerald-300"
+                      : "border-red-500/30 bg-red-500/[0.06] text-red-300"
+                  }`}
+                >
+                  <div className="flex items-start gap-2 min-w-0">
+                    <span className="text-base shrink-0" aria-hidden>
+                      {crossSellNotice.kind === "applied" ? "✅" : "⚠️"}
+                    </span>
+                    <p className="text-sm font-semibold leading-snug">{crossSellNotice.message}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCrossSellNotice(null)}
+                    aria-label="Dismiss notice"
+                    className="shrink-0 text-current/60 hover:text-current"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Success is shown in SuccessModal; brief placeholder if dropdown still visible */}
           {isSuccess ? (
@@ -5172,6 +5284,17 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                                 </span>
                               </span>
                               <span className="font-semibold">−${couponDiscount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {crossSellDiscount > 0 && crossSellCoupon && (
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:items-center text-emerald-400 min-w-0">
+                              <span className="flex items-center gap-1.5">
+                                🤝 Exterior Site Coupon
+                                <span className="text-[10px] text-emerald-500/70 font-mono">
+                                  {crossSellCoupon.code} · {crossSellCoupon.discountPct}%
+                                </span>
+                              </span>
+                              <span className="font-semibold">−${crossSellDiscount.toFixed(2)}</span>
                             </div>
                           )}
                           {travelFeeLoading && (
