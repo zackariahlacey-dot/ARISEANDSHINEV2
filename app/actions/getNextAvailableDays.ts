@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDurationMins, getAdditionalVehiclesDuration, checkSlotConflict, timeToMins, to12h, isWholeDayBooking, WHOLE_DAY_THRESHOLD_MINS, type BookingSlot } from "@/lib/availability";
 import { ymdInBusinessTz, todayInBusinessTz } from "@/lib/dates";
+import { getExteriorBlockedDatesIfLinked } from "@/app/actions/linkedCalendar";
 
 export type AvailableDay = {
   date: string;         // YYYY-MM-DD
@@ -98,15 +99,22 @@ export async function getNextAvailableDays(
 ): Promise<AvailableDay[]> {
   const supabase = createAdminClient();
 
-  const [ohResult, blockedResult] = await Promise.all([
+  const [ohResult, blockedResult, exteriorBlocks] = await Promise.all([
     supabase.from("operating_hours").select("*"),
     supabase.from("blocked_dates").select("blocked_date"),
+    // Honor the shared linked-calendar toggle — when ON, treat every
+    // exterior-booked day in the lookahead window as fully blocked.
+    getExteriorBlockedDatesIfLinked({
+      rangeStart: todayInBusinessTz(),
+      rangeDays:  Math.max(lookahead, 21),
+    }),
   ]);
 
   const operatingHours: any[] = ohResult.data ?? [];
-  const blockedDates = new Set<string>(
-    (blockedResult.data ?? []).map((r: any) => r.blocked_date as string)
-  );
+  const blockedDates = new Set<string>([
+    ...(blockedResult.data ?? []).map((r: any) => r.blocked_date as string),
+    ...exteriorBlocks.dates,
+  ]);
 
   const duration = customDurationMins ?? getDurationMins(serviceName, vehicleSize);
   const now = new Date();

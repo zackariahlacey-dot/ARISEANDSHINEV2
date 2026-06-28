@@ -17,13 +17,17 @@ import {
   runTestBookingAction, getCouponStats, toggleCouponAction, deleteCouponAction,
   getTestPayUrl,
 } from "@/app/actions/adminActions";
+import {
+  getLinkedCalendarSetting,
+  setLinkedCalendarSetting,
+} from "@/app/actions/linkedCalendar";
 import { createCoupon } from "@/app/actions/createCoupon";
 import { useToast } from "@/components/admin/Toast";
 import { SubNav, BUSINESS_SUBNAV } from "@/components/admin/SubNav";
 import {
   Clock, CalendarOff, Mail, Server, Activity, Check,
   AlertTriangle, CheckCircle2, Loader2, ChevronDown, ChevronUp,
-  Send, Target, Zap, RefreshCw, FlaskConical, X, Ticket, Power, Trash2, Plus, ExternalLink,
+  Send, Target, Zap, RefreshCw, FlaskConical, X, Ticket, Power, Trash2, Plus, ExternalLink, Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -477,8 +481,151 @@ export default function SettingsPage() {
         </div>
       </Section>
 
+      {/* ── Linked Calendars (cross-business) ──────────────────────────────── */}
+      <LinkedCalendarsSection />
+
       {/* ── Discount Codes ────────────────────────────────────────────────── */}
       <CouponsSection />
+    </div>
+  );
+}
+
+// ── Linked Calendars section ───────────────────────────────────────────────
+// Shared single toggle stored on the exterior site's settings table.
+// When ON, days with an exterior job render as fully blocked here and
+// vice versa. Flipping from here writes through to the exterior dashboard.
+function LinkedCalendarsSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const { data: linked, isLoading } = useQuery({
+    queryKey: ["admin", "linked-calendar"],
+    queryFn: getLinkedCalendarSetting,
+    // Refresh when the section opens — admin may have just toggled on the exterior side.
+    staleTime: 30_000,
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  async function handleToggle(next: boolean) {
+    setSaving(true);
+    try {
+      const r = await setLinkedCalendarSetting(next);
+      if (!r.ok) {
+        toast(r.error ?? "Failed to update setting", "error");
+        return;
+      }
+      toast(next
+        ? "Linked — detailing and exterior now block each other's days."
+        : "Independent — both businesses schedule on their own again.");
+      // Invalidate every cache that depends on the merged blocked-date set
+      // so the calendar grids and date pickers pick up the change immediately.
+      queryClient.invalidateQueries({ queryKey: ["admin", "linked-calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "exterior-blocked-dates"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "bookings"] });
+    } catch (e: any) {
+      toast(e?.message ?? "Failed to update setting", "error");
+    }
+    setSaving(false);
+  }
+
+  const isLinked = linked ?? true;
+
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(p => !p)}
+        className="w-full flex items-center justify-between px-4 py-4 text-left"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-amber-500"><Link2 size={16} /></span>
+          <span className="text-sm font-black uppercase tracking-widest">Linked Calendars</span>
+          {!isLoading && (
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+              isLinked
+                ? "bg-amber-500/15 border border-amber-500/30 text-amber-400"
+                : "bg-zinc-800 border border-white/10 text-zinc-500"
+            )}>
+              {isLinked ? "Linked" : "Independent"}
+            </span>
+          )}
+        </div>
+        {open ? <ChevronUp size={15} className="text-zinc-600" /> : <ChevronDown size={15} className="text-zinc-600" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 border-t border-white/[0.04] pt-4 space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-amber-500" size={20} /></div>
+          ) : (
+            <>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                When linked, detailing bookings are blocked on days that have exterior jobs,
+                and exterior bookings are blocked on days that have detailing jobs.
+                Recommended while you&apos;re solo — the same toggle exists on the exterior
+                site and changes here apply there too. Flip <strong>OFF</strong> once you
+                hire separate crews so each business schedules independently.
+              </p>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isLinked}
+                onClick={() => handleToggle(!isLinked)}
+                disabled={saving}
+                className={cn(
+                  "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border transition-all active:scale-[0.99]",
+                  isLinked
+                    ? "border-amber-500/40 bg-amber-500/[0.06]"
+                    : "border-white/[0.08] bg-white/[0.02]",
+                  saving && "opacity-60"
+                )}
+              >
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-sm font-black text-white">
+                    Link calendars with exterior site
+                  </span>
+                  <span className="text-[11px] text-zinc-500">
+                    {isLinked
+                      ? "Detailing + exterior are blocking each other's days."
+                      : "Each business schedules independently."}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {saving && <Loader2 size={13} className="animate-spin text-amber-400" />}
+                  <span className={cn(
+                    "relative inline-flex h-6 w-11 rounded-full border transition-colors",
+                    isLinked
+                      ? "bg-amber-500 border-amber-500"
+                      : "bg-zinc-800 border-white/10"
+                  )}>
+                    <span className={cn(
+                      "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                      isLinked ? "translate-x-5" : "translate-x-0.5"
+                    )} />
+                  </span>
+                </div>
+              </button>
+
+              <div className={cn(
+                "rounded-xl border px-3.5 py-3 flex items-start gap-2.5 text-[11px] leading-relaxed",
+                isLinked
+                  ? "border-amber-500/15 bg-amber-500/[0.04] text-amber-300/90"
+                  : "border-white/[0.06] bg-white/[0.02] text-zinc-500"
+              )}>
+                <span className="shrink-0">{isLinked ? "🔗" : "⚙️"}</span>
+                <span>
+                  {isLinked
+                    ? "Shared setting — the exterior admin sees the same switch and can flip it back. Last-write wins."
+                    : "Heads-up: while OFF, the same customer could book both services on the same day. Only safe once you have separate crews."}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

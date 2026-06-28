@@ -156,6 +156,18 @@ export async function checkAvailability(
   customDurationMins?: number
 ) {
   const supabase = createAdminClient();
+
+  // Linked-calendar guard — if the shared toggle is ON and exterior has
+  // a job on this date, treat the whole day as unavailable. Mirrors the
+  // exterior side's reverse-direction check. Defensive: a failure inside
+  // the helper returns linked=true with dates=[], so we never accidentally
+  // block detailing customers because the exterior table was unreachable.
+  try {
+    const { getExteriorBlockedDatesIfLinked } = await import("@/app/actions/linkedCalendar");
+    const exterior = await getExteriorBlockedDatesIfLinked({ rangeStart: date, rangeDays: 1 });
+    if (exterior.linked && exterior.dates.includes(date)) return false;
+  } catch { /* silent — never block detailing on a linked-calendar lookup error */ }
+
   const { data: existing } = await supabase
     .from("bookings")
     .select("booking_time, service_name, vehicle_size, additional_vehicles_json, duration_override, services(name), vehicles(size)")

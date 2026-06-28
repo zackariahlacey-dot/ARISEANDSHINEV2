@@ -1505,6 +1505,17 @@ export default function SchedulePage() {
   const { data: services } = useServices();
   const { data: blockedDates } = useBlockedDates();
   const { data: opHoursAll } = useOperatingHours();
+  // Linked-calendar exterior blocks. When the shared toggle is ON, these
+  // days have an exterior job already and should render the same as our
+  // own blocked dates (admin can't fit a detailing job around them).
+  const { data: linkedExterior } = useQuery({
+    queryKey: ["admin", "exterior-blocked-dates"],
+    queryFn: async () => {
+      const { getExteriorBlockedDatesIfLinked } = await import("@/app/actions/linkedCalendar");
+      return getExteriorBlockedDatesIfLinked({ rangeDays: 180 });
+    },
+    staleTime: 60_000,
+  });
   const updateStatus  = useUpdateBookingStatus();
   const sendOmw       = useSendOnMyWay();
   const handleNoShow  = useHandleNoShow();
@@ -1603,10 +1614,27 @@ export default function SchedulePage() {
       .sort((a: any, b: any) => (a.booking_time ?? "").localeCompare(b.booking_time ?? ""));
   }, [bookings, selectedDay]);
 
+  const exteriorBlockedSet = useMemo(
+    () => new Set<string>(linkedExterior?.dates ?? []),
+    [linkedExterior?.dates],
+  );
+
   const isBlockedDate = useCallback((date: Date) => {
     const ds = format(date, "yyyy-MM-dd");
-    return (blockedDates ?? []).some((b: any) => b.blocked_date === ds);
-  }, [blockedDates]);
+    if ((blockedDates ?? []).some((b: any) => b.blocked_date === ds)) return true;
+    if (exteriorBlockedSet.has(ds)) return true;
+    return false;
+  }, [blockedDates, exteriorBlockedSet]);
+
+  /** True when this date is blocked specifically by an exterior job
+   *  (not our own blocked_dates row). UI uses this to show the softer
+   *  "Our crew is on another project" copy instead of generic blocked. */
+  const isExteriorBlockedDate = useCallback((date: Date) => {
+    return exteriorBlockedSet.has(format(date, "yyyy-MM-dd"));
+  }, [exteriorBlockedSet]);
+  // Surface the helper so future call sites (peek popups, slot picker)
+  // can pull it without re-deriving — kept silent for now.
+  void isExteriorBlockedDate;
 
   // Actions
   async function handleComplete(b: any) {

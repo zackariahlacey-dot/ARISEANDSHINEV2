@@ -230,6 +230,20 @@ export async function adminQuickBookAction(payload: any): Promise<{ success: boo
   // 4. Check Availability First — prevent double booking
   const { checkSlotConflict: _checkConflict, getDurationMins: _getDur, timeToMins: _toMins, to24h: _to24h } = await import("@/lib/availability");
 
+  // Linked-calendar guard — when the shared toggle is ON and an exterior
+  // job exists on this date, block the booking unless the admin opted to
+  // override (allowOverlap). Mirrors the detailing-side conflict prompt
+  // so the same UI nudge can override it on purpose if needed.
+  if (!payload.allowOverlap) {
+    try {
+      const { getExteriorBlockedDatesIfLinked } = await import("@/app/actions/linkedCalendar");
+      const exterior = await getExteriorBlockedDatesIfLinked({ rangeStart: payload.bookingDate, rangeDays: 1 });
+      if (exterior.linked && exterior.dates.includes(payload.bookingDate)) {
+        return { success: false, error: "Exterior already has a job booked this day. Toggle Linked Calendars off in Settings or override the conflict to book anyway." };
+      }
+    } catch { /* silent — never block a confirmed admin action on a lookup failure */ }
+  }
+
   const { data: existingOnDate } = await supabase
     .from("bookings")
     .select("booking_time, service_name, vehicle_size, status, duration_override")

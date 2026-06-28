@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayInBusinessTz } from "@/lib/dates";
+import { getExteriorBlockedDatesIfLinked } from "@/app/actions/linkedCalendar";
 
 export type OperatingHour = {
   day_of_week: number;
@@ -13,7 +14,17 @@ export type OperatingHour = {
 
 export type AvailabilityData = {
   operatingHours: OperatingHour[];
+  /** Merged set of YYYY-MM-DD strings that are unavailable for booking:
+   *  detailing's own blocked_dates table PLUS (when linked calendars are
+   *  enabled) every day that has at least one active exterior job. */
   blockedDates: string[];
+  /** True when the shared linked-calendar toggle is ON. Exposed so the
+   *  UI can show a softened "Our crew is on another project" message
+   *  on exterior-blocked days instead of the generic blocked-date copy. */
+  linkedCalendar?: boolean;
+  /** Subset of blockedDates that came from exterior_bookings (so the UI
+   *  can distinguish "we blocked this" from "exterior booked this"). */
+  exteriorBlockedDates?: string[];
 };
 
 /**
@@ -29,6 +40,7 @@ export async function getAvailability(): Promise<AvailabilityData> {
   const [
     { data: hoursData },
     { data: blockedData },
+    exteriorBlocks,
   ] = await Promise.all([
     supabase
       .from("operating_hours")
@@ -40,6 +52,13 @@ export async function getAvailability(): Promise<AvailabilityData> {
       .select("blocked_date")
       .gte("blocked_date", today)
       .order("blocked_date", { ascending: true }),
+    // Linked calendars — when the shared toggle is ON, pull every
+    // exterior-booked day in the next 120 days and merge into the
+    // blocked-date list so customers can't book over an exterior job.
+    // Failure is silent (function returns []), and the toggle defaults
+    // to ON if the settings read itself fails — never accidentally
+    // double-book the owner.
+    getExteriorBlockedDatesIfLinked({ rangeStart: today, rangeDays: 120 }),
   ]);
 
   const operatingHours: OperatingHour[] = (hoursData ?? []).map((r) => {
@@ -54,7 +73,17 @@ export async function getAvailability(): Promise<AvailabilityData> {
     };
   });
 
-  const blockedDates = (blockedData ?? []).map((r) => String(r.blocked_date));
+  const ownBlocked = (blockedData ?? []).map((r) => String(r.blocked_date));
+  // Only include exterior dates that fall on or after today (the action
+  // already filters, but defensive — keeps the contract clean).
+  const exteriorBlocked = exteriorBlocks.dates.filter((d) => d >= today);
+  // Merge + dedupe so the UI gets a single list to disable in the picker.
+  const blockedDates = Array.from(new Set([...ownBlocked, ...exteriorBlocked])).sort();
 
-  return { operatingHours, blockedDates };
+  return {
+    operatingHours,
+    blockedDates,
+    linkedCalendar: exteriorBlocks.linked,
+    exteriorBlockedDates: exteriorBlocked,
+  };
 }
