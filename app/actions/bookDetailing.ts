@@ -118,14 +118,24 @@ export type BookingResult =
     }
   | { success: false; error: string };
 
-/** Converts "9:00 AM" → "09:00:00" for PostgreSQL time columns */
+/** Converts "9:00 AM" → "09:00:00" for PostgreSQL time columns.
+ *  Throws if the input is empty / malformed — previously silently emitted
+ *  "NaN:00:00" and let Postgres reject the booking with an opaque
+ *  "invalid input syntax for type time" error. Callers should validate
+ *  upstream; this is the defensive last line. */
 export async function to24h(time12: string): Promise<string> {
-  const [timePart, period] = time12.split(" ");
-  const [rawH, rawM = "00"] = timePart.split(":");
-  let h = parseInt(rawH, 10);
+  const raw = (time12 ?? "").trim();
+  if (!raw) throw new Error("Booking time is required.");
+  const [timePart, period] = raw.split(" ");
+  const [rawH, rawM = "00"] = (timePart ?? "").split(":");
+  const h0 = parseInt(rawH ?? "", 10);
+  const m0 = parseInt(rawM ?? "", 10);
+  if (isNaN(h0) || isNaN(m0)) throw new Error(`Booking time format not recognized: "${time12}"`);
+  let h = h0;
   if (period === "AM" && h === 12) h = 0;
   if (period === "PM" && h !== 12) h += 12;
-  return `${String(h).padStart(2, "0")}:${rawM}:00`;
+  if (h < 0 || h > 23 || m0 < 0 || m0 > 59) throw new Error(`Booking time out of range: "${time12}"`);
+  return `${String(h).padStart(2, "0")}:${String(m0).padStart(2, "0")}:00`;
 }
 
 /** "09:00:00" or "9:00 AM" → minutes from midnight */
@@ -213,6 +223,20 @@ function toPhoneDigits(phone: string): string {
 export async function bookDetailing(
   payload: BookingPayload
 ): Promise<BookingResult> {
+  // ── 0. Required-field sanity check ──────────────────────────────────────
+  // Reject obvious empty submissions up front with a customer-friendly
+  // error. Without this, an empty bookingTime ends up as "NaN:00:00" in
+  // to24h() and Postgres rejects the insert with an opaque type error.
+  if (!payload.bookingDate || !payload.bookingTime) {
+    return { success: false, error: "Please pick a date and time before confirming your booking." };
+  }
+  if (!payload.serviceId || !payload.serviceName) {
+    return { success: false, error: "Please pick a service before confirming your booking." };
+  }
+  if (!payload.name?.trim() || !payload.phone?.trim()) {
+    return { success: false, error: "Name and phone are required to confirm." };
+  }
+
   const supabase = await createClient();
 
   // ── Fresh session check ─────────────────────────────────────────────────

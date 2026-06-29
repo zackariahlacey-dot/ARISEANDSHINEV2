@@ -2384,7 +2384,12 @@ export function BookingSection({
       serviceAddress.trim() &&
       name.trim() &&
       phone.trim() &&
-      selectedService
+      selectedService &&
+      // Date + time are required — without them bookDetailing's to24h()
+      // parses an empty string into "NaN:00:00" and Postgres rejects the
+      // insert. Block submit at the source instead of crashing on save.
+      selectedDate &&
+      selectedTime
     );
 
   const handleNext = () => {
