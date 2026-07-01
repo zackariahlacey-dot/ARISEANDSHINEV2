@@ -26,6 +26,7 @@ import {
 import { sendStripePaymentLink, getPaymentLinkUrl, markPaymentLinkSent } from "@/app/actions/sendStripePaymentLink";
 import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
 import { BookingVehiclesPanel } from "@/components/admin/BookingVehiclesPanel";
+import { SplitPaymentPanel } from "@/components/admin/SplitPaymentPanel";
 import { cashPriceFor } from "@/lib/cashPricing";
 import { useQuery } from "@tanstack/react-query";
 import { getSqueezeRequests, updateSqueezeStatus, deleteSqueezeRequest, type SqueezeRequest } from "@/app/actions/squeezeActions";
@@ -2763,6 +2764,17 @@ export default function SchedulePage() {
                 );
               })()}
 
+              {/* ── Split-tender payment (multi-recipient) ─────────────────── */}
+              {!activeBooking.paid_at && Number(activeBooking.total_price ?? 0) > 0 && (
+                <SplitPaymentPanel
+                  bookingId={activeBooking.id}
+                  totalPrice={Number(activeBooking.total_price ?? 0)}
+                  defaultEmail={bEmail(activeBooking) ?? undefined}
+                  defaultName={bName(activeBooking)}
+                  onSplitsSaved={() => refetch()}
+                />
+              )}
+
               {/* ── Vehicles & Add-ons (editable, multi-vehicle) ──────────── */}
               <BookingVehiclesPanel
                 bookingId={activeBooking.id}
@@ -3182,6 +3194,85 @@ export default function SchedulePage() {
             <input type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50" />
           </div>
+          {/* Same-day appointments preview — surfaces what's already booked
+              on the selected date so the admin can eyeball conflicts before
+              committing. Excludes the booking being rescheduled + cancelled/
+              no-show rows. Sorted by time. */}
+          {rescheduleDate && (() => {
+            const onDay = (bookings ?? []).filter((b: any) =>
+              b.booking_date === rescheduleDate &&
+              b.status !== "cancelled" &&
+              b.status !== "no-show" &&
+              b.id !== activeBooking?.id
+            ).sort((a: any, b: any) => (a.booking_time ?? "").localeCompare(b.booking_time ?? ""));
+            return (
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    On this day
+                  </p>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400/80">
+                    {onDay.length} booked
+                  </span>
+                </div>
+                {onDay.length === 0 ? (
+                  <p className="text-xs text-zinc-600 italic">Nothing else booked — day is wide open.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {onDay.map((b: any) => {
+                      const startMins = b.booking_time
+                        ? (/^\d{1,2}:\d{2}$/.test(b.booking_time.slice(0, 5))
+                            ? timeToMins(b.booking_time.slice(0, 5))
+                            : timeToMins(to24h(b.booking_time)))
+                        : 0;
+                      const dur = b.duration_override ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
+                      const endMins = startMins + dur;
+                      const veh = [b.vehicle_year, b.vehicle_make, b.vehicle_model].filter(Boolean).join(" ");
+                      const isCash = payType(b) === "cash";
+                      const isPaid = payType(b) === "paid";
+                      const barColor = isCash ? "bg-emerald-500" : isPaid ? "bg-sky-500" : "bg-amber-500";
+                      const wouldOverlap = rescheduleTime && (() => {
+                        try {
+                          const newStart = timeToMins(rescheduleTime);
+                          const newDur = activeBooking?.duration_override ?? getDurationMins(activeBooking?.service_name ?? "", activeBooking?.vehicle_size ?? "sedan");
+                          return newStart < endMins && newStart + newDur > startMins;
+                        } catch { return false; }
+                      })();
+                      return (
+                        <div
+                          key={b.id}
+                          className={cn(
+                            "flex items-start gap-2 rounded-lg px-2.5 py-2 border",
+                            wouldOverlap
+                              ? "bg-red-500/[0.08] border-red-500/40"
+                              : "bg-zinc-900/50 border-white/[0.04]"
+                          )}
+                        >
+                          <div className={cn("w-1 rounded-full shrink-0 self-stretch", barColor)} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-xs font-black text-white tabular-nums">
+                                {minsToDisplay(startMins)}<span className="text-zinc-600">–</span>{minsToDisplay(endMins)}
+                              </p>
+                              <p className="text-[11px] text-zinc-400 truncate">{bName(b)}</p>
+                              {wouldOverlap && (
+                                <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/15 border border-red-500/30 px-1.5 py-0.5 rounded">
+                                  Overlap
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-zinc-600 truncate mt-0.5">
+                              {b.service_name}{veh ? ` · ${veh}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div>
             <FieldLabel>New Time</FieldLabel>
             <input type="time" value={rescheduleTime} onChange={e => setRescheduleTime(e.target.value)}

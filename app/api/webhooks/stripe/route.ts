@@ -128,6 +128,67 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // ── Split-tender payment path ─────────────────────────────────────────
+    // The recipient just paid their portion. Stamp paid_at + payment_intent
+    // on the split row. When every split for the booking is paid, flip the
+    // booking's aggregate paid_at so the admin card shows "Paid". Idempotent
+    // via the paid_at IS NULL guard — safe on Stripe webhook retries.
+    if (m?.source === "split_payment" && m.split_id) {
+      const splitId  = m.split_id as string;
+      const bookingId = (m.booking_id ?? "") as string;
+      const pi = typeof session.payment_intent === "string" ? session.payment_intent : null;
+
+      // Atomic redemption — only the first webhook that arrives writes paid_at.
+      const { data: updated, error: updateErr } = await supabase
+        .from("booking_split_payments")
+        .update({
+          status:                   "paid",
+          paid_at:                  new Date().toISOString(),
+          stripe_session_id:        session.id,
+          stripe_payment_intent_id: pi,
+        })
+        .eq("id", splitId)
+        .is("paid_at", null)
+        .select("id, booking_id")
+        .maybeSingle();
+
+      if (updateErr) {
+        console.error("[webhooks/stripe] split payment update failed:", updateErr.message);
+        logError({
+          type: "webhook",
+          source: "stripe_webhook/split_payment",
+          message: updateErr.message,
+          details: { splitId, bookingId, sessionId: session.id },
+        });
+      }
+
+      if (updated) {
+        // Check whether every split for this booking is now paid. If so,
+        // stamp the booking's paid_at so admin sees it as "Client Paid".
+        const targetBookingId = updated.booking_id ?? bookingId;
+        if (targetBookingId) {
+          const { data: siblings } = await supabase
+            .from("booking_split_payments")
+            .select("status")
+            .eq("booking_id", targetBookingId);
+          const rows = siblings ?? [];
+          const allPaid = rows.length > 0 && rows.every((r: { status: string }) => r.status === "paid");
+          if (allPaid) {
+            await supabase
+              .from("bookings")
+              .update({
+                paid_at:        new Date().toISOString(),
+                payment_source: "stripe",
+              })
+              .eq("id", targetBookingId)
+              .is("paid_at", null);
+          }
+        }
+      }
+
+      return NextResponse.json({ received: true });
+    }
+
     // ── Monthly subscription purchase path ────────────────────────────────
     if (m?.sessionType === "monthly_subscription") {
       // Idempotency: skip if subscription already created (Stripe webhook retries)
