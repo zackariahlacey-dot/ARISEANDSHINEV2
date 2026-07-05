@@ -1715,72 +1715,80 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
       >
         <div className={`rounded-2xl border bg-black/60 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.5)] transition-colors duration-300 ${bookingProgress ? "border-[#D4AF37]/20" : "border-[#D4AF37]/30"}`}>
           {bookingProgress ? (
-            /* ── Progress summary bar ── */
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-white truncate leading-tight">
-                  {bookingProgress.serviceName ?? "Booking in progress…"}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  {/* Step dots — 4-step journey (Detail · Vehicle · Schedule · Confirm).
-                      Internal step 1/2/3 maps to display step 2/3/4 since a service
-                      has already been picked upstream (Step 1 of 4). */}
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4].map((s) => {
-                      const displayStep = bookingProgress.step + 1; // 1→2, 2→3, 3→4
-                      const isDone = s <= displayStep;
-                      return (
-                        <div
-                          key={s}
-                          className={`rounded-full transition-all duration-300 ${isDone ? "w-3 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-zinc-700"}`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <span className="text-[11px] text-zinc-500">Step {bookingProgress.step + 1} of 4</span>
-                  {bookingProgress.date && (
-                    <>
-                      <span className="text-zinc-700 text-[11px]">·</span>
-                      <span className="flex items-center gap-1 text-[11px] text-zinc-400">
-                        <Calendar size={10} />
-                        {new Date(bookingProgress.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            /* ── Progress summary bar — mobile-optimised 2-row stack ── */
+            (() => {
+              const jumpBack = () => {
+                const el = document.getElementById("booking-panel");
+                if (!el) return;
+                const top = el.getBoundingClientRect().top + window.scrollY - 84;
+                const startY = window.scrollY;
+                const diff = top - startY;
+                const duration = Math.min(900, Math.max(400, Math.abs(diff) * 0.4));
+                const start = performance.now();
+                const step = (ts: number) => {
+                  const p = Math.min((ts - start) / duration, 1);
+                  const e = p < 0.5 ? 8 * p ** 4 : 1 - (-2 * p + 2) ** 4 / 2;
+                  window.scrollTo(0, startY + diff * e);
+                  if (p < 1) requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+              };
+              const displayStep = bookingProgress.step + 1;
+              return (
+                <div className="px-3 sm:px-4 py-2.5 sm:py-3">
+                  {/* Top row: service + running total */}
+                  <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                    <p className="text-[13px] sm:text-sm font-black text-white truncate leading-tight flex-1 min-w-0">
+                      {bookingProgress.serviceName ?? "Booking in progress…"}
+                    </p>
+                    {bookingProgress.price !== null && (
+                      <span className="text-[#D4AF37] font-black text-base sm:text-lg tabular-nums shrink-0 leading-none">
+                        ${Math.round(bookingProgress.price)}
                       </span>
-                    </>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Middle row: step ladder + date chip */}
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4].map((s) => {
+                        const isDone = s <= displayStep;
+                        return (
+                          <div
+                            key={s}
+                            className={`rounded-full transition-all duration-300 ${isDone ? "w-3 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-zinc-700"}`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0">
+                      Step {displayStep}/4
+                    </span>
+                    {bookingProgress.date && (
+                      <>
+                        <span className="text-zinc-700 text-[10px] shrink-0">·</span>
+                        <span className="flex items-center gap-1 text-[10px] text-zinc-400 truncate">
+                          <Calendar size={10} className="shrink-0" />
+                          <span className="truncate">
+                            {new Date(bookingProgress.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Full-width back-to-booking button */}
+                  <button
+                    type="button"
+                    onClick={jumpBack}
+                    className="w-full flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[#D4AF37] text-xs font-black uppercase tracking-widest hover:bg-[#D4AF37]/20 active:scale-[0.98] transition-all"
+                  >
+                    <ChevronUp size={13} strokeWidth={3} />
+                    Back to Booking
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {bookingProgress.price !== null && (
-                  <span className="text-[#D4AF37] font-black text-sm">
-                    ${Math.round(bookingProgress.price)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById("booking-panel");
-                    if (!el) return;
-                    const top = el.getBoundingClientRect().top + window.scrollY - 84;
-                    const startY = window.scrollY;
-                    const diff = top - startY;
-                    const duration = Math.min(900, Math.max(400, Math.abs(diff) * 0.4));
-                    const start = performance.now();
-                    const step = (ts: number) => {
-                      const p = Math.min((ts - start) / duration, 1);
-                      // easeInOutQuart
-                      const e = p < 0.5 ? 8 * p ** 4 : 1 - (-2 * p + 2) ** 4 / 2;
-                      window.scrollTo(0, startY + diff * e);
-                      if (p < 1) requestAnimationFrame(step);
-                    };
-                    requestAnimationFrame(step);
-                  }}
-                  className="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/25 text-[#D4AF37] text-xs font-semibold hover:bg-[#D4AF37]/20 active:scale-95 transition-all whitespace-nowrap"
-                >
-                  <ChevronUp size={13} />
-                  Back to booking
-                </button>
-              </div>
-            </div>
+              );
+            })()
           ) : (
             /* ── Normal Book Now CTA ── */
             <button

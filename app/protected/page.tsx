@@ -21,6 +21,8 @@ import { MembershipPanel } from "@/components/dashboard/MembershipPanel";
 import { claimGuestBookings } from "@/app/actions/claimGuestBookings";
 import { MaintenanceSection } from "@/components/dashboard/MaintenanceSection";
 import { SavedVehiclesSection } from "@/components/dashboard/SavedVehiclesSection";
+import { WeatherForecast } from "@/components/dashboard/WeatherForecast";
+import { getWeatherForecast } from "@/app/actions/getWeatherForecast";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
@@ -69,13 +71,14 @@ async function Dashboard() {
   // Safe to run on every dashboard load (no-op when there's nothing to merge).
   await claimGuestBookings().catch(err => console.error("[dashboard] claimGuestBookings:", err));
 
-  const [profile, { upcoming, past }, planRequest, maintenanceOffers, savedVehicles, activeMembership] = await Promise.all([
+  const [profile, { upcoming, past }, planRequest, maintenanceOffers, savedVehicles, activeMembership, weatherDays] = await Promise.all([
     getAuthProfile(),
     getClientBookings(user.id),
     getUserPlanRequest(),
     getMaintenanceOffers(),
     getSavedVehicles(),
     getMyActiveMembership(),
+    getWeatherForecast(),
   ]);
 
   const completedCount = profile?.completedDetailCount ?? 0;
@@ -102,6 +105,14 @@ async function Dashboard() {
     ? Math.min(100, Math.round(((completedCount - prevThresh) / (nextThresh - prevThresh)) * 100))
     : 100;
 
+  // Pull the next tier's actual pct from LOYALTY_TIERS so the "unlock X% off"
+  // copy is honest. Previously we did a nested ternary that ended up
+  // comparing counts against percentages and interpolating a boolean.
+  const nextTier = nextThresh != null
+    ? LOYALTY_TIERS.slice().reverse().find(t => t.minDetails === nextThresh) ?? null
+    : null;
+  const nextTierPct = nextTier?.pct ?? null;
+
   return (
     <div className="relative min-h-screen bg-zinc-950">
       {/* One-time tier-up celebration — only fires when tier increases */}
@@ -119,7 +130,7 @@ async function Dashboard() {
 
         <div className="max-w-2xl mx-auto px-4 pt-32 sm:pt-28 pb-20">
 
-          {/* ── Hero strip — Ultimate-card aesthetic ─────────────────────── */}
+          {/* ── Hero strip — enhanced with layered gradients + tier orbit ── */}
           <div
             className="relative overflow-hidden rounded-3xl border border-[#D4AF37]/40 shadow-[0_0_60px_rgba(212,175,55,0.12)] p-6 sm:p-7 mb-6"
             style={{ background: "linear-gradient(170deg, #1a1a1c 0%, #0d0d0f 100%)" }}
@@ -132,10 +143,19 @@ async function Dashboard() {
               className="pointer-events-none absolute inset-0"
               style={{ background: "radial-gradient(ellipse 110% 45% at 50% 0%, rgba(212,175,55,0.14) 0%, transparent 65%)" }}
             />
+            {/* Secondary shimmer accent */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl opacity-30"
+              style={{ background: "radial-gradient(circle, rgba(212,175,55,0.35) 0%, transparent 70%)" }}
+            />
 
             <div className="relative flex items-start justify-between gap-4 mb-6">
               <div className="min-w-0">
-                <p className="text-[11px] font-black tracking-[0.22em] uppercase text-[#D4AF37] mb-2">My Dashboard</p>
+                <div className="inline-flex items-center gap-1.5 mb-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse" />
+                  <p className="text-[11px] font-black tracking-[0.22em] uppercase text-[#D4AF37]">My Dashboard</p>
+                </div>
                 <h1
                   className="text-3xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-br from-white via-zinc-100 to-[#D4AF37] bg-clip-text text-transparent truncate"
                   style={{ filter: "drop-shadow(0 2px 16px rgba(212,175,55,0.18))" }}
@@ -145,34 +165,39 @@ async function Dashboard() {
                 <p className="text-xs text-zinc-500 mt-1.5 truncate">{user.email}</p>
               </div>
               {currentTier && (
-                <div className="shrink-0 flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/[0.06] border border-[#D4AF37]/40 shadow-[0_0_18px_rgba(212,175,55,0.18)]">
-                  {currentTier.label === "VIP" ? <Trophy size={18} className="text-[#D4AF37]" fill="currentColor" />
-                    : currentTier.label === "Gold" ? <Crown size={18} className="text-[#D4AF37]" fill="currentColor" />
-                    : currentTier.label === "Silver" ? <ShieldCheck size={18} className="text-zinc-200" />
-                    : <Sparkles size={18} className="text-zinc-300" />}
-                  <span className="text-[10px] font-black tracking-[0.18em] uppercase text-[#D4AF37]">{currentTier.label}</span>
-                  <span className="text-sm font-black text-white tabular-nums">{discountPct}% off</span>
+                <div className="relative shrink-0">
+                  {/* Orbital ring */}
+                  <div aria-hidden className="absolute inset-0 rounded-2xl border border-[#D4AF37]/25 animate-pulse pointer-events-none" style={{ animationDuration: "3s" }} />
+                  <div className="relative flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/[0.06] border border-[#D4AF37]/40 shadow-[0_0_18px_rgba(212,175,55,0.18)]">
+                    {currentTier.label === "VIP" ? <Trophy size={18} className="text-[#D4AF37]" fill="currentColor" />
+                      : currentTier.label === "Gold" ? <Crown size={18} className="text-[#D4AF37]" fill="currentColor" />
+                      : currentTier.label === "Silver" ? <ShieldCheck size={18} className="text-zinc-200" />
+                      : <Sparkles size={18} className="text-zinc-300" />}
+                    <span className="text-[10px] font-black tracking-[0.18em] uppercase text-[#D4AF37]">{currentTier.label}</span>
+                    <span className="text-sm font-black text-white tabular-nums">{discountPct}% off</span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Stat tiles — bigger, more confident, with icons. When the
-                customer has an active Premium Membership, the "Offers" tile
-                is replaced by a "Credit Left" tile that prominently shows
-                their remaining balance — most actionable stat for members. */}
+            {/* Stat tiles — 3 confident stats. Priority order:
+                  1. Membership Credit (when active member)
+                  2. Maintenance Offers (when there are any)
+                  3. Loyalty % Off (fallback so we never show "0 Offers")
+                Details + Bookings anchor the row on the left. */}
             <div className="relative grid grid-cols-3 gap-3">
-              {(membershipCreditDollars != null
-                ? [
-                    { label: "Bookings",    value: String(totalBookings),               color: "text-white",     icon: CalendarDays as typeof CalendarDays },
-                    { label: "Details",     value: String(completedCount),              color: "text-[#D4AF37]", icon: Sparkles as typeof CalendarDays     },
-                    { label: "Credit Left", value: `$${membershipCreditDollars}`,       color: "text-emerald-300", icon: Crown as typeof CalendarDays     },
-                  ]
-                : [
-                    { label: "Bookings", value: String(totalBookings),                  color: "text-white",     icon: CalendarDays as typeof CalendarDays },
-                    { label: "Details",  value: String(completedCount),                 color: "text-[#D4AF37]", icon: Sparkles as typeof CalendarDays     },
-                    { label: "Offers",   value: String(maintenanceOffers.length),       color: "text-emerald-300", icon: Zap as typeof CalendarDays       },
-                  ]
-              ).map(({ label, value, color, icon: Icon }) => (
+              {(() => {
+                const third = membershipCreditDollars != null
+                  ? { label: "Credit Left", value: `$${membershipCreditDollars}`,       color: "text-emerald-300", icon: Crown as typeof CalendarDays }
+                  : maintenanceOffers.length > 0
+                    ? { label: "Offers",       value: String(maintenanceOffers.length), color: "text-emerald-300", icon: Zap as typeof CalendarDays }
+                    : { label: "Loyalty",      value: `${discountPct}%`,                color: "text-[#D4AF37]",   icon: Crown as typeof CalendarDays };
+                return [
+                  { label: "Bookings", value: String(totalBookings),  color: "text-white",     icon: CalendarDays as typeof CalendarDays },
+                  { label: "Details",  value: String(completedCount), color: "text-[#D4AF37]", icon: Sparkles as typeof CalendarDays     },
+                  third,
+                ];
+              })().map(({ label, value, color, icon: Icon }) => (
                 <div key={label} className="rounded-2xl bg-zinc-950/60 border border-white/[0.06] px-3 py-3 backdrop-blur-sm">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Icon size={11} className={color} />
@@ -184,12 +209,22 @@ async function Dashboard() {
             </div>
           </div>
 
-          {/* ── Membership Panel — moved up so members see their credit
-              balance right after the hero. Non-members see the upsell card. */}
+          {/* ── 7-Day Weather Forecast — Burlington VT ──────────────────
+              Helps the customer pick a dry day for exterior work. Rendered
+              between the hero and membership panel so it's the first
+              actionable info they see when planning a new booking. */}
+          <WeatherForecast days={weatherDays} />
+
+          {/* ── Membership Panel — members see credit balance up top. ── */}
           <MembershipPanel />
 
           {/* ── Active Maintenance Offers ──────────────────────────────── */}
-          <MaintenanceSection offers={maintenanceOffers} />
+          <MaintenanceSection
+            offers={maintenanceOffers}
+            savedAddress={profile?.saved_address ?? null}
+            savedName={profile?.full_name ?? null}
+            savedPhone={profile?.phone ?? null}
+          />
 
           {/* ── Upcoming Appointments ─────────────────────────────────── */}
           {upcoming.length > 0 && (
@@ -303,9 +338,6 @@ async function Dashboard() {
             </div>
           </div>
 
-          {/* MembershipPanel moved to the top of the dashboard (above
-              Maintenance offers) so members see their credit balance first. */}
-
           {/* ── Book Now CTA ──────────────────────────────────────────── */}
           <Link
             href="/#services"
@@ -318,8 +350,8 @@ async function Dashboard() {
               <div>
                 <p className="text-sm font-bold text-zinc-200">Book a new detail</p>
                 <p className="text-[11px] text-zinc-500">
-                  {toNext
-                    ? `${toNext} more to unlock ${toNext <= (completedCount < 1 ? 5 : completedCount < 3 ? 10 : completedCount < 5 ? 15 : 20)}% off`
+                  {toNext && nextTierPct != null
+                    ? `${toNext} more to unlock ${nextTierPct}% off`
                     : "Enjoy your 20% VIP discount forever"}
                 </p>
               </div>

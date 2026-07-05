@@ -16,6 +16,8 @@ export type AuthProfile = {
   loyaltyDiscountPct: number;
   saved_vehicle: SavedVehicle;
   saved_address: string | null;
+  full_name: string | null;
+  phone: string | null;
   userId: string;
   email: string | null;
 } | null;
@@ -37,7 +39,7 @@ export async function getAuthProfile(): Promise<AuthProfile> {
 
   const { data: profile } = await adminSupabase
     .from("profiles")
-    .select("saved_vehicle, saved_address, completed_detail_count, loyalty_discount_pct")
+    .select("saved_vehicle, saved_address, completed_detail_count, loyalty_discount_pct, first_name, last_name, phone")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -46,7 +48,18 @@ export async function getAuthProfile(): Promise<AuthProfile> {
     saved_address?: string;
     completed_detail_count?: number;
     loyalty_discount_pct?: number;
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
   } | null;
+
+  const composedName = [row?.first_name, row?.last_name].filter(Boolean).join(" ").trim();
+  const metaName = (user.user_metadata?.full_name as string | undefined)?.trim() ?? "";
+  // Google/Apple OAuth users often have phone in user_metadata but not yet
+  // in the profile row. Fall back through metadata + auth phone before
+  // giving up so the maintenance modal doesn't ask them to re-enter it.
+  const metaPhone = (user.user_metadata?.phone as string | undefined)?.trim() ?? "";
+  const authPhone = (user.phone ?? "").trim();
 
   const rawVehicle = row?.saved_vehicle as Record<string, unknown> | null | undefined;
   const savedVehicle: SavedVehicle =
@@ -69,6 +82,8 @@ export async function getAuthProfile(): Promise<AuthProfile> {
     loyaltyDiscountPct: row?.loyalty_discount_pct ?? 0,
     saved_vehicle: savedVehicle,
     saved_address: typeof row?.saved_address === "string" ? row.saved_address : null,
+    full_name: (composedName || metaName) || null,
+    phone: ((row?.phone ?? "").trim() || metaPhone || authPhone) || null,
     userId: user.id,
     email: user.email ?? null,
   };

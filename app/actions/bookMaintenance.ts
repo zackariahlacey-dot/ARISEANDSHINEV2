@@ -19,6 +19,10 @@ export type BookMaintenanceArgs = {
   bookingTime: string;          // "9:00 AM"
   /** Optional override — defaults to the customer's profile address. */
   serviceAddress?: string;
+  /** Optional override — defaults to the customer's profile name. */
+  name?: string;
+  /** Optional override — defaults to the customer's profile phone. */
+  phone?: string;
   /** Optional notes the customer adds. */
   notes?: string;
 };
@@ -74,13 +78,18 @@ export async function bookMaintenance(args: BookMaintenanceArgs): Promise<Bookin
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   const metaName = (auth.user.user_metadata?.full_name as string | undefined)?.trim() ?? "";
-  const name  = fullName || metaName || (auth.user.email ?? "").split("@")[0] || "Customer";
-  const phone = (profile?.phone ?? "").trim();
+  // Customer-provided args take precedence over profile snapshot so returning
+  // customers can type in name/phone if their profile is missing them.
+  const name  = (args.name?.trim())  || fullName || metaName || (auth.user.email ?? "").split("@")[0] || "Customer";
+  const phone = (args.phone?.trim()) || (profile?.phone ?? "").trim();
   const email = (profile?.email ?? auth.user.email ?? "").trim();
   const serviceAddress = (args.serviceAddress ?? profile?.saved_address ?? "").trim();
 
   if (!serviceAddress) {
     return { success: false, error: "We need a service address — please add one to your profile or include it in this booking." };
+  }
+  if (!phone) {
+    return { success: false, error: "We need a phone number to confirm — please add one to your profile or include it in this booking." };
   }
 
   // ── Pricing + size mapping ──────────────────────────────────────────────

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { MapPin, Loader2, X, CheckCircle2 } from "lucide-react";
 
@@ -54,6 +55,26 @@ export function AddressAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Portal target for the dropdown so it can escape overflow-hidden ancestors
+  // (dashboards, modals, drawers). Recomputed on scroll/resize while open.
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const updateDropdownPos = useCallback(() => {
+    if (!inputRef.current) return;
+    const r = inputRef.current.getBoundingClientRect();
+    setDropdownPos({ top: r.bottom + 6, left: r.left, width: r.width });
+  }, []);
+  useEffect(() => {
+    if (!isOpen) return;
+    updateDropdownPos();
+    const handler = () => updateDropdownPos();
+    window.addEventListener("scroll", handler, true);
+    window.addEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("scroll", handler, true);
+      window.removeEventListener("resize", handler);
+    };
+  }, [isOpen, predictions, updateDropdownPos]);
 
   // ── Load Google Maps Places once ─────────────────────────────────────────
   useEffect(() => {
@@ -215,44 +236,54 @@ export function AddressAutocomplete({
         ) : null}
       </div>
 
-      {/* Dropdown */}
-      {isOpen && predictions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-[70] mt-1.5 bg-[#181818] border border-[#252525] rounded-xl overflow-hidden shadow-2xl shadow-black/70">
+      {/* Dropdown — portaled to document.body so it escapes overflow-hidden
+          modal ancestors. Fixed-positioned, max-height with internal scroll,
+          shows all predictions Google returns (up to 5). */}
+      {isOpen && predictions.length > 0 && dropdownPos && typeof window !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            maxHeight: "min(320px, 60vh)",
+            zIndex: 10000,
+          }}
+          className="bg-[#181818] border border-[#252525] rounded-xl overflow-y-auto shadow-2xl shadow-black/70"
+          onMouseDown={(e) => {
+            // Prevent the outside-click handler from closing us when clicking
+            // inside the dropdown (which is now outside containerRef).
+            e.stopPropagation();
+          }}
+        >
           {predictions.slice(0, 5).map((p, i) => (
             <button
               key={p.place_id}
               type="button"
-              // onMouseDown + preventDefault prevents the input from blurring
-              // before the click fires, which would close the dropdown first
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSelect(p);
               }}
               className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#222] transition-colors ${
-                i < Math.min(predictions.length, 5) - 1
-                  ? "border-b border-[#2a2a2a]"
-                  : ""
+                i < Math.min(predictions.length, 5) - 1 ? "border-b border-[#2a2a2a]" : ""
               }`}
             >
               <MapPin size={13} className="text-zinc-500 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-white truncate leading-snug">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white leading-snug break-words">
                   {p.structured_formatting.main_text}
                 </p>
-                <p className="text-xs text-zinc-500 mt-0.5 truncate">
+                <p className="text-xs text-zinc-500 mt-0.5 leading-snug break-words">
                   {p.structured_formatting.secondary_text}
                 </p>
               </div>
             </button>
           ))}
-
-          {/* Required by Google Maps Platform Terms of Service */}
-          <div className="flex justify-end items-center px-4 py-2 bg-[#111] border-t border-[#2a2a2a]">
-            <span className="text-[9px] text-zinc-600 tracking-widest uppercase">
-              Powered by Google
-            </span>
+          <div className="flex justify-end items-center px-4 py-2 bg-[#111] border-t border-[#2a2a2a] sticky bottom-0">
+            <span className="text-[9px] text-zinc-600 tracking-widest uppercase">Powered by Google</span>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

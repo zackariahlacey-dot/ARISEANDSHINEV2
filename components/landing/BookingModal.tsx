@@ -6411,6 +6411,68 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                         </div>
                       )}
 
+                      {/* ── Missing-info explainer ── Shows when payment buttons are
+                          disabled so customer knows exactly what to fix. Common cause
+                          is page refresh clearing the time slot. Each row is a
+                          jump-back button. */}
+                      {!canConfirm() && !isSubmitting && !isStripeLoading && (() => {
+                        const missing: { key: string; label: string; jumpTo: 1 | 2 | 3 }[] = [];
+                        if (!selectedService)          missing.push({ key: "svc",  label: "Service not selected",           jumpTo: 1 });
+                        if (!selectedDate)             missing.push({ key: "date", label: "Appointment date not selected",   jumpTo: 2 });
+                        if (!selectedTime)             missing.push({ key: "time", label: "Appointment time not selected",   jumpTo: 2 });
+                        if (!serviceAddress.trim())    missing.push({ key: "addr", label: "Service address not entered",     jumpTo: 3 });
+                        if (!name.trim())              missing.push({ key: "name", label: "Full name not entered",           jumpTo: 3 });
+                        if (!phone.trim())             missing.push({ key: "phon", label: "Phone number not entered",        jumpTo: 3 });
+                        if (missing.length === 0) return null;
+                        // Special-case the most common "page refreshed" cause:
+                        // the time slot state resets. Time is the ONLY thing missing
+                        // and the rest is filled → likely the refresh case.
+                        const timeOnly = missing.length === 1 && missing[0].key === "time";
+                        return (
+                          <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/[0.08] via-amber-500/[0.03] to-transparent overflow-hidden">
+                            <div className="flex items-start gap-2.5 px-4 py-3 border-b border-amber-500/20">
+                              <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center shrink-0">
+                                <AlertCircle size={15} className="text-amber-400" strokeWidth={2} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[13px] font-black text-amber-100 leading-tight tracking-tight">
+                                  {timeOnly ? "Time slot needs re-selection" : `${missing.length} thing${missing.length === 1 ? "" : "s"} left before you can book`}
+                                </div>
+                                <div className="text-[10px] text-amber-200/70 leading-tight mt-0.5">
+                                  {timeOnly
+                                    ? "Looks like the page refreshed — please pick your time again to continue."
+                                    : "Payment buttons unlock once every item below is filled in."}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="px-2 py-2 space-y-1">
+                              {missing.map((m) => (
+                                <button
+                                  key={m.key}
+                                  type="button"
+                                  onClick={() => {
+                                    setStepDirection(-1);
+                                    setStep(m.jumpTo);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left hover:bg-amber-500/[0.06] transition-colors group"
+                                >
+                                  <div className="w-4 h-4 rounded-full border border-amber-500/50 flex items-center justify-center shrink-0">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500/60" />
+                                  </div>
+                                  <div className="flex-1 text-[11px] font-bold text-amber-100/90 group-hover:text-amber-100">
+                                    {m.label}
+                                  </div>
+                                  <div className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest text-amber-400/70 group-hover:text-amber-400 shrink-0">
+                                    Fix
+                                    <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" strokeWidth={3} />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Pay at Arrival — primary CTA (lower friction for first-time customers) */}
                       <button
                         onClick={handlePayAtArrival}

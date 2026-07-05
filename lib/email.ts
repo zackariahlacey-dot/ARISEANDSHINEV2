@@ -847,12 +847,29 @@ function updatedBookingHtml(data: UpdatedBookingEmailData, formattedDate: string
                 <strong>${esc(formattedDate)}</strong> at <strong>${esc(data.newTime)}</strong>.
               </p>
 
-              <!-- New date/time summary card -->
+              <!-- New date/time summary card (inline dark text so it's readable
+                   on the light gray background — the shared detailRow helper
+                   uses near-white value text meant for dark email templates). -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
                      style="background-color:#f7f7f7;border-radius:12px;overflow:hidden;margin-bottom:24px;">
-                ${detailRow("Service", esc(data.serviceName))}
-                ${detailRow("New Date", esc(formattedDate))}
-                ${detailRow("New Time", esc(data.newTime), true)}
+                <tr>
+                  <td style="padding:16px 24px;border-bottom:1px solid #e4e4e7;">
+                    <p style="font-size:10px;font-weight:900;color:#71717a;margin:0 0 4px;letter-spacing:0.15em;text-transform:uppercase;">Service</p>
+                    <p style="font-size:15px;font-weight:700;color:#111111;margin:0;line-height:1.4;">${esc(data.serviceName)}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 24px;border-bottom:1px solid #e4e4e7;">
+                    <p style="font-size:10px;font-weight:900;color:#71717a;margin:0 0 4px;letter-spacing:0.15em;text-transform:uppercase;">New Date</p>
+                    <p style="font-size:15px;font-weight:700;color:#111111;margin:0;line-height:1.4;">${esc(formattedDate)}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 24px;">
+                    <p style="font-size:10px;font-weight:900;color:#71717a;margin:0 0 4px;letter-spacing:0.15em;text-transform:uppercase;">New Time</p>
+                    <p style="font-size:15px;font-weight:700;color:#111111;margin:0;line-height:1.4;">${esc(data.newTime)}</p>
+                  </td>
+                </tr>
               </table>
 
               <p style="font-size:14px;color:#666666;margin:0 0 24px;line-height:1.7;">

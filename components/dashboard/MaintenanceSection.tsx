@@ -15,7 +15,17 @@ import {
  * Dashboard section that lists active maintenance offers. Each card opens
  * the MaintenanceBookingModal for one-tap rebook.
  */
-export function MaintenanceSection({ offers }: { offers: MaintenanceOffer[] }) {
+export function MaintenanceSection({
+  offers,
+  savedAddress = null,
+  savedName = null,
+  savedPhone = null,
+}: {
+  offers: MaintenanceOffer[];
+  savedAddress?: string | null;
+  savedName?: string | null;
+  savedPhone?: string | null;
+}) {
   const [activeOffer, setActiveOffer] = useState<MaintenanceOffer | null>(null);
 
   if (offers.length === 0) return null;
@@ -95,6 +105,9 @@ export function MaintenanceSection({ offers }: { offers: MaintenanceOffer[] }) {
         open={!!activeOffer}
         onClose={() => setActiveOffer(null)}
         onBooked={() => setActiveOffer(null)}
+        savedAddress={savedAddress}
+        savedName={savedName}
+        savedPhone={savedPhone}
       />
     </>
   );

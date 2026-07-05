@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, MapPin, RotateCcw, X, AlertTriangle, Loader2, CalendarClock, RefreshCw, CalendarPlus, Car, Clock } from "lucide-react";
+import { Calendar, MapPin, RotateCcw, X, AlertTriangle, Loader2, CalendarClock, RefreshCw, CalendarPlus, Car, Clock, CreditCard, Banknote, Timer } from "lucide-react";
 import { cancelBooking } from "@/app/actions/cancelBooking";
 import { RescheduleModal } from "./RescheduleModal";
 import type { ClientBooking } from "@/app/actions/getClientBookings";
+import { getDurationMins } from "@/lib/availability";
 
 function buildGoogleCalendarUrl(b: ClientBooking): string {
   try {
@@ -46,9 +47,20 @@ function formatTime(t: string | null) {
 }
 
 function buildRebookDraft(b: ClientBooking) {
+  // Preserve the original vehicle size so price + size-tiered add-ons render
+  // correctly on first paint. Old bookings may store the legacy "compact" or
+  // "truck" values — map those onto the current sedan/xl slugs. Anything else
+  // unrecognised falls back to sedan (safest cheapest tier).
+  const rawSize = (b.vehicle_size ?? "").toLowerCase();
+  const REBOOK_SIZE_MAP: Record<string, "sedan" | "suv" | "xl"> = {
+    sedan: "sedan", suv: "suv", xl: "xl",
+    compact: "sedan", medium: "sedan", large: "suv", extra_large: "xl",
+    truck: "xl",
+  };
+  const vehicleSize: "sedan" | "suv" | "xl" = REBOOK_SIZE_MAP[rawSize] ?? "sedan";
   return {
     serviceId: b.service_id ?? "",
-    vehicleSize: "sedan" as const,
+    vehicleSize,
     vehicleYear: b.vehicle_year ?? "",
     vehicleMake: b.vehicle_make ?? "",
     vehicleModel: b.vehicle_model ?? "",
@@ -106,6 +118,40 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
   const cancellable = isCancellable(b);
   const statusStyle = STATUS_STYLES[b.status] ?? { label: b.status, className: "bg-zinc-700/50 text-zinc-500 border border-zinc-700" };
   const formattedTime = formatTime(b.booking_time?.slice(0, 5) ?? null);
+
+  // Reconcile add-on sum vs. total_price so we can render a discount line
+  // instead of leaving the customer to notice the discrepancy themselves.
+  const addonSum = (b.addons ?? []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+  const addonDiscount = Math.max(0, Math.round(addonSum + (b.total_price ?? 0) * 0)); // placeholder to satisfy TS
+  // Real discount = (base service + addons_raw) - total. We don't have base
+  // service price on the booking record (it's not on ClientBooking), so we
+  // infer it: total - additional_vehicles_total should equal base + addons - discount.
+  // Simpler: compute "savings" only when addons exist AND their sum is bigger
+  // than the total minus a plausible base minimum ($100). Otherwise skip.
+  const additionalVehiclesTotal = (b.additional_vehicles ?? []).reduce((s, v) => s + (Number(v.servicePrice) || 0), 0);
+  const remainderAfterAddons = (b.total_price ?? 0) - additionalVehiclesTotal - addonSum;
+  const looksDiscounted = addonSum > 0 && remainderAfterAddons < 0; // total less than sum of addons alone → base was discounted or addons were bundled
+  const savedDollars = looksDiscounted ? Math.round(-remainderAfterAddons) : 0;
+  // silence unused-var lint; kept for symmetry / future use
+  void addonDiscount;
+
+  // Payment method inferred from Stripe session presence.
+  const paidOnline = !!b.stripe_checkout_session_id;
+
+  // Duration estimate — service base + add-on time. Only shown on upcoming
+  // cards. Skipped for maintenance-like services (durations there are set
+  // by the maintenance flow's own condition tier, not the base service).
+  const showDuration = isUpcoming && !!b.service_name && !/maintenance/i.test(b.service_name);
+  const durationMins = showDuration
+    ? getDurationMins(b.service_name ?? "", (b.vehicle_size as string) ?? "sedan")
+    : 0;
+  const durationLabel = durationMins > 0
+    ? durationMins < 60
+      ? `${durationMins} min`
+      : durationMins % 60 === 0
+        ? `${Math.round(durationMins / 60)} hr`
+        : `${Math.floor(durationMins / 60)}h ${durationMins % 60}m`
+    : null;
 
   const router = useRouter();
   const [cancelState, setCancelState] = useState<"idle" | "confirm" | "loading" | "done" | "error">("idle");
@@ -254,7 +300,7 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
             </div>
           </div>
 
-          {/* Add-ons breakdown — shown when the booking has any add-ons attached */}
+          {/* Add-ons breakdown + reconciled bundle discount */}
           {b.addons && b.addons.length > 0 && (
             <div className="mb-3 rounded-xl border border-white/[0.06] bg-zinc-950/40 px-3 py-2">
               <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5">
@@ -268,6 +314,15 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
                   </li>
                 ))}
               </ul>
+              {savedDollars > 0 && (
+                <div className="mt-2 pt-1.5 border-t border-white/[0.04] flex items-center justify-between gap-2 text-[10px]">
+                  <span className="inline-flex items-center gap-1 text-emerald-400 font-black uppercase tracking-widest">
+                    <RefreshCw size={9} strokeWidth={3} />
+                    Bundle / loyalty applied
+                  </span>
+                  <span className="text-emerald-300 font-black tabular-nums">− ${savedDollars}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -295,7 +350,7 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
             </div>
           )}
 
-          {/* Date / time / location chips */}
+          {/* Date / time / location / duration / payment chips */}
           <div className="flex flex-wrap gap-2 mb-3">
             <div className="flex items-center gap-1.5 bg-zinc-800/60 rounded-lg px-2.5 py-1.5">
               <Calendar size={10} className="text-zinc-500 shrink-0" />
@@ -307,6 +362,24 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
                 <span className="text-[11px] text-zinc-400 font-medium">{formattedTime}</span>
               </div>
             )}
+            {durationLabel && (
+              <div className="flex items-center gap-1.5 bg-zinc-800/60 rounded-lg px-2.5 py-1.5">
+                <Timer size={10} className="text-zinc-500 shrink-0" />
+                <span className="text-[11px] text-zinc-400 font-medium">~{durationLabel}</span>
+              </div>
+            )}
+            <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${
+              paidOnline
+                ? "bg-sky-500/[0.10] border border-sky-500/25"
+                : "bg-amber-500/[0.08] border border-amber-500/20"
+            }`}>
+              {paidOnline
+                ? <CreditCard size={10} className="text-sky-400 shrink-0" />
+                : <Banknote size={10} className="text-amber-400 shrink-0" />}
+              <span className={`text-[11px] font-bold ${paidOnline ? "text-sky-300" : "text-amber-300"}`}>
+                {paidOnline ? "Paid — card" : "Pay on arrival"}
+              </span>
+            </div>
             {b.service_address && (
               <div className="flex items-center gap-1.5 bg-zinc-800/60 rounded-lg px-2.5 py-1.5 max-w-[200px]">
                 <MapPin size={10} className="text-zinc-500 shrink-0" />
@@ -389,9 +462,12 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
                       <X size={11} /> Cancel
                     </button>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs text-zinc-700 py-1">
-                      <AlertTriangle size={10} /> &lt;24hr — call us to cancel
-                    </span>
+                    <a
+                      href={`mailto:contact@ariseandshinedetailing.com?subject=${encodeURIComponent(`Cancellation request — ${b.service_name ?? "Booking"} on ${formatDate(b.booking_date)}`)}&body=${encodeURIComponent(`Hi,\n\nI need to cancel my booking on ${formatDate(b.booking_date)}${formattedTime ? ` at ${formattedTime}` : ""}. Ref: ${b.id.slice(0, 8)}.\n\nThanks.`)}`}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-amber-400/80 hover:text-amber-300 transition-colors py-1"
+                    >
+                      <AlertTriangle size={11} /> Request cancellation
+                    </a>
                   )}
                 </>
               )}

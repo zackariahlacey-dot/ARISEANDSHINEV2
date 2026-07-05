@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ChevronLeft, Check, X, Car, Calendar, Clock, ShieldCheck, Sparkles } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, X, Car, Clock, ShieldCheck, Sparkles, MapPin } from "lucide-react";
 import {
   CONDITION_TIERS,
   maintenancePrice,
@@ -14,6 +14,8 @@ import {
 import type { MaintenanceOffer } from "@/app/actions/getMaintenanceOffers";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { bookMaintenance } from "@/app/actions/bookMaintenance";
+import { saveProfileAddress, saveProfileContact } from "@/app/actions/saveProfileAddress";
+import { AddressAutocomplete } from "@/components/landing/AddressAutocomplete";
 
 type Step = 1 | 2 | 3;
 
@@ -22,11 +24,21 @@ export function MaintenanceBookingModal({
   open,
   onClose,
   onBooked,
+  savedAddress = null,
+  savedName = null,
+  savedPhone = null,
 }: {
   offer: MaintenanceOffer | null;
   open: boolean;
   onClose: () => void;
   onBooked: () => void;
+  /** Customer's saved address from their profile — pre-fills the address input
+   *  on Step 3. Null when no address on file yet. */
+  savedAddress?: string | null;
+  /** Customer's saved full name from their profile. Null if missing. */
+  savedName?: string | null;
+  /** Customer's saved phone number from their profile. Null if missing. */
+  savedPhone?: string | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -37,6 +49,14 @@ export function MaintenanceBookingModal({
   const [loadingDays, setLoadingDays] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Address (pre-filled from profile, editable). Saves back to profile on
+  // confirm so future maintenance bookings don't have to re-enter it.
+  const [serviceAddress, setServiceAddress] = useState<string>(savedAddress ?? "");
+  const [rememberAddress, setRememberAddress] = useState(true);
+  // Name + phone — only rendered when profile is missing them. Auto-saved to
+  // profile on confirm so the customer never has to re-enter them.
+  const [customerName, setCustomerName] = useState<string>(savedName ?? "");
+  const [customerPhone, setCustomerPhone] = useState<string>(savedPhone ?? "");
 
   // Reset on open
   useEffect(() => {
@@ -46,10 +66,17 @@ export function MaintenanceBookingModal({
       setSelectedDate("");
       setSelectedTime("");
       setError(null);
+      setServiceAddress(savedAddress ?? "");
+      setRememberAddress(true);
+      setCustomerName(savedName ?? "");
+      setCustomerPhone(savedPhone ?? "");
     }
-  }, [open]);
+  }, [open, savedAddress, savedName, savedPhone]);
 
-  // Body scroll lock while open
+  // Lock body scroll while the modal is open so the dashboard behind
+  // doesn't move underneath. The modal's own internal `overflow-y-auto`
+  // body still scrolls; the address autocomplete dropdown escapes to a
+  // portal so this doesn't clip it.
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -100,14 +127,43 @@ export function MaintenanceBookingModal({
 
   const handleConfirm = async () => {
     if (!condition || !selectedDate || !selectedTime) return;
+    const trimmedAddress = serviceAddress.trim();
+    const trimmedName    = customerName.trim();
+    const trimmedPhone   = customerPhone.trim();
+    if (!trimmedAddress) {
+      setError("Please enter a service address so we know where to come.");
+      return;
+    }
+    if (!trimmedName) {
+      setError("Please enter your name so we know who to greet.");
+      return;
+    }
+    if (!trimmedPhone) {
+      setError("Please enter a phone number so we can reach you.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
+    // Persist customer details to profile in the background so returning
+    // maintenance bookings don't need to re-enter them. Best-effort only.
+    const savePromises: Promise<unknown>[] = [];
+    if (rememberAddress && trimmedAddress !== (savedAddress ?? "")) {
+      savePromises.push(saveProfileAddress(trimmedAddress).catch(() => null));
+    }
+    if (trimmedName !== (savedName ?? "") || trimmedPhone !== (savedPhone ?? "")) {
+      savePromises.push(saveProfileContact(trimmedName, trimmedPhone).catch(() => null));
+    }
+    await Promise.all(savePromises);
+
     const result = await bookMaintenance({
       offerId: offer.id,
       condition,
       foundation,
       bookingDate: selectedDate,
       bookingTime: selectedTime,
+      serviceAddress: trimmedAddress,
+      name: trimmedName,
+      phone: trimmedPhone,
     });
     setSubmitting(false);
     if (!result.success) {
@@ -315,6 +371,107 @@ export function MaintenanceBookingModal({
                     <span className="text-2xl font-black text-[#D4AF37] tabular-nums">${price}</span>
                   </div>
                 </div>
+
+                {/* Wrap contact + address in a real <form> so Google Password
+                    Manager / Safari AutoFill / 1Password detect the fields and
+                    surface saved profile suggestions. The submit is a no-op —
+                    the Confirm button in the footer is what fires the booking. */}
+                <form
+                  id="maintenance-contact-form"
+                  autoComplete="on"
+                  onSubmit={(e) => e.preventDefault()}
+                  className="space-y-3"
+                >
+                  {/* Hidden email field — browsers use it as a stable identity
+                      hook for AutoFill so name/phone suggestions come from the
+                      customer's own address book entry. */}
+                  <input
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    value={""}
+                    onChange={() => { /* readonly bait for autofill */ }}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="sr-only pointer-events-none"
+                  />
+
+                  {/* Name + Phone — only rendered when profile is missing them.
+                      Auto-saves back so the customer never has to re-enter. */}
+                  {(!savedName || !savedPhone) && (
+                    <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 overflow-hidden">
+                      <div className="px-4 py-2.5 border-b border-white/[0.04]">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Your Contact</p>
+                      </div>
+                      <div className="p-3 space-y-2">
+                        {!savedName && (
+                          <div>
+                            <label htmlFor="mt-full-name" className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Full Name</label>
+                            <input
+                              id="mt-full-name"
+                              name="name"
+                              type="text"
+                              value={customerName}
+                              onChange={(e) => setCustomerName(e.target.value)}
+                              placeholder="Zack Lacey"
+                              autoComplete="name"
+                              autoCapitalize="words"
+                              spellCheck={false}
+                              className="w-full bg-zinc-950/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/40"
+                            />
+                          </div>
+                        )}
+                        {!savedPhone && (
+                          <div>
+                            <label htmlFor="mt-phone" className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Phone</label>
+                            <input
+                              id="mt-phone"
+                              name="tel"
+                              type="tel"
+                              value={customerPhone}
+                              onChange={(e) => setCustomerPhone(e.target.value)}
+                              placeholder="(802) 585-5563"
+                              autoComplete="tel"
+                              inputMode="tel"
+                              className="w-full bg-zinc-950/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/40"
+                            />
+                          </div>
+                        )}
+                        <p className="text-[10px] text-zinc-500 leading-tight">
+                          We&apos;ll save this to your profile so you don&apos;t have to re-enter it next time.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Service address — Google Places autocomplete, pre-filled
+                      from the customer's profile if they have one saved. */}
+                <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center gap-2">
+                    <MapPin size={13} className="text-[#D4AF37]" />
+                    <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Service Address</p>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <AddressAutocomplete
+                      value={serviceAddress}
+                      onChange={setServiceAddress}
+                    />
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={rememberAddress}
+                        onChange={(e) => setRememberAddress(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-[#D4AF37] cursor-pointer"
+                      />
+                      <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 transition-colors leading-tight">
+                        Save this address to my profile for next time
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                </form>
+
                 <p className="text-[11px] text-zinc-500 text-center inline-flex items-center justify-center gap-1.5 w-full">
                   <ShieldCheck size={11} className="text-emerald-400" /> Pay at arrival — cash or card
                 </p>

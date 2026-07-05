@@ -112,12 +112,12 @@ const DAY_END_HOUR   = 20;
 const TIMELINE_DAY_START_HOUR = 5;
 const TIMELINE_DAY_END_HOUR   = 23;
 
-// ── Shared add-on data (mirrors BookingModal + July 2026 lineup) ───────────
+// ── Shared add-on data (mirrors customer BookingModal · July 2026 lineup) ──
 // Admin sees ALL add-ons including retired ones so historical bookings still
-// render correctly. New passenger-vehicle bookings should only surface the
-// 8 basics + Premium Ceramic sections (see the customer BookingModal for that).
+// render their line items correctly. Retired items get [legacy] prefix to
+// dissuade re-use on new bookings.
 const ADMIN_ADDONS = [
-  // ── The 8 basics (July 2026 canonical) ──
+  // ── The 8 basics ──
   { id: "engine_bay",        label: "Engine Bay Detail",                     price: 65  },
   { id: "headlight_restore", label: "Headlight Restoration (pair)",          price: 75  },
   { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
@@ -126,57 +126,58 @@ const ADMIN_ADDONS = [
   { id: "ozone_treatment",   label: "Ozone Treatment",                       price: 60  },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50  },
   { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 50  },
-  // ── July 2026 special ──
+  // ── Specials ──
   { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade",   price: 45  },
   { id: "ultimate_ext_addon",   label: "+ Exterior Detail (Ultimate bundle)", price: 65 },
-  // ── Premium Ceramic sections ──
-  { id: "premium_ceramic_hood",           label: "Premium Ceramic — Hood",              price: 85  },
-  { id: "premium_ceramic_roof",           label: "Premium Ceramic — Roof",              price: 75  },
-  { id: "premium_ceramic_trunk",          label: "Premium Ceramic — Trunk",             price: 60  },
-  { id: "premium_ceramic_front_bumper",   label: "Premium Ceramic — Front Bumper",      price: 65  },
-  { id: "premium_ceramic_rear_bumper",    label: "Premium Ceramic — Rear Bumper",       price: 65  },
-  { id: "premium_ceramic_doors",          label: "Premium Ceramic — All Doors",         price: 110 },
-  { id: "premium_ceramic_fenders",        label: "Premium Ceramic — All Fenders",       price: 75  },
-  { id: "premium_ceramic_mirrors",        label: "Premium Ceramic — Mirrors",           price: 30  },
-  { id: "premium_ceramic_wheels",         label: "Premium Ceramic — Wheels + Calipers", price: 150 },
-  { id: "premium_ceramic_windshield",     label: "Premium Ceramic — Windshield",        price: 95  },
+  // ── Premium Ceramic (2-year) sections ──
+  { id: "premium_ceramic_hood",            label: "Premium Ceramic — Hood",              price: 85  },
+  { id: "premium_ceramic_roof",            label: "Premium Ceramic — Roof",              price: 75  },
+  { id: "premium_ceramic_trunk",           label: "Premium Ceramic — Trunk",             price: 60  },
+  { id: "premium_ceramic_front_bumper",    label: "Premium Ceramic — Front Bumper",      price: 65  },
+  { id: "premium_ceramic_rear_bumper",     label: "Premium Ceramic — Rear Bumper",       price: 65  },
+  { id: "premium_ceramic_doors",           label: "Premium Ceramic — All Doors",         price: 110 },
+  { id: "premium_ceramic_fenders",         label: "Premium Ceramic — All Fenders",       price: 75  },
+  { id: "premium_ceramic_mirrors",         label: "Premium Ceramic — Mirrors",           price: 30  },
+  { id: "premium_ceramic_wheels",          label: "Premium Ceramic — Wheels + Calipers", price: 150 },
+  { id: "premium_ceramic_windshield",      label: "Premium Ceramic — Windshield",        price: 95  },
   { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", price: 175 },
-  { id: "premium_ceramic_full_glass",     label: "Premium Ceramic — Full Glass",        price: 250 },
-  { id: "premium_ceramic_full_body",      label: "Premium Ceramic — Full Body (sedan)", price: 650 },
-  // ── LEGACY (historical bookings) — retained so old bookings render ──
-  { id: "odor_bomb",         label: "[legacy] Strong Odor Elimination",      price: 75  },
-  { id: "uv_interior",       label: "[legacy] UV Protection",                price: 35  },
-  { id: "tar_bug",           label: "[legacy] Tar, Bug & Sap Removal",       price: 35  },
-  { id: "headliner_clean",   label: "[legacy] Headliner Cleaning",           price: 40  },
-  { id: "steam_sanitation",  label: "[legacy] Steam Sanitation",             price: 45  },
-  { id: "seat_removal_driver",    label: "Seat Removal — Driver Side",       price: 60  },
-  { id: "seat_removal_passenger", label: "Seat Removal — Passenger Side",    price: 60  },
-  { id: "seat_removal_rear",      label: "Seat Removal — Rear Seats",        price: 85  },
-  { id: "seat_removal_3rd_row",   label: "Seat Removal — 3rd Row",           price: 95  },
-  { id: "seat_removal_all_2row",  label: "All Seats — 2-Row Bundle",         price: 150 },
-  { id: "seat_removal_all_3row",  label: "All Seats — 3-Row Bundle",         price: 225 },
-  { id: "trim_dressing",     label: "Rubber, Plastics & Vinyl Dressing",     price: 30  },
-  { id: "mech_chem_decon",   label: "Mechanical & Chemical Decontamination", price: 85  },
-  { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30  },
-  { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45  },
-  { id: "floor_all",         label: "Floorboard Shampoo – All",             price: 60  },
-  // Vehicle — ultimate upgrades
-  { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic",       price: 350 },
-  { id: "ozone_treatment",   label: "Ozone Odor Elimination",               price: 75  },
-  // 2-Year Graphene Window Coating (flat-priced, 3-tier)
-  { id: "window_coat_windshield", label: "2-Year Graphene Window — Windshield",       price: 100 },
-  { id: "window_coat_front",      label: "2-Year Graphene Window — Front 3 Windows",  price: 150 },
-  { id: "window_coat_all",        label: "2-Year Graphene Window — All Windows",      price: 250 },
-  // 5-Year Gentech Graphene Coating (size-tier priced; defaults to small tier)
-  { id: "ceramic_3yr",            label: "5-Year Gentech Graphene Coating",           price: 250 },
-  // Wheel & Caliper Ceramic Coating (flat price)
-  { id: "wheel_ceramic",          label: "Wheel & Caliper Ceramic Coating",           price: 125 },
-  // Ultimate Interior add-on (flat — adds 3 hrs)
-  { id: "ultimate_interior",      label: "Ultimate Interior Add-on (+3 hrs)",         price: 175 },
-  // Marine
+  { id: "premium_ceramic_full_glass",      label: "Premium Ceramic — Full Glass",        price: 250 },
+  { id: "premium_ceramic_full_body",       label: "Premium Ceramic — Full Body (sedan)", price: 650 },
+  // ── 5-Yr Gentech Graphene (application only) ──
+  { id: "gentech_5yr_body",            label: "5-Yr Gentech — Full Body (sedan)",       price: 350 },
+  { id: "gentech_5yr_wheels",          label: "5-Yr Gentech — Wheels + Calipers",       price: 125 },
+  { id: "gentech_5yr_windshield",      label: "5-Yr Gentech — Windshield Only",         price: 50  },
+  { id: "gentech_5yr_windows_front",   label: "5-Yr Gentech — Windshield + Front 3",    price: 85  },
+  { id: "gentech_5yr_windows_all",     label: "5-Yr Gentech — All Windows",             price: 145 },
+  { id: "gentech_5yr_full",            label: "5-Yr Gentech — Full Package (sedan)",    price: 525 },
+  // ── LEGACY — retained so historical bookings' line items still render ──
+  { id: "odor_bomb",              label: "[legacy] Strong Odor Elimination",           price: 75  },
+  { id: "uv_interior",            label: "[legacy] UV Protection",                     price: 35  },
+  { id: "tar_bug",                label: "[legacy] Tar, Bug & Sap Removal",            price: 35  },
+  { id: "headliner_clean",        label: "[legacy] Headliner Cleaning",                price: 40  },
+  { id: "steam_sanitation",       label: "[legacy] Steam Sanitation",                  price: 45  },
+  { id: "seat_removal_driver",    label: "[legacy] Seat Removal — Driver Side",        price: 60  },
+  { id: "seat_removal_passenger", label: "[legacy] Seat Removal — Passenger Side",     price: 60  },
+  { id: "seat_removal_rear",      label: "[legacy] Seat Removal — Rear Seats",         price: 85  },
+  { id: "seat_removal_3rd_row",   label: "[legacy] Seat Removal — 3rd Row",            price: 95  },
+  { id: "seat_removal_all_2row",  label: "[legacy] All Seats — 2-Row Bundle",          price: 150 },
+  { id: "seat_removal_all_3row",  label: "[legacy] All Seats — 3-Row Bundle",          price: 225 },
+  { id: "trim_dressing",          label: "[legacy] Rubber/Plastic/Vinyl Dressing",     price: 30  },
+  { id: "mech_chem_decon",        label: "[legacy] Mechanical & Chemical Decon",       price: 85  },
+  { id: "floor_1",                label: "[legacy] Floorboard Shampoo – 1 Section",    price: 30  },
+  { id: "floor_2",                label: "[legacy] Floorboard Shampoo – 2 Sections",   price: 45  },
+  { id: "floor_all",              label: "[legacy] Floorboard Shampoo – All",          price: 60  },
+  { id: "polish_ceramic",         label: "[legacy] 1-Step Polish + 2-Year Ceramic",    price: 350 },
+  { id: "window_coat_windshield", label: "[legacy] 2-Yr Graphene Windshield",          price: 100 },
+  { id: "window_coat_front",      label: "[legacy] 2-Yr Graphene Front 3 Windows",     price: 150 },
+  { id: "window_coat_all",        label: "[legacy] 2-Yr Graphene All Windows",         price: 250 },
+  { id: "ceramic_3yr",            label: "[legacy] 5-Yr Gentech Graphene (old)",       price: 250 },
+  { id: "wheel_ceramic",          label: "[legacy] Wheel & Caliper Ceramic",           price: 125 },
+  { id: "ultimate_interior",      label: "[legacy] Ultimate Interior Add-on (+3 hrs)", price: 175 },
+  // ── Marine (unchanged — separate flow) ──
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows",            price: 100 },
   { id: "marine_engine_bay", label: "Marine Engine Bay",                    price: 150 },
-  // RV
+  // ── RV (unchanged — separate flow) ──
   { id: "rv_awning",         label: "Awning Deep Clean",                    price: 60  },
   { id: "rv_slide_seal",     label: "Slide-Out Seal Conditioning",          price: 50  },
   { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",             price: 80  },
@@ -419,10 +420,12 @@ export function NewBookingForm({
   const vehicleAddonsForServiceName = (name: string) => {
     const n = (name ?? "").toLowerCase();
     const premiumCeramicIds = ADMIN_ADDONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
+    const gentechIds = ADMIN_ADDONS.filter(a => a.id.startsWith("gentech_5yr_")).map(a => a.id);
     if (n.includes("paint") || n.includes("correction")) {
       return ADMIN_ADDONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
         ...premiumCeramicIds,
+        ...gentechIds,
       ].includes(a.id));
     }
     if (n.includes("ultimate")) {
@@ -430,12 +433,14 @@ export function NewBookingForm({
         "engine_bay", "headlight_restore", "clay_bar",
         "salt_stain_removal", "ozone_treatment",
         "ceramic_6_10_upgrade", "ultimate_ext_addon",
+        ...gentechIds,
       ].includes(a.id));
     }
     if (n.includes("exterior") && !n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
         ...premiumCeramicIds,
+        ...gentechIds,
       ].includes(a.id));
     }
     if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
@@ -447,13 +452,14 @@ export function NewBookingForm({
     if (n.includes("maintenance")) {
       return ADMIN_ADDONS.filter(a => a.id === "engine_bay");
     }
-    // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic
+    // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic + Gentech
     return ADMIN_ADDONS.filter(a => [
       "engine_bay", "headlight_restore", "clay_bar",
       "upholstery_shampoo", "salt_stain_removal", "leather_condition",
       "ozone_treatment", "pet_hair",
       "ceramic_6_10_upgrade",
       ...premiumCeramicIds,
+      ...gentechIds,
     ].includes(a.id));
   };
 
