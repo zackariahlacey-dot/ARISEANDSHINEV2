@@ -473,6 +473,7 @@ export async function getAllServices() {
   const { data, error } = await supabase
     .from("services")
     .select("*")
+    .eq("is_active", true)
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);

@@ -51,6 +51,7 @@ import {
 } from "date-fns";
 import { AddressAutocomplete } from "@/components/landing/AddressAutocomplete";
 import { cn } from "@/lib/utils";
+import { detectVehicleSize, getAllMakeSuggestions, getModelSuggestionsForMake } from "@/lib/detectVehicleSize";
 import {
   checkSlotConflict, getDurationMins, timeToMins, minsToDisplay, to12h, to24h,
   getAvailableSlots,
@@ -301,6 +302,10 @@ export function NewBookingForm({
   const [vehicleMake,  setVehicleMake]  = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleSize,  setVehicleSize]  = useState("sedan");
+  // True when vehicleSize was auto-filled from year/make/model — mirrors the
+  // homepage BookingModal so the admin sees the same "auto-detected" pill
+  // (and knows they didn't have to pick manually).
+  const [autoDetected, setAutoDetected] = useState(false);
   const [serviceId,    setServiceId]    = useState("");
   const [footage,      setFootage]      = useState<number | "">("");
   const [priceOverride,setPriceOverride]= useState("");
@@ -392,6 +397,48 @@ export function NewBookingForm({
     if (clientPrefill.pathwayHint) setPathway(clientPrefill.pathwayHint);
   }, [clientPrefill]);
 
+  // ── Auto-detect vehicle size from make/model ─────────────────────────────
+  // Matches the homepage BookingModal behavior — debounce 500ms, then run
+  // the vehicle-DB lookup and set size when we get a match. Only runs on the
+  // manual-entry path; the saved-vehicle path already has a canonical size.
+  useEffect(() => {
+    if (existingVehicleId) return;
+    if (!vehicleMake.trim() || vehicleModel.trim().length < 2) return;
+    const t = setTimeout(() => {
+      const detected = detectVehicleSize(vehicleMake, vehicleModel);
+      if (detected) {
+        setVehicleSize(detected);
+        setAutoDetected(true);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [vehicleMake, vehicleModel, existingVehicleId]);
+
+  // Same auto-detect for the additional-vehicle rows. Tracked per-index via a
+  // ref so we don't fight the admin if they manually pick a size after typing.
+  const additionalVehicleDetectedRef = useRef<Map<number, string>>(new Map());
+  useEffect(() => {
+    const t = setTimeout(() => {
+      additionalVehicles.forEach((av, idx) => {
+        const make = av.vehicleMake?.trim() ?? "";
+        const model = av.vehicleModel?.trim() ?? "";
+        if (!make || model.length < 2) return;
+        const key = `${make.toLowerCase()}|${model.toLowerCase()}`;
+        if (additionalVehicleDetectedRef.current.get(idx) === key) return;
+        const detected = detectVehicleSize(make, model);
+        if (detected && detected !== av.vehicleSize) {
+          const svcForAv = vehicleServices.find((svc: any) => svc.id === av.serviceId);
+          const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === detected);
+          const newPrice = svcForAv && sizeEntry ? Number(svcForAv[sizeEntry.key] ?? svcForAv.price_small ?? 0) : av.servicePrice;
+          updateAdminVehicle(idx, { vehicleSize: detected, servicePrice: newPrice });
+        }
+        if (detected) additionalVehicleDetectedRef.current.set(idx, key);
+      });
+    }, 500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [additionalVehicles]);
+
   // Derived
   const isTruckCat = (s: any) =>
     s.category === "Truck" ||
@@ -452,14 +499,15 @@ export function NewBookingForm({
     if (n.includes("maintenance")) {
       return ADMIN_ADDONS.filter(a => a.id === "engine_bay");
     }
-    // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic + Gentech
+    // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic.
+    // Gentech is intentionally excluded here to mirror the customer picker
+    // (customer flow surfaces Gentech only on Exterior / Ultimate / Paint Correction).
     return ADMIN_ADDONS.filter(a => [
       "engine_bay", "headlight_restore", "clay_bar",
       "upholstery_shampoo", "salt_stain_removal", "leather_condition",
       "ozone_treatment", "pet_hair",
       "ceramic_6_10_upgrade",
       ...premiumCeramicIds,
-      ...gentechIds,
     ].includes(a.id));
   };
 
@@ -797,8 +845,8 @@ export function NewBookingForm({
               )}
               <div className="grid grid-cols-3 gap-2">
                 <div><FieldLabel>Year</FieldLabel><Input value={vehicleYear} onChange={setVehicleYear} placeholder="2022" /></div>
-                <div><FieldLabel>Make</FieldLabel><Input value={vehicleMake} onChange={setVehicleMake} placeholder="Toyota" /></div>
-                <div><FieldLabel>Model</FieldLabel><Input value={vehicleModel} onChange={setVehicleModel} placeholder="Camry" /></div>
+                <div><FieldLabel>Make</FieldLabel><MakeAutocomplete value={vehicleMake} onChange={setVehicleMake} placeholder="Toyota" /></div>
+                <div><FieldLabel>Model</FieldLabel><ModelAutocomplete value={vehicleModel} onChange={setVehicleModel} make={vehicleMake} placeholder="Camry" /></div>
               </div>
               {/* Vehicle size — only show manual picker if not using a saved vehicle */}
               {existingVehicleId ? (
@@ -811,10 +859,17 @@ export function NewBookingForm({
                 </div>
               ) : (
                 <>
-                  <FieldLabel>Vehicle Size</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    <FieldLabel>Vehicle Size</FieldLabel>
+                    {autoDetected && (
+                      <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/40 text-amber-400 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        <Zap size={8} className="fill-amber-400" /> Auto-detected
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     {VEHICLE_SIZES_ADMIN.map(s => (
-                      <button key={s.value} onClick={() => setVehicleSize(s.value)}
+                      <button key={s.value} onClick={() => { setVehicleSize(s.value); setAutoDetected(false); }}
                         className={cn("py-2.5 rounded-xl border text-xs font-black transition-all",
                           vehicleSize === s.value ? "bg-amber-500 border-amber-500 text-black" : "border-white/[0.08] text-zinc-400"
                         )}
@@ -873,10 +928,8 @@ export function NewBookingForm({
                         <div className="grid grid-cols-3 gap-2">
                           <input value={av.vehicleYear} onChange={e => updateAdminVehicle(idx, { vehicleYear: e.target.value })} placeholder="Year"
                             className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
-                          <input value={av.vehicleMake} onChange={e => updateAdminVehicle(idx, { vehicleMake: e.target.value })} placeholder="Make"
-                            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
-                          <input value={av.vehicleModel} onChange={e => updateAdminVehicle(idx, { vehicleModel: e.target.value })} placeholder="Model"
-                            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50" />
+                          <MakeAutocomplete value={av.vehicleMake} onChange={v => updateAdminVehicle(idx, { vehicleMake: v })} placeholder="Make" />
+                          <ModelAutocomplete value={av.vehicleModel} onChange={v => updateAdminVehicle(idx, { vehicleModel: v })} make={av.vehicleMake} placeholder="Model" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           {VEHICLE_SIZES_ADMIN.map(s => (
@@ -3618,6 +3671,88 @@ function Input({ value, onChange, placeholder, type = "text" }: { value: string;
       placeholder={placeholder}
       className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
     />
+  );
+}
+
+// ── Vehicle make + model autocomplete ────────────────────────────────────────
+// Same DB backs suggestions and detectVehicleSize(), so sizes always match.
+// Admin can also type freely — no dropdown = pick a size manually.
+function MakeAutocomplete({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const q = value.trim().toLowerCase();
+  const options = q
+    ? getAllMakeSuggestions().filter(m => m.toLowerCase().includes(q))
+    : getAllMakeSuggestions();
+  const show = open && options.length > 0;
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
+      />
+      {show && (
+        <div className="absolute top-full left-0 right-0 z-[70] mt-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
+          {options.slice(0, 12).map(m => (
+            <button
+              key={m}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); onChange(m); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+            >{m}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModelAutocomplete({ value, onChange, make, placeholder }: { value: string; onChange: (v: string) => void; make: string; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const q = value.trim().toLowerCase();
+  const models = getModelSuggestionsForMake(make);
+  const options = q ? models.filter(m => m.toLowerCase().includes(q)) : models;
+  const show = open && make.trim() !== "" && options.length > 0;
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => make.trim() && setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-amber-500/50"
+      />
+      {show && (
+        <div className="absolute top-full left-0 right-0 z-[70] mt-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/95 shadow-xl shadow-black/60">
+          {options.slice(0, 12).map(m => (
+            <button
+              key={m}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); onChange(m); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+            >{m}</button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 function NavBtn({ onBack, onNext, disabled }: { onBack?: () => void; onNext?: () => void; disabled?: boolean }) {
