@@ -29,7 +29,7 @@ export async function getBookingsByPhone(phone: string): Promise<{
 
   const { data } = await supabase
     .from("bookings")
-    .select("id, booking_date, booking_time, status, total_price, service_id, service_name, vehicle_year, vehicle_make, vehicle_model, vehicle_size, service_address, stripe_checkout_session_id, customer_phone, user_id, additional_vehicles_json")
+    .select("id, booking_date, booking_time, status, total_price, service_id, service_name, vehicle_year, vehicle_make, vehicle_model, vehicle_size, service_address, stripe_checkout_session_id, customer_phone, user_id, additional_vehicles_json, addons_json")
     .or(conditions)
     .neq("status", "cancelled")
     .order("booking_date", { ascending: false });
@@ -61,6 +61,11 @@ export async function getBookingsByPhone(phone: string): Promise<{
       service_address: b.service_address,
       stripe_checkout_session_id: b.stripe_checkout_session_id ?? null,
       additional_vehicles: additional,
+      addons: (Array.isArray(b.addons_json) ? b.addons_json : []).map((a: any) => ({
+        id:    String(a.id ?? ""),
+        label: String(a.label ?? a.name ?? a.id ?? ""),
+        price: Number(a.price ?? 0),
+      })).filter((a: { id: string; label: string }) => a.id && a.label),
     };
   });
 

@@ -41,7 +41,7 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 };
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Sign Up", desc: "Choose your plan — Interior or Basic Interior + Exterior. No long-term commitment." },
+  { step: "01", title: "Sign Up", desc: "Choose your plan — Interior or Interior + Exterior. No long-term commitment." },
   { step: "02", title: "Initial Deep Clean", desc: "Your first visit includes a one-time Deep Clean & Reset Detail to get your vehicle to our standard." },
   { step: "03", title: "Monthly Service", desc: "We show up every month on your fixed date. You don't have to think about it." },
 ];

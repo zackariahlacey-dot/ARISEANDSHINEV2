@@ -17,7 +17,7 @@ const esc = (s: string | number): string =>
 /** Customer-facing friendly labels for auto services. Boat/RV-specific
  *  "Full Detail" SKUs (e.g. "Boat Full Detail") keep their full names. */
 const AUTO_FRIENDLY_LABELS: Record<string, string> = {
-  "Full Detail": "Basic Interior + Exterior",
+  "Full Detail": "Interior + Exterior",
 };
 
 export function getReviewRequestHtml(

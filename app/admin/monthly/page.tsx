@@ -643,7 +643,7 @@ export default function MonthlySubscribersPage() {
 const PLAN_LABELS: Record<string, string> = {
   interior_only: "Interior Only",
   exterior_only: "Exterior Only",
-  full_detail:   "Basic Interior + Exterior",
+  full_detail:   "Interior + Exterior",
 };
 
 const FREQ_LABELS: Record<string, string> = {

@@ -39,7 +39,7 @@ const PAIN_OPTIONS: PainOption[] = [
 const FOUNDATION_DISPLAY: Record<Scope, { name: string; subtitle: string; icon: typeof Sofa }> = {
   interior: { name: "Interior Detail",          subtitle: "Ultimate Interior",            icon: Sofa     },
   exterior: { name: "Exterior Detail",          subtitle: "Ultimate Exterior",            icon: Droplets },
-  full:     { name: "Basic Interior + Exterior", subtitle: "Ultimate Interior + Exterior", icon: Zap      },
+  full:     { name: "Interior + Exterior", subtitle: "Ultimate Interior + Exterior", icon: Zap      },
 };
 
 const FOUNDATION_SERVICE_NAME: Record<Scope, string> = {

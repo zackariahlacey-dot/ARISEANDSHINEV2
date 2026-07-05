@@ -7,7 +7,7 @@ import type { Service } from "@/app/page";
 export const metadata: Metadata = {
   title: "Detailing Services & Pricing | Arise And Shine Detailing",
   description:
-    "Browse all mobile auto detailing services in Vermont — Interior, Exterior, Basic Interior + Exterior, Ultimate Series, and Monthly Maintenance Club. Transparent pricing, easy online booking.",
+    "Browse all mobile auto detailing services in Vermont — Interior, Exterior, Interior + Exterior, Ultimate Series, and Monthly Maintenance Club. Transparent pricing, easy online booking.",
   keywords: [
     "Vermont auto detailing",
     "mobile car detailing Vermont",
@@ -36,8 +36,9 @@ async function ServicesDataProvider() {
   const { data: services } = await supabase
     .from("services")
     .select(
-      "id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription"
+      "id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription, is_active"
     )
+    .eq("is_active", true)
     .order("price_small", { ascending: true });
 
   return <ServicesPage services={services ?? []} />;

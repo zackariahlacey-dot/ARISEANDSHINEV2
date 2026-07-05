@@ -30,31 +30,19 @@ const SuccessModal = dynamic(
 const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
-    tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 240, priceLarge: 270,
-    badge: { label: "Best for Families", icon: "star" as const },
-    features: [
-      "Everything in Basic Interior + Exterior",
-      "Hot Water Extraction & Shampooing (Carpets & Seats)",
-      "High-Pressure Steam Sanitation (Vents, Cup Holders, Crevices)",
-      "Vermont Road Salt & Calcium Neutralization",
-      "Engine Bay Deep Clean & Dressing (Add-On Available)",
-      "6-Month Ceramic Sealant Upgrade",
-    ],
-    isFlagship: false,
-  },
-  {
-    name: "Ultimate Interior + Exterior Reset",
-    tagline: "Showroom quality — every surface, inside and out. No polishing required.",
-    priceNormal: 335, priceLarge: 375,
+    tagline: "Seats removed. Every crevice reset.",
+    priceNormal: 300, priceLarge: 370,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
-      "Everything in Ultimate Interior Reset",
-      "Full Exterior Decontamination Wash & Clay Bar Treatment",
-      "Iron & Fallout Decontamination (Paint Prep)",
-      "Ceramic Spray Coating — 6-Month Protection",
-      "All Exterior Trim, Rubber & Glass Dressing",
-      "Exhaust Tips & Wheel Barrels Deep Cleaned",
+      "Seats REMOVED from vehicle for deep steam clean",
+      "Full shampoo of seats, carpet, and mats",
+      "Steam clean every surface, vacuum every crack",
+      "Disinfect and protect all interior surfaces",
+      "Interior glass streak-free (all windows)",
+      "Rubber/carpet mats cleaned and protected",
+      "Leather conditioning (if applicable)",
+      "Trunk fully included",
+      "Add + Exterior Detail at checkout for a bundle price",
     ],
     isFlagship: true,
   },
@@ -63,7 +51,7 @@ const ULTIMATE_CARDS = [
 const EXTERIOR_ITEMS = [
   "Full handwash and foam bath",
   "Deep clean wheel wells, rims, and tires",
-  "3 Month Ceramic Sealant",
+  "Included: 1–3 Month Ceramic Spray Sealant",
 ];
 const INTERIOR_ITEMS = [
   "Full wipe down & vacuum of every surface, crack, and crevice",
@@ -87,7 +75,7 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 
 const FAQ = [
   { q: "Do you come to my location?", a: "Yes — we're 100% mobile. We come to your home, office, or anywhere in Vermont. No shop visit needed." },
-  { q: "How long does a detail take?", a: "Interior typically takes 1.5–2 hours, Exterior 1–1.5 hours, Basic Interior + Exterior 2–2.5 hours. Ultimate Interior Reset runs 2.5–3.5 hours; Ultimate Interior + Exterior Reset runs 3.5–4.5 hours." },
+  { q: "How long does a detail take?", a: "Interior typically takes 1.5–2 hours, Exterior 1–1.5 hours, Full Detail (Interior + Exterior) 2–2.5 hours. Ultimate Interior Reset runs 3.5–4.5 hours (seats are removed for deep clean); add + Exterior at checkout for a full-vehicle reset in one visit." },
   { q: "What products do you use?", a: "We use professional-grade, eco-friendly products including pH-neutral soaps, ceramic-grade protectants, and premium interior dressings — safe for all surfaces." },
   { q: "What's the cancellation policy?", a: "Cancellations must be made at least 24 hours in advance. Same-day cancellations may incur a $50 fee. We'll never charge you if we reschedule due to weather." },
 ];
@@ -191,7 +179,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
         className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="w-full max-w-7xl mx-auto">
-          <SectionHeader eyebrow="Auto Detailing" title="Interior, Exterior & Basic Interior + Exterior" subtitle="Our core mobile detailing packages — Interior, Exterior, and Basic Interior + Exterior — delivered anywhere in Vermont." />
+          <SectionHeader eyebrow="Auto Detailing" title="Interior, Exterior & Interior + Exterior" subtitle="Our core mobile detailing packages — Interior, Exterior, and Interior + Exterior — delivered anywhere in Vermont." />
           {detailingServices.length === 0 ? (
             <div className="text-center py-20 text-zinc-600">
               <Car size={40} className="mx-auto mb-4 opacity-30" />
@@ -218,7 +206,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
       >
         <div className="w-full max-w-7xl mx-auto">
           <SectionHeader eyebrow="Premium Collection" title="Ultimate Packages" subtitle="Our most comprehensive packages — engineered for vehicles that deserve nothing less than perfection." />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10 md:mt-14">
+          <div className="grid grid-cols-1 gap-6 mt-10 md:mt-14 max-w-xl mx-auto">
             {ULTIMATE_CARDS.map((card) => (
               <UltimateServiceCard key={card.name} {...card} onBook={() => openBooking("ultimate")} />
             ))}

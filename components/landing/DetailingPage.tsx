@@ -28,7 +28,7 @@ const SuccessModal = dynamic(
 
 const DETAIL_ORDER = ["Interior Detail", "Full Detail", "Exterior Detail"];
 
-// What's unique per service — Basic Interior + Exterior just references the others
+// What's unique per service — Interior + Exterior just references the others
 const CORE_FEATURES: Record<string, { icon: React.ElementType; items: string[] }> = {
   "Interior Detail": {
     icon: Sofa,
@@ -44,7 +44,7 @@ const CORE_FEATURES: Record<string, { icon: React.ElementType; items: string[] }
     items: [
       "Full hand wash & foam bath",
       "Deep clean wheel wells, rims & tires",
-      "3-Month Ceramic Sealant protection",
+      "Included: 1–3 Month Ceramic Spray Sealant",
     ],
   },
   "Full Detail": {
@@ -56,34 +56,21 @@ const CORE_FEATURES: Record<string, { icon: React.ElementType; items: string[] }
 const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
-    tagline: "The deep clean your interior deserves.",
-    priceLow: 240,
-    priceHigh: 270,
-    badge: "Best for Families",
-    badgeIcon: Star,
-    features: [
-      "Everything in Basic Interior + Exterior",
-      "Hot water extraction & shampooing (carpets & seats)",
-      "High-pressure steam sanitation (vents, cup holders, crevices)",
-      "Vermont road salt & calcium neutralization",
-      "6-Month Ceramic Sealant upgrade",
-    ],
-    isFlagship: false,
-  },
-  {
-    name: "Ultimate Interior + Exterior Reset",
-    tagline: "Showroom condition — every surface, inside and out.",
-    priceLow: 350,
-    priceHigh: 400,
+    tagline: "Seats removed. Every crevice reset.",
+    priceLow: 300,
+    priceHigh: 370,
     badge: "Flagship Service",
     badgeIcon: Gem,
     features: [
-      "Everything in Ultimate Interior Reset",
-      "Full exterior decontamination & clay bar treatment",
-      "Iron & fallout decontamination (paint prep)",
-      "6-Month Ceramic Spray Coating",
-      "All trim, rubber & glass dressing",
-      "Exhaust tips & wheel barrels deep cleaned",
+      "Seats REMOVED from vehicle for deep steam clean",
+      "Full shampoo of seats, carpet, and mats",
+      "Steam clean every surface, vacuum every crevice",
+      "Disinfect and protect all interior surfaces",
+      "Interior glass streak-free (all windows)",
+      "Rubber and/or carpet mats cleaned and protected",
+      "Leather conditioning (if applicable)",
+      "Trunk fully included",
+      "Optional: + Exterior Detail bundle (unlocks discounted add-ons)",
     ],
     isFlagship: true,
   },
@@ -252,7 +239,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
 
       {/* ── Core Packages — primary service grid for /detailing ───────────────
           Re-enabled 2026-06 after Build Your Package was hidden. These three
-          cards (Interior / Exterior / Basic Interior + Exterior) are the
+          cards (Interior / Exterior / Interior + Exterior) are the
           customer's main entry point into the booking flow. */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
         className="py-12 md:py-16 px-4 sm:px-6 lg:px-8"
@@ -279,41 +266,55 @@ export function DetailingPage({ services }: { services: Service[] }) {
                 const Icon = meta?.icon ?? Sparkles;
                 return (
                   <div key={service.id}
-                    className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+                    className={`relative flex flex-col rounded-3xl overflow-hidden transition-all duration-500 hover:-translate-y-1.5 group ${
                       isPopular
-                        ? "border border-[#D4AF37]/40 shadow-[0_0_32px_rgba(212,175,55,0.08)] bg-zinc-900/70"
-                        : "border border-white/[0.07] bg-zinc-900/50 hover:border-[#D4AF37]/20"
+                        ? "border border-[#D4AF37]/40 bg-gradient-to-br from-zinc-900/80 via-zinc-900/60 to-zinc-950/80 shadow-[0_0_40px_rgba(212,175,55,0.08)] hover:shadow-[0_0_60px_rgba(212,175,55,0.18)] hover:border-[#D4AF37]/60"
+                        : "border border-white/[0.06] bg-gradient-to-br from-zinc-900/50 to-zinc-950/50 hover:border-[#D4AF37]/25"
                     }`}>
-                    {isPopular && <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent shrink-0" />}
+                    {/* Top accent shimmer */}
+                    <div className={`h-[1px] w-full shrink-0 ${
+                      isPopular
+                        ? "bg-gradient-to-r from-transparent via-[#D4AF37]/80 to-transparent"
+                        : "bg-gradient-to-r from-transparent via-white/[0.08] to-transparent"
+                    }`} />
 
-                    <div className="p-5 flex flex-col flex-1 text-center">
-                      {/* Header */}
-                      <div className="flex flex-col items-center mb-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${isPopular ? "bg-[#D4AF37]/10 border border-[#D4AF37]/20" : "bg-white/[0.04] border border-white/[0.06]"}`}>
-                          <Icon size={17} className={isPopular ? "text-[#D4AF37]" : "text-zinc-400"} strokeWidth={1.5} />
+                    {/* Popular badge — floating pill at the top */}
+                    {isPopular && (
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+                        <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D4AF37] text-black">
+                          <Crown size={8} strokeWidth={2.5} />
+                          <span className="text-[8px] font-black uppercase tracking-[0.22em]">Most Popular</span>
                         </div>
-                        {isPopular && (
-                          <div className="flex items-center gap-1 mb-1.5">
-                            <Crown size={10} className="text-[#D4AF37]" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">Most Popular</span>
-                          </div>
-                        )}
-                        <h3 className="text-lg font-black text-white tracking-tight">{getServiceDisplayName(service.name)}</h3>
-                        {service.description && (
-                          <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{service.description}</p>
-                        )}
+                      </div>
+                    )}
+
+                    <div className={`p-6 flex flex-col flex-1 ${isPopular ? "pt-8" : ""}`}>
+                      {/* Icon + Name */}
+                      <div className="flex flex-col items-center mb-5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-500 group-hover:scale-110 ${
+                          isPopular
+                            ? "bg-[#D4AF37]/10 border border-[#D4AF37]/30 shadow-[0_0_16px_rgba(212,175,55,0.15)]"
+                            : "bg-white/[0.03] border border-white/[0.08]"
+                        }`}>
+                          <Icon size={18} className={isPopular ? "text-[#D4AF37]" : "text-zinc-400"} strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-lg font-black text-white tracking-tight text-center">{getServiceDisplayName(service.name)}</h3>
+                        <div className={`h-px w-8 mx-auto mt-3 ${isPopular ? "bg-[#D4AF37]/40" : "bg-white/[0.08]"}`} />
                       </div>
 
-                      {/* Price */}
-                      <div className={`flex rounded-xl mb-4 overflow-hidden border text-center ${isPopular ? "border-[#D4AF37]/20" : "border-white/[0.06]"}`}>
-                        <div className="flex-1 py-3 bg-white/[0.02]">
-                          <div className="text-xl font-black text-white">${service.price_small}</div>
-                          <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 mt-0.5">Normal</div>
+                      {/* Price grid */}
+                      <div className="grid grid-cols-2 gap-2 mb-5">
+                        <div className={`rounded-xl py-2.5 text-center transition-colors ${
+                          isPopular ? "bg-white/[0.02] border border-white/[0.04]" : "bg-white/[0.02] border border-white/[0.04]"
+                        }`}>
+                          <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-0.5">Sedan</div>
+                          <div className="text-lg font-black text-zinc-100 tabular-nums">${service.price_small}</div>
                         </div>
-                        <div className="w-px bg-white/[0.05]" />
-                        <div className={`flex-1 py-3 ${isPopular ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
-                          <div className={`text-xl font-black ${isPopular ? "text-[#D4AF37]" : "text-zinc-200"}`}>${service.price_large}</div>
-                          <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 mt-0.5">Large / 3-Row</div>
+                        <div className={`rounded-xl py-2.5 text-center ${
+                          isPopular ? "bg-[#D4AF37]/[0.06] border border-[#D4AF37]/20" : "bg-white/[0.02] border border-white/[0.04]"
+                        }`}>
+                          <div className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${isPopular ? "text-[#D4AF37]/70" : "text-zinc-600"}`}>3-Row / Van</div>
+                          <div className={`text-lg font-black tabular-nums ${isPopular ? "text-[#D4AF37]" : "text-zinc-200"}`}>${service.price_large}</div>
                         </div>
                       </div>
 
@@ -321,22 +322,22 @@ export function DetailingPage({ services }: { services: Service[] }) {
                       <div className="mb-5 flex-1">
                         {service.name === "Full Detail" ? (
                           <div className="space-y-1.5">
-                            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15">
+                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.04] border border-[#D4AF37]/15">
                               <Sofa size={12} className="text-[#D4AF37] shrink-0" />
                               <span className="text-xs text-zinc-300 font-medium">Full Interior Detail</span>
                             </div>
-                            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.05] border border-[#D4AF37]/15">
+                            <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-[#D4AF37]/[0.04] border border-[#D4AF37]/15">
                               <Droplets size={12} className="text-[#D4AF37] shrink-0" />
                               <span className="text-xs text-zinc-300 font-medium">Full Exterior Detail</span>
                             </div>
-                            <p className="text-[10px] text-zinc-600">Both services in one visit — best value.</p>
+                            <p className="text-[10px] text-zinc-600 text-center pt-1">Both in one visit — save $35–$45</p>
                           </div>
                         ) : (
-                          <ul className="space-y-1.5 inline-block text-left">
+                          <ul className="space-y-2">
                             {(meta?.items ?? []).map((item) => (
-                              <li key={item} className="flex items-start gap-2 text-xs text-zinc-400 leading-snug">
-                                <CheckCircle size={11} className={`shrink-0 mt-0.5 ${isPopular ? "text-[#D4AF37]" : "text-zinc-500"}`} />
-                                {item}
+                              <li key={item} className="flex items-start gap-2 text-xs text-zinc-400 leading-relaxed">
+                                <CheckCircle size={11} className={`shrink-0 mt-0.5 ${isPopular ? "text-[#D4AF37]" : "text-zinc-500"}`} strokeWidth={1.75} />
+                                <span>{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -344,12 +345,13 @@ export function DetailingPage({ services }: { services: Service[] }) {
                       </div>
 
                       <button onClick={() => openBooking(service)}
-                        className={`w-full py-3 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all duration-200 active:scale-[0.97] ${
+                        className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] flex justify-center items-center gap-2 transition-all duration-300 active:scale-[0.97] ${
                           isPopular
-                            ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-90 shadow-[0_4px_16px_rgba(212,175,55,0.3)]"
-                            : "bg-zinc-900 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/[0.07]"
+                            ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black hover:opacity-95 shadow-[0_8px_28px_rgba(212,175,55,0.28)]"
+                            : "bg-zinc-900/60 border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/[0.08] hover:border-[#D4AF37]/50"
                         }`}>
                         Book Now
+                        <ArrowRight size={12} strokeWidth={2.5} />
                       </button>
                     </div>
                   </div>
@@ -383,7 +385,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 gap-4 max-w-xl mx-auto">
             {ULTIMATE_CARDS.map((card) => {
               const BadgeIcon = card.badgeIcon;
               return (
@@ -438,11 +440,19 @@ export function DetailingPage({ services }: { services: Service[] }) {
             })}
           </div>
 
-          <div className="mt-5 flex items-center justify-center gap-2">
-            <AlertTriangle size={12} className="text-amber-500/60 shrink-0" />
-            <p className="text-[10px] text-zinc-600 leading-relaxed">
-              Vehicles with extreme mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.
-            </p>
+          <div className="mt-5 max-w-xl mx-auto space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={12} className="text-amber-500/60 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
+                <span className="text-zinc-400 font-semibold">Ultimate disclaimer:</span> We cannot guarantee 100% removal of set-in stains, embedded debris, or permanent damage — but we will do everything we can.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={12} className="text-amber-500/60 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-zinc-600 leading-relaxed">
+                Vehicles with extreme mold, biohazards, or excessive pet hair may incur a $50–$100 surcharge.
+              </p>
+            </div>
           </div>
         </div>
       </motion.section>

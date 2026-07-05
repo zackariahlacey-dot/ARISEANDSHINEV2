@@ -65,7 +65,7 @@ export function MaintenanceSection({ offers }: { offers: MaintenanceOffer[] }) {
                     </div>
                     <p className="text-sm font-black text-white truncate">{vehicleLabel}</p>
                     <p className="text-[11px] text-zinc-500 truncate">
-                      Maintenance · {foundation === "full" ? "Basic Interior + Exterior" : foundation === "interior" ? "Interior" : "Exterior"}
+                      Maintenance · {foundation === "full" ? "Interior + Exterior" : foundation === "interior" ? "Interior" : "Exterior"}
                     </p>
                   </div>
                   <ChevronRight size={16} className="shrink-0 text-zinc-600 group-hover:text-[#D4AF37] transition-colors" />

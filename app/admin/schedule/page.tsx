@@ -22,6 +22,7 @@ import {
   updateBookingDetailsAction,
   blockRestOfDayAction,
   updateBookingDurationAction,
+  rescheduleBookingAction,
 } from "@/app/actions/adminActions";
 import { sendStripePaymentLink, getPaymentLinkUrl, markPaymentLinkSent } from "@/app/actions/sendStripePaymentLink";
 import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
@@ -111,22 +112,43 @@ const DAY_END_HOUR   = 20;
 const TIMELINE_DAY_START_HOUR = 5;
 const TIMELINE_DAY_END_HOUR   = 23;
 
-// ── Shared add-on data (mirrors BookingModal) ──────────────────────────────
+// ── Shared add-on data (mirrors BookingModal + July 2026 lineup) ───────────
+// Admin sees ALL add-ons including retired ones so historical bookings still
+// render correctly. New passenger-vehicle bookings should only surface the
+// 8 basics + Premium Ceramic sections (see the customer BookingModal for that).
 const ADMIN_ADDONS = [
-  // Vehicle — standard
-  { id: "engine_bay",        label: "Engine Bay Detail",                     price: 85  },
-  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65  },
-  { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 75  },
+  // ── The 8 basics (July 2026 canonical) ──
+  { id: "engine_bay",        label: "Engine Bay Detail",                     price: 65  },
+  { id: "headlight_restore", label: "Headlight Restoration (pair)",          price: 75  },
   { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
-  { id: "uv_interior",       label: "UV Protection & Interior Restoration",  price: 35  },
-  { id: "leather_condition", label: "Leather Conditioning",                  price: 45  },
+  { id: "salt_stain_removal",label: "Mild–Medium Salt Removal",              price: 65  },
+  { id: "leather_condition", label: "Leather Conditioning",                  price: 40  },
+  { id: "ozone_treatment",   label: "Ozone Treatment",                       price: 60  },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50  },
-  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 75  },
-  { id: "tar_bug",           label: "Tar, Bug & Sap Removal",               price: 35  },
-  // Build Your Package add-ons
-  { id: "headliner_clean",   label: "Headliner Cleaning",                    price: 40  },
-  { id: "salt_stain_removal",label: "Standard Salt Stain Removal",           price: 45  },
-  { id: "steam_sanitation",  label: "Steam Sanitation (free at 3+ addons)",  price: 45  },
+  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 50  },
+  // ── July 2026 special ──
+  { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade",   price: 45  },
+  { id: "ultimate_ext_addon",   label: "+ Exterior Detail (Ultimate bundle)", price: 65 },
+  // ── Premium Ceramic sections ──
+  { id: "premium_ceramic_hood",           label: "Premium Ceramic — Hood",              price: 85  },
+  { id: "premium_ceramic_roof",           label: "Premium Ceramic — Roof",              price: 75  },
+  { id: "premium_ceramic_trunk",          label: "Premium Ceramic — Trunk",             price: 60  },
+  { id: "premium_ceramic_front_bumper",   label: "Premium Ceramic — Front Bumper",      price: 65  },
+  { id: "premium_ceramic_rear_bumper",    label: "Premium Ceramic — Rear Bumper",       price: 65  },
+  { id: "premium_ceramic_doors",          label: "Premium Ceramic — All Doors",         price: 110 },
+  { id: "premium_ceramic_fenders",        label: "Premium Ceramic — All Fenders",       price: 75  },
+  { id: "premium_ceramic_mirrors",        label: "Premium Ceramic — Mirrors",           price: 30  },
+  { id: "premium_ceramic_wheels",         label: "Premium Ceramic — Wheels + Calipers", price: 150 },
+  { id: "premium_ceramic_windshield",     label: "Premium Ceramic — Windshield",        price: 95  },
+  { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", price: 175 },
+  { id: "premium_ceramic_full_glass",     label: "Premium Ceramic — Full Glass",        price: 250 },
+  { id: "premium_ceramic_full_body",      label: "Premium Ceramic — Full Body (sedan)", price: 650 },
+  // ── LEGACY (historical bookings) — retained so old bookings render ──
+  { id: "odor_bomb",         label: "[legacy] Strong Odor Elimination",      price: 75  },
+  { id: "uv_interior",       label: "[legacy] UV Protection",                price: 35  },
+  { id: "tar_bug",           label: "[legacy] Tar, Bug & Sap Removal",       price: 35  },
+  { id: "headliner_clean",   label: "[legacy] Headliner Cleaning",           price: 40  },
+  { id: "steam_sanitation",  label: "[legacy] Steam Sanitation",             price: 45  },
   { id: "seat_removal_driver",    label: "Seat Removal — Driver Side",       price: 60  },
   { id: "seat_removal_passenger", label: "Seat Removal — Passenger Side",    price: 60  },
   { id: "seat_removal_rear",      label: "Seat Removal — Rear Seats",        price: 85  },
@@ -135,7 +157,6 @@ const ADMIN_ADDONS = [
   { id: "seat_removal_all_3row",  label: "All Seats — 3-Row Bundle",         price: 225 },
   { id: "trim_dressing",     label: "Rubber, Plastics & Vinyl Dressing",     price: 30  },
   { id: "mech_chem_decon",   label: "Mechanical & Chemical Decontamination", price: 85  },
-  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on", price: 85  },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30  },
   { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",      price: 45  },
   { id: "floor_all",         label: "Floorboard Shampoo – All",             price: 60  },
@@ -293,7 +314,7 @@ export function NewBookingForm({
   // $40 otherwise. Only kicks in with 2+ vehicles.
   const ADMIN_MULTI_VEHICLE_SERVICES = [
     "Interior Detail", "Exterior Detail", "Full Detail",
-    "Ultimate Interior Reset", "Ultimate Interior + Exterior Reset",
+    "Ultimate Interior Reset",
   ];
   const getAdminMultiVehicleDiscount = (subtotal: number, vehicleCount: number): number => {
     if (vehicleCount < 2) return 0;
@@ -390,27 +411,50 @@ export function NewBookingForm({
   const selectedService = services.find((s: any) => s.id === serviceId);
   const supportsAdminMultiVehicle = ADMIN_MULTI_VEHICLE_SERVICES.includes(selectedService?.name ?? "");
 
-  // Resolves the add-on list for a given vehicle-pathway service name —
-  // used for both the primary service and each additional vehicle in
-  // multi-vehicle bookings.
+  // Resolves the add-on list for a given vehicle-pathway service name — July 2026 lineup.
+  // Surfaces: the 8 basics + special (ceramic upgrade, Ultimate + Ext toggle) +
+  // Premium Ceramic sections. Retired add-ons (seat removal, gentech, window
+  // coats, uv/odor/headliner/tar/decon/salt/floor/steam/trim/polish_ceramic)
+  // never appear in the admin New Booking picker.
   const vehicleAddonsForServiceName = (name: string) => {
     const n = (name ?? "").toLowerCase();
-    const isInteriorOnly = n.includes("interior") && !n.includes("exterior") && !n.includes("full");
-    const isMaintenance  = n.includes("maintenance");
-    const windowIds = (!isInteriorOnly && !isMaintenance) ? WINDOW_COATING_ADDON_IDS : [];
-    if (n.includes("paint") || n.includes("correction")) return ADMIN_ADDONS.filter(a => ["engine_bay","ceramic_3yr","wheel_ceramic","ultimate_interior", ...windowIds].includes(a.id));
-    if (n.includes("ultimate")) {
-      const includesExterior = n.includes("exterior");
-      const ultimateIds = ["engine_bay","polish_ceramic","headlight_restore","ozone_treatment", ...windowIds];
-      if (includesExterior) { ultimateIds.push("ceramic_3yr"); ultimateIds.push("wheel_ceramic"); }
-      return ADMIN_ADDONS.filter(a => ultimateIds.includes(a.id));
+    const premiumCeramicIds = ADMIN_ADDONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
+    if (n.includes("paint") || n.includes("correction")) {
+      return ADMIN_ADDONS.filter(a => [
+        "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
+        ...premiumCeramicIds,
+      ].includes(a.id));
     }
-    if (n === "exterior detail") return ADMIN_ADDONS.filter(a => [...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
-    if (n === "interior detail") return ADMIN_ADDONS.filter(a => BUILDER_INTERIOR_IDS.includes(a.id));
-    if (n === "full detail")     return ADMIN_ADDONS.filter(a => [...BUILDER_INTERIOR_IDS, ...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
-    if (n.includes("exterior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...windowIds].includes(a.id));
-    if (n.includes("interior") && !n.includes("full"))   return ADMIN_ADDONS.filter(a => VEHICLE_ADDON_IDS.includes(a.id));
-    return ADMIN_ADDONS.filter(a => [...VEHICLE_ADDON_IDS, ...BUILDER_INTERIOR_IDS, ...BUILDER_EXTERIOR_IDS, ...windowIds].includes(a.id));
+    if (n.includes("ultimate")) {
+      return ADMIN_ADDONS.filter(a => [
+        "engine_bay", "headlight_restore", "clay_bar",
+        "salt_stain_removal", "ozone_treatment",
+        "ceramic_6_10_upgrade", "ultimate_ext_addon",
+      ].includes(a.id));
+    }
+    if (n.includes("exterior") && !n.includes("full")) {
+      return ADMIN_ADDONS.filter(a => [
+        "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
+        ...premiumCeramicIds,
+      ].includes(a.id));
+    }
+    if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
+      return ADMIN_ADDONS.filter(a => [
+        "upholstery_shampoo", "salt_stain_removal", "leather_condition",
+        "ozone_treatment", "pet_hair",
+      ].includes(a.id));
+    }
+    if (n.includes("maintenance")) {
+      return ADMIN_ADDONS.filter(a => a.id === "engine_bay");
+    }
+    // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic
+    return ADMIN_ADDONS.filter(a => [
+      "engine_bay", "headlight_restore", "clay_bar",
+      "upholstery_shampoo", "salt_stain_removal", "leather_condition",
+      "ozone_treatment", "pet_hair",
+      "ceramic_6_10_upgrade",
+      ...premiumCeramicIds,
+    ].includes(a.id));
   };
 
   const availableAddons = useMemo(() => {
@@ -1525,9 +1569,14 @@ export default function SchedulePage() {
   const updateOpHours   = useUpdateOperatingHours();
   const { toast }       = useToast();
 
-  const [viewMode, setViewMode]   = useState<"month" | "day">("month");
+  const [viewMode, setViewMode]   = useState<"month" | "week" | "day">("week");
   const [monthDate, setMonthDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(new Date());
+  // Week view drag-and-drop state — lifted to top level so hooks
+  // don't get called conditionally when WeekView renders (fixes React
+  // "change in the order of Hooks" error). Only meaningful when viewMode === "week".
+  const [weekDragOverKey, setWeekDragOverKey] = useState<string | null>(null);
+  const [weekRescheduling, setWeekRescheduling] = useState(false);
   const [activeBooking, setActiveBooking]   = useState<any>(null);
   const [showNewBooking, setShowNewBooking] = useState(false);
   const [newBookingDirty, setNewBookingDirty] = useState(false);
@@ -2209,6 +2258,261 @@ export default function SchedulePage() {
     );
   }
 
+  // ── WEEK VIEW — 5 clean day columns, Mon-Fri ──────────────────────────────
+  // No time-grid overlays. Each day is a card; bookings list vertically
+  // inside, sorted by start time. Drag a booking card → drop on another day
+  // to reschedule (keeps original time-of-day). Click a card to open its Day
+  // View for editing.
+  //
+  // CRITICAL: no hooks inside this function. All hooks are declared at the
+  // top level of SchedulePage.
+  function WeekView() {
+    // Cheap sync computation of the Mon-Fri window around selectedDay.
+    const wsd = new Date(selectedDay);
+    const dow = wsd.getDay();
+    const diffToMon = dow === 0 ? -6 : 1 - dow;
+    wsd.setDate(wsd.getDate() + diffToMon);
+    wsd.setHours(0, 0, 0, 0);
+    const weekStart = wsd;
+    const weekDays: Date[] = Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+
+    // Drag state aliases — refs the top-level state.
+    const dragOverKey = weekDragOverKey;
+    const setDragOverKey = setWeekDragOverKey;
+    const rescheduling = weekRescheduling;
+    const setRescheduling = setWeekRescheduling;
+
+    const handleDragStart = (e: React.DragEvent, booking: any) => {
+      e.dataTransfer.setData("text/plain", JSON.stringify({
+        id: booking.id,
+        originalDate: booking.booking_date,
+        originalTime: booking.booking_time,
+      }));
+      e.dataTransfer.effectAllowed = "move";
+    };
+    const handleDragOver = (e: React.DragEvent, key: string) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (dragOverKey !== key) setDragOverKey(key);
+    };
+    const handleDayDrop = async (e: React.DragEvent, date: Date) => {
+      e.preventDefault();
+      setDragOverKey(null);
+      const raw = e.dataTransfer.getData("text/plain");
+      if (!raw) return;
+      let payload: any;
+      try { payload = JSON.parse(raw); } catch { return; }
+      if (!payload?.id) return;
+
+      const newDate = format(date, "yyyy-MM-dd");
+      // Keep the same time-of-day when dropping on a different day.
+      const keepTime = (payload.originalTime ?? "13:00").slice(0, 5);
+      if (payload.originalDate === newDate) return; // no-op
+      setRescheduling(true);
+      try {
+        const result = await rescheduleBookingAction(payload.id, newDate, keepTime);
+        if (result?.success) {
+          toast(`Moved to ${format(date, "EEE MMM d")}`);
+          await refetch();
+        } else {
+          toast("Reschedule failed");
+        }
+      } catch {
+        toast("Reschedule failed");
+      } finally {
+        setRescheduling(false);
+      }
+    };
+
+    return (
+      <div className="space-y-3">
+        {/* Week navigation */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => {
+              const prev = new Date(weekStart);
+              prev.setDate(prev.getDate() - 7);
+              setSelectedDay(prev);
+            }}
+            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] transition-all active:scale-90"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <div className="flex items-center gap-2">
+            <Calendar size={14} className="text-amber-500" />
+            <div className="text-sm font-black text-zinc-100">
+              {format(weekStart, "MMM d")} <span className="text-zinc-600">–</span> {format(weekDays[4], "MMM d, yyyy")}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const next = new Date(weekStart);
+              next.setDate(next.getDate() + 7);
+              setSelectedDay(next);
+            }}
+            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] transition-all active:scale-90"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        <div className="flex justify-center">
+          <button
+            onClick={() => setSelectedDay(new Date())}
+            className="text-[10px] font-black uppercase tracking-widest text-amber-500/70 hover:text-amber-500 transition-colors"
+          >
+            Jump to Today
+          </button>
+        </div>
+
+        {rescheduling && (
+          <div className="flex items-center justify-center gap-2 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <Loader2 size={14} className="animate-spin text-amber-500" />
+            <span className="text-xs font-bold text-amber-400">Rescheduling…</span>
+          </div>
+        )}
+
+        {/* 5-column day grid — one card per day */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+          {weekDays.map((day) => {
+            const dayStr = format(day, "yyyy-MM-dd");
+            const isTodayDay = isToday(day);
+            const isSel = isSameDay(day, selectedDay);
+            const dropKey = `day-${dayStr}`;
+            const isDropTarget = dragOverKey === dropKey;
+            const dayBks = getBookingsForDate(day).sort((a: any, b: any) =>
+              (a.booking_time ?? "").localeCompare(b.booking_time ?? "")
+            );
+            const realBks = dayBks.filter((b: any) => b.service_name !== "Personal Block");
+            const dayRevenue = realBks.reduce((sum: number, b: any) => sum + (Number(b.total_price) || 0), 0);
+            return (
+              <div
+                key={dayStr}
+                onDragOver={(e) => handleDragOver(e, dropKey)}
+                onDragLeave={() => setDragOverKey(null)}
+                onDrop={(e) => handleDayDrop(e, day)}
+                className={cn(
+                  "rounded-2xl border overflow-hidden transition-all min-h-[240px] flex flex-col",
+                  isDropTarget
+                    ? "border-amber-400/60 bg-amber-500/10 shadow-[0_0_16px_rgba(245,158,11,0.20)]"
+                    : isSel
+                      ? "border-amber-500/30 bg-zinc-900/60"
+                      : isTodayDay
+                        ? "border-amber-500/25 bg-amber-500/[0.03]"
+                        : "border-white/[0.06] bg-zinc-900/30"
+                )}
+              >
+                {/* Header */}
+                <button
+                  onClick={() => { setSelectedDay(day); setViewMode("day"); }}
+                  className={cn(
+                    "px-3 py-2 flex items-center justify-between border-b transition-colors text-left",
+                    isTodayDay ? "border-amber-500/20 bg-amber-500/[0.05]" : "border-white/[0.05] bg-zinc-950/40",
+                    "hover:bg-white/[0.03]"
+                  )}
+                >
+                  <div>
+                    <div className={cn(
+                      "text-[9px] font-black uppercase tracking-[0.2em]",
+                      isTodayDay ? "text-amber-500" : "text-zinc-500"
+                    )}>
+                      {format(day, "EEE")}
+                      {isTodayDay && <span className="ml-1 text-amber-400">· Today</span>}
+                    </div>
+                    <div className={cn(
+                      "text-xl font-black tabular-nums leading-tight",
+                      isTodayDay ? "text-amber-400" : "text-zinc-100"
+                    )}>
+                      {format(day, "MMM d")}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={cn(
+                      "text-sm font-black tabular-nums leading-tight",
+                      realBks.length === 0 ? "text-zinc-600" : "text-zinc-200"
+                    )}>
+                      {realBks.length}
+                    </div>
+                    <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-500 leading-tight">
+                      {realBks.length === 1 ? "job" : "jobs"}
+                    </div>
+                    {dayRevenue > 0 && (
+                      <div className="text-[9px] font-bold tabular-nums text-emerald-400/80 mt-0.5">
+                        ${dayRevenue.toFixed(0)}
+                      </div>
+                    )}
+                  </div>
+                </button>
+
+                {/* Booking cards */}
+                <div className="flex-1 p-2 flex flex-col gap-1.5 overflow-y-auto">
+                  {dayBks.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center text-center py-6">
+                      <p className="text-[10px] text-zinc-600 leading-relaxed">
+                        No bookings<br />
+                        <span className="text-zinc-700">Drop here to move</span>
+                      </p>
+                    </div>
+                  ) : (
+                    dayBks.map((b: any) => {
+                      const bTime = (b.booking_time ?? "").slice(0, 5);
+                      const dur = b.duration_override ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
+                      const isBlk = b.service_name === "Personal Block";
+                      const isCompleted = b.status === "completed";
+                      return (
+                        <div
+                          key={b.id}
+                          draggable={!isBlk}
+                          onDragStart={(e) => handleDragStart(e, b)}
+                          onClick={() => setActiveBooking(b)}
+                          className={cn(
+                            "rounded-lg px-2 py-1.5 border overflow-hidden cursor-pointer transition-all hover:shadow-md active:opacity-70",
+                            !isBlk && "cursor-move",
+                            isBlk
+                              ? "bg-zinc-800/60 border-zinc-700/60 text-zinc-300"
+                              : isCompleted
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-100 hover:bg-emerald-500/15"
+                                : "bg-amber-500/10 border-amber-500/30 text-amber-100 hover:bg-amber-500/15"
+                          )}
+                          title={isBlk ? "Personal block" : `${b.customer_name ?? "Guest"} · ${b.service_name} · Drag to move`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <div className="text-[10px] font-black tabular-nums">
+                              {bTime ? to12h(bTime) : "—"}
+                            </div>
+                            <div className="text-[8px] font-bold uppercase tracking-wider opacity-60">
+                              {Math.round(dur / 60)}h{dur % 60 !== 0 ? `${dur % 60}m` : ""}
+                            </div>
+                          </div>
+                          <div className="text-[11px] font-black leading-tight truncate">
+                            {isBlk ? "Personal Block" : (b.customer_name ?? "Guest")}
+                          </div>
+                          {!isBlk && b.service_name && (
+                            <div className="text-[9px] font-medium leading-tight truncate opacity-80 mt-0.5">
+                              {b.service_name}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-[10px] text-zinc-600 text-center">
+          Drag a booking card to another day to reschedule · Click any card to open it · Click the day header for full day view
+        </p>
+      </div>
+    );
+  }
+
   // ── DAY VIEW ──────────────────────────────────────────────────────────────
   function DayView() {
     function timeRange(b: any): string {
@@ -2469,6 +2773,9 @@ export default function SchedulePage() {
             <button onClick={() => setViewMode("month")}
               className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
                 viewMode === "month" ? "bg-amber-500 text-black" : "text-zinc-500")}>Month</button>
+            <button onClick={() => setViewMode("week")}
+              className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                viewMode === "week" ? "bg-amber-500 text-black" : "text-zinc-500")}>Week</button>
             <button onClick={() => setViewMode("day")}
               className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
                 viewMode === "day" ? "bg-amber-500 text-black" : "text-zinc-500")}>Day</button>
@@ -2485,6 +2792,8 @@ export default function SchedulePage() {
           <div className="flex justify-center py-8"><Loader2 className="animate-spin text-amber-500" size={24} /></div>
         ) : viewMode === "month" ? (
           MonthView()
+        ) : viewMode === "week" ? (
+          WeekView()
         ) : (
           DayView()
         )}

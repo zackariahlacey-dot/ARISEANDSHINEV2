@@ -133,7 +133,7 @@ function buildTownSchema(town: ReturnType<typeof getTownBySlug>) {
           "@type": "City",
           name:    `${town.shortName}, VT`,
         },
-        description: `Premium mobile auto detailing in ${town.shortName}, Vermont. Interior, Exterior, Basic Interior + Exterior, Ultimate Series, and 5-Year Gentech Graphene Coating. We come to you anywhere in ${town.shortName}.`,
+        description: `Premium mobile auto detailing in ${town.shortName}, Vermont. Interior, Exterior, Interior + Exterior, Ultimate Series, and 5-Year Gentech Graphene Coating. We come to you anywhere in ${town.shortName}.`,
         offers: {
           "@type": "AggregateOffer",
           priceCurrency: "USD",

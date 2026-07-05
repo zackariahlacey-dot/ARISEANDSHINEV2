@@ -1,70 +1,68 @@
-// Canonical add-on catalogue used by admin Quick Book + BookingVehiclesPanel.
-// Mirrors BookingModal's customer-facing list so prices stay in sync.
+// Canonical add-on catalogue for admin (Quick Book + BookingVehiclesPanel).
+// Mirrors the customer-facing list in lib/addonMeta.ts so prices stay in sync.
+// July 2026 lineup — 8 basics + special + Premium Ceramic sections.
 export type AdminAddon = { id: string; label: string; price: number };
 
 export const ADMIN_ADDONS: AdminAddon[] = [
-  // Vehicle — standard
-  { id: "engine_bay",        label: "Engine Bay Detail",                     price: 85  },
-  { id: "headlight_restore", label: "Headlight Restoration",                 price: 65  },
-  { id: "odor_bomb",         label: "Strong Odor Elimination",               price: 75  },
-  { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
-  { id: "uv_interior",       label: "UV Protection & Interior Restoration",  price: 35  },
-  { id: "leather_condition", label: "Leather Conditioning",                  price: 45  },
-  { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50  },
-  { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 75  },
-  { id: "tar_bug",           label: "Tar, Bug & Sap Removal",                price: 35  },
-  // Build Your Package add-ons
-  { id: "headliner_clean",   label: "Headliner Cleaning",                    price: 40  },
-  { id: "salt_stain_removal",label: "Standard Salt Stain Removal",           price: 45  },
-  { id: "steam_sanitation",  label: "Steam Sanitation (free at 3+ addons)",  price: 45  },
-  { id: "seat_removal_driver",    label: "Seat Removal — Driver Side",       price: 60  },
-  { id: "seat_removal_passenger", label: "Seat Removal — Passenger Side",    price: 60  },
-  { id: "seat_removal_rear",      label: "Seat Removal — Rear Seats",        price: 85  },
-  { id: "seat_removal_3rd_row",   label: "Seat Removal — 3rd Row",           price: 95  },
-  { id: "seat_removal_all_2row",  label: "All Seats — 2-Row Bundle",         price: 150 },
-  { id: "seat_removal_all_3row",  label: "All Seats — 3-Row Bundle",         price: 225 },
-  { id: "trim_dressing",     label: "Rubber, Plastics & Vinyl Dressing",     price: 30  },
-  { id: "mech_chem_decon",   label: "Mechanical & Chemical Decontamination", price: 85  },
-  { id: "salt_recovery_addon", label: "Salt Recovery — Undercarriage Add-on", price: 85  },
-  { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",        price: 30  },
-  { id: "floor_2",           label: "Floorboard Shampoo – 2 Sections",       price: 45  },
-  { id: "floor_all",         label: "Floorboard Shampoo – All",              price: 60  },
-  // Vehicle — ultimate upgrades
-  { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic",        price: 350 },
-  { id: "ozone_treatment",   label: "Ozone Odor Elimination",                price: 75  },
-  // 2-Year Graphene Window Coating (flat-priced, 3-tier)
-  { id: "window_coat_windshield", label: "2-Year Graphene Window — Windshield",      price: 100 },
-  { id: "window_coat_front",      label: "2-Year Graphene Window — Front 3 Windows", price: 150 },
-  { id: "window_coat_all",        label: "2-Year Graphene Window — All Windows",     price: 250 },
-  // 2-Year Pro Ceramic Sealant (size-tier priced; defaults to small tier)
-  { id: "ceramic_3yr",            label: "5-Year Gentech Graphene Coating",          price: 250 },
-  // Wheel & Caliper Ceramic Coating (flat price)
-  { id: "wheel_ceramic",          label: "Wheel & Caliper Ceramic Coating",          price: 125 },
-  // Ultimate Interior add-on (flat — adds 3 hrs)
-  { id: "ultimate_interior",      label: "Ultimate Interior Add-on (+3 hrs)",        price: 175 },
-  // Marine
-  { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows",             price: 100 },
-  { id: "marine_engine_bay", label: "Marine Engine Bay",                     price: 150 },
-  // RV
-  { id: "rv_awning",         label: "Awning Deep Clean",                     price: 60  },
-  { id: "rv_slide_seal",     label: "Slide-Out Seal Conditioning",           price: 50  },
-  { id: "rv_roof_coat",      label: "Rubber Roof Sealant Coat",              price: 80  },
-  { id: "rv_generator",      label: "Generator Bay Detail",                  price: 75  },
-  { id: "rv_step",           label: "Entry Step & Threshold",                price: 30  },
+  // ── The 8 basics ──────────────────────────────────────────────────────
+  { id: "engine_bay",         label: "Engine Bay Detail",              price: 65 },
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo",    price: 75 },
+  { id: "salt_stain_removal", label: "Mild–Medium Salt Removal",       price: 65 },
+  { id: "leather_condition",  label: "Leather Conditioning",           price: 40 },
+  { id: "ozone_treatment",    label: "Ozone Treatment",                price: 60 },
+  { id: "clay_bar",           label: "Clay Bar Treatment",             price: 50 },
+  { id: "pet_hair",           label: "Heavy Pet Hair Removal",         price: 50 },
+  { id: "headlight_restore",  label: "Headlight Restoration (pair)",   price: 75 },
+
+  // ── Special add-ons ───────────────────────────────────────────────────
+  { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade", price: 45 },
+  { id: "ultimate_ext_addon",   label: "+ Exterior Detail (Ultimate bundle, sedan)", price: 65 },
+
+  // ── Premium Ceramic — section-by-section ──────────────────────────────
+  { id: "premium_ceramic_hood",            label: "Premium Ceramic — Hood",              price: 85  },
+  { id: "premium_ceramic_roof",            label: "Premium Ceramic — Roof",              price: 75  },
+  { id: "premium_ceramic_trunk",           label: "Premium Ceramic — Trunk / Rear Hatch", price: 60 },
+  { id: "premium_ceramic_front_bumper",    label: "Premium Ceramic — Front Bumper",      price: 65  },
+  { id: "premium_ceramic_rear_bumper",     label: "Premium Ceramic — Rear Bumper",       price: 65  },
+  { id: "premium_ceramic_doors",           label: "Premium Ceramic — All Doors",         price: 110 },
+  { id: "premium_ceramic_fenders",         label: "Premium Ceramic — All Fenders",       price: 75  },
+  { id: "premium_ceramic_mirrors",         label: "Premium Ceramic — Mirrors (pair)",    price: 30  },
+  { id: "premium_ceramic_wheels",          label: "Premium Ceramic — Wheels + Calipers", price: 150 },
+  { id: "premium_ceramic_windshield",      label: "Premium Ceramic — Windshield",        price: 95  },
+  { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", price: 175 },
+  { id: "premium_ceramic_full_glass",      label: "Premium Ceramic — Full Glass",        price: 250 },
+  { id: "premium_ceramic_full_body",       label: "Premium Ceramic — Full Body (sedan)", price: 650 },
+
+  // ── Marine (unchanged — separate flow) ────────────────────────────────
+  { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows", price: 100 },
+  { id: "marine_engine_bay", label: "Marine Engine Bay",         price: 150 },
+
+  // ── RV (unchanged — separate flow) ────────────────────────────────────
+  { id: "rv_awning",     label: "Awning Deep Clean",              price: 60 },
+  { id: "rv_slide_seal", label: "Slide-Out Seal Conditioning",    price: 50 },
+  { id: "rv_roof_coat",  label: "Rubber Roof Sealant Coat",       price: 80 },
+  { id: "rv_generator",  label: "Generator Bay Detail",           price: 75 },
+  { id: "rv_step",       label: "Entry Step & Threshold",         price: 30 },
 ];
 
-const CERAMIC_3YR_PRICES: Record<string, number> = { sedan: 300, suv: 350, xl: 400, medium: 300, large: 350, extra_large: 400 };
+/** Size-tiered base prices for add-ons where size matters. */
+const ULTIMATE_EXT_ADDON_PRICES: Record<string, number> = {
+  sedan: 65, medium: 65,
+  suv: 80, large: 80,
+  xl: 95, extra_large: 95,
+};
+const PREMIUM_CERAMIC_FULL_BODY_PRICES: Record<string, number> = {
+  sedan: 650, medium: 650,
+  suv: 775, large: 775,
+  xl: 895, extra_large: 895,
+};
 
-/** Returns the effective price for an add-on given the vehicle size. Handles
- *  the size-tier and flat-price special cases that customer-facing UI applies. */
+/** Returns the effective price for an add-on given the vehicle size. */
 export function getAddonPrice(id: string, vehicleSize: string): number {
   const a = ADMIN_ADDONS.find(x => x.id === id);
   if (!a) return 0;
-  if (id === "window_coat_windshield") return 100;
-  if (id === "window_coat_front")      return 150;
-  if (id === "window_coat_all")        return 250;
-  if (id === "ceramic_3yr")            return CERAMIC_3YR_PRICES[vehicleSize] ?? a.price;
-  if (id === "upholstery_shampoo" && (vehicleSize === "xl" || vehicleSize === "extra_large")) return a.price + 20;
+  if (id === "ultimate_ext_addon")        return ULTIMATE_EXT_ADDON_PRICES[vehicleSize] ?? a.price;
+  if (id === "premium_ceramic_full_body") return PREMIUM_CERAMIC_FULL_BODY_PRICES[vehicleSize] ?? a.price;
   return a.price;
 }
 

@@ -91,7 +91,7 @@ export function buildServiceSchema({
 export const AUTO_DETAILING_SCHEMA = buildServiceSchema({
   name: "Mobile Auto Detailing",
   description:
-    "Professional mobile car detailing in Vermont — Interior, Exterior, and Basic Interior + Exterior packages. We come to your home, office, or driveway anywhere in Chittenden County and beyond.",
+    "Professional mobile car detailing in Vermont — Interior, Exterior, and Interior + Exterior packages. We come to your home, office, or driveway anywhere in Chittenden County and beyond.",
   url: "https://www.ariseandshinedetailing.com/detailing",
   lowPrice: 130,
   highPrice: 400,

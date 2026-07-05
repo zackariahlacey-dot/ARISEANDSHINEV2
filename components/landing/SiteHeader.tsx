@@ -22,21 +22,15 @@ const ADMIN_EMAIL = "zackariahlacey@gmail.com";
 
 const NAV_LINKS = [
   { href: "/",                 label: "Home"             },
-  { href: "/detailing",        label: "Auto"             },
-  { href: "/boat-detailing",   label: "Boat"             },
-  { href: "/rv-detailing",     label: "RV"               },
-  { href: "/truck-detailing",  label: "Truck"            },
+  { href: "/detailing",        label: "Auto Detailing"   },
+  { href: "/paint-correction", label: "Paint Correction" },
   { href: "/about",            label: "About"            },
   { href: "/contact",          label: "Contact"          },
 ];
 
 const SERVICE_LINKS = [
-  { href: "/detailing",                  label: "Auto Detailing",        icon: Sparkles,  desc: "Cars, trucks & SUVs"           },
-  { href: "/boat-detailing",             label: "Boat Detailing",        icon: Anchor,    desc: "Per-foot · Lake Champlain"     },
-  { href: "/rv-detailing",               label: "RV Detailing",          icon: Truck,     desc: "Per-foot · motorhomes & 5ers"  },
-  { href: "/truck-detailing",            label: "Semi Truck Detailing",  icon: Container, desc: "Day cabs & sleepers · on-site" },
-  { href: "/heavy-equipment-detailing",  label: "Heavy Equipment",       icon: Tractor,   desc: "Cab interiors · excavators, loaders, log trucks" },
-  { href: "/fleet",                      label: "Fleet Quotes",          icon: Building2, desc: "4+ vehicles · up to 20% off"   },
+  { href: "/detailing",        label: "Auto Detailing",  icon: Sparkles, desc: "Interior, Exterior & Full Detail" },
+  { href: "/paint-correction", label: "Paint Correction", icon: Sparkles, desc: "1-Step, 2-Step + Premium Ceramic" },
 ];
 
 const MORE_LINKS = [

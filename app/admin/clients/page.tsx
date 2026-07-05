@@ -37,7 +37,7 @@ const EMAIL_TEMPLATES = [
     id: "maintenance",
     label: "🔄 Maintenance Plan",
     subject: "Keep the shine — monthly maintenance plan",
-    body: "Hi {{name}},\n\nWant to keep that showroom shine all year round? Our Monthly Maintenance Plan keeps your vehicle looking its best without the hassle.\n\n✅ Interior Monthly Plan — $75/mo\n✅ Basic Interior + Exterior Monthly Plan — $120/mo\n\nReply to this email or visit ariseandshinedetailing.com to sign up. First month is on us if you book this week!\n\n– Zack\nArise And Shine Detailing",
+    body: "Hi {{name}},\n\nWant to keep that showroom shine all year round? Our Monthly Maintenance Plan keeps your vehicle looking its best without the hassle.\n\n✅ Interior Monthly Plan — $75/mo\n✅ Interior + Exterior Monthly Plan — $120/mo\n\nReply to this email or visit ariseandshinedetailing.com to sign up. First month is on us if you book this week!\n\n– Zack\nArise And Shine Detailing",
   },
   {
     id: "promo",

@@ -77,7 +77,7 @@ const RV_DISPLAY: Record<string, string> = {
  *  customer-facing name and the internal DB key so the owner knows what
  *  was booked at both levels. */
 const AUTO_FRIENDLY_LABELS: Record<string, string> = {
-  "Full Detail": "Basic Interior + Exterior",
+  "Full Detail": "Interior + Exterior",
 };
 
 function displayService(name: string, type: ServiceType): string {

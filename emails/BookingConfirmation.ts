@@ -204,9 +204,9 @@ const RV_DISPLAY: Record<string, string> = {
 };
 
 /** Customer-facing friendly labels for auto services — keeps the DB key
- *  "Full Detail" intact while customers see "Basic Interior + Exterior". */
+ *  "Full Detail" intact while customers see "Interior + Exterior". */
 const AUTO_FRIENDLY_LABELS: Record<string, string> = {
-  "Full Detail": "Basic Interior + Exterior",
+  "Full Detail": "Interior + Exterior",
 };
 
 function getDisplayServiceName(serviceName: string, type: ServiceType): string {

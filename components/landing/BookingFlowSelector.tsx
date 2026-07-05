@@ -2,58 +2,28 @@
 
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Car, Anchor, Truck, Container, Tractor, Zap } from "lucide-react";
+import { X, Car, Sparkles, Zap } from "lucide-react";
 
 const FLOWS = [
   {
     href: "/detailing",
     icon: Car,
     title: "Auto Detailing",
-    desc: "Cars, trucks, SUVs & vans — interior, exterior, full & ultimate packages",
+    desc: "Interior, Exterior, Full Detail & Ultimate Interior Reset",
     border: "border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04]",
     iconColor: "text-[#D4AF37]",
     iconBg: "bg-[#D4AF37]/10",
     badge: null,
   },
   {
-    href: "/boat-detailing",
-    icon: Anchor,
-    title: "My Boat",
-    desc: "Powerboats, pontoons, sailboats & center consoles — per-foot pricing from $20/ft",
-    border: "border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/[0.04]",
-    iconColor: "text-blue-400",
-    iconBg: "bg-blue-500/10",
-    badge: "15 ft min",
-  },
-  {
-    href: "/rv-detailing",
-    icon: Truck,
-    title: "My RV / Motorhome",
-    desc: "Class A/B/C motorhomes, travel trailers, fifth wheels & camper vans — from $18/ft",
-    border: "border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/[0.04]",
-    iconColor: "text-emerald-400",
-    iconBg: "bg-emerald-500/10",
-    badge: "20 ft min",
-  },
-  {
-    href: "/truck-detailing",
-    icon: Container,
-    title: "My Semi Truck",
-    desc: "Day cabs, sleepers & owner-operator rigs — yard washes from $99, full details from $449",
-    border: "border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/[0.04]",
-    iconColor: "text-orange-400",
-    iconBg: "bg-orange-500/10",
-    badge: "On-site",
-  },
-  {
-    href: "/heavy-equipment-detailing",
-    icon: Tractor,
-    title: "Heavy Equipment",
-    desc: "Excavators, dozers, loaders, log & dump trucks — cab interiors from $175 or $95/hr on-site",
-    border: "border-yellow-500/20 hover:border-yellow-500/40 hover:bg-yellow-500/[0.04]",
-    iconColor: "text-yellow-400",
-    iconBg: "bg-yellow-500/10",
-    badge: "Cab interior",
+    href: "/paint-correction",
+    icon: Sparkles,
+    title: "Paint Correction",
+    desc: "1-Step, 2-Step machine polish + Premium Ceramic coating",
+    border: "border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04]",
+    iconColor: "text-[#D4AF37]",
+    iconBg: "bg-[#D4AF37]/10",
+    badge: "Premium",
   },
 ] as const;
 

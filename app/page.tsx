@@ -16,6 +16,9 @@ export type Service = {
   /** Optional Supabase service category — used by the booking modal to route
    *  semi truck and heavy equipment services into the right pathway. */
   category?: string | null;
+  /** Optional is_active — customer-facing queries filter by this so
+   *  retired SKUs never surface even if the migration hasn't run yet. */
+  is_active?: boolean;
 };
 
 async function ServicesProvider() {
@@ -24,7 +27,8 @@ async function ServicesProvider() {
   const [{ data: services }, addonOverrides, nextSlot] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription, category")
+      .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription, category, is_active")
+      .eq("is_active", true)
       .order("price_small", { ascending: true }),
     getAddonOverridesMap(),
     getNextAvailableSlot().catch(() => null),

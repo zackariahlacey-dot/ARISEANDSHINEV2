@@ -94,10 +94,12 @@ function getGoogleCalendarUrl(data: BookingEmailData): string {
 }
 
 const VEHICLE_SIZE_LABELS: Record<string, string> = {
-  compact: "Compact / Hatchback",
   sedan: "Sedan / Coupe",
-  suv: "SUV / Crossover",
-  truck: "Truck / Van",
+  suv: "SUV / Truck",
+  xl: "3-Row / Work Van",
+  // Legacy mappings for older bookings
+  compact: "Sedan / Coupe",
+  truck: "3-Row / Work Van",
 };
 
 function formatDate(dateStr: string): string {
@@ -255,6 +257,21 @@ function customerEmailHtml(
                 and we can't wait to take care of your vehicle. Here's a full summary
                 of your appointment.
               </p>
+
+              ${data.serviceName.toLowerCase().includes("ultimate") ? `
+              <!-- Ultimate disclaimer -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#fffbeb;border-left:3px solid #f59e0b;border-radius:6px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="font-size:11px;font-weight:800;color:#92400e;margin:0 0 4px;letter-spacing:0.1em;text-transform:uppercase;">Ultimate Interior Reset — Note</p>
+                    <p style="font-size:12px;color:#78350f;margin:0;line-height:1.5;">
+                      We cannot guarantee 100% removal of set-in stains, embedded debris, or permanent damage — but we will do everything we can. Seats are removed for the deepest clean possible.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              ` : ""}
 
               <!-- Booking details card -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0"

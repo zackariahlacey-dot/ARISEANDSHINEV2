@@ -254,6 +254,23 @@ export function BookingCard({ b, showRebook, showActions, onCancelled, variant =
             </div>
           </div>
 
+          {/* Add-ons breakdown — shown when the booking has any add-ons attached */}
+          {b.addons && b.addons.length > 0 && (
+            <div className="mb-3 rounded-xl border border-white/[0.06] bg-zinc-950/40 px-3 py-2">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5">
+                Add-ons ({b.addons.length})
+              </p>
+              <ul className="space-y-1">
+                {b.addons.map((a, i) => (
+                  <li key={`${a.id}-${i}`} className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-zinc-400 truncate">{a.label}</span>
+                    <span className="text-zinc-500 font-medium tabular-nums shrink-0">${a.price.toFixed(0)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Additional vehicles — only shown when the booking includes 2+ vehicles */}
           {b.additional_vehicles && b.additional_vehicles.length > 0 && (
             <div className="mb-3 rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] px-3 py-2">

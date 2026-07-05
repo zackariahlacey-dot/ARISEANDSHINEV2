@@ -10,9 +10,9 @@ import { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 // This guarantees the booking system never under-reserves time on long boats/RVs.
 export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
   "Interior Detail": {
-    // 2 hrs base — customer-facing display window shows "1.5–2 hrs"
-    small: 120, medium: 120, large: 120, extra_large: 120,
-    sedan: 120, suv: 120, xl: 120,
+    // 2.5 hrs base (July 2026 update)
+    small: 150, medium: 150, large: 150, extra_large: 150,
+    sedan: 150, suv: 150, xl: 150,
   },
   "Exterior Detail": {
     // 1.5 hrs base — display window shows "1–1.5 hrs"
@@ -20,9 +20,9 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     sedan: 90, suv: 90, xl: 90,
   },
   "Full Detail": {
-    // 2.5 hrs base — display window shows "2–2.5 hrs"
-    small: 150, medium: 150, large: 150, extra_large: 150,
-    sedan: 150, suv: 150, xl: 150,
+    // 3 hrs base (July 2026 update)
+    small: 180, medium: 180, large: 180, extra_large: 180,
+    sedan: 180, suv: 180, xl: 180,
   },
   "Interior Monthly Maintenance": {
     small: 90, medium: 90, large: 120, extra_large: 120,
@@ -32,16 +32,26 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 150, medium: 150, large: 210, extra_large: 210,
     sedan: 150, suv: 210, xl: 210,
   },
-  // Ultimate Series — display window "2.5–3.5" / "3.5–4.5", book the upper-mid
+  // Ultimate Series (July 2026): only one SKU. Seats-out deep clean.
+  // Book 4 hrs — covers the 3.5–4.5 hr realistic window on the reset process.
   "Ultimate Interior Reset": {
-    // 3 hrs booked — covers the 2.5–3.5 hr realistic window
-    small: 180, medium: 180, large: 180, extra_large: 180,
-    sedan: 180, suv: 180, xl: 180,
-  },
-  "Ultimate Interior + Exterior Reset": {
-    // 4 hrs booked — covers the 3.5–4.5 hr realistic window
     small: 240, medium: 240, large: 240, extra_large: 240,
     sedan: 240, suv: 240, xl: 240,
+  },
+  // Historical bookings snapshotted the old combo name — keep the duration
+  // entry so admin/reschedule flows still calculate slot length correctly.
+  "Ultimate Interior + Exterior Reset": {
+    small: 240, medium: 240, large: 240, extra_large: 240,
+    sedan: 240, suv: 240, xl: 240,
+  },
+  // Paint Correction (July 2026 rename — was "Ultimate Exterior + N-Step").
+  "Paint Correction — 1 Step": {
+    small: 300, medium: 300, large: 360, extra_large: 420,
+    sedan: 300, suv: 360, xl: 420,
+  },
+  "Paint Correction — 2 Step": {
+    small: 420, medium: 420, large: 480, extra_large: 540,
+    sedan: 420, suv: 480, xl: 540,
   },
   // ── Boat Detailing — length-bracketed durations ─────────────────────
   // medium ≤30 ft · large 31–45 ft · xl 46+ ft

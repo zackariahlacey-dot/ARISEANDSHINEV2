@@ -13,7 +13,7 @@
  */
 
 const FRIENDLY_LABELS: Record<string, string> = {
-  "Full Detail": "Basic Interior + Exterior",
+  "Full Detail": "Interior + Exterior",
 };
 
 export function getServiceDisplayName(serviceName: string | null | undefined, _opts: { includeFoundation?: boolean } = {}): string {

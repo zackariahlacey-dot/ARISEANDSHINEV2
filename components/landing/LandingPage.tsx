@@ -95,9 +95,8 @@ const staggerItem = {
 const HERO_SCROLL_THRESHOLD = 0.8; // Show sticky CTA after 80% of viewport scrolled
 
 const SERVICE_LINKS = [
-  { href: "/detailing", label: "Vehicle Detailing", icon: Car, desc: "Interior, Exterior & Basic Interior + Exterior" },
-  { href: "/boat-detailing", label: "Boat Detailing", icon: Anchor, desc: "Marine interior, exterior & full detail" },
-  { href: "/rv-detailing", label: "RV Detailing", icon: Truck, desc: "Per-foot pricing for motorhomes & trailers" },
+  { href: "/detailing", label: "Auto Detailing", icon: Car, desc: "Interior, Exterior, Full Detail & Ultimate" },
+  { href: "/paint-correction", label: "Paint Correction", icon: Sparkles, desc: "1-Step, 2-Step + Premium Ceramic Coating" },
 ];
 
 const REVIEWS = [
@@ -106,7 +105,7 @@ const REVIEWS = [
       "I was blown away by how easy it was. They came right to my driveway in Williston while I worked from home. My SUV looked better than the day I bought it. The whole thing took maybe two hours and I didn't have to move a muscle.",
     name: "Sarah M.",
     location: "Williston, VT",
-    service: "Basic Interior + Exterior",
+    service: "Interior + Exterior",
   },
   {
     review:
@@ -795,7 +794,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
 
       {/* ─── Before & After Gallery ───────────────────────────────── */}
       <BeforeAfterGallery
-        onBookUltimate={() => openUltimateBooking("Ultimate Interior + Exterior Reset")}
+        onBookUltimate={() => openUltimateBooking("Ultimate Interior Reset")}
       />
 
 
@@ -925,8 +924,8 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{ULTIMATE_CARDS[ultimateCarouselActiveIdx]?.name ?? ""}</p>
             </div>}
 
-            {/* Desktop: Ultimate grid */}
-            <div className="hidden lg:grid lg:grid-cols-2 gap-6 items-start">
+            {/* Desktop: Ultimate grid — single card now, centered */}
+            <div className="hidden lg:grid lg:grid-cols-1 gap-6 items-start max-w-xl mx-auto">
               {ULTIMATE_CARDS.map((card) => (
                 <UltimateServiceCard key={card.name} {...card} onBook={openUltimateBooking} loyaltyDiscountPct={authLoyaltyDiscountPct} />
               ))}
@@ -983,12 +982,9 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
       )}
 
       {/* ─── Boat / RV / Fleet — collapsed under "More Services" button ──────
-          Auto detailing is the primary funnel. Boat, RV, and Fleet are
-          secondary and hidden behind a disclosure so they don't pull
-          attention from the Ultimate cards above. Click → tile grid
-          expands. Once expanded the customer sees the same compact icon
-          + name + CTA cards. */}
-      <MoreServicesDisclosure />
+          Boat/RV/Truck/Heavy Equipment retired 2026-07. Kept the
+          component definition below in case fleet needs to surface later. */}
+      {/* <MoreServicesDisclosure /> */}
 
       {/* ─── Fleet Quote Calculator — homepage embed ─────────────────────────
           Live slider that lets visitors play with the per-vehicle math
@@ -1320,7 +1316,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
 
                     {/* Sample savings — concrete dollar value */}
                     <div className="hidden md:block mt-3 pt-3 border-t border-white/[0.05] w-full">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Save on Basic Interior + Exterior</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Save on Interior + Exterior</p>
                       <p className={`text-base font-black tabular-nums ${textColor}`}>${sample}</p>
                     </div>
                   </div>
@@ -1332,11 +1328,11 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             <div className="md:hidden mt-3 grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-white/[0.06] bg-zinc-900/40 px-4 py-2.5 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Member saves</p>
-                <p className="text-sm font-black tabular-nums text-zinc-200">$12 / Basic Interior + Exterior</p>
+                <p className="text-sm font-black tabular-nums text-zinc-200">$12 / Interior + Exterior</p>
               </div>
               <div className="rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/[0.06] px-4 py-2.5 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]/70">VIP saves</p>
-                <p className="text-sm font-black tabular-nums text-[#D4AF37]">$48 / Basic Interior + Exterior</p>
+                <p className="text-sm font-black tabular-nums text-[#D4AF37]">$48 / Interior + Exterior</p>
               </div>
             </div>
           </div>
@@ -1347,7 +1343,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               style={{ background: "radial-gradient(ellipse 60% 80% at 50% 50%, rgba(212,175,55,0.04) 0%, transparent 70%)" }} />
             <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-0 md:divide-x divide-white/[0.06]">
               {[
-                { step: "01", icon: Sparkles, title: "Book any car detail",        sub: "Interior, Exterior, Basic Interior + Exterior, or Ultimate" },
+                { step: "01", icon: Sparkles, title: "Book any car detail",        sub: "Interior, Exterior, Interior + Exterior, or Ultimate" },
                 { step: "02", icon: Zap,      title: "Climb the ladder",            sub: "Each detail counts — automatic, no apps" },
                 { step: "03", icon: Crown,    title: "Save more, every time",       sub: "Discount auto-applies forever at checkout" },
               ].map(({ step, icon: Icon, title, sub }) => (
@@ -1530,7 +1526,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               <ChevronDown className="w-5 h-5 shrink-0 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <p className="text-zinc-400 text-sm md:text-base px-6 pb-6 leading-relaxed text-center">
-              Interior 2–3 hrs · Exterior 1.5–2 hrs · Basic Interior + Exterior 3–4 hrs · Ultimate 4–6 hrs.
+              Interior 2–3 hrs · Exterior 1.5–2 hrs · Interior + Exterior 3–4 hrs · Ultimate 4–6 hrs.
             </p>
           </details>
           <details className="bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden transition-all duration-300 group w-full">
@@ -1726,16 +1722,22 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                   {bookingProgress.serviceName ?? "Booking in progress…"}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
-                  {/* Step dots */}
+                  {/* Step dots — 4-step journey (Detail · Vehicle · Schedule · Confirm).
+                      Internal step 1/2/3 maps to display step 2/3/4 since a service
+                      has already been picked upstream (Step 1 of 4). */}
                   <div className="flex items-center gap-1">
-                    {[1, 2, 3].map((s) => (
-                      <div
-                        key={s}
-                        className={`rounded-full transition-all duration-300 ${s <= bookingProgress.step ? "w-3 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-zinc-700"}`}
-                      />
-                    ))}
+                    {[1, 2, 3, 4].map((s) => {
+                      const displayStep = bookingProgress.step + 1; // 1→2, 2→3, 3→4
+                      const isDone = s <= displayStep;
+                      return (
+                        <div
+                          key={s}
+                          className={`rounded-full transition-all duration-300 ${isDone ? "w-3 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-zinc-700"}`}
+                        />
+                      );
+                    })}
                   </div>
-                  <span className="text-[11px] text-zinc-500">Step {bookingProgress.step} of 3</span>
+                  <span className="text-[11px] text-zinc-500">Step {bookingProgress.step + 1} of 4</span>
                   {bookingProgress.date && (
                     <>
                       <span className="text-zinc-700 text-[11px]">·</span>
@@ -1907,7 +1909,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           <p>
             All Monthly Maintenance Club subscriptions require a one-time{" "}
             <strong className="text-zinc-200">Deep Clean &amp; Reset Detail</strong>{" "}
-            ($75 for Interior, $100 for Basic Interior + Exterior) before the recurring monthly service begins. This fee is{" "}
+            ($75 for Interior, $100 for Interior + Exterior) before the recurring monthly service begins. This fee is{" "}
             <strong className="text-zinc-200">non-refundable</strong>{" "}
             once the initial detail has been completed. Subscriptions may be cancelled at any time before the next billing cycle with no further charges.
           </p>
@@ -2149,37 +2151,21 @@ function ServiceCard({
 const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
-    tagline: "The deep interior clean your vehicle deserves.",
-    priceNormal: 240, priceLarge: 265,
-    badge: { label: "Best for Families", icon: "star" as const },
-    /** Estimated on-site duration window. Calibrated from SERVICE_DURATIONS. */
-    timeOnSite: "2.5–3.5 hrs",
-    features: [
-      "Everything in Interior Detail",
-      "UV Protection on All Interior Plastics & Surfaces",
-      "Hot Water Extraction & Deep Shampooing (Seats & Carpets)",
-      "Dog Hair & Heavy Dirt Removal",
-      "Standard Salt Stain Removal (Vermont winter survival)",
-      "Carpet & Upholstery Shampoo (Hot Water Extraction)",
-      "Clay Bar Treatment (Interior Glass)",
-      "Strong Odor Elimination",
-      "Leather Conditioning",
-    ],
-    isFlagship: true,
-  },
-  {
-    name: "Ultimate Interior + Exterior Reset",
-    tagline: "Showroom quality — every surface, inside and out.",
-    priceNormal: 335, priceLarge: 375,
+    tagline: "Seats removed. Every crevice reset.",
+    priceNormal: 300, priceLarge: 370,
     badge: { label: "Flagship Service", icon: "gem" as const },
+    /** Estimated on-site duration window. Calibrated from SERVICE_DURATIONS. */
     timeOnSite: "3.5–4.5 hrs",
     features: [
-      "Everything in Ultimate Interior Reset",
-      "Full Exterior Hand Wash & Dry",
-      "Clay Bar Treatment (Paint Decontamination)",
-      "Plastic Trim Restoration",
-      "6-Month Ceramic Spray Coating",
-      "Standard Salt Stain Removal (carpets + door sills)",
+      "Seats REMOVED from vehicle for deep clean",
+      "Full shampoo of seats, carpet, and floor mats",
+      "Steam clean every surface, vacuum every crevice",
+      "Disinfect and protect all interior surfaces",
+      "Interior glass streak-free (all windows)",
+      "Rubber/carpet mats cleaned and protected",
+      "Leather conditioning (if applicable)",
+      "Trunk fully included",
+      "Optional: + Exterior Detail bundle at checkout",
     ],
     isFlagship: true,
   },

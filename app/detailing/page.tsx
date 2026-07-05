@@ -6,9 +6,9 @@ import type { Service } from "@/app/page";
 import { AUTO_DETAILING_SCHEMA } from "@/lib/serviceSchemas";
 
 export const metadata: Metadata = {
-  title: "Mobile Auto Detailing Vermont | Interior, Exterior & Basic Interior + Exterior | Arise And Shine Detailing",
+  title: "Mobile Auto Detailing Vermont | Interior, Exterior & Interior + Exterior | Arise And Shine Detailing",
   description:
-    "Professional mobile car detailing services in Vermont — Interior Detail, Exterior Detail, and Basic Interior + Exterior packages. We come to your home or office. Transparent pricing, easy booking.",
+    "Professional mobile car detailing services in Vermont — Interior Detail, Exterior Detail, and Interior + Exterior packages. We come to your home or office. Transparent pricing, easy booking.",
   keywords: [
     "mobile car detailing Vermont",
     "auto detailing Burlington VT",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Mobile Auto Detailing Vermont | Arise And Shine Detailing",
-    description: "Interior, Exterior & Basic Interior + Exterior — we come to you, anywhere in Vermont.",
+    description: "Interior, Exterior & Interior + Exterior — we come to you, anywhere in Vermont.",
     url: "https://ariseandshinedetailing.com/detailing",
     siteName: "Arise And Shine Detailing",
     locale: "en_US",
@@ -36,11 +36,12 @@ async function DataProvider() {
   const supabase = await createClient();
   const { data: services } = await supabase
     .from("services")
-    .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription, category")
+    .select("id, name, description, price_small, price_medium, price_large, price_extra_large, is_subscription, category, is_active")
+    .eq("is_active", true)
     .order("price_small", { ascending: true });
   const VEHICLE_NAMES = [
     "Interior Detail", "Exterior Detail", "Full Detail",
-    "Ultimate Interior Reset", "Ultimate Interior + Exterior Reset",
+    "Ultimate Interior Reset",
   ];
   return <DetailingPage services={(services ?? []).filter((s: Service) =>
     !s.is_subscription && VEHICLE_NAMES.includes(s.name)
