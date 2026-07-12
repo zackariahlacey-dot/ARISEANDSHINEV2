@@ -35,85 +35,95 @@ const MAKE_ALIASES: Record<string, string> = {
 
 type Entry = [string, VehicleSizeSlug];
 const DB: Record<string, Entry[]> = {
-  // Size tiers (July 2026):
-  //   sedan = cars, coupes, compacts, 2-row crossovers
-  //   suv   = 2-row SUVs, mid-size trucks (Tacoma, Colorado, Frontier, Ranger, Ridgeline, Maverick, Gladiator)
-  //   xl    = 3-row SUVs + full-size pickups + minivans + work vans + Sprinter/Transit
+  // Size tiers (July 2026 — form-factor based, per business rule):
+  //   sedan = cars only (sedan, coupe, hatchback, wagon, sports car)
+  //   suv   = every crossover/SUV (subcompact, compact, mid-size 2-row) +
+  //           small/mid-size trucks (Tacoma, Colorado, Canyon, Ranger, Maverick,
+  //           Frontier, Ridgeline, Gladiator, Santa Cruz) + small commercial
+  //           vans (Transit Connect, ProMaster City, NV200)
+  //   xl    = 3-row SUVs, full-size body-on-frame SUVs (Tahoe/Suburban/Yukon/
+  //           Expedition), full-size pickups (F-150+, Silverado, Sierra, Ram
+  //           1500+, Titan, Tundra, Cybertruck), minivans, full-size work vans
   toyota: [
-    ["yaris", "sedan"], ["echo", "sedan"], ["priusc", "sedan"], ["chr", "sedan"],
-    ["chrcrossover", "sedan"], ["matrix", "sedan"], ["bz3", "sedan"], ["prius", "sedan"],
-    ["priusprime", "sedan"], ["priusv", "sedan"], ["mirai", "sedan"], ["corolla", "sedan"],
-    ["camry", "sedan"], ["avalon", "sedan"], ["supra", "sedan"], ["86", "sedan"],
-    ["gr86", "sedan"], ["celica", "sedan"], ["solara", "sedan"],
-    ["bz4x", "sedan"], ["venza", "sedan"], ["rav4", "sedan"], // 2-Row SUVs
+    // Cars
+    ["yaris", "sedan"], ["echo", "sedan"], ["priusc", "sedan"], ["matrix", "sedan"],
+    ["bz3", "sedan"], ["prius", "sedan"], ["priusprime", "sedan"], ["priusv", "sedan"],
+    ["mirai", "sedan"], ["corolla", "sedan"], ["camry", "sedan"], ["avalon", "sedan"],
+    ["supra", "sedan"], ["86", "sedan"], ["gr86", "sedan"], ["celica", "sedan"],
+    ["solara", "sedan"],
+    // All crossovers + 2-row SUVs + mid-size truck
+    ["chr", "suv"], ["chrcrossover", "suv"],
+    ["rav4", "suv"], ["venza", "suv"], ["bz4x", "suv"],
     ["4runner", "suv"], ["fjcruiser", "suv"], ["tacoma", "suv"],
-    // 3-row SUVs + full-size trucks + minivan → xl
+    // 3-row SUVs + full-size truck + minivan → xl
     ["highlander", "xl"], ["sequoia", "xl"], ["landcruiser", "xl"],
     ["grandhighlander", "xl"], ["sienna", "xl"], ["tundra", "xl"],
   ],
 
   honda: [
-    ["fit", "sedan"], ["hrv", "sedan"], ["honda", "sedan"], ["insight", "sedan"],
-    ["civic", "sedan"], ["accord", "sedan"], ["clarity", "sedan"], ["crz", "sedan"],
-    ["crv", "sedan"], ["element", "sedan"], // 2-Row
-    ["passport", "suv"], ["ridgeline", "suv"], // 2-row full SUV / mid-size truck
-    ["pilot", "xl"], ["odyssey", "xl"], // 3-row SUV + minivan
+    ["fit", "sedan"], ["insight", "sedan"], ["civic", "sedan"], ["accord", "sedan"],
+    ["clarity", "sedan"], ["crz", "sedan"],
+    // All crossovers + 2-row SUVs + mid-size truck
+    ["hrv", "suv"], ["crv", "suv"], ["element", "suv"], ["passport", "suv"],
+    ["ridgeline", "suv"],
+    // 3-row SUV + minivan → xl
+    ["pilot", "xl"], ["odyssey", "xl"],
   ],
 
   ford: [
-    ["fiesta", "sedan"], ["focus", "sedan"], ["ecosport", "sedan"], ["transitconnect", "sedan"],
-    ["fusion", "sedan"], ["mustang", "sedan"], ["taurus", "sedan"],
-    ["escape", "sedan"], ["broncosport", "sedan"], ["edge", "sedan"], // 2-Row
-    ["bronco", "suv"], ["explorer", "suv"], // 2-row full SUV
-    ["maverick", "suv"], ["ranger", "suv"], // mid-size trucks
-    // 3-row SUV + full-size trucks + work vans → xl
-    ["expedition", "xl"], ["f150", "xl"], ["f250", "xl"], ["f350", "xl"],
-    ["f450", "xl"], ["f550", "xl"],
+    ["fiesta", "sedan"], ["focus", "sedan"], ["fusion", "sedan"], ["mustang", "sedan"],
+    ["taurus", "sedan"],
+    // All crossovers + 2-row SUVs + mid-size trucks + small commercial vans
+    ["ecosport", "suv"], ["broncosport", "suv"], ["transitconnect", "suv"],
+    ["escape", "suv"], ["edge", "suv"], ["bronco", "suv"],
+    ["maverick", "suv"], ["ranger", "suv"],
+    // 3-row (Explorer is 3-row) + full-size body-on-frame SUV + full-size trucks + work vans → xl
+    ["explorer", "xl"], ["expedition", "xl"],
+    ["f150", "xl"], ["f250", "xl"], ["f350", "xl"], ["f450", "xl"], ["f550", "xl"],
     ["transit", "xl"], ["eseries", "xl"], ["econoline", "xl"],
   ],
 
   chevrolet: [
     ["spark", "sedan"], ["sonic", "sedan"], ["cruze", "sedan"], ["cobalt", "sedan"],
-    ["trax", "sedan"], ["malibu", "sedan"], ["impala", "sedan"], ["camaro", "sedan"],
-    ["corvette", "sedan"],
-    ["trailblazer", "sedan"], ["blazer", "sedan"], ["equinox", "sedan"], // 2-Row
-    ["colorado", "suv"], // mid-size truck
-    // 3-row SUVs + full-size trucks + work van → xl
+    ["malibu", "sedan"], ["impala", "sedan"], ["camaro", "sedan"], ["corvette", "sedan"],
+    // All crossovers + 2-row SUVs + mid-size truck
+    ["trax", "suv"], ["trailblazer", "suv"],
+    ["equinox", "suv"], ["blazer", "suv"], ["colorado", "suv"],
+    // 3-row + full-size body-on-frame + full-size trucks + work van → xl
     ["traverse", "xl"], ["tahoe", "xl"], ["suburban", "xl"],
     ["silverado", "xl"], ["avalanche", "xl"], ["express", "xl"],
   ],
 
   gmc: [
-    ["terrain", "sedan"],
-    ["canyon", "suv"], // mid-size truck
-    // 3-row + full-size + work van
+    // Compact crossover / mid-size truck
+    ["terrain", "suv"], ["canyon", "suv"],
+    // 3-row + full-size body-on-frame + full-size trucks + work van
     ["acadia", "xl"], ["yukon", "xl"], ["yukonxl", "xl"],
     ["sierra", "xl"], ["savana", "xl"],
   ],
 
   dodge: [
     ["neon", "sedan"], ["dart", "sedan"], ["charger", "sedan"], ["challenger", "sedan"],
-    ["journey", "suv"], // mid-size 2-row
-    // 3-row SUVs + minivans + work van
+    // All crossovers + 2-row SUVs + small commercial vans
+    ["journey", "suv"], ["promastercitycargo", "suv"], ["promastercity", "suv"],
+    // 3-row SUV + minivans + full-size work van → xl
     ["durango", "xl"], ["caravan", "xl"], ["grandcaravan", "xl"], ["promaster", "xl"],
-    ["promastercitycargo", "sedan"], ["promastercity", "sedan"],
   ],
 
   ram: [
+    // Full-size trucks + full-size work van + small commercial van
     ["1500", "xl"], ["ram1500", "xl"],
     ["2500", "xl"], ["ram2500", "xl"],
     ["3500", "xl"], ["ram3500", "xl"],
     ["4500", "xl"], ["5500", "xl"],
-    ["promaster", "xl"], ["promastercity", "sedan"],
+    ["promaster", "xl"], ["promastercity", "suv"],
   ],
 
   jeep: [
-    ["renegade", "sedan"], ["compass", "sedan"], ["patriot", "sedan"], ["cherokee", "sedan"],
-    ["liberty", "sedan"], // 2-Row
-    ["wrangler", "suv"], // full-size 2-row SUV
-    ["gladiator", "suv"], // mid-size truck
-    ["grandcherokee", "suv"], // 2-row full SUV
-    // 3-row + Grand Wagoneer full-size
+    // All crossovers + 2-row SUVs + mid-size truck
+    ["renegade", "suv"], ["compass", "suv"], ["patriot", "suv"], ["cherokee", "suv"],
+    ["liberty", "suv"], ["wrangler", "suv"], ["grandcherokee", "suv"], ["gladiator", "suv"],
+    // 3-row + Grand Wagoneer full-size → xl
     ["grandcherokeel", "xl"], ["commander", "xl"],
     ["wagoneer", "xl"], ["grandwaganeer", "xl"], ["grandwagoneer", "xl"],
   ],
@@ -121,104 +131,131 @@ const DB: Record<string, Entry[]> = {
   nissan: [
     ["micra", "sedan"], ["versa", "sedan"], ["sentra", "sedan"], ["altima", "sedan"],
     ["maxima", "sedan"], ["leaf", "sedan"],
-    ["juke", "sedan"], ["kicks", "sedan"], ["rogue", "sedan"], ["murano", "sedan"],
-    ["xterra", "suv"], ["frontier", "suv"], // 2-row full SUV / mid-size truck
-    // 3-row SUVs + full-size truck + minivan + work vans
+    // All crossovers + 2-row SUVs + mid-size truck + small commercial van
+    ["juke", "suv"], ["kicks", "suv"], ["rogue", "suv"], ["murano", "suv"],
+    ["xterra", "suv"], ["frontier", "suv"], ["nv200", "suv"],
+    // 3-row SUVs + full-size truck + minivan + full-size work vans → xl
     ["pathfinder", "xl"], ["armada", "xl"], ["quest", "xl"], ["titan", "xl"],
-    ["nv", "xl"], ["nv200", "sedan"],
-    ["nv1500", "xl"], ["nv2500", "xl"], ["nv3500", "xl"],
+    ["nv", "xl"], ["nv1500", "xl"], ["nv2500", "xl"], ["nv3500", "xl"],
   ],
 
   hyundai: [
     ["accent", "sedan"], ["elantra", "sedan"], ["sonata", "sedan"], ["ioniq", "sedan"],
-    ["venue", "sedan"], ["kona", "sedan"], ["tucson", "sedan"], ["santafe", "sedan"], // 2-Row
-    ["santacruz", "suv"], // compact/mid-size truck
-    ["ioniq5", "sedan"], ["ioniq6", "sedan"],
-    ["palisade", "xl"], // 3-row
+    ["ioniq6", "sedan"],
+    // All crossovers + 2-row SUVs + mid-size truck
+    ["venue", "suv"], ["kona", "suv"], ["tucson", "suv"], ["santafe", "suv"],
+    ["santacruz", "suv"], ["ioniq5", "suv"],
+    // 3-row
+    ["palisade", "xl"],
   ],
 
   kia: [
     ["rio", "sedan"], ["forte", "sedan"], ["k5", "sedan"], ["stinger", "sedan"],
-    ["soul", "sedan"], ["niro", "sedan"], ["seltos", "sedan"], ["sportage", "sedan"], // 2-Row
-    ["sorento", "suv"], // 2-3 row varies; keep in middle tier
-    ["telluride", "xl"], ["carnival", "xl"], // 3-row + minivan
+    // All crossovers + 2-row SUVs
+    ["soul", "suv"], ["niro", "suv"], ["seltos", "suv"],
+    ["sportage", "suv"], ["sorento", "suv"],
+    // 3-row + minivan
+    ["telluride", "xl"], ["carnival", "xl"],
   ],
 
   subaru: [
     ["impreza", "sedan"], ["legacy", "sedan"], ["wrx", "sedan"], ["brz", "sedan"],
-    ["crosstrek", "sedan"], ["forester", "sedan"], ["outback", "sedan"], // 2-Row
-    ["ascent", "xl"], // 3-row
+    // All crossovers + 2-row SUVs
+    ["crosstrek", "suv"], ["forester", "suv"], ["outback", "suv"],
+    // 3-row
+    ["ascent", "xl"],
   ],
 
   mazda: [
     ["mazda3", "sedan"], ["mazda6", "sedan"], ["miata", "sedan"],
-    ["cx3", "sedan"], ["cx30", "sedan"], ["cx5", "sedan"], ["cx50", "sedan"], // 2-Row
-    ["cx9", "xl"], ["cx90", "xl"], // 3-row
+    // All crossovers + 2-row SUVs
+    ["cx3", "suv"], ["cx30", "suv"], ["cx5", "suv"], ["cx50", "suv"],
+    // 3-row
+    ["cx9", "xl"], ["cx90", "xl"],
   ],
 
   volkswagen: [
     ["golf", "sedan"], ["jetta", "sedan"], ["passat", "sedan"], ["arteon", "sedan"],
-    ["taos", "sedan"], ["tiguan", "sedan"], ["id4", "sedan"], // 2-Row
-    ["atlas", "xl"], ["touareg", "xl"], ["idbuzz", "xl"], ["routan", "xl"], // 3-row + van
+    // All crossovers + 2-row SUVs
+    ["taos", "suv"], ["tiguan", "suv"], ["id4", "suv"],
+    // 3-row + minivan + work van → xl
+    ["atlas", "xl"], ["touareg", "xl"], ["idbuzz", "xl"], ["routan", "xl"],
   ],
 
   bmw: [
     ["1series", "sedan"], ["2series", "sedan"], ["3series", "sedan"], ["4series", "sedan"],
     ["5series", "sedan"], ["7series", "sedan"],
-    ["x1", "sedan"], ["x2", "sedan"], ["x3", "sedan"], // 2-Row
-    ["x4", "suv"], ["x5", "suv"], ["x6", "suv"], // 2-row full SUV
-    ["x7", "xl"], // 3-row
+    // All crossovers + 2-row SUVs
+    ["x1", "suv"], ["x2", "suv"], ["x3", "suv"],
+    ["x4", "suv"], ["x5", "suv"], ["x6", "suv"],
+    // 3-row
+    ["x7", "xl"],
   ],
 
   mercedes: [
     ["aclass", "sedan"], ["cclass", "sedan"], ["eclass", "sedan"], ["sclass", "sedan"],
     ["cla", "sedan"], ["cls", "sedan"],
-    ["gla", "sedan"], ["glb", "sedan"], ["glc", "sedan"], // 2-Row
-    ["gle", "suv"], ["gclass", "suv"], // 2-row full SUV
-    ["gls", "xl"], ["sprinter", "xl"], // 3-row + van
+    // All crossovers + 2-row SUVs
+    ["gla", "suv"], ["glb", "suv"], ["glc", "suv"], ["gle", "suv"], ["gclass", "suv"],
+    // 3-row + full-size work van → xl
+    ["gls", "xl"], ["sprinter", "xl"],
   ],
 
   audi: [
     ["a1", "sedan"], ["a3", "sedan"], ["a4", "sedan"], ["a5", "sedan"],
     ["a6", "sedan"], ["a7", "sedan"], ["a8", "sedan"],
-    ["q2", "sedan"], ["q3", "sedan"], ["q5", "sedan"], // 2-Row
-    ["etron", "suv"],
-    ["q7", "xl"], ["q8", "xl"], // 3-row
+    // All crossovers + 2-row SUVs
+    ["q2", "suv"], ["q3", "suv"], ["q5", "suv"], ["etron", "suv"],
+    // 3-row
+    ["q7", "xl"], ["q8", "xl"],
   ],
 
   lexus: [
     ["is", "sedan"], ["es", "sedan"], ["ls", "sedan"], ["rc", "sedan"], ["lc", "sedan"],
-    ["ux", "sedan"], ["nx", "sedan"], ["rx", "sedan"], // 2-Row
-    ["gx", "xl"], ["lx", "xl"], ["tx", "xl"], // 3-row
+    // All crossovers + 2-row SUVs
+    ["ux", "suv"], ["nx", "suv"], ["rx", "suv"],
+    // 3-row + full-size body-on-frame → xl
+    ["gx", "xl"], ["lx", "xl"], ["tx", "xl"],
   ],
 
   infiniti: [
     ["q50", "sedan"], ["q60", "sedan"], ["q70", "sedan"],
-    ["qx30", "sedan"], ["qx50", "sedan"], ["qx55", "sedan"],
-    ["qx60", "xl"], ["qx70", "suv"], ["qx80", "xl"],
+    // All crossovers + 2-row SUVs
+    ["qx30", "suv"], ["qx50", "suv"], ["qx55", "suv"], ["qx70", "suv"],
+    // 3-row + full-size body-on-frame
+    ["qx60", "xl"], ["qx80", "xl"],
   ],
 
   cadillac: [
     ["cts", "sedan"], ["ats", "sedan"], ["ct4", "sedan"], ["ct5", "sedan"], ["ct6", "sedan"],
-    ["xt4", "sedan"], ["xt5", "sedan"], ["xt6", "xl"],
-    ["escalade", "xl"], ["escaladeesv", "xl"],
+    // All crossovers + 2-row SUVs
+    ["xt4", "suv"], ["xt5", "suv"],
+    // 3-row + full-size body-on-frame
+    ["xt6", "xl"], ["escalade", "xl"], ["escaladeesv", "xl"],
   ],
 
   lincoln: [
-    ["continental", "sedan"], ["mkz", "sedan"], ["corsair", "sedan"], ["nautilus", "sedan"],
+    ["continental", "sedan"], ["mkz", "sedan"],
+    // All crossovers + 2-row SUVs
+    ["corsair", "suv"], ["nautilus", "suv"],
+    // 3-row + full-size body-on-frame
     ["aviator", "xl"], ["navigator", "xl"],
   ],
 
   buick: [
-    ["encore", "sedan"], ["envision", "sedan"], ["regal", "sedan"], ["verano", "sedan"],
+    ["regal", "sedan"], ["verano", "sedan"],
+    // All crossovers + 2-row SUVs
+    ["encore", "suv"], ["envision", "suv"],
+    // 3-row
     ["enclave", "xl"],
   ],
 
   tesla: [
-    ["model3", "sedan"], ["models", "sedan"], ["modely", "sedan"],
-    ["modelx", "xl"], // 3-row
-    ["cybertruck", "xl"], // full-size truck
-    ["semi", "xl"],
+    ["model3", "sedan"], ["models", "sedan"],
+    // Compact crossover
+    ["modely", "suv"],
+    // 3-row + full-size truck
+    ["modelx", "xl"], ["cybertruck", "xl"], ["semi", "xl"],
   ],
 };
 

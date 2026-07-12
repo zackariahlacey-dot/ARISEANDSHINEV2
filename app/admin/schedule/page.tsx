@@ -41,7 +41,7 @@ import { manuallyAssignBooking } from "@/app/actions/autoAssignBooking";
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, MapPin,
   Phone, MessageSquare, Navigation, Check, CheckCircle2, X, Trash2,
-  RotateCcw, Loader2, Car, DollarSign, Lock, Zap, Send,
+  RotateCcw, Loader2, Car, DollarSign, Lock, Zap, Send, Clock,
   Copy, Pencil, StickyNote, Mail, AlertCircle, ClipboardCheck,
   UserPlus, AlertTriangle,
 } from "lucide-react";
@@ -2434,6 +2434,128 @@ export default function SchedulePage() {
             <span className="text-xs font-bold text-amber-400">Rescheduling…</span>
           </div>
         )}
+
+        {/* Weekly stats strip — computed off the same Mon–Fri window as the grid.
+            Excludes Personal Blocks from job/revenue counts but includes them in
+            time-on-site since they still occupy the calendar. */}
+        {(() => {
+          let jobs = 0;
+          let completedJobs = 0;
+          let revenue = 0;
+          let mins = 0;
+          for (const day of weekDays) {
+            const dayBks = getBookingsForDate(day);
+            for (const b of dayBks) {
+              const isBlk = b.service_name === "Personal Block";
+              const dur = b.duration_override ?? getDurationMins(b.service_name ?? "", b.vehicle_size ?? "sedan");
+              mins += Number(dur) || 0;
+              if (isBlk) continue;
+              jobs += 1;
+              if (b.status === "completed") completedJobs += 1;
+              revenue += Number(b.total_price) || 0;
+            }
+          }
+          const hours = mins / 60;
+          const avgPerJob = jobs > 0 ? revenue / jobs : 0;
+          const remaining = jobs - completedJobs;
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <div className="rounded-xl border border-white/[0.06] bg-zinc-900/40 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-zinc-500">
+                  <ClipboardCheck size={11} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Jobs</span>
+                </div>
+                <div className="text-lg font-black tabular-nums text-zinc-100 leading-tight mt-0.5">{jobs}</div>
+                {jobs > 0 && (
+                  <div className="text-[9px] font-bold text-zinc-500 mt-0.5">
+                    <span className="text-emerald-400/80 tabular-nums">{completedJobs}</span> done · <span className="text-amber-400/80 tabular-nums">{remaining}</span> left
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-zinc-900/40 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-zinc-500">
+                  <Clock size={11} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Est Hours</span>
+                </div>
+                <div className="text-lg font-black tabular-nums text-sky-300 leading-tight mt-0.5">
+                  {hours.toFixed(1)}<span className="text-[10px] text-zinc-500 font-bold ml-0.5">hrs</span>
+                </div>
+                <div className="text-[9px] font-bold text-zinc-500 mt-0.5 tabular-nums">
+                  {mins} min total
+                </div>
+              </div>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] px-3 py-2">
+                <div className="flex items-center gap-1.5 text-emerald-400/70">
+                  <DollarSign size={11} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Revenue</span>
+                </div>
+                <div className="text-lg font-black tabular-nums text-emerald-300 leading-tight mt-0.5">
+                  ${revenue.toFixed(0)}
+                </div>
+                {jobs > 0 && (
+                  <div className="text-[9px] font-bold text-emerald-400/60 mt-0.5 tabular-nums">
+                    ${avgPerJob.toFixed(0)} avg / job
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-zinc-900/40 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-zinc-500">
+                  <Calendar size={11} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Busiest</span>
+                </div>
+                {(() => {
+                  let busiestDay: Date | null = null;
+                  let busiestRev = 0;
+                  for (const day of weekDays) {
+                    const rev = getBookingsForDate(day)
+                      .filter((b: any) => b.service_name !== "Personal Block")
+                      .reduce((s: number, b: any) => s + (Number(b.total_price) || 0), 0);
+                    if (rev > busiestRev) { busiestRev = rev; busiestDay = day; }
+                  }
+                  return busiestDay ? (
+                    <>
+                      <div className="text-lg font-black text-zinc-100 leading-tight mt-0.5">
+                        {format(busiestDay, "EEE")}
+                      </div>
+                      <div className="text-[9px] font-bold text-emerald-400/70 mt-0.5 tabular-nums">
+                        ${busiestRev.toFixed(0)}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-lg font-black text-zinc-600 leading-tight mt-0.5">—</div>
+                  );
+                })()}
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-zinc-900/40 px-3 py-2 col-span-2 md:col-span-1">
+                <div className="flex items-center gap-1.5 text-zinc-500">
+                  <CheckCircle2 size={11} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Load</span>
+                </div>
+                {(() => {
+                  // 5 workdays × 8 hrs = 40 hr capacity target
+                  const capacityMins = 5 * 8 * 60;
+                  const pct = Math.min(100, Math.round((mins / capacityMins) * 100));
+                  const color = pct >= 90 ? "text-red-400" : pct >= 65 ? "text-amber-400" : "text-emerald-400";
+                  return (
+                    <>
+                      <div className={cn("text-lg font-black tabular-nums leading-tight mt-0.5", color)}>
+                        {pct}%
+                      </div>
+                      <div className="w-full h-1 mt-1 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          className={cn("h-full rounded-full",
+                            pct >= 90 ? "bg-red-400" : pct >= 65 ? "bg-amber-400" : "bg-emerald-400"
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 5-column day grid — one card per day */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">

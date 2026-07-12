@@ -745,19 +745,19 @@ const VEHICLE_SIZES: VehicleSizeOption[] = [
   {
     id: "sedan",
     label: "Sedan / Coupe",
-    desc: "Cars, coupes, compacts, 2-row crossovers",
+    desc: "Sedans, coupes, hatches, wagons, sports cars",
     sizeKey: "price_medium",
   },
   {
     id: "suv",
-    label: "SUV / Truck",
-    desc: "2-row SUVs, midsize trucks, Sienna, Odyssey",
+    label: "Compact SUV / SUV / Small Truck",
+    desc: "Tucson, RAV4, CR-V, Escape, Rogue, Wrangler, Tacoma, Ranger",
     sizeKey: "price_large",
   },
   {
     id: "xl",
-    label: "3-Row / Work Van",
-    desc: "Yukon, Suburban, 3-row SUVs, Sprinter, Transit",
+    label: "3-Row / Full-Size Truck",
+    desc: "Tahoe, Suburban, Highlander, Pilot, F-150, Sienna, Sprinter",
     sizeKey: "price_extra_large",
   },
 ];
