@@ -15,6 +15,7 @@ import type { SuccessModalData } from "./SuccessModal";
 import type { VehicleSizeSlug } from "@/app/actions/bookDetailing";
 import { SiteHeader } from "./SiteHeader";
 import { BuildYourPackage } from "./BuildYourPackage";
+import { BuildForMeQuiz } from "./BuildForMeQuiz";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
 
 const BookingSection = dynamic(
@@ -35,7 +36,7 @@ const CORE_FEATURES: Record<string, { icon: React.ElementType; items: string[] }
     items: [
       "Full vacuum — every surface, crack & crevice",
       "Wipe-down & protection of all plastics & leather",
-      "Floor mats & carpet cleaning",
+      "Floor mats & carpet cleaning (shampoo not included — add for heavy stains)",
       "Interior glass cleaned & protected",
     ],
   },
@@ -57,8 +58,8 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "Seats removed. Every crevice reset.",
-    priceLow: 300,
-    priceHigh: 370,
+    priceLow: 325,
+    priceHigh: 395,
     badge: "Flagship Service",
     badgeIcon: Gem,
     features: [
@@ -236,6 +237,50 @@ export function DetailingPage({ services }: { services: Service[] }) {
           />
         </motion.section>
       )}
+
+      {/* ── Build For Me Quiz — sits above Core Packages ─────────────────────
+          Answer 3 questions, get a recommended foundation + add-ons stack
+          with descriptions. Clicking "Use this build" pre-fills the booking
+          modal with the recommended add-on IDs so the customer can walk
+          straight through to Step 4. */}
+      <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
+        className="pt-10 md:pt-14 pb-2 px-4 sm:px-6 lg:px-8"
+      >
+        <div className="w-full max-w-3xl mx-auto">
+          <div className="text-center mb-5">
+            <div className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#D4AF37] mb-3">
+              <Sparkles size={11} /> Not Sure Which Package?
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
+              Answer 3 questions, we&apos;ll build it for you.
+            </h2>
+            <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
+              Tell us what needs love and how rough it&apos;s gotten — we&apos;ll pick the right foundation, stack the add-ons that make sense, and drop it straight into the booking flow.
+            </p>
+          </div>
+          <BuildForMeQuiz
+            services={services}
+            onUseBuild={(args) => {
+              const serviceName = args.preferUltimate
+                ? "Ultimate Interior Reset"
+                : args.foundation === "interior" ? "Interior Detail"
+                : args.foundation === "exterior" ? "Exterior Detail"
+                : "Full Detail";
+              const svc = services.find(s => s.name === serviceName) ?? null;
+              setSelectedService(svc);
+              setBuilderPrefill({
+                vehicleMake:  args.vehicle.make,
+                vehicleModel: args.vehicle.model,
+                vehicleYear:  args.vehicle.year,
+                vehicleSize:  args.vehicle.size,
+                addonIds:     args.addonIds,
+              });
+              setBookingOpen(true);
+              setTimeout(() => document.getElementById("booking-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+            }}
+          />
+        </div>
+      </motion.section>
 
       {/* ── Core Packages — primary service grid for /detailing ───────────────
           Re-enabled 2026-06 after Build Your Package was hidden. These three

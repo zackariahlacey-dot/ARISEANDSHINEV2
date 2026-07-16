@@ -31,7 +31,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "Seats removed. Every crevice reset.",
-    priceNormal: 300, priceLarge: 370,
+    priceNormal: 325, priceLarge: 395,
     badge: { label: "Flagship Service", icon: "gem" as const },
     features: [
       "Seats REMOVED from vehicle for deep steam clean",
@@ -56,7 +56,7 @@ const EXTERIOR_ITEMS = [
 const INTERIOR_ITEMS = [
   "Full wipe down & vacuum of every surface, crack, and crevice",
   "Clean and protect plastics and leathers",
-  "Floor mats & carpet cleaning (shampoo not included)",
+  "Floor mats & carpet cleaning (shampoo not included — heavy dirt or set-in stains will NOT lift without adding Carpet & Upholstery Shampoo)",
   "Interior glass cleaned and protected",
 ];
 const MAINTENANCE_ITEMS = [

@@ -121,7 +121,7 @@ const ADMIN_ADDONS = [
   // ── The 8 basics ──
   { id: "engine_bay",        label: "Engine Bay Detail",                     price: 65  },
   { id: "headlight_restore", label: "Headlight Restoration (pair)",          price: 75  },
-  { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
+  { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 95  },
   { id: "salt_stain_removal",label: "Mild–Medium Salt Removal",              price: 65  },
   { id: "leather_condition", label: "Leather Conditioning",                  price: 40  },
   { id: "ozone_treatment",   label: "Ozone Treatment",                       price: 60  },
@@ -211,7 +211,7 @@ function getAdminAddonPrice(id: string, vehicleSize: string): number {
   if (id === "window_coat_front")      return WINDOW_COAT_FRONT_PRICE;
   if (id === "window_coat_all")        return WINDOW_COAT_ALL_PRICE;
   if (id === "ceramic_3yr")            return CERAMIC_3YR_PRICES_ADMIN[vehicleSize] ?? a.price;
-  if (id === "upholstery_shampoo" && vehicleSize === "xl") return a.price + 20;
+  // Shampoo is flat $95 — no XL surcharge (July 2026).
   return a.price;
 }
 

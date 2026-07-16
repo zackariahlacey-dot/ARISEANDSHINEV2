@@ -52,12 +52,13 @@ const SERVICE_TYPES = [
 ] as const;
 
 const AUTO_SERVICES = [
-  { label: "Exterior Detail",                    price: "$130–$170",  desc: "Hand wash, wheels, tires & 3-mo ceramic sealant"          },
-  { label: "Interior Detail",                    price: "$150–$185",  desc: "Full vacuum, wipe-down, mats & interior glass"            },
-  { label: "Interior + Exterior",          price: "$240–$280",  desc: "Interior + exterior combined"                             },
-  { label: "Ultimate Interior Reset",            price: "$240–$270",  desc: "Hot water extraction, steam sanitation & salt removal"    },
-  { label: "Ultimate Interior + Exterior Reset", price: "$335–$375",  desc: "Full decontamination, clay bar & 6-mo ceramic spray"     },
-  { label: "Not sure yet",                       price: "",           desc: "We'll figure it out together"                             },
+  { label: "Exterior Detail",              price: "$120–$150",  desc: "Hand wash, wheels, tires + INCLUDED 1–3 mo ceramic spray sealant" },
+  { label: "Interior Detail",              price: "$150–$190",  desc: "Full vacuum, wipe-down, mats & interior glass"                    },
+  { label: "Full Detail",                  price: "$235–$285",  desc: "Interior + exterior combined · Save $35–$45"                      },
+  { label: "Ultimate Interior Reset",      price: "$325–$395",  desc: "Seats REMOVED · deep steam clean, shampoo, sanitation"           },
+  { label: "Paint Correction — 1 Step",    price: "$449–$599",  desc: "Single-pass polish · lifts 60–75% of light swirls + oxidation"    },
+  { label: "Paint Correction — 2 Step",    price: "$675–$875",  desc: "Compound + polish · lifts 85–95% of correctable defects"          },
+  { label: "Not sure yet",                 price: "",           desc: "We'll figure it out together"                                     },
 ];
 const BOAT_SERVICES = [
   { label: "Boat Interior",    price: "$15/ft",    desc: "Vinyl, carpet, upholstery & odor treatment"  },

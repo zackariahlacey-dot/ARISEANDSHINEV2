@@ -37,6 +37,9 @@ import {
   Sun,
   Shield,
   Droplets,
+  Info,
+  ChevronDown,
+  XCircle,
 } from "lucide-react";
 import type { Service } from "@/app/page";
 import {
@@ -58,6 +61,7 @@ import { validateGiftCard } from "@/app/actions/validateGiftCard";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
+import { BuildForMeQuiz } from "./BuildForMeQuiz";
 import { todayInBusinessTz } from "@/lib/dates";
 import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, PREMIUM_ADDON_BONUS_PCT } from "@/lib/bundleDiscount";
 import {
@@ -91,7 +95,7 @@ const ALL_ADD_ONS = [
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 65,  desc: "Deep degrease, dressing, and plastic care. Customers love the \"open the hood and it looks new\" moment. Skipped on vehicles with sensitive electronics by your request." },
   { id: "headlight_restore",   label: "Headlight Restoration (pair)",        price: 75,  desc: "Sand, polish, and UV-seal cloudy or yellowed lenses to like-new clarity. Visible result, lasts 2+ years. Pair pricing." },
   { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 75,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source." },
+  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 95,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. ⚠️ Highly recommended when carpets or seats are heavily soiled or stained — a standard interior clean alone will NOT lift set-in dirt or discoloration without this." },
   { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
   { id: "leather_condition",   label: "Leather Conditioning",                 price: 40, desc: "Deep-clean and condition all leather surfaces with premium conditioner — restores softness, prevents cracking, and leaves a clean matte finish." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
@@ -269,7 +273,7 @@ function ceramicPackagePct(count: number): number {
 }
 /** Add-ons functionally INCLUDED in Ultimate Interior Reset (July 2026 scope).
  *  Selecting these on a base package triggers the upgrade nudge to Ultimate. */
-const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "leather_condition", "pet_hair"];
+const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "leather_condition", "pet_hair", "salt_stain_removal", "clay_bar"];
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
@@ -397,7 +401,8 @@ function getEffectiveAddonPrice(
     const ov = overrides[`${addon.id}:${vehicleSize}`] ?? overrides[`${addon.id}:all`];
     if (ov?.price_cents != null) return ov.price_cents / 100;
   }
-  if (addon.id === "upholstery_shampoo" && (vehicleSize === "xl" || vehicleSize === "extra_large")) return addon.price + 30;
+  // Shampoo is flat $95 across all sizes per July 2026 pricing decision —
+  // no XL surcharge. Historical +$30 removed.
   // salt_stain_removal is a flat $65 in the July 2026 lineup (was size-tiered).
   if (addon.id === "polish_ceramic") return CERAMIC_PRICES[vehicleSize] ?? addon.price;
   if (addon.id === "ceramic_3yr")    return CERAMIC_3YR_PRICES[vehicleSize] ?? addon.price;
@@ -711,11 +716,11 @@ const BOAT_MIN_FEET = 15;
  */
 const SERVICE_DESCRIPTION_OVERRIDES: Record<string, string> = {
   "Interior Detail":
-    "A thorough professional interior clean — full vacuum, wipe-down and protection of all plastics/leather, floor mats and carpet cleaning, and streak-free interior glass.",
+    "A thorough professional interior clean — full vacuum, wipe-down and protection of all plastics/leather, floor mats and carpet cleaning, and streak-free interior glass. ⚠️ Heads-up: carpets or seats with heavy dirt or set-in stains will NOT see much improvement without adding Carpet & Upholstery Shampoo on the next step.",
   "Exterior Detail":
     "Full hand wash and dry, wheels/tires cleaned and dressed, plastic trim restoration, exterior glass, and INCLUDED 1–3 month ceramic spray sealant.",
   "Full Detail":
-    "Interior + Exterior in one visit — full interior clean plus hand wash, wheels/tires, trim, and INCLUDED 1–3 month ceramic sealant. Best value combo.",
+    "Interior + Exterior in one visit — full interior clean plus hand wash, wheels/tires, trim, and INCLUDED 1–3 month ceramic sealant. Best value combo. ⚠️ Heads-up: carpets or seats with heavy dirt or set-in stains will NOT see much improvement without adding Carpet & Upholstery Shampoo on the next step.",
   "Ultimate Interior Reset":
     "The full interior reset. Seats REMOVED for deep steam clean of seats and carpet, every crevice vacuumed, all surfaces disinfected + protected, streak-free glass, mats cleaned and protected, leather conditioned (if applicable), trunk fully included. Note: 100% removal of set-in stains and embedded debris is not guaranteed — but we do everything we can.",
   "Paint Correction — 1 Step":
@@ -1455,11 +1460,10 @@ export function BookingSection({
       if (i !== idx) return v;
       const updated = { ...v, ...patch };
       if ("vehicleSize" in patch) {
-        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
+        // Shampoo is flat $95 across all sizes (July 2026) — no XL surcharge.
+        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 95;
         updated.selectedAddons = updated.selectedAddons.map(a =>
-          a.id === "upholstery_shampoo"
-            ? { ...a, price: updated.vehicleSize === "xl" ? base + 30 : base }
-            : a
+          a.id === "upholstery_shampoo" ? { ...a, price: base } : a
         );
       }
       return updated;
@@ -2171,6 +2175,9 @@ export function BookingSection({
   // Price Summary collapsible (Step 4). Closed initially — customer sees the
   // grand total up top and taps to expand the full breakdown.
   const [priceSummaryExpanded, setPriceSummaryExpanded] = useState(false);
+  // Step 1 — which core package card has its includes/excludes drawer open.
+  // Only one at a time to keep the list scannable. `null` = all collapsed.
+  const [expandedDetailPkg, setExpandedDetailPkg] = useState<string | null>(null);
 
   // ── Restore from localStorage when form opens (after the reset effect) ────
   const [showResumeToast, setShowResumeToast] = useState(false);
@@ -2385,12 +2392,13 @@ export function BookingSection({
   }, [selectedService?.name, vehicleSize, step, totalBookingDurationMins]);
 
   // ── Re-price upholstery shampoo if vehicle size changes after selection ────
+  // Shampoo is flat $95 across all sizes (July 2026) — no XL surcharge. Kept
+  // as a no-op re-sync so any stale price from an older draft gets snapped
+  // back to the current flat rate whenever size changes.
   useEffect(() => {
-    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
+    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 95;
     setSelectedAddons(prev => prev.map(a =>
-      a.id === "upholstery_shampoo"
-        ? { ...a, price: vehicleSize === "xl" ? base + 30 : base }
-        : a
+      a.id === "upholstery_shampoo" ? { ...a, price: base } : a
     ));
   }, [vehicleSize]);
 
@@ -3452,8 +3460,108 @@ export function BookingSection({
                     "Full Detail":     { icon: Zap,      blurb: "Interior + Exterior in one visit · Save $35–$45",              time: "2–2.5 hrs" },
                   };
 
+                  // What each core package DOES include vs what it does NOT
+                  // (customer needs an add-on to get it). Shown in the expandable
+                  // details drawer under each package card so customers can
+                  // pick with confidence — and the "not included" list doubles
+                  // as an add-on discovery aid on the next step.
+                  const SERVICE_DETAILS: Record<string, { included: string[]; notIncluded: string[] }> = {
+                    "Interior Detail": {
+                      included: [
+                        "Full vacuum of every surface, crack & crevice",
+                        "Wipe-down + protection of plastics & leather",
+                        "Floor mats & carpet cleaned (no shampoo)",
+                        "Interior glass — streak free",
+                        "Cabin deodorize",
+                      ],
+                      notIncluded: [
+                        "Deep shampoo of seats / carpet (Carpet & Upholstery Shampoo add-on)",
+                        "Heavy pet hair extraction (Pet Hair Removal add-on)",
+                        "Salt stain removal (Mild–Medium Salt Removal add-on)",
+                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                        "Leather conditioning (Leather Conditioning add-on)",
+                        "Seats REMOVED for deep steam clean — that's the Ultimate Interior Reset",
+                      ],
+                    },
+                    "Exterior Detail": {
+                      included: [
+                        "Full hand wash + foam bath + hand dry",
+                        "Wheels, tires & wheel wells cleaned + dressed",
+                        "Plastic trim restoration",
+                        "Exterior glass cleaned",
+                        "1–3 month ceramic spray sealant INCLUDED",
+                      ],
+                      notIncluded: [
+                        "Paint decontamination (Clay Bar add-on)",
+                        "Cloudy / yellow headlight restoration (Headlight Restoration add-on)",
+                        "Engine bay degrease + dressing (Engine Bay Detail add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                      ],
+                    },
+                    "Full Detail": {
+                      included: [
+                        "Everything in Interior Detail",
+                        "Everything in Exterior Detail",
+                        "1–3 month ceramic spray sealant INCLUDED",
+                        "Best value combo — save $35–$45 vs. buying separately",
+                      ],
+                      notIncluded: [
+                        "Deep shampoo of seats / carpet (Carpet & Upholstery Shampoo add-on)",
+                        "Heavy pet hair extraction (Pet Hair Removal add-on)",
+                        "Salt stain removal (Mild–Medium Salt Removal add-on)",
+                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                        "Leather conditioning (Leather Conditioning add-on)",
+                        "Paint decontamination (Clay Bar add-on)",
+                        "Headlight restoration (Headlight Restoration add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                        "Seats REMOVED for deep steam clean — that's the Ultimate Interior Reset",
+                      ],
+                    },
+                  };
+
                   return (
                     <div className="space-y-6">
+                      {/* Compact quiz trigger — for customers who don't want to
+                          hand-pick a package. Fires the same handoff that our
+                          landing-page prefill uses: sets service + vehicle +
+                          addons and jumps straight to Step 2 (Date & Time). */}
+                      <div className="flex flex-col items-center gap-1.5 pt-1">
+                        <BuildForMeQuiz
+                          compact
+                          services={services}
+                          onUseBuild={(args) => {
+                            const foundationName = args.preferUltimate
+                              ? "Ultimate Interior Reset"
+                              : args.foundation === "interior" ? "Interior Detail"
+                              : args.foundation === "exterior" ? "Exterior Detail"
+                              : "Full Detail";
+                            const svc = services.find(s => s.name === foundationName);
+                            if (!svc) return;
+                            // Set vehicle info in modal state
+                            setVehicleYear(args.vehicle.year);
+                            setVehicleMake(args.vehicle.make);
+                            setVehicleModel(args.vehicle.model);
+                            setVehicleSize(args.vehicle.size);
+                            // Build addon rows with size-adjusted prices so
+                            // the total matches what the quiz result showed.
+                            const preAddons = args.addonIds
+                              .map(id => ALL_ADD_ONS.find(a => a.id === id))
+                              .filter((a): a is AddonItem => !!a)
+                              .map(a => ({
+                                id: a.id,
+                                label: a.label,
+                                price: getEffectiveAddonPrice(a, args.vehicle.size, addonOverrides),
+                              }));
+                            setSelectedAddons(preAddons);
+                            // Pick the foundation service and jump to Date/Time
+                            onSelectService(svc);
+                            setStepDirection(1);
+                            setStep(2);
+                          }}
+                        />
+                        <p className="text-[10px] text-zinc-600">Not sure which package? Answer 4 quick questions.</p>
+                      </div>
+
                       {/* Core packages — 3 vertical rich cards */}
                       {standard.length > 0 && (
                         <div>
@@ -3470,15 +3578,15 @@ export function BookingSection({
                               })
                               .map((service) => {
                                 const meta = SERVICE_META[service.name];
+                                const details = SERVICE_DETAILS[service.name];
                                 const Icon = meta?.icon ?? Sparkles;
                                 const isFull = service.name === "Full Detail";
                                 const displayName = service.name === "Full Detail" ? "Interior + Exterior" : service.name;
+                                const detailsOpen = expandedDetailPkg === service.name;
                                 return (
-                                  <button
+                                  <div
                                     key={service.id}
-                                    type="button"
-                                    onClick={() => onSelectService(service)}
-                                    className={`relative rounded-2xl border overflow-hidden transition-all duration-200 active:scale-[0.99] group text-left ${
+                                    className={`relative rounded-2xl border overflow-hidden transition-all duration-200 group ${
                                       isFull
                                         ? "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.06] via-zinc-900/60 to-zinc-950/70 hover:border-[#D4AF37]/60 hover:shadow-[0_0_24px_rgba(212,175,55,0.10)]"
                                         : "border-white/[0.08] bg-zinc-900/40 hover:border-[#D4AF37]/30 hover:bg-zinc-900/60"
@@ -3486,47 +3594,118 @@ export function BookingSection({
                                   >
                                     {/* Popular ribbon */}
                                     {isFull && (
-                                      <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D4AF37] text-black text-[8px] font-black uppercase tracking-widest">
+                                      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D4AF37] text-black text-[8px] font-black uppercase tracking-widest">
                                         <Crown size={8} strokeWidth={2.5} />
                                         Popular
                                       </div>
                                     )}
-                                    <div className="p-4 flex items-center gap-3">
-                                      {/* Icon disc */}
-                                      <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                                        isFull
-                                          ? "bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_16px_rgba(212,175,55,0.12)]"
-                                          : "bg-white/[0.03] border border-white/[0.08] group-hover:bg-white/[0.06]"
-                                      }`}>
-                                        <Icon size={19} className={isFull ? "text-[#D4AF37]" : "text-zinc-300"} strokeWidth={1.75} />
-                                      </div>
-                                      {/* Copy */}
-                                      <div className="flex-1 min-w-0 pr-16">
-                                        <div className={`text-[15px] font-black tracking-tight leading-tight ${isFull ? "text-white" : "text-zinc-100 group-hover:text-white"}`}>
-                                          {displayName}
+                                    {/* Main select region */}
+                                    <button
+                                      type="button"
+                                      onClick={() => onSelectService(service)}
+                                      className="w-full text-left active:scale-[0.99] transition-transform"
+                                    >
+                                      <div className="p-4 flex items-center gap-3">
+                                        {/* Icon disc */}
+                                        <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                                          isFull
+                                            ? "bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_16px_rgba(212,175,55,0.12)]"
+                                            : "bg-white/[0.03] border border-white/[0.08] group-hover:bg-white/[0.06]"
+                                        }`}>
+                                          <Icon size={19} className={isFull ? "text-[#D4AF37]" : "text-zinc-300"} strokeWidth={1.75} />
                                         </div>
-                                        {meta?.blurb && (
-                                          <div className="text-[11px] text-zinc-500 leading-snug mt-0.5">
-                                            {meta.blurb}
+                                        {/* Copy */}
+                                        <div className="flex-1 min-w-0 pr-16">
+                                          <div className={`text-[15px] font-black tracking-tight leading-tight ${isFull ? "text-white" : "text-zinc-100 group-hover:text-white"}`}>
+                                            {displayName}
                                           </div>
-                                        )}
-                                        {meta?.time && (
-                                          <div className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-zinc-600 mt-1.5">
-                                            <Calendar size={8} strokeWidth={2.5} />
-                                            {meta.time}
-                                          </div>
-                                        )}
-                                      </div>
-                                      {/* Price + arrow */}
-                                      <div className="shrink-0 text-right">
-                                        <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-600">From</div>
-                                        <div className={`text-lg font-black tabular-nums leading-none mt-0.5 ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>
-                                          ${service.price_small}
+                                          {meta?.blurb && (
+                                            <div className="text-[11px] text-zinc-500 leading-snug mt-0.5">
+                                              {meta.blurb}
+                                            </div>
+                                          )}
+                                          {meta?.time && (
+                                            <div className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-zinc-600 mt-1.5">
+                                              <Calendar size={8} strokeWidth={2.5} />
+                                              {meta.time}
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-[8px] font-bold text-zinc-600 mt-0.5">to ${service.price_extra_large}</div>
+                                        {/* Price + arrow */}
+                                        <div className="shrink-0 text-right">
+                                          <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-600">From</div>
+                                          <div className={`text-lg font-black tabular-nums leading-none mt-0.5 ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                            ${service.price_small}
+                                          </div>
+                                          <div className="text-[8px] font-bold text-zinc-600 mt-0.5">to ${service.price_extra_large}</div>
+                                        </div>
                                       </div>
-                                    </div>
-                                  </button>
+                                    </button>
+
+                                    {/* What's included / not included — expandable
+                                        drawer so customers can pick with full context
+                                        without cluttering the card at idle. */}
+                                    {details && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedDetailPkg(prev => prev === service.name ? null : service.name)}
+                                          aria-expanded={detailsOpen}
+                                          className="w-full flex items-center justify-center gap-1.5 border-t border-white/[0.05] py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-[#D4AF37] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors"
+                                        >
+                                          <Info size={11} />
+                                          {detailsOpen ? "Hide details" : "See what's included"}
+                                          <ChevronDown size={11} className={`transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
+                                        </button>
+                                        <AnimatePresence initial={false}>
+                                          {detailsOpen && (
+                                            <motion.div
+                                              key="details"
+                                              initial={{ height: 0, opacity: 0 }}
+                                              animate={{ height: "auto", opacity: 1 }}
+                                              exit={{ height: 0, opacity: 0 }}
+                                              transition={{ duration: 0.22, ease: "easeOut" }}
+                                              className="overflow-hidden border-t border-white/[0.05] bg-black/25"
+                                            >
+                                              <div className="px-4 py-3.5 space-y-3">
+                                                {/* Included */}
+                                                <div>
+                                                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 mb-1.5">
+                                                    Included in {displayName}
+                                                  </p>
+                                                  <ul className="space-y-1">
+                                                    {details.included.map((item) => (
+                                                      <li key={item} className="flex items-start gap-1.5 text-[11px] text-zinc-300 leading-snug">
+                                                        <Check size={10} className="text-emerald-400 shrink-0 mt-[3px]" strokeWidth={3} />
+                                                        <span>{item}</span>
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                </div>
+                                                {/* Not included */}
+                                                <div className="pt-2.5 border-t border-white/[0.05]">
+                                                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400 mb-1.5">
+                                                    Not included <span className="text-zinc-500 font-bold">· add-on required</span>
+                                                  </p>
+                                                  <ul className="space-y-1">
+                                                    {details.notIncluded.map((item) => (
+                                                      <li key={item} className="flex items-start gap-1.5 text-[11px] text-zinc-400 leading-snug">
+                                                        <XCircle size={10} className="text-amber-500/70 shrink-0 mt-[3px]" strokeWidth={2.5} />
+                                                        <span>{item}</span>
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                  <p className="text-[10px] text-zinc-500 mt-2 italic leading-snug">
+                                                    You'll get a chance to add any of these on the next step.
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </motion.div>
+                                          )}
+                                        </AnimatePresence>
+                                      </>
+                                    )}
+                                  </div>
                                 );
                               })}
                           </div>
@@ -3541,67 +3720,152 @@ export function BookingSection({
                             <span className="text-[9px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">The Ultimate</span>
                             <div className="h-px flex-1 bg-[#D4AF37]/25" />
                           </div>
-                          {ultimate.map((service) => (
-                            <button
+                          {ultimate.map((service) => {
+                            const detailsOpen = expandedDetailPkg === service.name;
+                            return (
+                            <div
                               key={service.id}
-                              type="button"
-                              onClick={() => onSelectService(service)}
-                              className="relative w-full rounded-2xl border border-[#D4AF37]/50 bg-gradient-to-br from-[#D4AF37]/[0.10] via-zinc-900/70 to-zinc-950/70 overflow-hidden transition-all duration-300 hover:border-[#D4AF37]/80 hover:shadow-[0_0_36px_rgba(212,175,55,0.18)] active:scale-[0.99] group text-left"
+                              className="relative w-full rounded-2xl border border-[#D4AF37]/50 bg-gradient-to-br from-[#D4AF37]/[0.10] via-zinc-900/70 to-zinc-950/70 overflow-hidden transition-all duration-300 hover:border-[#D4AF37]/80 hover:shadow-[0_0_36px_rgba(212,175,55,0.18)] group text-left"
                             >
                               {/* Top shimmer bar */}
                               <div className="h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40" />
 
-                              <div className="p-5">
-                                {/* Header row: icon + title + price */}
-                                <div className="flex items-start justify-between gap-3 mb-3">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.15)]">
-                                      <Crown size={20} className="text-[#D4AF37]" fill="currentColor" strokeWidth={1.5} />
+                              {/* Main select region */}
+                              <button
+                                type="button"
+                                onClick={() => onSelectService(service)}
+                                className="w-full text-left active:scale-[0.99] transition-transform"
+                              >
+                                <div className="p-5">
+                                  {/* Header row: icon + title + price */}
+                                  <div className="flex items-start justify-between gap-3 mb-3">
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                      <div className="shrink-0 w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.15)]">
+                                        <Crown size={20} className="text-[#D4AF37]" fill="currentColor" strokeWidth={1.5} />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-1">
+                                          <span className="text-[8px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Flagship</span>
+                                        </div>
+                                        <div className="text-base font-black text-white tracking-tight leading-tight">
+                                          {service.name}
+                                        </div>
+                                        <div className="text-[10px] text-zinc-400 leading-tight mt-0.5">Seats removed · Every crevice reset</div>
+                                      </div>
                                     </div>
-                                    <div className="min-w-0">
-                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/25 mb-1">
-                                        <span className="text-[8px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Flagship</span>
-                                      </div>
-                                      <div className="text-base font-black text-white tracking-tight leading-tight">
-                                        {service.name}
-                                      </div>
-                                      <div className="text-[10px] text-zinc-400 leading-tight mt-0.5">Seats removed · Every crevice reset</div>
+                                    <div className="shrink-0 text-right">
+                                      <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">From</div>
+                                      <div className="text-xl font-black text-[#D4AF37] tabular-nums leading-none mt-0.5">${service.price_small}</div>
+                                      <div className="text-[8px] font-bold text-zinc-500 mt-0.5">to ${service.price_extra_large}</div>
                                     </div>
                                   </div>
-                                  <div className="shrink-0 text-right">
-                                    <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">From</div>
-                                    <div className="text-xl font-black text-[#D4AF37] tabular-nums leading-none mt-0.5">${service.price_small}</div>
-                                    <div className="text-[8px] font-bold text-zinc-500 mt-0.5">to ${service.price_extra_large}</div>
+
+                                  {/* Feature bullets */}
+                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-3 border-t border-[#D4AF37]/15">
+                                    {[
+                                      "Seats out — deep steam clean",
+                                      "Full shampoo · seats + carpet",
+                                      "Every crevice vacuumed",
+                                      "Leather conditioned",
+                                      "Disinfect + protect surfaces",
+                                      "Trunk fully included",
+                                    ].map((f) => (
+                                      <div key={f} className="flex items-start gap-1.5 text-[10px] text-zinc-400 leading-tight">
+                                        <Check size={9} className="text-[#D4AF37] shrink-0 mt-0.5" strokeWidth={3} />
+                                        <span>{f}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Bundle hint */}
+                                  <div className="mt-3 pt-3 border-t border-[#D4AF37]/15 flex items-center gap-2">
+                                    <Zap size={10} className="text-[#D4AF37] shrink-0" fill="currentColor" />
+                                    <span className="text-[10px] text-zinc-400 leading-tight">
+                                      <span className="text-[#D4AF37] font-bold">Add + Exterior at checkout</span> — save $55 vs. buying separately, unlocks 20% off add-ons
+                                    </span>
                                   </div>
                                 </div>
+                              </button>
 
-                                {/* Feature bullets */}
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-3 border-t border-[#D4AF37]/15">
-                                  {[
-                                    "Seats out — deep steam clean",
-                                    "Full shampoo · seats + carpet",
-                                    "Every crevice vacuumed",
-                                    "Leather conditioned",
-                                    "Disinfect + protect surfaces",
-                                    "Trunk fully included",
-                                  ].map((f) => (
-                                    <div key={f} className="flex items-start gap-1.5 text-[10px] text-zinc-400 leading-tight">
-                                      <Check size={9} className="text-[#D4AF37] shrink-0 mt-0.5" strokeWidth={3} />
-                                      <span>{f}</span>
+                              {/* What's included / not included — full breakdown */}
+                              <button
+                                type="button"
+                                onClick={() => setExpandedDetailPkg(prev => prev === service.name ? null : service.name)}
+                                aria-expanded={detailsOpen}
+                                className="w-full flex items-center justify-center gap-1.5 border-t border-[#D4AF37]/20 py-2 text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]/70 hover:text-[#D4AF37] hover:bg-[#D4AF37]/[0.04] active:bg-[#D4AF37]/[0.08] transition-colors"
+                              >
+                                <Info size={11} />
+                                {detailsOpen ? "Hide details" : "See everything included"}
+                                <ChevronDown size={11} className={`transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              <AnimatePresence initial={false}>
+                                {detailsOpen && (
+                                  <motion.div
+                                    key="ult-details"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.22, ease: "easeOut" }}
+                                    className="overflow-hidden border-t border-[#D4AF37]/20 bg-black/25"
+                                  >
+                                    <div className="px-5 py-4 space-y-3">
+                                      {/* Included — full list */}
+                                      <div>
+                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 mb-1.5">
+                                          Included in {service.name}
+                                        </p>
+                                        <ul className="space-y-1">
+                                          {[
+                                            "Seats REMOVED from vehicle for deep steam clean",
+                                            "Full shampoo of seats, carpet & floor mats",
+                                            "Steam clean every surface, vacuum every crevice",
+                                            "Heavy pet hair extraction",
+                                            "Salt stain removal + neutralization",
+                                            "Leather conditioning (if applicable)",
+                                            "Clay bar paint decontamination",
+                                            "Disinfect + protect all interior surfaces",
+                                            "Interior glass streak-free (all windows)",
+                                            "Rubber / carpet mats cleaned and protected",
+                                            "Cabin deodorize",
+                                            "Trunk fully included",
+                                          ].map((item) => (
+                                            <li key={item} className="flex items-start gap-1.5 text-[11px] text-zinc-300 leading-snug">
+                                              <Check size={10} className="text-emerald-400 shrink-0 mt-[3px]" strokeWidth={3} />
+                                              <span>{item}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                      {/* Not included */}
+                                      <div className="pt-2.5 border-t border-[#D4AF37]/15">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400 mb-1.5">
+                                          Not included <span className="text-zinc-500 font-bold">· add-on required</span>
+                                        </p>
+                                        <ul className="space-y-1">
+                                          {[
+                                            "Exterior wash, wheels, tires, trim (add + Exterior Detail bundle: $65 sedan / $80 SUV / $95 3-row)",
+                                            "Cloudy / yellow headlight restoration (Headlight Restoration add-on)",
+                                            "Engine bay degrease + dressing (Engine Bay Detail add-on)",
+                                            "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                                            "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                                          ].map((item) => (
+                                            <li key={item} className="flex items-start gap-1.5 text-[11px] text-zinc-400 leading-snug">
+                                              <XCircle size={10} className="text-amber-500/70 shrink-0 mt-[3px]" strokeWidth={2.5} />
+                                              <span>{item}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                        <p className="text-[10px] text-zinc-500 mt-2 italic leading-snug">
+                                          You'll get a chance to add any of these on the next step.
+                                        </p>
+                                      </div>
                                     </div>
-                                  ))}
-                                </div>
-
-                                {/* Bundle hint */}
-                                <div className="mt-3 pt-3 border-t border-[#D4AF37]/15 flex items-center gap-2">
-                                  <Zap size={10} className="text-[#D4AF37] shrink-0" fill="currentColor" />
-                                  <span className="text-[10px] text-zinc-400 leading-tight">
-                                    <span className="text-[#D4AF37] font-bold">Add + Exterior at checkout</span> — save $55 vs. buying separately, unlocks 20% off add-ons
-                                  </span>
-                                </div>
-                              </div>
-                            </button>
-                          ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -4680,7 +4944,7 @@ export function BookingSection({
                                               {(effectiveIncluded || isSpecial) && (
                                                 <div className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-[#D4AF37]/80 mt-0.5">
                                                   {effectiveIncluded ? <Crown size={7} fill="currentColor" /> : <Sparkles size={7} />}
-                                                  {isBundleIncluded ? "Included in bundle" : effectiveIncluded ? "Included" : "Bundle"}
+                                                  {isBundleIncluded ? "Included in bundle" : effectiveIncluded ? "Included in Ultimate" : "Bundle"}
                                                 </div>
                                               )}
                                             </div>

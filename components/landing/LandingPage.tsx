@@ -648,7 +648,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           </p>
 
           {/* CTAs — content-fit width, centered, side-by-side on desktop */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-3">
             <button
               onClick={() => openBooking()}
               className="btn-primary-gold-shimmer h-12 px-8 rounded-xl font-semibold tracking-wide w-fit min-w-[180px] bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out"
@@ -663,6 +663,33 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               View Services
               <ChevronDown size={16} />
             </Button>
+          </div>
+
+          {/* Small "Build me a package" pill under the primary CTAs — same
+              quiz as the one above packages, wired to the same handoff. */}
+          <div className="flex justify-center mb-4">
+            <BuildForMeQuiz
+              compact
+              services={services}
+              onUseBuild={(args) => {
+                const serviceName = args.preferUltimate
+                  ? "Ultimate Interior Reset"
+                  : args.foundation === "interior" ? "Interior Detail"
+                  : args.foundation === "exterior" ? "Exterior Detail"
+                  : "Full Detail";
+                const svc = services.find(s => s.name === serviceName) ?? null;
+                setSelectedService(svc);
+                setBuilderPrefill({
+                  vehicleMake:  args.vehicle.make,
+                  vehicleModel: args.vehicle.model,
+                  vehicleYear:  args.vehicle.year,
+                  vehicleSize:  args.vehicle.size,
+                  addonIds:     args.addonIds,
+                });
+                setExpandedBookingId("hero");
+                setTimeout(() => document.getElementById("hero-booking")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+              }}
+            />
           </div>
 
           {/* Squeeze Me In CTA */}
@@ -797,6 +824,35 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         onBookUltimate={() => openUltimateBooking("Ultimate Interior Reset")}
       />
 
+
+      {/* Build For Me Quiz — sits directly above the packages so people who
+          don't know which tier to pick get an immediate on-ramp. Quiz collects
+          scope + pains + severity + vehicle → the full builder prefill is
+          handed off so BookingModal opens on Step 2 (Date & Time) with
+          service, vehicle, and add-ons already selected. When customer picks
+          the Ultimate upgrade from the result screen, `preferUltimate` is
+          set so we swap the foundation to Ultimate Interior Reset. */}
+      <BuildForMeHomepageSection
+        services={services}
+        onUseBuild={(args) => {
+          const serviceName = args.preferUltimate
+            ? "Ultimate Interior Reset"
+            : args.foundation === "interior" ? "Interior Detail"
+            : args.foundation === "exterior" ? "Exterior Detail"
+            : "Full Detail";
+          const svc = services.find(s => s.name === serviceName) ?? null;
+          setSelectedService(svc);
+          setBuilderPrefill({
+            vehicleMake:  args.vehicle.make,
+            vehicleModel: args.vehicle.model,
+            vehicleYear:  args.vehicle.year,
+            vehicleSize:  args.vehicle.size,
+            addonIds:     args.addonIds,
+          });
+          setExpandedBookingId("services");
+          setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+        }}
+      />
 
       {/* ─── Our Services ─────────────────────────────────────────────────────────────── */}
       <motion.section
@@ -959,27 +1015,6 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </div>
       </motion.section>
 
-      {/* Build For Me Quiz — hidden per owner request 2026-06.
-          Component + handler preserved below (gated behind `false`) so we
-          can re-enable in one line when ready. BuildForMeQuiz +
-          packageMatcher both still ship in the bundle but aren't rendered.
-          To turn back on: change the gate to `true` (or delete the wrapper). */}
-      {false && (
-        <BuildForMeHomepageSection
-          services={services}
-          onUseBuild={(args) => {
-            const matched = matchPackage({ foundation: args.foundation, selectedAddonIds: args.addonIds });
-            const serviceName = matched?.serviceName
-              ?? (args.foundation === "interior" ? "Interior Detail"
-                 : args.foundation === "exterior" ? "Exterior Detail"
-                 : "Full Detail");
-            const svc = services.find(s => s.name === serviceName) ?? null;
-            setSelectedService(svc);
-            setExpandedBookingId("ultimate");
-            setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-          }}
-        />
-      )}
 
       {/* ─── Boat / RV / Fleet — collapsed under "More Services" button ──────
           Boat/RV/Truck/Heavy Equipment retired 2026-07. Kept the
@@ -2005,7 +2040,7 @@ const EXTERIOR_ITEMS = [
 const INTERIOR_ITEMS = [
   "Full wipe down & vacuum of every surface, crack, and crevice",
   "Clean and protect plastics and leathers",
-  "Floor mats & carpet cleaning (shampoo not included)",
+  "Floor mats & carpet cleaning (shampoo not included — heavy dirt or set-in stains will NOT lift without adding Carpet & Upholstery Shampoo)",
   "Interior glass cleaned and protected",
 ];
 
@@ -2160,7 +2195,7 @@ const ULTIMATE_CARDS = [
   {
     name: "Ultimate Interior Reset",
     tagline: "Seats removed. Every crevice reset.",
-    priceNormal: 300, priceLarge: 370,
+    priceNormal: 325, priceLarge: 395,
     badge: { label: "Flagship Service", icon: "gem" as const },
     /** Estimated on-site duration window. Calibrated from SERVICE_DURATIONS. */
     timeOnSite: "3.5–4.5 hrs",

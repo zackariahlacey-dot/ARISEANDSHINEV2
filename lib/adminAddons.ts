@@ -6,7 +6,7 @@ export type AdminAddon = { id: string; label: string; price: number };
 export const ADMIN_ADDONS: AdminAddon[] = [
   // ── The 8 basics ──────────────────────────────────────────────────────
   { id: "engine_bay",         label: "Engine Bay Detail",              price: 65 },
-  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo",    price: 75 },
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo",    price: 95 },
   { id: "salt_stain_removal", label: "Mild–Medium Salt Removal",       price: 65 },
   { id: "leather_condition",  label: "Leather Conditioning",           price: 40 },
   { id: "ozone_treatment",    label: "Ozone Treatment",                price: 60 },

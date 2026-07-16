@@ -27,7 +27,7 @@ export type AddonMeta = {
 export const ADDON_META: AddonMeta[] = [
   // ── The 8 basics (interior) ──────────────────────────────────────────
   { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", side: "interior",
-    basePrice: 75, baseDuration: 0 },
+    basePrice: 95, baseDuration: 0 },
   { id: "salt_stain_removal", label: "Mild–Medium Salt Removal", side: "interior",
     basePrice: 65, baseDuration: 45 },
   { id: "leather_condition",  label: "Leather Conditioning", side: "interior",
@@ -99,6 +99,8 @@ export const ULTIMATE_INTERIOR_INCLUDED_ADDONS = new Set<string>([
   "upholstery_shampoo",  // seat + carpet shampoo is core to Ultimate
   "leather_condition",   // included if leather present
   "pet_hair",            // heavy vacuum + shampoo covers this
+  "salt_stain_removal",  // salt neutralization included in the reset
+  "clay_bar",            // paint decontamination prep baked into Ultimate
 ]);
 
 /** Sections available in the Premium Ceramic add-on picker (in display order). */

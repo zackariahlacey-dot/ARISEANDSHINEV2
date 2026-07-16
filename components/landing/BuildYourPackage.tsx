@@ -78,7 +78,7 @@ type AddonDef = {
 // exist downstream in BookingModal.tsx for paint-correction / work-van /
 // RV / boat flows; they just don't surface in this builder anymore.
 const INTERIOR_ADDONS: AddonDefExt[] = [
-  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 75, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. 3-row SUVs add $30 (extra row + cargo area).", side: "interior", popular: true },
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", price: 95, desc: "Deep steam shampoo of all seats, upholstery, and floorboards. Lifts stains, grime and odor. Flat $95 across all vehicle sizes.", side: "interior", popular: true },
   { id: "pet_hair",           label: "Heavy Pet Hair Removal",      price: 50, desc: "Deep extraction of embedded pet hair from seats, carpet, and cargo. Only charged if heavy accumulation present.", side: "interior", popular: true },
   { id: "salt_stain_removal", label: "Salt Stain Removal & Prevention", price: 50, desc: "Vermont winter survival: neutralize dried salt stains from carpets and door sills, then apply a salt repellent.", side: "interior" },
 ];
@@ -156,7 +156,7 @@ function getAddonEffectivePrice(
     if (ov?.price_cents != null) return ov.price_cents / 100;
   }
   if (addon.sizedPrice) return addon.sizedPrice[size] ?? addon.price;
-  if (addon.id === "upholstery_shampoo" && size === "xl") return addon.price + 30;
+  // Shampoo is flat $95 — no XL surcharge (July 2026).
   return addon.price;
 }
 
