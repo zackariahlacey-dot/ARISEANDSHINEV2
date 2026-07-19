@@ -61,6 +61,7 @@ import { validateGiftCard } from "@/app/actions/validateGiftCard";
 import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBookingsForDate";
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
+import { trackFbPurchase } from "@/lib/analytics/metaPixel";
 import { BuildForMeQuiz } from "./BuildForMeQuiz";
 import { todayInBusinessTz } from "@/lib/dates";
 import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, PREMIUM_ADDON_BONUS_PCT } from "@/lib/bundleDiscount";
@@ -1311,6 +1312,10 @@ export interface DraftBooking {
     servicePrice: number;
     selectedAddonIds: string[];
   }>;
+  /** Total charged (dollars, after all discounts). Set when submitting through
+   *  Stripe so the post-return handler can fire the Meta Pixel Purchase event
+   *  with the correct value. */
+  totalPaid?: number;
 }
 
 const DRAFT_STORAGE_KEY = "draftBooking";
@@ -2726,6 +2731,15 @@ export function BookingSection({
     setBookingResult(result);
     if (result.success && onBookingSuccess && selectedService) {
       try { localStorage.removeItem(PERSISTENT_DRAFT_KEY); } catch {}
+      // Meta Pixel: Purchase conversion — pay-at-arrival path. Fires once per
+      // successful booking so ad optimization targets actual bookers, not
+      // just checkout starters.
+      trackFbPurchase({
+        value: totalAfterDiscount,
+        currency: "USD",
+        content_name: selectedService.name,
+        content_ids: [selectedService.id],
+      });
       onClose();
       router.refresh();
       onBookingSuccess?.({
@@ -2816,6 +2830,9 @@ export function BookingSection({
         pointsToRedeemInput: 0,
         boatLength: isFootageService(selectedService.name) ? boatLength : undefined,
         selectedAddonIds: selectedAddons.map((a) => a.id),
+        // Snapshotted so the LandingPage Stripe-return handler can fire the
+        // Meta Pixel Purchase event with the actual charged amount.
+        totalPaid: totalAfterDiscount,
       };
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));

@@ -77,6 +77,7 @@ import { matchPackage } from "@/lib/packageMatcher";
 import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
+import { trackFbInitiateCheckout, trackFbPurchase } from "@/lib/analytics/metaPixel";
 
 const sectionViewport = { once: true, margin: "-100px" };
 const sectionVariants = {
@@ -208,6 +209,21 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedBookingId, builderPrefill]);
 
+  // ── Meta Pixel: InitiateCheckout ──────────────────────────────────────────
+  // Fire when a booking section opens (customer clicked a Book Now CTA,
+  // finished the Build-For-Me quiz, or landed with ?book=1). Tracks the
+  // section so we can segment audiences by which package they engaged with.
+  const prevExpandedBookingRef = useRef<ExpandedBookingId>(null);
+  useEffect(() => {
+    if (expandedBookingId !== null && prevExpandedBookingRef.current === null) {
+      trackFbInitiateCheckout({
+        content_category: expandedBookingId,
+        content_name: selectedService?.name ?? undefined,
+      });
+    }
+    prevExpandedBookingRef.current = expandedBookingId;
+  }, [expandedBookingId, selectedService?.name]);
+
   // Restore selectedService from saved handoff once services load
   useEffect(() => {
     if (initialHandoff?.serviceName && !selectedService) {
@@ -297,6 +313,19 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         const sessionId = searchParams.get("session_id");
         const service = services.find((s) => s.id === draft.serviceId);
         const firstName = draft.name?.trim().split(/\s+/)[0] ?? "there";
+
+        // Meta Pixel: Purchase conversion — Stripe path. Fire ONCE with the
+        // draft-snapshotted total so ad optimization targets actual bookers.
+        // Guarded against double-fires by removing draftBooking above (line
+        // sessionStorage.removeItem("draftBooking")).
+        if (typeof draft.totalPaid === "number" && draft.totalPaid > 0) {
+          trackFbPurchase({
+            value: draft.totalPaid,
+            currency: "USD",
+            content_name: service?.name ?? "Detailing Service",
+            content_ids: service ? [service.id] : undefined,
+          });
+        }
 
         if (sessionId) {
           setStripeVerifying(true);

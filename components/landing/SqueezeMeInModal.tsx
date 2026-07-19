@@ -8,6 +8,7 @@ import {
   Check, Loader2, ChevronLeft, Sparkles, Clock, Phone,
 } from "lucide-react";
 import { createSqueezeRequest, getRecentVehiclesByContact } from "@/app/actions/squeezeActions";
+import { trackFbLead } from "@/lib/analytics/metaPixel";
 
 // ── Google Places singleton loader ────────────────────────────────────────────
 let _placesLoaded = false;
@@ -335,8 +336,18 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
       notes: notes.trim() || undefined,
     });
     setSubmitting(false);
-    if (res.success) setSubmitted(true);
-    else setSubmitError("Something went wrong — please try again or call 802-585-5563.");
+    if (res.success) {
+      setSubmitted(true);
+      // Meta Pixel: warm lead (contact info captured, not yet paid). Fires
+      // once per successful submission so audience-building isn't polluted
+      // by validation errors.
+      trackFbLead({
+        content_category: "squeeze_me_in",
+        content_name: specificService !== "Not sure yet" ? specificService : serviceType,
+      });
+    } else {
+      setSubmitError("Something went wrong — please try again or call 802-585-5563.");
+    }
   }
 
   const serviceList = serviceType === "boat" ? BOAT_SERVICES : serviceType === "rv" ? RV_SERVICES : AUTO_SERVICES;
