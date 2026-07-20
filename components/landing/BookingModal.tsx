@@ -40,7 +40,10 @@ import {
   Info,
   ChevronDown,
   XCircle,
+  Wand2,
 } from "lucide-react";
+import { LightDetailingPicker } from "@/components/booking/LightDetailingPicker";
+import { LIGHT_DETAIL_ITEMS, computeLightDetailPrice, LIGHT_DETAIL_MIN_ITEMS } from "@/lib/lightDetailItems";
 import type { Service } from "@/app/page";
 import {
   bookDetailing,
@@ -62,6 +65,7 @@ import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBooking
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import { trackFbPurchase } from "@/lib/analytics/metaPixel";
+import { getServiceDisplayName } from "@/lib/serviceDisplay";
 import { BuildForMeQuiz } from "./BuildForMeQuiz";
 import { todayInBusinessTz } from "@/lib/dates";
 import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, PREMIUM_ADDON_BONUS_PCT } from "@/lib/bundleDiscount";
@@ -275,6 +279,28 @@ function ceramicPackagePct(count: number): number {
 /** Add-ons functionally INCLUDED in Ultimate Interior Reset (July 2026 scope).
  *  Selecting these on a base package triggers the upgrade nudge to Ultimate. */
 const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "leather_condition", "pet_hair", "salt_stain_removal", "clay_bar"];
+
+/** Add-ons baked into each Refresh / Reset tier — used to flag them as
+ *  "Included" in the add-on picker so customers see they're already getting
+ *  them (and can't accidentally double-charge). Keyed by DB name. */
+const INCLUDED_ADDONS_BY_SERVICE: Record<string, readonly string[]> = {
+  // Refresh tier — top popular add-ons per foundation.
+  "The Refresh — Interior": ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
+  "The Refresh — Exterior": ["clay_bar", "headlight_restore", "engine_bay"],
+  "The Refresh — Full":     ["upholstery_shampoo", "salt_stain_removal", "pet_hair", "clay_bar", "headlight_restore", "engine_bay"],
+  // Reset tier — Ultimate Interior Reset kept under its DB name.
+  "Ultimate Interior Reset": INCLUDED_IN_ULTIMATE_IDS,
+  "The Reset — Full":        [...INCLUDED_IN_ULTIMATE_IDS, "headlight_restore", "engine_bay"],
+};
+
+/** Returns true if the given add-on id is already included in the selected
+ *  service's package price (so it should render as "Included" in the picker,
+ *  not as a paid add-on). */
+function isAddonIncludedInService(serviceName: string | undefined, addonId: string): boolean {
+  if (!serviceName) return false;
+  const included = INCLUDED_ADDONS_BY_SERVICE[serviceName];
+  return !!included && included.includes(addonId);
+}
 /** Add-ons that require a full-day appointment */
 export const FULL_DAY_ADDON_IDS    = ["polish_ceramic"];
 export const FULL_DAY_DURATION_MIN = 480; // 8 hours — blocks the whole day
@@ -479,6 +505,10 @@ function getAddonExtraDurationMins(
 
 function getAddonsForService(serviceName: string, vehicleSize?: string): readonly AddonItem[] {
   const n = serviceName.toLowerCase();
+  // Light Detailing has its own item picker on step 1 (LightDetailingPicker) —
+  // it doesn't surface any regular add-ons. Items are converted into fake
+  // addon rows on Continue so downstream code renders them as line items.
+  if (n === "light detailing") return [];
   const isWorkVan = vehicleSize === "xl";
   const cargoIds = isWorkVan ? CARGO_ADDON_IDS : [];
 
@@ -547,25 +577,29 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     ));
   }
 
-  // Ultimate Interior Reset: 8 basics (non-included) + Ultimate + Ext toggle + ceramic upgrade.
-  // Included in Ultimate (shampoo, leather, pet hair) are visually flagged but stay in list.
-  if (n.includes("ultimate")) {
-    return july2026Filter((
+  // Ultimate Interior Reset (displays as "The Reset — Interior"). Ultimate_ext_addon
+  // was retired when The Reset — Full became its own tier — customers wanting
+  // interior + exterior now book Reset Full directly, so the +Ext toggle would
+  // just be a redundant path to the same place.
+  if (n.includes("ultimate") || n.includes("reset")) {
+    return stripBakedIn(july2026Filter((
       ALL_ADD_ONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar",
         "salt_stain_removal", "ozone_treatment",
-        "ceramic_6_10_upgrade", "ultimate_ext_addon",
+        "ceramic_6_10_upgrade",
         "gentech_5yr_body", "gentech_5yr_wheels",
         "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all",
         "gentech_5yr_full",
       ].includes(a.id))
-    ));
+    )), serviceName);
   }
 
-  // Exterior Detail — the 8 basics on the exterior side + ceramic upgrade + Premium Ceramic
+  // Exterior Detail — the 8 basics on the exterior side + ceramic upgrade + Premium Ceramic.
+  // Matches Basic Exterior AND The Refresh — Exterior; stripBakedIn removes
+  // whatever's already baked into Refresh Exterior (clay bar, headlight, engine bay).
   if (n.includes("exterior") && !n.includes("full")) {
     const premiumCeramicIds = ALL_ADD_ONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
-    return july2026Filter((
+    return stripBakedIn(july2026Filter((
       ALL_ADD_ONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar",
         "ceramic_6_10_upgrade",
@@ -574,17 +608,19 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
         "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all",
         "gentech_5yr_full",
       ].includes(a.id))
-    ));
+    )), serviceName);
   }
 
-  // Interior Detail — the 8 basics on the interior side.
+  // Interior Detail — the 8 basics on the interior side. Matches Basic Interior
+  // AND The Refresh — Interior; stripBakedIn removes shampoo/salt/pet-hair
+  // when Refresh Interior is picked so they aren't offered as buyable add-ons.
   if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
-    return july2026Filter((
+    return stripBakedIn(july2026Filter((
       ALL_ADD_ONS.filter(a => [
         "upholstery_shampoo", "salt_stain_removal", "leather_condition",
         "ozone_treatment", "pet_hair",
       ].includes(a.id))
-    ));
+    )), serviceName);
   }
 
   // Maintenance plans: engine bay only (quick recurring visits)
@@ -592,9 +628,11 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return july2026Filter((ALL_ADD_ONS.filter(a => a.id === "engine_bay")));
   }
 
-  // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic
+  // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic.
+  // Matches Basic Full, The Refresh — Full, and The Reset — Full; stripBakedIn
+  // removes whatever's already included per package.
   const premiumCeramicIds = ALL_ADD_ONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
-  return july2026Filter((
+  return stripBakedIn(july2026Filter((
     ALL_ADD_ONS.filter(a => [
       "engine_bay", "headlight_restore", "clay_bar",
       "upholstery_shampoo", "salt_stain_removal", "leather_condition",
@@ -602,7 +640,17 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
       "ceramic_6_10_upgrade",
       ...premiumCeramicIds,
     ].includes(a.id))
-  ));
+  )), serviceName);
+}
+
+/** Removes add-ons that are already baked into the service's package price
+ *  so they don't appear in the picker as buyable items. Keyed off
+ *  INCLUDED_ADDONS_BY_SERVICE so it stays in sync with the "Included" flag
+ *  the picker uses elsewhere. Safe no-op for services with no baked-in list. */
+function stripBakedIn(list: readonly AddonItem[], serviceName: string): readonly AddonItem[] {
+  const baked = INCLUDED_ADDONS_BY_SERVICE[serviceName];
+  if (!baked || baked.length === 0) return list;
+  return list.filter(a => !baked.includes(a.id));
 }
 
 /**
@@ -1421,6 +1469,19 @@ export function BookingSection({
   // Add-ons
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; label: string; price: number }[]>([]);
 
+  // Light Detailing — picked items live here until Continue converts them
+  // into fake addon rows so the rest of the flow treats them as line items.
+  const [lightDetailItemIds, setLightDetailItemIds] = useState<string[]>([]);
+
+  // Clear Light Detailing item picks when the customer switches to any other
+  // service — prevents stale picks from bleeding into an unrelated booking.
+  useEffect(() => {
+    if (selectedService?.name !== "Light Detailing" && lightDetailItemIds.length > 0) {
+      setLightDetailItemIds([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedService?.name]);
+
   // Auto-drop clay_bar when the Ultimate + Exterior toggle is on — clay bar is
   // baked into the bundle, so charging for it separately would double-bill.
   useEffect(() => {
@@ -1629,7 +1690,12 @@ export function BookingSection({
 
   // Computed price
   const computedPrice = selectedService
-    ? isFootageService(selectedService.name)
+    ? selectedService.name === "Light Detailing"
+      ? computeLightDetailPrice(
+          lightDetailItemIds,
+          (vehicleSize === "xl" ? "xl" : vehicleSize === "suv" ? "suv" : "sedan"),
+        ).finalPrice
+      : isFootageService(selectedService.name)
       ? (() => {
           const minFt = FOOTAGE_MIN_FEET[selectedService.name] ?? 15;
           const rate  = FOOTAGE_RATE[selectedService.name] ?? selectedService.price_small;
@@ -1684,9 +1750,14 @@ export function BookingSection({
   // the discount tier, and their own price never receives a bundle discount.
   const isPremiumCeramicId = (id: string) => id.startsWith("premium_ceramic_");
   const isGentechId = (id: string) => id.startsWith("gentech_5yr_");
+  // Light Detailing item IDs — get stored on selectedAddons for display+booking
+  // but must NOT trigger the bundle discount tier (they're already priced à la
+  // carte at maintenance rates, not full add-on prices).
+  const LIGHT_DETAIL_IDS = new Set(["vacuum", "wipe_down", "floor_mats", "windows", "exterior_rinse", "tire_shine"]);
   const isCeramicOrSpecial = (id: string) =>
     isPremiumCeramicId(id) || isGentechId(id) ||
-    id === "ultimate_ext_addon" || id === "ceramic_6_10_upgrade";
+    id === "ultimate_ext_addon" || id === "ceramic_6_10_upgrade" ||
+    LIGHT_DETAIL_IDS.has(id);
   const isSpecialAddonId = isCeramicOrSpecial; // legacy alias
   const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicOrSpecial(a.id));
   const ceramicAddons    = selectedAddons.filter(a => isPremiumCeramicId(a.id));
@@ -1914,25 +1985,40 @@ export function BookingSection({
     if (ultimateNudgeDismissed) return null;
     if (!selectedService) return null;
     const n = selectedService.name.toLowerCase();
-    if (n.includes("ultimate") || n.includes("boat") || n.includes("rv") || n.includes("motorhome") || n.includes("maintenance") || n.includes("paint") || n.includes("correction")) return null;
-    // Always show the upgrade banner on basic Interior / Full Detail bookings —
-    // gives every customer a clear path to Ultimate without having to first
-    // discover that they could be saving by upgrading.
-    // July 2026: only one Ultimate SKU. Nudge from Interior / Full to Ultimate Interior Reset.
-    const targetName = "Ultimate Interior Reset";
+    // Skip: services that are already at the top of their ladder, or that
+    // don't participate in the Basic/Refresh/Reset ladder at all.
+    if (n.includes("boat") || n.includes("rv") || n.includes("motorhome") || n.includes("maintenance") || n.includes("paint") || n.includes("correction")) return null;
+
+    // Route the nudge to the correct top-tier per foundation. Basic Full and
+    // Refresh Full get pushed to The Reset — Full (not Ultimate Interior Reset)
+    // so customers don't silently lose their exterior side when accepting the
+    // upgrade. Exterior-only doesn't have a "Reset" — Refresh is the ceiling.
+    const currentName = selectedService.name;
+    let targetName: string | null = null;
+    if (currentName === "Interior Detail" || currentName === "The Refresh — Interior") {
+      targetName = "Ultimate Interior Reset";
+    } else if (currentName === "Full Detail" || currentName === "The Refresh — Full") {
+      targetName = "The Reset — Full";
+    } else {
+      // Already on a Reset tier, on an Exterior tier (no Reset exists), or
+      // on something outside the ladder — no nudge.
+      return null;
+    }
     const targetService = services.find(s => s.name === targetName);
     if (!targetService) return null;
-    // Ultimate is size-tiered — compare against the customer's actual vehicle size
-    // so the upgrade delta is accurate. Falls back to price_small for safety.
+    // Size-tiered — compare against the customer's actual vehicle size so
+    // the upgrade delta is accurate. Falls back to price_small for safety.
     const targetPrice = vehicleSize
       ? getPriceForSize(targetService, vehicleSize as VehicleSizeSlug)
       : (targetService.price_small ?? 0);
-    // Honest upgrade delta: only the add-ons INCLUDED in Ultimate become free
-    // post-upgrade. Premium add-ons (engine bay, headlight, seat removal,
-    // ceramic, etc.) survive and still cost the same on Ultimate, so they
-    // shouldn't be counted as part of the "savings" from upgrading.
+    // Honest upgrade delta: only the add-ons ABSORBED by the target tier
+    // become free post-upgrade. Premium add-ons that survive still cost the
+    // same, so they shouldn't be counted as "savings" from upgrading.
+    // Uses INCLUDED_ADDONS_BY_SERVICE so the calc is per-tier (Reset Full
+    // absorbs headlight + engine bay in addition to interior add-ons).
+    const targetAbsorbed = INCLUDED_ADDONS_BY_SERVICE[targetName] ?? INCLUDED_IN_ULTIMATE_IDS;
     const includedAddonsCost = selectedAddons
-      .filter(a => INCLUDED_IN_ULTIMATE_IDS.includes(a.id))
+      .filter(a => targetAbsorbed.includes(a.id))
       .reduce((sum, a) => sum + a.price, 0);
     const delta = targetPrice - (servicePrice + includedAddonsCost);
     return { targetService, targetName, targetPrice, delta };
@@ -2595,6 +2681,11 @@ export function BookingSection({
   // ── Navigation guards ────────────────────────────────────────────────────
   const canGoNext = (): boolean => {
     if (step === 1) {
+      // Light Detailing — need vehicle info + minimum item count picked.
+      if (selectedService?.name === "Light Detailing") {
+        return !!(vehicleSize && vehicleYear && vehicleMake && vehicleModel)
+          && lightDetailItemIds.length >= LIGHT_DETAIL_MIN_ITEMS;
+      }
       if (selectedService && isFootageService(selectedService.name)) {
         const minFt = FOOTAGE_MIN_FEET[selectedService.name] ?? 15;
         return !!(vehicleYear && vehicleMake && vehicleModel &&
@@ -2634,6 +2725,20 @@ export function BookingSection({
     );
 
   const handleNext = () => {
+    // Light Detailing — convert selected item ids into fake addon rows so
+    // downstream code (price, review, submit) treats them as line items,
+    // then jump straight to date/time.
+    if (step === 1 && selectedService?.name === "Light Detailing") {
+      const sizeKey: "sedan" | "suv" | "xl" =
+        vehicleSize === "xl" ? "xl" : vehicleSize === "suv" ? "suv" : "sedan";
+      const asAddons = LIGHT_DETAIL_ITEMS
+        .filter(item => lightDetailItemIds.includes(item.id))
+        .map(item => ({ id: item.id, label: item.label, price: item.prices[sizeKey] }));
+      setSelectedAddons(asAddons);
+      setStepDirection(1);
+      setStep(2);
+      return;
+    }
     if (step < 3) {
       setStepDirection(1);
       setStep((s) => s + 1);
@@ -3470,11 +3575,54 @@ export function BookingSection({
                   const standard = services.filter(s => isVehicleService(s) && !s.name.toLowerCase().includes("ultimate"));
                   const ultimate = services.filter(s => isVehicleService(s) && s.name.toLowerCase().includes("ultimate"));
 
-                  // Icon + accent config per service
+                  // Categorize non-Ultimate services by foundation so Step 1
+                  // can render the tier ladder per foundation. Everything in
+                  // `standard` sorts into one of these buckets:
+                  //   Interior — Basic Interior Detail, The Refresh — Interior
+                  //   Exterior — Basic Exterior Detail, The Refresh — Exterior
+                  //   Full     — Basic Full Detail, The Refresh — Full, The Reset — Full
+                  // (Ultimate Interior Reset is rendered separately as the
+                  // flagship Interior top tier alongside the Interior group.)
+                  const foundationOf = (name: string): "interior" | "exterior" | "full" | null => {
+                    const n = name.toLowerCase();
+                    if (n.includes("full")) return "full";
+                    if (n.includes("interior")) return "interior";
+                    if (n.includes("exterior")) return "exterior";
+                    return null;
+                  };
+                  // Tier rank within a foundation — used to sort Basic < Refresh < Reset.
+                  const tierRankOf = (name: string): number => {
+                    const n = name.toLowerCase();
+                    if (n.includes("reset") || n.includes("ultimate")) return 2;
+                    if (n.includes("refresh")) return 1;
+                    return 0;
+                  };
+                  const interiorTier = [
+                    ...standard.filter(s => foundationOf(s.name) === "interior"),
+                    ...ultimate, // "Ultimate Interior Reset" = top interior tier
+                  ].sort((a, b) => tierRankOf(a.name) - tierRankOf(b.name));
+                  const exteriorTier = standard
+                    .filter(s => foundationOf(s.name) === "exterior")
+                    .sort((a, b) => tierRankOf(a.name) - tierRankOf(b.name));
+                  const fullTier = standard
+                    .filter(s => foundationOf(s.name) === "full")
+                    .sort((a, b) => tierRankOf(a.name) - tierRankOf(b.name));
+
+                  // Icon + accent config per service. Keyed by DB name so
+                  // it works transparently with the display-mapping layer.
                   const SERVICE_META: Record<string, { icon: React.ElementType; blurb: string; time: string }> = {
-                    "Interior Detail": { icon: Sofa,     blurb: "Vacuum, wipe-down, glass, floor mats",                        time: "1.5–2 hrs" },
-                    "Exterior Detail": { icon: Droplets, blurb: "Hand wash, wheels/tires, trim + 1–3mo ceramic",                time: "1–1.5 hrs" },
-                    "Full Detail":     { icon: Zap,      blurb: "Interior + Exterior in one visit · Save $35–$45",              time: "2–2.5 hrs" },
+                    // Basic tier (entry) — DB name unchanged; getServiceDisplayName renames.
+                    "Interior Detail":         { icon: Sofa,     blurb: "Vacuum, wipe-down, glass, floor mats",                          time: "1.5–2 hrs" },
+                    "Exterior Detail":         { icon: Droplets, blurb: "Hand wash, wheels/tires, trim + 1–3mo ceramic",                  time: "1–1.5 hrs" },
+                    "Full Detail":             { icon: Zap,      blurb: "Basic Interior + Exterior · Save $35–$45",                       time: "2–2.5 hrs" },
+                    // Refresh tier (middle) — top popular add-ons baked in at bundle discount.
+                    "The Refresh — Interior":  { icon: Sofa,     blurb: "Basic + Shampoo + Salt + Pet Hair · Save $95",                    time: "3–4 hrs" },
+                    "The Refresh — Exterior":  { icon: Droplets, blurb: "Basic + Clay Bar + Headlight + Engine Bay · Save $65",           time: "3–4 hrs" },
+                    "The Refresh — Full":      { icon: Zap,      blurb: "Full + all interior + all exterior refresh add-ons · Save $190", time: "4–5 hrs" },
+                    // Reset tier (top) — seats out, everything baked in. "Ultimate Interior
+                    // Reset" is the DB name; displays as "The Reset — Interior".
+                    "Ultimate Interior Reset": { icon: Crown,    blurb: "Seats REMOVED + full reset · Marquee tier",                      time: "4–6 hrs" },
+                    "The Reset — Full":        { icon: Crown,    blurb: "Reset Interior + full exterior + headlight + engine bay",        time: "6–8 hrs" },
                   };
 
                   // What each core package DOES include vs what it does NOT
@@ -3483,6 +3631,7 @@ export function BookingSection({
                   // pick with confidence — and the "not included" list doubles
                   // as an add-on discovery aid on the next step.
                   const SERVICE_DETAILS: Record<string, { included: string[]; notIncluded: string[] }> = {
+                    // ── BASIC tier ──
                     "Interior Detail": {
                       included: [
                         "Full vacuum of every surface, crack & crevice",
@@ -3492,12 +3641,12 @@ export function BookingSection({
                         "Cabin deodorize",
                       ],
                       notIncluded: [
-                        "Deep shampoo of seats / carpet (Carpet & Upholstery Shampoo add-on)",
-                        "Heavy pet hair extraction (Pet Hair Removal add-on)",
-                        "Salt stain removal (Mild–Medium Salt Removal add-on)",
+                        "Deep shampoo of seats / carpet — upgrade to The Refresh or add à la carte",
+                        "Heavy pet hair extraction — upgrade to The Refresh or add à la carte",
+                        "Salt stain removal — upgrade to The Refresh or add à la carte",
                         "Smoke / pet odor elimination (Ozone Treatment add-on)",
                         "Leather conditioning (Leather Conditioning add-on)",
-                        "Seats REMOVED for deep steam clean — that's the Ultimate Interior Reset",
+                        "Seats REMOVED for deep steam clean — that's The Reset — Interior",
                       ],
                     },
                     "Exterior Detail": {
@@ -3509,29 +3658,100 @@ export function BookingSection({
                         "1–3 month ceramic spray sealant INCLUDED",
                       ],
                       notIncluded: [
-                        "Paint decontamination (Clay Bar add-on)",
-                        "Cloudy / yellow headlight restoration (Headlight Restoration add-on)",
-                        "Engine bay degrease + dressing (Engine Bay Detail add-on)",
+                        "Paint decontamination — upgrade to The Refresh or add Clay Bar à la carte",
+                        "Headlight restoration — upgrade to The Refresh or add à la carte",
+                        "Engine bay detail — upgrade to The Refresh or add à la carte",
                         "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
                       ],
                     },
                     "Full Detail": {
                       included: [
-                        "Everything in Interior Detail",
-                        "Everything in Exterior Detail",
+                        "Everything in Basic Interior Detail",
+                        "Everything in Basic Exterior Detail",
                         "1–3 month ceramic spray sealant INCLUDED",
                         "Best value combo — save $35–$45 vs. buying separately",
                       ],
                       notIncluded: [
-                        "Deep shampoo of seats / carpet (Carpet & Upholstery Shampoo add-on)",
-                        "Heavy pet hair extraction (Pet Hair Removal add-on)",
-                        "Salt stain removal (Mild–Medium Salt Removal add-on)",
-                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                        "Shampoo / Salt / Pet Hair — upgrade to The Refresh — Full",
+                        "Clay Bar / Headlight Restoration / Engine Bay — upgrade to The Refresh — Full",
                         "Leather conditioning (Leather Conditioning add-on)",
-                        "Paint decontamination (Clay Bar add-on)",
-                        "Headlight restoration (Headlight Restoration add-on)",
                         "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
-                        "Seats REMOVED for deep steam clean — that's the Ultimate Interior Reset",
+                        "Seats REMOVED for deep steam clean — that's The Reset — Interior",
+                      ],
+                    },
+                    // ── REFRESH tier ──
+                    "The Refresh — Interior": {
+                      included: [
+                        "Everything in Basic Interior Detail",
+                        "Carpet & Upholstery Shampoo (deep steam clean)",
+                        "Mild–Medium Salt Removal + neutralization",
+                        "Heavy Pet Hair Extraction",
+                        "Bundle savings: ~$95 vs à la carte",
+                      ],
+                      notIncluded: [
+                        "Seats REMOVED for deep steam clean — that's The Reset — Interior",
+                        "Leather conditioning (Leather Conditioning add-on)",
+                        "Clay bar / paint decontamination (Clay Bar add-on)",
+                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                      ],
+                    },
+                    "The Refresh — Exterior": {
+                      included: [
+                        "Everything in Basic Exterior Detail",
+                        "Clay Bar paint decontamination",
+                        "Headlight Restoration (pair)",
+                        "Engine Bay Detail (degrease + dressing)",
+                        "1–3 month ceramic spray sealant INCLUDED",
+                        "Bundle savings: ~$65 vs à la carte",
+                      ],
+                      notIncluded: [
+                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                        "Paint correction (separate service — swirls / oxidation)",
+                      ],
+                    },
+                    "The Refresh — Full": {
+                      included: [
+                        "Everything in Basic Full Detail",
+                        "Carpet & Upholstery Shampoo + Salt Removal + Pet Hair Extraction",
+                        "Clay Bar + Headlight Restoration + Engine Bay Detail",
+                        "1–3 month ceramic spray sealant INCLUDED",
+                        "Bundle savings: ~$190 vs à la carte",
+                      ],
+                      notIncluded: [
+                        "Seats REMOVED for deep steam clean — that's The Reset — Full",
+                        "Leather conditioning (Leather Conditioning add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                      ],
+                    },
+                    // ── RESET tier (Ultimate Interior Reset DB name) ──
+                    "Ultimate Interior Reset": {
+                      included: [
+                        "Everything in The Refresh — Interior",
+                        "Front seats REMOVED for deep steam clean",
+                        "Leather conditioning (if applicable)",
+                        "Clay bar paint decontamination",
+                        "Full disinfect + protect all interior surfaces",
+                        "Trunk fully included",
+                      ],
+                      notIncluded: [
+                        "Exterior wash / wheels / trim — add + Exterior Detail at checkout, or upgrade to The Reset — Full",
+                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                      ],
+                    },
+                    "The Reset — Full": {
+                      included: [
+                        "Everything in The Reset — Interior (seats REMOVED, shampoo, salt, pet hair, leather, clay bar)",
+                        "Full exterior hand wash + wheels + tires + trim",
+                        "Headlight Restoration + Engine Bay Detail",
+                        "1–3 month ceramic spray sealant INCLUDED",
+                        "Best combined-visit value — save $60+ vs à la carte",
+                      ],
+                      notIncluded: [
+                        "Smoke / pet odor elimination (Ozone Treatment add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                        "Paint correction (separate service — swirls / oxidation)",
                       ],
                     },
                   };
@@ -3547,11 +3767,10 @@ export function BookingSection({
                           compact
                           services={services}
                           onUseBuild={(args) => {
-                            const foundationName = args.preferUltimate
-                              ? "Ultimate Interior Reset"
-                              : args.foundation === "interior" ? "Interior Detail"
-                              : args.foundation === "exterior" ? "Exterior Detail"
-                              : "Full Detail";
+                            const foundationName = args.preferredServiceName
+                              ?? (args.foundation === "interior" ? "Interior Detail"
+                                : args.foundation === "exterior" ? "Exterior Detail"
+                                : "Full Detail");
                             const svc = services.find(s => s.name === foundationName);
                             if (!svc) return;
                             // Set vehicle info in modal state
@@ -3579,26 +3798,60 @@ export function BookingSection({
                         <p className="text-[10px] text-zinc-600">Not sure which package? Answer 4 quick questions.</p>
                       </div>
 
-                      {/* Core packages — 3 vertical rich cards */}
-                      {standard.length > 0 && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3 px-1">
-                            <div className="h-px flex-1 bg-white/[0.06]" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.28em] text-zinc-500">Core Packages</span>
-                            <div className="h-px flex-1 bg-white/[0.06]" />
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            {standard
-                              .sort((a, b) => {
-                                const order = ["Interior Detail", "Full Detail", "Exterior Detail"];
-                                return order.indexOf(a.name) - order.indexOf(b.name);
-                              })
-                              .map((service) => {
+                      {/* ── Light Detailing — TOP OF PAGE ────────────────────
+                          Quick maintenance pathway, sits above the tier grid so
+                          returning customers who just need a touch-up can find
+                          it immediately without scrolling past every service. */}
+                      {(() => {
+                        const lightSvc = services.find(s => s.name === "Light Detailing");
+                        if (!lightSvc) return null;
+                        const sizeKeyLD: "sedan" | "suv" | "xl" =
+                          vehicleSize === "xl" ? "xl" : vehicleSize === "suv" ? "suv" : "sedan";
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => onSelectService(lightSvc)}
+                            className="w-full rounded-xl border border-amber-500/30 bg-amber-500/[0.04] hover:border-amber-500/60 hover:bg-amber-500/[0.08] transition-all p-3 text-left group"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="shrink-0 w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                                <Wand2 size={15} className="text-amber-400" strokeWidth={1.75} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[13px] font-black text-white leading-tight">Light Detailing</span>
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1 py-px rounded">
+                                    Maintenance
+                                  </span>
+                                </div>
+                                <div className="text-[10.5px] text-zinc-500 mt-0.5 leading-snug">
+                                  Quick touch-up · pick 2+ items · 1 hr
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-600">From</div>
+                                <div className="text-sm font-black text-amber-300 tabular-nums leading-none mt-0.5">
+                                  ${computeLightDetailPrice([], sizeKeyLD).finalPrice}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })()}
+
+                      {/* Renders one tier card. Extracted so we can render
+                          each foundation section (Interior, Exterior, Full)
+                          without duplicating 130 lines of JSX. */}
+                      {(() => {
+                        const renderTierCard = (service: Service, opts: { emphasize?: boolean } = {}) => {
                                 const meta = SERVICE_META[service.name];
                                 const details = SERVICE_DETAILS[service.name];
                                 const Icon = meta?.icon ?? Sparkles;
-                                const isFull = service.name === "Full Detail";
-                                const displayName = service.name === "Full Detail" ? "Interior + Exterior" : service.name;
+                                // "Emphasize" flags the top tier of the foundation (Reset)
+                                // or the popular middle tier (Refresh) so the card
+                                // gets premium styling instead of the muted Basic look.
+                                const isFull = !!opts.emphasize;
+                                const displayName = getServiceDisplayName(service.name);
                                 const detailsOpen = expandedDetailPkg === service.name;
                                 return (
                                   <div
@@ -3616,45 +3869,55 @@ export function BookingSection({
                                         Popular
                                       </div>
                                     )}
-                                    {/* Main select region */}
+                                    {/* Main select region — compact 2-row card:
+                                        Row 1: icon + name + time
+                                        Row 2: 3 sizes with prices inline */}
                                     <button
                                       type="button"
                                       onClick={() => onSelectService(service)}
                                       className="w-full text-left active:scale-[0.99] transition-transform"
                                     >
-                                      <div className="p-4 flex items-center gap-3">
-                                        {/* Icon disc */}
-                                        <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                                          isFull
-                                            ? "bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_16px_rgba(212,175,55,0.12)]"
-                                            : "bg-white/[0.03] border border-white/[0.08] group-hover:bg-white/[0.06]"
-                                        }`}>
-                                          <Icon size={19} className={isFull ? "text-[#D4AF37]" : "text-zinc-300"} strokeWidth={1.75} />
-                                        </div>
-                                        {/* Copy */}
-                                        <div className="flex-1 min-w-0 pr-16">
-                                          <div className={`text-[15px] font-black tracking-tight leading-tight ${isFull ? "text-white" : "text-zinc-100 group-hover:text-white"}`}>
-                                            {displayName}
+                                      <div className="px-3 pt-2.5 pb-2 flex flex-col gap-1.5">
+                                        {/* Row 1: icon + name + time */}
+                                        <div className="flex items-center gap-2.5">
+                                          <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                            isFull
+                                              ? "bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_10px_rgba(212,175,55,0.10)]"
+                                              : "bg-white/[0.03] border border-white/[0.08] group-hover:bg-white/[0.06]"
+                                          }`}>
+                                            <Icon size={14} className={isFull ? "text-[#D4AF37]" : "text-zinc-300"} strokeWidth={1.75} />
                                           </div>
-                                          {meta?.blurb && (
-                                            <div className="text-[11px] text-zinc-500 leading-snug mt-0.5">
-                                              {meta.blurb}
-                                            </div>
-                                          )}
-                                          {meta?.time && (
-                                            <div className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-zinc-600 mt-1.5">
-                                              <Calendar size={8} strokeWidth={2.5} />
-                                              {meta.time}
-                                            </div>
-                                          )}
-                                        </div>
-                                        {/* Price + arrow */}
-                                        <div className="shrink-0 text-right">
-                                          <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-600">From</div>
-                                          <div className={`text-lg font-black tabular-nums leading-none mt-0.5 ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>
-                                            ${service.price_small}
+                                          <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                                            <span className={`text-[13.5px] font-black tracking-tight leading-tight ${isFull ? "text-white" : "text-zinc-100 group-hover:text-white"}`}>
+                                              {displayName}
+                                            </span>
+                                            {meta?.time && (
+                                              <span className="inline-flex items-center gap-0.5 text-[8.5px] font-bold uppercase tracking-widest text-zinc-500">
+                                                <Calendar size={7} strokeWidth={2.5} />{meta.time}
+                                              </span>
+                                            )}
                                           </div>
-                                          <div className="text-[8px] font-bold text-zinc-600 mt-0.5">to ${service.price_extra_large}</div>
+                                        </div>
+                                        {/* Row 2: 3 sizes with prices inline */}
+                                        <div className="flex items-center justify-between gap-1 pl-[42px]">
+                                          <div className={`flex-1 flex items-center gap-0.5 rounded-md px-1.5 py-1 ${isFull ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+                                            <span className="text-[8.5px] font-bold uppercase tracking-widest text-zinc-500">Sedan</span>
+                                            <span className={`ml-auto text-[12px] font-black tabular-nums leading-none ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                              ${service.price_small}
+                                            </span>
+                                          </div>
+                                          <div className={`flex-1 flex items-center gap-0.5 rounded-md px-1.5 py-1 ${isFull ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+                                            <span className="text-[8.5px] font-bold uppercase tracking-widest text-zinc-500">SUV</span>
+                                            <span className={`ml-auto text-[12px] font-black tabular-nums leading-none ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                              ${service.price_large}
+                                            </span>
+                                          </div>
+                                          <div className={`flex-1 flex items-center gap-0.5 rounded-md px-1.5 py-1 ${isFull ? "bg-[#D4AF37]/[0.05]" : "bg-white/[0.02]"}`}>
+                                            <span className="text-[8.5px] font-bold uppercase tracking-widest text-zinc-500">XL</span>
+                                            <span className={`ml-auto text-[12px] font-black tabular-nums leading-none ${isFull ? "text-[#D4AF37]" : "text-zinc-200"}`}>
+                                              ${service.price_extra_large}
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     </button>
@@ -3668,7 +3931,7 @@ export function BookingSection({
                                           type="button"
                                           onClick={() => setExpandedDetailPkg(prev => prev === service.name ? null : service.name)}
                                           aria-expanded={detailsOpen}
-                                          className="w-full flex items-center justify-center gap-1.5 border-t border-white/[0.05] py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-[#D4AF37] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors"
+                                          className="w-full flex items-center justify-center gap-1.5 border-t border-white/[0.05] py-1.5 text-[9.5px] font-bold uppercase tracking-widest text-zinc-500 hover:text-[#D4AF37] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors"
                                         >
                                           <Info size={11} />
                                           {detailsOpen ? "Hide details" : "See what's included"}
@@ -3724,13 +3987,201 @@ export function BookingSection({
                                     )}
                                   </div>
                                 );
-                              })}
-                          </div>
-                        </div>
-                      )}
+                        };
 
-                      {/* Ultimate — flagship hero card */}
-                      {ultimate.length > 0 && (
+                        // ─── FoundationCard ─────────────────────────────
+                        // One consolidated card per foundation (Interior /
+                        // Interior+Exterior / Exterior) with the 3 tier
+                        // buttons side-by-side. Tapping a tier button selects
+                        // that specific service. A "See what's in each" toggle
+                        // reveals per-tier included/not-included details.
+                        const renderFoundationCard = (
+                          foundationLabel: string,
+                          tiers: Service[],
+                          opts: { gold?: boolean } = {},
+                        ) => {
+                          if (tiers.length === 0) return null;
+                          // Icon for foundation — reuse the meta icon from the
+                          // highest tier (usually most representative).
+                          const topTier = tiers[tiers.length - 1];
+                          const FoundationIcon = SERVICE_META[topTier.name]?.icon ?? Sparkles;
+                          const gold = !!opts.gold;
+                          const detailsOpen = expandedDetailPkg === `foundation:${foundationLabel}`;
+
+                          const tierTone = (svc: Service): "basic" | "refresh" | "reset" => {
+                            const n = svc.name.toLowerCase();
+                            if (n.includes("reset") || n.includes("ultimate")) return "reset";
+                            if (n.includes("refresh")) return "refresh";
+                            return "basic";
+                          };
+                          const TIER_SHORT: Record<string, string> = {
+                            basic:   "Basic",
+                            refresh: "Refresh",
+                            reset:   "Reset",
+                          };
+
+                          return (
+                            <div className={`relative rounded-2xl border overflow-hidden ${
+                              gold
+                                ? "border-[#D4AF37]/40 bg-gradient-to-br from-[#D4AF37]/[0.05] via-zinc-900/70 to-zinc-950/70 shadow-[0_0_24px_rgba(212,175,55,0.08)]"
+                                : "border-white/[0.08] bg-gradient-to-br from-zinc-900/60 to-zinc-950/60"
+                            }`}>
+                              {/* Top accent line */}
+                              <div className={`absolute top-0 inset-x-0 h-[2px] ${
+                                gold ? "bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent"
+                                : "bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                              }`} />
+
+                              {/* Header — centered */}
+                              <div className="flex flex-col items-center text-center px-3 pt-4 pb-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${
+                                  gold
+                                    ? "bg-[#D4AF37]/15 border border-[#D4AF37]/40 shadow-[0_0_14px_rgba(212,175,55,0.15)]"
+                                    : "bg-white/[0.04] border border-white/[0.08]"
+                                }`}>
+                                  <FoundationIcon size={17} className={gold ? "text-[#D4AF37]" : "text-zinc-300"} strokeWidth={1.75} />
+                                </div>
+                                <div className={`text-[15px] font-black tracking-tight leading-tight ${gold ? "text-white" : "text-zinc-100"}`}>
+                                  {foundationLabel}
+                                </div>
+                                <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-zinc-500 mt-1">
+                                  {tiers.length} Tier{tiers.length !== 1 ? "s" : ""} · Tap to book
+                                </div>
+                              </div>
+
+                              {/* Tier buttons — one per column */}
+                              <div className={`grid gap-1.5 px-3 pb-2.5`} style={{ gridTemplateColumns: `repeat(${tiers.length}, minmax(0, 1fr))` }}>
+                                {tiers.map((svc) => {
+                                  const tone = tierTone(svc);
+                                  const displayName = getServiceDisplayName(svc.name);
+                                  const meta = SERVICE_META[svc.name];
+                                  const isReset = tone === "reset";
+                                  const isRefresh = tone === "refresh";
+                                  return (
+                                    <button
+                                      key={svc.id}
+                                      type="button"
+                                      onClick={() => onSelectService(svc)}
+                                      className={`relative flex flex-col items-center text-center rounded-xl border px-2 py-3 active:scale-[0.98] transition-all group/tier overflow-hidden ${
+                                        isReset
+                                          ? "border-[#D4AF37]/50 bg-gradient-to-b from-[#D4AF37]/[0.10] to-[#D4AF37]/[0.02] hover:border-[#D4AF37] hover:from-[#D4AF37]/[0.18] hover:shadow-[0_0_16px_rgba(212,175,55,0.15)]"
+                                          : isRefresh
+                                          ? "border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.08] to-emerald-500/[0.02] hover:border-emerald-500/70 hover:from-emerald-500/[0.14] hover:shadow-[0_0_16px_rgba(52,211,153,0.12)]"
+                                          : "border-white/[0.10] bg-gradient-to-b from-white/[0.04] to-transparent hover:border-white/[0.30] hover:from-white/[0.08]"
+                                      }`}
+                                    >
+                                      {/* Top glow accent */}
+                                      <div className={`absolute top-0 inset-x-0 h-[2px] ${
+                                        isReset ? "bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent"
+                                        : isRefresh ? "bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent"
+                                        : "bg-gradient-to-r from-transparent via-white/15 to-transparent"
+                                      }`} />
+
+                                      {/* Tier badge */}
+                                      <div className={`text-[8.5px] font-black uppercase tracking-[0.2em] leading-none mb-1 ${
+                                        isReset ? "text-[#D4AF37]" : isRefresh ? "text-emerald-300" : "text-zinc-500"
+                                      }`}>
+                                        {TIER_SHORT[tone]}
+                                      </div>
+
+                                      {/* Price — hero element, centered */}
+                                      <div className={`text-[22px] font-black tabular-nums leading-none tracking-tight ${
+                                        isReset ? "text-[#D4AF37]" : isRefresh ? "text-emerald-200" : "text-white"
+                                      }`}>
+                                        ${svc.price_small}
+                                      </div>
+
+                                      {/* Size prices — SUV / XL underneath */}
+                                      <div className="text-[8.5px] text-zinc-500 leading-tight mt-1.5 space-y-0.5">
+                                        <div className="tabular-nums">SUV <span className="text-zinc-400 font-bold">${svc.price_large}</span></div>
+                                        <div className="tabular-nums">XL <span className="text-zinc-400 font-bold">${svc.price_extra_large}</span></div>
+                                      </div>
+
+                                      {/* Time badge — bottom pill */}
+                                      {meta?.time && (
+                                        <div className={`mt-2 inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
+                                          isReset ? "bg-[#D4AF37]/15 text-[#D4AF37]/90"
+                                          : isRefresh ? "bg-emerald-500/15 text-emerald-300/90"
+                                          : "bg-white/[0.05] text-zinc-500"
+                                        }`}>
+                                          {meta.time}
+                                        </div>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Toggle for per-tier details */}
+                              <button
+                                type="button"
+                                onClick={() => setExpandedDetailPkg(prev => prev === `foundation:${foundationLabel}` ? null : `foundation:${foundationLabel}`)}
+                                className="w-full flex items-center justify-center gap-1.5 border-t border-white/[0.05] py-1.5 text-[9.5px] font-bold uppercase tracking-widest text-zinc-500 hover:text-[#D4AF37] hover:bg-white/[0.02] transition-colors"
+                              >
+                                <Info size={10} />
+                                {detailsOpen ? "Hide details" : "See what's in each tier"}
+                                <ChevronDown size={10} className={`transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              <AnimatePresence initial={false}>
+                                {detailsOpen && (
+                                  <motion.div
+                                    key={`details-${foundationLabel}`}
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.22, ease: "easeOut" }}
+                                    className="overflow-hidden border-t border-white/[0.05] bg-black/25"
+                                  >
+                                    <div className="px-3 py-3 space-y-3">
+                                      {tiers.map((svc) => {
+                                        const d = SERVICE_DETAILS[svc.name];
+                                        const displayName = getServiceDisplayName(svc.name);
+                                        if (!d) return null;
+                                        return (
+                                          <div key={svc.id} className="rounded-lg border border-white/[0.04] bg-zinc-950/40 p-2.5">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 mb-1.5">{displayName}</p>
+                                            <ul className="space-y-0.5 mb-1.5">
+                                              {d.included.slice(0, 4).map(item => (
+                                                <li key={item} className="flex items-start gap-1.5 text-[10.5px] text-zinc-300 leading-snug">
+                                                  <Check size={9} className="text-emerald-400 shrink-0 mt-[3px]" strokeWidth={3} />
+                                                  <span>{item}</span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                            {d.notIncluded.length > 0 && (
+                                              <p className="text-[9.5px] text-zinc-500 italic leading-snug">
+                                                <span className="text-amber-500/80 font-bold">Not included:</span>{" "}
+                                                {d.notIncluded[0].split(" — ")[0]}
+                                                {d.notIncluded.length > 1 && ` + ${d.notIncluded.length - 1} more`}
+                                              </p>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <div className="flex flex-col gap-2">
+                            {renderFoundationCard("Interior", interiorTier)}
+                            {renderFoundationCard("Interior + Exterior", fullTier, { gold: true })}
+                            {renderFoundationCard("Exterior", exteriorTier)}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Light Detailing card moved to TOP of Step 1 (see above).
+                          The expanded picker (when Light Detailing is the selected
+                          service) renders further down in the wizard step 1 branch. */}
+
+                      {/* Legacy Ultimate hero card — removed; Reset — Interior is now
+                          rendered inside the Interior section via renderTierCard. */}
+                      {false && ultimate.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-3 px-1">
                             <div className="h-px flex-1 bg-[#D4AF37]/25" />
@@ -4599,6 +5050,48 @@ export function BookingSection({
                       </div>
                       )}
 
+                      {/* Light Detailing — item picker (renders when customer
+                          has selected Light Detailing from the service list
+                          and picked a vehicle size). Live-totals + minimum-2
+                          enforcement live inside the picker component. */}
+                      {selectedService?.name === "Light Detailing" && vehicleSize && (() => {
+                        const basicInterior = services.find(s => s.name === "Interior Detail");
+                        const basicExterior = services.find(s => s.name === "Exterior Detail");
+                        const basicFull = services.find(s => s.name === "Full Detail");
+                        const sizeKeyLD: "sedan" | "suv" | "xl" =
+                          vehicleSize === "xl" ? "xl" : vehicleSize === "suv" ? "suv" : "sedan";
+                        const getSizedPrice = (svc: Service | undefined): number | undefined => {
+                          if (!svc) return undefined;
+                          const key = vehicleSize === "sedan"
+                            ? "price_medium"
+                            : vehicleSize === "suv"
+                              ? "price_large"
+                              : "price_extra_large";
+                          const raw = (svc as any)[key] ?? (svc as any).price_medium ?? 0;
+                          return Number(raw);
+                        };
+                        return (
+                          <div className="rounded-2xl border border-amber-500/60 bg-amber-500/[0.04] p-4">
+                            <LightDetailingPicker
+                              vehicleSize={sizeKeyLD}
+                              selectedItemIds={lightDetailItemIds}
+                              onToggleItem={(id) => setLightDetailItemIds(prev =>
+                                prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                              )}
+                              basicInteriorPrice={getSizedPrice(basicInterior)}
+                              basicExteriorPrice={getSizedPrice(basicExterior)}
+                              basicFullPrice={getSizedPrice(basicFull)}
+                              onSwitchToBasic={(f) => {
+                                setLightDetailItemIds([]);
+                                const svc = f === "interior" ? basicInterior : f === "exterior" ? basicExterior : basicFull;
+                                if (svc) onSelectService(svc);
+                              }}
+                              isFirstTimeCustomer={false}
+                            />
+                          </div>
+                        );
+                      })()}
+
                       {/* Enhance Your Detail (Smart per-service Add-ons) */}
                       {(() => {
                         const available = getAddonsForService(selectedService?.name ?? "", vehicleSize as string);
@@ -4902,7 +5395,13 @@ export function BookingSection({
                                     <div className="flex flex-col gap-1.5 mb-3">
                                       {visibleBoosts.map((addon) => {
                                         const isSelected = selectedAddons.some(a => a.id === addon.id);
-                                        const isIncluded = isUltimateUpgradeable && INCLUDED_IN_ULTIMATE_IDS.includes(addon.id);
+                                        // Flag add-ons that are baked into the picked package (Refresh
+                                        // Interior includes shampoo/salt/pet-hair; Reset includes all
+                                        // of those plus leather/clay; Reset — Full also includes headlight
+                                        // + engine bay). Prevents double-charging and signals "already
+                                        // covered" in the picker.
+                                        const isBakedIntoService = isAddonIncludedInService(selectedService?.name, addon.id);
+                                        const isIncluded = isBakedIntoService || (isUltimateUpgradeable && INCLUDED_IN_ULTIMATE_IDS.includes(addon.id));
                                         const isSpecial = addon.id === "ultimate_ext_addon" || addon.id === "premium_ceramic_full_body";
                                         // Clay Bar is baked into the Ultimate + Exterior bundle. When the toggle
                                         // is on, mark it "Included" so the customer sees they're getting it
@@ -5709,11 +6208,13 @@ export function BookingSection({
                                 <Crown size={12} className="text-[#D4AF37]" fill="currentColor" />
                               </div>
 
-                              {/* Copy */}
+                              {/* Copy — dynamic per target tier so Basic Full
+                                  customers see "Reset — Full" instead of the
+                                  interior-only "Ultimate" label. */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="text-[11px] font-black text-white leading-tight">
-                                    Upgrade to Ultimate
+                                    Upgrade to {getServiceDisplayName(ultimateNudge.targetName)}
                                   </span>
                                   {ultimateNudge.delta < 0 ? (
                                     <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-1.5 py-0.5">
@@ -5730,7 +6231,9 @@ export function BookingSection({
                                   )}
                                 </div>
                                 <p className="text-[9px] text-zinc-500 leading-tight mt-0.5 truncate">
-                                  Seats out · deep shampoo · every crevice reset
+                                  {ultimateNudge.targetName === "The Reset — Full"
+                                    ? "Seats out · full interior + exterior reset in one visit"
+                                    : "Seats out · deep shampoo · every crevice reset"}
                                 </p>
                               </div>
 

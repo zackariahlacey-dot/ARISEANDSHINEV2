@@ -261,11 +261,10 @@ export function DetailingPage({ services }: { services: Service[] }) {
           <BuildForMeQuiz
             services={services}
             onUseBuild={(args) => {
-              const serviceName = args.preferUltimate
-                ? "Ultimate Interior Reset"
-                : args.foundation === "interior" ? "Interior Detail"
-                : args.foundation === "exterior" ? "Exterior Detail"
-                : "Full Detail";
+              const serviceName = args.preferredServiceName
+                ?? (args.foundation === "interior" ? "Interior Detail"
+                  : args.foundation === "exterior" ? "Exterior Detail"
+                  : "Full Detail");
               const svc = services.find(s => s.name === serviceName) ?? null;
               setSelectedService(svc);
               setBuilderPrefill({

@@ -28,6 +28,7 @@ import { sendStripePaymentLink, getPaymentLinkUrl, markPaymentLinkSent } from "@
 import { markBookingPaidCash } from "@/app/actions/markBookingPaidCash";
 import { BookingVehiclesPanel } from "@/components/admin/BookingVehiclesPanel";
 import { SplitPaymentPanel } from "@/components/admin/SplitPaymentPanel";
+import { EnrollRecurringButton } from "@/components/admin/EnrollRecurringButton";
 import { cashPriceFor } from "@/lib/cashPricing";
 import { useQuery } from "@tanstack/react-query";
 import { getSqueezeRequests, updateSqueezeStatus, deleteSqueezeRequest, type SqueezeRequest } from "@/app/actions/squeezeActions";
@@ -52,6 +53,8 @@ import {
 import { AddressAutocomplete } from "@/components/landing/AddressAutocomplete";
 import { cn } from "@/lib/utils";
 import { detectVehicleSize, getAllMakeSuggestions, getModelSuggestionsForMake } from "@/lib/detectVehicleSize";
+import { LightDetailingPicker } from "@/components/booking/LightDetailingPicker";
+import { LIGHT_DETAIL_ITEMS, computeLightDetailPrice, LIGHT_DETAIL_MIN_ITEMS, type LightDetailSize } from "@/lib/lightDetailItems";
 import {
   checkSlotConflict, getDurationMins, timeToMins, minsToDisplay, to12h, to24h,
   getAvailableSlots,
@@ -257,6 +260,185 @@ export type ClientPrefillForBooking = {
   pathwayHint?: Pathway;
 };
 
+// ── Tier grouping for admin service picker ──────────────────────────────────
+const TIER_ORDER = ["Basic", "Refresh", "Reset"];
+const TIER_BADGE: Record<string, { label: string; color: string }> = {
+  Basic:   { label: "Basic",   color: "bg-zinc-700 text-zinc-300" },
+  Refresh: { label: "Refresh", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30" },
+  Reset:   { label: "Reset",   color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" },
+};
+const TIER_BAKED_IN: Record<string, string[]> = {
+  "The Refresh — Interior": ["Shampoo", "Salt Removal", "Pet Hair"],
+  "The Refresh — Exterior": ["Clay Bar", "Headlights", "Engine Bay"],
+  "The Refresh — Full":     ["Shampoo", "Salt", "Pet Hair", "Clay", "Headlights", "Engine Bay"],
+  "Ultimate Interior Reset": ["Shampoo", "Salt", "Pet Hair", "Leather", "Clay", "Seats Out"],
+  "The Reset — Full":       ["Shampoo", "Salt", "Pet Hair", "Leather", "Clay", "Headlights", "Engine Bay", "Seats Out"],
+};
+function svcTier(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("reset") || n.includes("ultimate")) return "Reset";
+  if (n.includes("refresh")) return "Refresh";
+  return "Basic";
+}
+function svcFoundation(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("interior") && !n.includes("full")) return "Interior";
+  if (n.includes("exterior") && !n.includes("full")) return "Exterior";
+  if (n.includes("full")) return "Full";
+  return "Other";
+}
+
+function AdminServicePicker({
+  services,
+  vehicleSize,
+  selectedServiceId,
+  onSelect,
+}: {
+  services: any[];
+  vehicleSize: string;
+  selectedServiceId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [showPriceRef, setShowPriceRef] = useState(false);
+  const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize);
+  const priceKey = sizeEntry?.key ?? "price_medium";
+
+  // Group services: { Interior: { Basic: svc, Refresh: svc, Reset: svc }, ... }
+  const foundations = ["Interior", "Exterior", "Full"] as const;
+  const grouped: Record<string, Record<string, any>> = { Interior: {}, Exterior: {}, Full: {} };
+  const otherServices: any[] = [];
+  for (const svc of services) {
+    const f = svcFoundation(svc.name);
+    const t = svcTier(svc.name);
+    if (f !== "Other") grouped[f][t] = svc;
+    else otherServices.push(svc);
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Quick price reference toggle */}
+      <button
+        type="button"
+        onClick={() => setShowPriceRef(v => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] text-[11px] font-black uppercase tracking-widest text-amber-400 hover:bg-amber-500/[0.08] transition-all"
+      >
+        <span>📋 Quick Price Reference</span>
+        <span className="text-zinc-500 text-[10px]">{showPriceRef ? "▲ hide" : "▼ show"}</span>
+      </button>
+
+      {showPriceRef && (
+        <div className="rounded-xl border border-white/[0.08] bg-zinc-950/60 overflow-hidden">
+          <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Service · Sedan / SUV / XL</span>
+            <span className="text-[9px] text-zinc-600">call reference</span>
+          </div>
+          {foundations.map(f => {
+            const tiers = TIER_ORDER.filter(t => grouped[f][t]);
+            if (tiers.length === 0) return null;
+            return (
+              <div key={f} className="border-b border-white/[0.04] last:border-b-0">
+                <div className="px-3 py-1.5 bg-white/[0.02]">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{f}</span>
+                </div>
+                {tiers.map(t => {
+                  const svc = grouped[f][t];
+                  const p1 = svc.price_medium ?? svc.price_small ?? 0;
+                  const p2 = svc.price_large ?? p1;
+                  const p3 = svc.price_extra_large ?? p2;
+                  const badge = TIER_BADGE[t];
+                  return (
+                    <div key={t} className="flex items-center justify-between px-3 py-2 border-t border-white/[0.03]">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`shrink-0 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${badge.color}`}>{badge.label}</span>
+                        <span className="text-[11px] text-zinc-300 font-bold truncate">{svc.name}</span>
+                      </div>
+                      <span className="text-[11px] font-black text-white tabular-nums shrink-0 ml-2">
+                        ${p1} / ${p2} / ${p3}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+          {/* Add-on quick ref */}
+          <div className="px-3 py-2 border-t border-white/[0.06]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1.5">Key Add-ons (flat)</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+              {[
+                ["Shampoo", "$95"], ["Pet Hair", "$50"], ["Salt Removal", "$65"],
+                ["Leather", "$40"], ["Clay Bar", "$50"], ["Headlights", "$75"],
+                ["Engine Bay", "$65"], ["Ozone", "$60"],
+              ].map(([label, price]) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-500">{label}</span>
+                  <span className="text-[10px] font-black text-zinc-400 tabular-nums">{price}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grouped service selector */}
+      {foundations.map(f => {
+        const tiers = TIER_ORDER.filter(t => grouped[f][t]);
+        if (tiers.length === 0) return null;
+        return (
+          <div key={f}>
+            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1.5">{f}</p>
+            <div className="space-y-1.5">
+              {tiers.map(t => {
+                const svc = grouped[f][t];
+                const displayPrice = svc[priceKey] ?? svc.price_medium ?? svc.price_small ?? 0;
+                const badge = TIER_BADGE[t];
+                const bakedIn = TIER_BAKED_IN[svc.name];
+                return (
+                  <button key={svc.id} onClick={() => onSelect(svc.id)}
+                    className={cn(
+                      "w-full text-left px-3 py-2.5 rounded-xl border transition-all",
+                      selectedServiceId === svc.id
+                        ? "bg-amber-500/10 border-amber-500/50 text-amber-400"
+                        : "border-white/[0.07] text-zinc-300 bg-white/[0.02] hover:border-amber-500/25"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`shrink-0 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${badge.color}`}>{badge.label}</span>
+                        <span className="text-sm font-bold truncate">{svc.name}</span>
+                      </div>
+                      <span className="text-sm font-black shrink-0">${displayPrice}</span>
+                    </div>
+                    {bakedIn && (
+                      <p className="text-[9.5px] text-zinc-600 mt-1 leading-snug">
+                        Includes: {bakedIn.join(" · ")}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Other services (paint correction etc) */}
+      {otherServices.map((svc: any) => {
+        const displayPrice = svc[priceKey] ?? svc.price_medium ?? svc.price_small ?? 0;
+        return (
+          <button key={svc.id} onClick={() => onSelect(svc.id)}
+            className={cn("w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center justify-between",
+              selectedServiceId === svc.id ? "bg-amber-500/10 border-amber-500/50 text-amber-400" : "border-white/[0.07] text-zinc-300 bg-white/[0.02]"
+            )}>
+            <span className="text-sm font-bold">{svc.name}</span>
+            <span className="text-sm font-black shrink-0">${displayPrice}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function dbSizeToSlug(size: string | null | undefined): string {
   const s = (size || "").toLowerCase();
   // Legacy "small" / "compact" values fold into sedan (compact is gone).
@@ -316,11 +498,15 @@ export function NewBookingForm({
   // Step 3 — Add-ons
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
+  // Light Detailing — item picker state (only used when service.name === "Light Detailing")
+  const [lightDetailItemIds, setLightDetailItemIds] = useState<string[]>([]);
+
   // Multi-vehicle (vehicle pathway only). Flat tier: $25 ≤ $500 subtotal,
   // $40 otherwise. Only kicks in with 2+ vehicles.
   const ADMIN_MULTI_VEHICLE_SERVICES = [
     "Interior Detail", "Exterior Detail", "Full Detail",
-    "Ultimate Interior Reset",
+    "The Refresh — Interior", "The Refresh — Exterior", "The Refresh — Full",
+    "Ultimate Interior Reset", "The Reset — Full",
   ];
   const getAdminMultiVehicleDiscount = (subtotal: number, vehicleCount: number): number => {
     if (vehicleCount < 2) return 0;
@@ -459,55 +645,87 @@ export function NewBookingForm({
   const selectedService = services.find((s: any) => s.id === serviceId);
   const supportsAdminMultiVehicle = ADMIN_MULTI_VEHICLE_SERVICES.includes(selectedService?.name ?? "");
 
-  // Resolves the add-on list for a given vehicle-pathway service name — July 2026 lineup.
-  // Surfaces: the 8 basics + special (ceramic upgrade, Ultimate + Ext toggle) +
-  // Premium Ceramic sections. Retired add-ons (seat removal, gentech, window
-  // coats, uv/odor/headliner/tar/decon/salt/floor/steam/trim/polish_ceramic)
-  // never appear in the admin New Booking picker.
+  // Resolves the purchasable add-on list for a given service — July 2026 lineup.
+  // Refresh/Reset tiers bake in certain add-ons; only show what's NOT already
+  // included so admin doesn't double-charge. ultimate_ext_addon is retired —
+  // customers book "The Reset — Full" as its own tier now.
   const vehicleAddonsForServiceName = (name: string) => {
     const n = (name ?? "").toLowerCase();
     const premiumCeramicIds = ADMIN_ADDONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
     const gentechIds = ADMIN_ADDONS.filter(a => a.id.startsWith("gentech_5yr_")).map(a => a.id);
+
     if (n.includes("paint") || n.includes("correction")) {
       return ADMIN_ADDONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
-        ...premiumCeramicIds,
-        ...gentechIds,
+        ...premiumCeramicIds, ...gentechIds,
       ].includes(a.id));
     }
-    if (n.includes("ultimate")) {
+
+    // Reset — Full bakes in Ultimate add-ons + headlight + engine bay
+    if (n.includes("reset") && n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
-        "engine_bay", "headlight_restore", "clay_bar",
-        "salt_stain_removal", "ozone_treatment",
-        "ceramic_6_10_upgrade", "ultimate_ext_addon",
+        "ozone_treatment", "ceramic_6_10_upgrade",
+        ...premiumCeramicIds, ...gentechIds,
+      ].includes(a.id));
+    }
+
+    // Reset — Interior (DB: "Ultimate Interior Reset") bakes in shampoo, salt,
+    // pet hair, leather, clay bar. Extra add-ons: ozone + ceramics.
+    if (n.includes("ultimate") || (n.includes("reset") && n.includes("interior"))) {
+      return ADMIN_ADDONS.filter(a => [
+        "ozone_treatment", "ceramic_6_10_upgrade",
         ...gentechIds,
       ].includes(a.id));
     }
+
+    // Refresh — Full bakes in all 6 add-ons. Extras: ozone, leather, ceramics.
+    if (n.includes("refresh") && n.includes("full")) {
+      return ADMIN_ADDONS.filter(a => [
+        "ozone_treatment", "leather_condition",
+        "ceramic_6_10_upgrade", ...premiumCeramicIds, ...gentechIds,
+      ].includes(a.id));
+    }
+
+    // Refresh — Interior bakes in shampoo + salt + pet hair. Extras: ozone, leather.
+    if (n.includes("refresh") && n.includes("interior")) {
+      return ADMIN_ADDONS.filter(a => [
+        "ozone_treatment", "leather_condition",
+      ].includes(a.id));
+    }
+
+    // Refresh — Exterior bakes in clay bar + headlight + engine bay. Extras: ceramics.
+    if (n.includes("refresh") && n.includes("exterior")) {
+      return ADMIN_ADDONS.filter(a => [
+        "ceramic_6_10_upgrade", ...premiumCeramicIds, ...gentechIds,
+      ].includes(a.id));
+    }
+
+    // Basic Exterior
     if (n.includes("exterior") && !n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
-        ...premiumCeramicIds,
-        ...gentechIds,
+        ...premiumCeramicIds, ...gentechIds,
       ].includes(a.id));
     }
+
+    // Basic Interior
     if (n.includes("interior") && !n.includes("full") && !n.includes("maintenance")) {
       return ADMIN_ADDONS.filter(a => [
         "upholstery_shampoo", "salt_stain_removal", "leather_condition",
         "ozone_treatment", "pet_hair",
       ].includes(a.id));
     }
+
     if (n.includes("maintenance")) {
       return ADMIN_ADDONS.filter(a => a.id === "engine_bay");
     }
-    // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic.
-    // Gentech is intentionally excluded here to mirror the customer picker
-    // (customer flow surfaces Gentech only on Exterior / Ultimate / Paint Correction).
+
+    // Basic Full Detail
     return ADMIN_ADDONS.filter(a => [
       "engine_bay", "headlight_restore", "clay_bar",
       "upholstery_shampoo", "salt_stain_removal", "leather_condition",
       "ozone_treatment", "pet_hair",
-      "ceramic_6_10_upgrade",
-      ...premiumCeramicIds,
+      "ceramic_6_10_upgrade", ...premiumCeramicIds,
     ].includes(a.id));
   };
 
@@ -524,6 +742,9 @@ export function NewBookingForm({
   // Base price (before addons)
   const basePrice = useMemo(() => {
     if (!selectedService) return 0;
+    if (selectedService.name === "Light Detailing") {
+      return computeLightDetailPrice(lightDetailItemIds, vehicleSize as LightDetailSize).finalPrice;
+    }
     if (pathway === "boat" || pathway === "rv") {
       const ft = Number(footage) || 0;
       const minFt = FOOTAGE_MIN[selectedService.name] ?? 15;
@@ -538,7 +759,15 @@ export function NewBookingForm({
     const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize);
     const key = sizeEntry?.key ?? "price_medium";
     return Number(selectedService[key] ?? selectedService.price_medium ?? selectedService.price_small ?? 0);
-  }, [selectedService, pathway, footage, vehicleSize]);
+  }, [selectedService, pathway, footage, vehicleSize, lightDetailItemIds]);
+
+  // Reset Light Detailing picks when the admin switches away from that service
+  useEffect(() => {
+    if (selectedService?.name !== "Light Detailing" && lightDetailItemIds.length > 0) {
+      setLightDetailItemIds([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedService?.name]);
 
   const addonTotal  = selectedAddons.reduce((sum, id) => sum + getAdminAddonPrice(id, vehicleSize), 0);
   const additionalVehiclesTotal = additionalVehicles.reduce((sum, v) => {
@@ -640,6 +869,10 @@ export function NewBookingForm({
     if (!name || !phone || !serviceId || !bookingDate || !bookingTime) {
       toast("Fill in all required fields", "error"); return;
     }
+    if (selectedService?.name === "Light Detailing" && lightDetailItemIds.length < LIGHT_DETAIL_MIN_ITEMS) {
+      toast(`Light Detailing requires at least ${LIGHT_DETAIL_MIN_ITEMS} items`, "error");
+      return;
+    }
     // If there's a conflict and we haven't confirmed override yet, show the dialog
     if (!allowOverlap && hasTimeOverlap()) {
       setShowOverlapConfirm(true);
@@ -647,7 +880,14 @@ export function NewBookingForm({
     }
     setLoading(true);
     try {
-      const addonNote = selectedAddons.length
+      const addonNote = selectedService?.name === "Light Detailing"
+        ? (lightDetailItemIds.length
+            ? `\nLight Detailing items: ${LIGHT_DETAIL_ITEMS
+                .filter(i => lightDetailItemIds.includes(i.id))
+                .map(i => `${i.label} ($${i.prices[vehicleSize as LightDetailSize]})`)
+                .join(", ")}`
+            : "")
+        : selectedAddons.length
         ? `\nAdd-ons: ${selectedAddons.map(id => ADMIN_ADDONS.find(a => a.id === id)?.label).filter(Boolean).join(", ")}`
         : "";
       const footageNote = (pathway === "boat" || pathway === "rv") && footage ? `\n${pathway === "boat" ? "Boat" : "RV"} length: ${footage} ft` : "";
@@ -879,22 +1119,27 @@ export function NewBookingForm({
                 </>
               )}
               <FieldLabel>Service *</FieldLabel>
-              <div className="space-y-2">
-                {vehicleServices.map((svc: any) => {
-                  const sizeEntry = VEHICLE_SIZES_ADMIN.find(s => s.value === vehicleSize);
-                  const priceKey = sizeEntry?.key ?? "price_medium";
-                  const displayPrice = svc[priceKey] ?? svc.price_medium ?? svc.price_small ?? 0;
-                  return (
-                    <button key={svc.id} onClick={() => setServiceId(svc.id)}
-                      className={cn("w-full text-left px-3 py-3 rounded-xl border transition-all flex items-center justify-between",
-                        serviceId === svc.id ? "bg-amber-500/10 border-amber-500/50 text-amber-400" : "border-white/[0.07] text-zinc-300 bg-white/[0.02]"
-                      )}>
-                      <span className="text-sm font-bold">{svc.name}</span>
-                      <span className="text-sm font-black shrink-0">${displayPrice}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <AdminServicePicker
+                services={vehicleServices}
+                vehicleSize={vehicleSize}
+                selectedServiceId={serviceId}
+                onSelect={setServiceId}
+              />
+              {selectedService?.name === "Light Detailing" && (
+                <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/[0.04] p-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mb-3">
+                    Light Detailing Items
+                  </p>
+                  <LightDetailingPicker
+                    vehicleSize={vehicleSize as LightDetailSize}
+                    selectedItemIds={lightDetailItemIds}
+                    onToggleItem={(id) => setLightDetailItemIds(prev =>
+                      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                    )}
+                    compact
+                  />
+                </div>
+              )}
               <FieldLabel>Price Override (optional)</FieldLabel>
               <Input value={priceOverride} onChange={setPriceOverride} placeholder={`Auto: $${basePrice}`} type="number" />
 
@@ -3264,6 +3509,12 @@ export default function SchedulePage() {
                   onSplitsSaved={() => refetch()}
                 />
               )}
+
+              {/* ── Enroll in Monthly Recurring (Light Detailing only) ────── */}
+              <EnrollRecurringButton
+                booking={activeBooking}
+                onEnrolled={() => refetch()}
+              />
 
               {/* ── Vehicles & Add-ons (editable, multi-vehicle) ──────────── */}
               <BookingVehiclesPanel

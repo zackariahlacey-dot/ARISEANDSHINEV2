@@ -14,6 +14,31 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 150, medium: 150, large: 150, extra_large: 150,
     sedan: 150, suv: 150, xl: 150,
   },
+  // Light Detailing — maintenance-only. Slot reserves 90 min (max needed
+  // when customer picks all items) so we never under-book. Typical 2–5 item
+  // picks finish in ~60 min; picker shows the honest ETA to the customer.
+  "Light Detailing": {
+    small: 90, medium: 90, large: 90, extra_large: 90,
+    sedan: 90, suv: 90, xl: 90,
+  },
+  // Refresh tier — Interior/Exterior/Full mid-tier bundles
+  "The Refresh — Interior": {
+    small: 210, medium: 210, large: 240, extra_large: 240,
+    sedan: 210, suv: 240, xl: 240,
+  },
+  "The Refresh — Exterior": {
+    small: 150, medium: 150, large: 180, extra_large: 180,
+    sedan: 150, suv: 180, xl: 180,
+  },
+  "The Refresh — Full": {
+    small: 300, medium: 300, large: 360, extra_large: 360,
+    sedan: 300, suv: 360, xl: 360,
+  },
+  // Reset — Full: Reset Interior + full exterior + headlight + engine bay
+  "The Reset — Full": {
+    small: 360, medium: 360, large: 420, extra_large: 480,
+    sedan: 360, suv: 420, xl: 480,
+  },
   "Exterior Detail": {
     // 1.5 hrs base — display window shows "1–1.5 hrs"
     small: 90, medium: 90, large: 90, extra_large: 90,

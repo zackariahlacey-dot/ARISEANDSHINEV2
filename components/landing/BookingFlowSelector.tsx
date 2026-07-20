@@ -9,7 +9,7 @@ const FLOWS = [
     href: "/detailing",
     icon: Car,
     title: "Auto Detailing",
-    desc: "Interior, Exterior, Full Detail & Ultimate Interior Reset",
+    desc: "Basic · The Refresh · The Reset — Interior, Exterior, or Full",
     border: "border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.04]",
     iconColor: "text-[#D4AF37]",
     iconBg: "bg-[#D4AF37]/10",

@@ -523,6 +523,33 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
     [mainGridServices]
   );
 
+  // ── 3-tier foundation grouping for the new homepage cards ──
+  // Basic (DB name unchanged) → Refresh → Reset. Each foundation card
+  // renders whatever tiers are actually present in `services` so the
+  // homepage doesn't break if the Refresh/Reset SQL migration hasn't
+  // run yet on this environment.
+  const tierRankOf = (name: string): number => {
+    const n = name.toLowerCase();
+    if (n.includes("reset") || n.includes("ultimate")) return 2;
+    if (n.includes("refresh")) return 1;
+    return 0;
+  };
+  const foundationTiers = useMemo(() => {
+    const activeVehicleServices = mainGridServices.filter(s => (s as any).is_active !== false);
+    const interiorNames = ["Interior Detail", "The Refresh — Interior", "Ultimate Interior Reset"];
+    const exteriorNames = ["Exterior Detail", "The Refresh — Exterior"];
+    const fullNames     = ["Full Detail", "The Refresh — Full", "The Reset — Full"];
+    const pick = (names: string[]) =>
+      activeVehicleServices
+        .filter(s => names.includes(s.name))
+        .sort((a, b) => tierRankOf(a.name) - tierRankOf(b.name));
+    return {
+      interior: pick(interiorNames),
+      exterior: pick(exteriorNames),
+      full:     pick(fullNames),
+    };
+  }, [mainGridServices]);
+
   const fullDetailIdx = carouselServices.findIndex((s) => s.name === "Full Detail");
   const [carouselActiveIdx, setCarouselActiveIdx] = useState(fullDetailIdx >= 0 ? fullDetailIdx : 1);
 
@@ -701,11 +728,12 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               compact
               services={services}
               onUseBuild={(args) => {
-                const serviceName = args.preferUltimate
-                  ? "Ultimate Interior Reset"
-                  : args.foundation === "interior" ? "Interior Detail"
-                  : args.foundation === "exterior" ? "Exterior Detail"
-                  : "Full Detail";
+                // Prefer the exact service name the quiz picked (Refresh/Reset
+                // tier). Falls back to the foundation-defaulted Basic tier.
+                const serviceName = args.preferredServiceName
+                  ?? (args.foundation === "interior" ? "Interior Detail"
+                    : args.foundation === "exterior" ? "Exterior Detail"
+                    : "Full Detail");
                 const svc = services.find(s => s.name === serviceName) ?? null;
                 setSelectedService(svc);
                 setBuilderPrefill({
@@ -859,16 +887,16 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           scope + pains + severity + vehicle → the full builder prefill is
           handed off so BookingModal opens on Step 2 (Date & Time) with
           service, vehicle, and add-ons already selected. When customer picks
-          the Ultimate upgrade from the result screen, `preferUltimate` is
-          set so we swap the foundation to Ultimate Interior Reset. */}
+          the Reset upgrade from the result screen, `preferredServiceName` is
+          set so we swap the foundation to the exact Reset tier (Ultimate
+          Interior Reset for interior scope, The Reset — Full for full scope). */}
       <BuildForMeHomepageSection
         services={services}
         onUseBuild={(args) => {
-          const serviceName = args.preferUltimate
-            ? "Ultimate Interior Reset"
-            : args.foundation === "interior" ? "Interior Detail"
-            : args.foundation === "exterior" ? "Exterior Detail"
-            : "Full Detail";
+          const serviceName = args.preferredServiceName
+            ?? (args.foundation === "interior" ? "Interior Detail"
+              : args.foundation === "exterior" ? "Exterior Detail"
+              : "Full Detail");
           const svc = services.find(s => s.name === serviceName) ?? null;
           setSelectedService(svc);
           setBuilderPrefill({
@@ -901,42 +929,123 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             <p className="text-zinc-500 text-sm mt-2">Three foundations, four sizes, fully transparent pricing.</p>
           </div>
 
-          {/* ── Basic services carousel (mobile) + grid (desktop) ──── */}
-          {mounted && (
-            <div className="flex flex-col items-center w-full lg:hidden">
-              <div
-                ref={carouselRef}
-                onScroll={handleCarouselScroll}
-                className="w-full flex overflow-x-auto snap-x snap-mandatory"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-              >
-                {carouselServices.map((service) => (
-                  <div key={service.id} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
-                    <div className="w-full max-w-[360px]">
-                      <ServiceCard service={service} onBook={() => openBooking(service)} />
+          {/* ── Light Detailing banner — quick maintenance pathway ────
+              Compact horizontal card above the tier grid so returning
+              customers or "just need X" callers find it first. */}
+          {mounted && (() => {
+            const lightSvc = services.find(s => s.name === "Light Detailing");
+            if (!lightSvc) return null;
+            const openLight = () => {
+              setSelectedService(lightSvc);
+              setExpandedBookingId("services");
+              setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+            };
+            return (
+              <div className="mb-8 md:mb-10">
+                <button
+                  type="button"
+                  onClick={openLight}
+                  className="group w-full rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/[0.06] via-zinc-900/60 to-zinc-950/70 hover:border-amber-500/60 hover:from-amber-500/[0.10] transition-all p-4 md:p-5 text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center group-hover:bg-amber-500/25 transition-colors">
+                      <Sparkles size={22} className="text-amber-400" strokeWidth={1.75} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg md:text-xl font-black text-white leading-tight">Light Detailing</h3>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                          Maintenance
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        Quick freshen-up between details — pick 2+ items (vacuum, windows, mats, tires, wipe-down, quick wash).
+                        <span className="hidden md:inline"> Strictly maintenance, not a deep clean. Always 1 hour.</span>
+                      </p>
+                    </div>
+                    <div className="hidden sm:block shrink-0 text-right">
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">From</div>
+                      <div className="text-2xl font-black text-amber-300 tabular-nums leading-none mt-0.5">$65</div>
+                      <div className="text-[9px] font-bold text-zinc-600 mt-0.5">Sedan · 1 hr</div>
+                    </div>
+                    <div className="shrink-0 hidden md:flex items-center justify-center w-9 h-9 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] text-amber-400 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+                      <ChevronRight size={16} strokeWidth={2.5} />
                     </div>
                   </div>
-                ))}
+                </button>
               </div>
-              <div className="flex items-center gap-2.5 mt-4">
-                {carouselServices.map((service, i) => (
-                  <button key={service.id} type="button" onClick={() => scrollToCard(i)} aria-label={service.name} className="group">
-                    <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">{carouselServices[carouselActiveIdx]?.name ?? ""}</p>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* Desktop: 3-up grid of basic service cards */}
-          {carouselServices.length > 0 && (
-            <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-start">
-              {carouselServices.map((service) => (
-                <ServiceCard key={service.id} service={service} onBook={() => openBooking(service)} />
-              ))}
-            </div>
-          )}
+          {/* ── Foundation Tier Cards (July 2026 3-tier lineup) ──────
+              One card per foundation (Interior · Interior+Exterior · Exterior)
+              showing all 2-3 tier prices at a glance. "Choose Package" opens
+              the booking modal at Step 1 where the customer picks the specific
+              tier. Uses the same carousel (mobile) + 3-up grid (desktop). */}
+          {mounted && (foundationTiers.interior.length + foundationTiers.exterior.length + foundationTiers.full.length) > 0 && (() => {
+            const cards: Array<{ key: string; foundation: "interior" | "exterior" | "full"; tiers: Service[] }> = [];
+            if (foundationTiers.interior.length) cards.push({ key: "interior", foundation: "interior", tiers: foundationTiers.interior });
+            if (foundationTiers.full.length)     cards.push({ key: "full",     foundation: "full",     tiers: foundationTiers.full });
+            if (foundationTiers.exterior.length) cards.push({ key: "exterior", foundation: "exterior", tiers: foundationTiers.exterior });
+
+            const openStep1 = (firstTier: Service) => {
+              // Open the booking section on the customer's picked foundation.
+              // Step 1 (service picker) is what they'll see. We seed the
+              // preferred foundation via selectedService — booking modal
+              // still lets them switch to any tier within Step 1.
+              setSelectedService(firstTier);
+              setExpandedBookingId("services");
+              setTimeout(() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+            };
+
+            return (
+              <>
+                {/* Mobile: carousel */}
+                <div className="flex flex-col items-center w-full lg:hidden">
+                  <div
+                    ref={carouselRef}
+                    onScroll={handleCarouselScroll}
+                    className="w-full flex overflow-x-auto snap-x snap-mandatory"
+                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+                  >
+                    {cards.map((c) => (
+                      <div key={c.key} className="snap-center shrink-0 w-full flex justify-center px-4 pt-6 pb-12">
+                        <div className="w-full max-w-[360px]">
+                          <FoundationTierCard
+                            foundation={c.foundation}
+                            tiers={c.tiers}
+                            onChoosePackage={() => openStep1(c.tiers[0])}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2.5 mt-4">
+                    {cards.map((c, i) => (
+                      <button key={c.key} type="button" onClick={() => scrollToCard(i)} aria-label={c.foundation} className="group">
+                        <div className={`h-1.5 rounded-full transition-all duration-300 ${carouselActiveIdx === i ? "w-6 bg-[#D4AF37]" : "w-1.5 bg-zinc-700 group-hover:bg-zinc-500"}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 mt-2">
+                    {cards[carouselActiveIdx]?.foundation ?? ""}
+                  </p>
+                </div>
+
+                {/* Desktop: 3-up grid */}
+                <div className="hidden lg:grid lg:grid-cols-3 gap-6 items-stretch">
+                  {cards.map((c) => (
+                    <FoundationTierCard
+                      key={c.key}
+                      foundation={c.foundation}
+                      tiers={c.tiers}
+                      onChoosePackage={() => openStep1(c.tiers[0])}
+                    />
+                  ))}
+                </div>
+              </>
+            );
+          })()}
 
           {/* ── Inline booking — opens when a basic service card is clicked ── */}
           {mounted && expandedBookingId === "services" && (
@@ -965,8 +1074,15 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             </div>
           )}
 
-          {/* ── Ultimate Series — premium deep-reset cards ── */}
-          {(
+          {/* ── Ultimate Series — RETIRED (July 2026 3-tier lineup) ──
+              This standalone Ultimate section is redundant now — The Reset
+              is surfaced inside the FoundationTierCard grid above alongside
+              Basic and Refresh. Gated behind {false} so the `openUltimateBooking`
+              callback + `expandedBookingId === "ultimate"` inline booking
+              section (still used by the "Book The Reset" CTA under the
+              before/after gallery) keep working. Safe to fully delete once
+              the before/after CTA is rewired to expandedBookingId="services". */}
+          {false && (
           <div className="mt-14 md:mt-20">
             {/* Ultimate Series intro */}
             <div className="mb-8 md:mb-10">
@@ -1407,7 +1523,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               style={{ background: "radial-gradient(ellipse 60% 80% at 50% 50%, rgba(212,175,55,0.04) 0%, transparent 70%)" }} />
             <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-0 md:divide-x divide-white/[0.06]">
               {[
-                { step: "01", icon: Sparkles, title: "Book any car detail",        sub: "Interior, Exterior, Interior + Exterior, or Ultimate" },
+                { step: "01", icon: Sparkles, title: "Book any car detail",        sub: "Basic, Refresh, or Reset — interior, exterior, or full" },
                 { step: "02", icon: Zap,      title: "Climb the ladder",            sub: "Each detail counts — automatic, no apps" },
                 { step: "03", icon: Crown,    title: "Save more, every time",       sub: "Discount auto-applies forever at checkout" },
               ].map(({ step, icon: Icon, title, sub }) => (
@@ -2096,6 +2212,154 @@ const SERVICE_CARD_ICONS: Record<string, React.ComponentType<{ size?: number; cl
   "Exterior Detail": Car,
   "Full Detail": Sparkles,
 };
+
+// ─── Foundation Tier Card ────────────────────────────────────────────────────
+// July 2026 · 3-tier lineup card. One card per foundation (Interior, Exterior,
+// Full) that surfaces all 2-3 tier prices at a glance. "Choose Package" opens
+// the booking modal at Step 1 where the customer picks the specific tier.
+//
+// This replaces the old 1-card-per-service homepage grid — customers used to
+// see 3 separate ServiceCards (Basic Interior, Basic Full, Basic Exterior)
+// and had no visibility into the Refresh / Reset tiers until they were in
+// the booking flow. Now the homepage teaches the ladder up-front.
+const FOUNDATION_TIER_CARD_ICONS: Record<"interior" | "exterior" | "full", React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
+  interior: Brush,
+  exterior: Car,
+  full:     Sparkles,
+};
+
+const FOUNDATION_TIER_CARD_LABELS: Record<"interior" | "exterior" | "full", { title: string; subtitle: string }> = {
+  interior: { title: "Interior",           subtitle: "Inside the cabin" },
+  exterior: { title: "Exterior",           subtitle: "Outside wash + protect" },
+  full:     { title: "Interior + Exterior", subtitle: "Both sides · one visit" },
+};
+
+/** Tier metadata keyed by DB service name — muted for Basic, popular ribbon for
+ *  Refresh, gold for Reset. The `label` collapses the DB name into the short
+ *  ladder rung (Basic / The Refresh / The Reset). */
+const TIER_LABEL_OF: Record<string, { label: string; tone: "basic" | "refresh" | "reset" }> = {
+  "Interior Detail":         { label: "Basic",       tone: "basic"   },
+  "Exterior Detail":         { label: "Basic",       tone: "basic"   },
+  "Full Detail":             { label: "Basic",       tone: "basic"   },
+  "The Refresh — Interior":  { label: "The Refresh", tone: "refresh" },
+  "The Refresh — Exterior":  { label: "The Refresh", tone: "refresh" },
+  "The Refresh — Full":      { label: "The Refresh", tone: "refresh" },
+  "Ultimate Interior Reset": { label: "The Reset",   tone: "reset"   },
+  "The Reset — Full":        { label: "The Reset",   tone: "reset"   },
+};
+
+function FoundationTierCard({
+  foundation,
+  tiers,
+  onChoosePackage,
+}: {
+  foundation: "interior" | "exterior" | "full";
+  tiers: Service[]; // pre-sorted Basic → Refresh → Reset
+  onChoosePackage: () => void;
+}) {
+  const Icon = FOUNDATION_TIER_CARD_ICONS[foundation];
+  const labels = FOUNDATION_TIER_CARD_LABELS[foundation];
+  const isPopular = foundation === "full";
+
+  return (
+    <div className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1.5 group h-full ${
+      isPopular
+        ? "border border-[#D4AF37]/40 shadow-[0_0_50px_rgba(212,175,55,0.12)] bg-gradient-to-b from-zinc-900 to-zinc-950 hover:shadow-[0_20px_60px_rgba(212,175,55,0.2)]"
+        : "border border-white/[0.07] bg-gradient-to-b from-zinc-900/80 to-zinc-950 hover:border-[#D4AF37]/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.7)]"
+    }`}>
+      {/* Top accent line */}
+      <div className={`h-[2px] w-full bg-gradient-to-r from-transparent to-transparent shrink-0 transition-all duration-500 ${
+        isPopular ? "via-[#D4AF37]" : "via-white/10 group-hover:via-[#D4AF37]/50"
+      }`} />
+
+      {/* Header — icon + name */}
+      <div className={`px-6 pt-6 pb-4 ${isPopular ? "bg-[#D4AF37]/[0.03]" : ""}`}>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex-1 min-w-0">
+            {isPopular && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <Crown size={10} className="text-[#D4AF37]" strokeWidth={2} />
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">
+                  Most Popular
+                </span>
+              </div>
+            )}
+            <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+              {labels.title}
+            </h3>
+            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{labels.subtitle}</p>
+          </div>
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${
+            isPopular
+              ? "bg-[#D4AF37]/15 border border-[#D4AF37]/25"
+              : "bg-zinc-800/80 border border-white/[0.06] group-hover:border-[#D4AF37]/25 group-hover:bg-[#D4AF37]/[0.07]"
+          }`}>
+            <Icon size={18} className={`transition-colors duration-300 ${isPopular ? "text-[#D4AF37]" : "text-zinc-500 group-hover:text-[#D4AF37]"}`} strokeWidth={1.5} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-6 h-px bg-white/[0.05]" />
+
+      {/* Tier ladder — Basic / Refresh / Reset with prices per size */}
+      <div className="px-6 py-5 flex-1">
+        <div className="flex flex-col gap-2">
+          {tiers.map((t) => {
+            const meta = TIER_LABEL_OF[t.name] ?? { label: t.name, tone: "basic" as const };
+            const isReset   = meta.tone === "reset";
+            const isRefresh = meta.tone === "refresh";
+            return (
+              <div
+                key={t.id}
+                className={`rounded-xl border px-3.5 py-2.5 flex items-center justify-between gap-3 transition-colors ${
+                  isReset
+                    ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.06]"
+                    : isRefresh
+                    ? "border-emerald-500/35 bg-emerald-500/[0.06]"
+                    : "border-white/[0.06] bg-zinc-950/50"
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[11px] font-black uppercase tracking-[0.18em] leading-tight ${
+                    isReset ? "text-[#D4AF37]" : isRefresh ? "text-emerald-300" : "text-zinc-400"
+                  }`}>
+                    {meta.label}
+                  </p>
+                  <p className="text-[9.5px] text-zinc-500 mt-0.5 leading-tight">
+                    Sedan · SUV · 3-Row
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className={`text-[13px] font-black tabular-nums leading-tight ${
+                    isReset ? "text-[#D4AF37]" : isRefresh ? "text-emerald-200" : "text-zinc-200"
+                  }`}>
+                    ${t.price_small} / ${t.price_large} / ${t.price_extra_large}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Choose Package CTA */}
+      <div className="px-6 pb-6 pt-1">
+        <button
+          type="button"
+          onClick={onChoosePackage}
+          className={`w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] ${
+            isPopular
+              ? "bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_6px_22px_rgba(212,175,55,0.35)] hover:shadow-[0_8px_28px_rgba(212,175,55,0.45)]"
+              : "bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10 hover:border-[#D4AF37]/50 hover:text-[#D4AF37]"
+          }`}
+        >
+          Choose Package
+          <ChevronRight size={15} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function ServiceCard({
   service,

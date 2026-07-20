@@ -20,7 +20,7 @@ import { GlobalSearch } from "@/components/admin/GlobalSearch";
  */
 const TABS = [
   { label: "Today",    href: "/admin",          icon: Home,      subroutes: [] as string[] },
-  { label: "Schedule", href: "/admin/schedule", icon: Calendar,  subroutes: ["/admin/squeeze"] },
+  { label: "Schedule", href: "/admin/schedule", icon: Calendar,  subroutes: ["/admin/squeeze", "/admin/recurring"] },
   { label: "People",   href: "/admin/clients",  icon: Users,     subroutes: ["/admin/monthly", "/admin/contractors"] },
   { label: "Fleet",    href: "/admin/fleet",    icon: Building2, subroutes: [] as string[] },
   { label: "Business", href: "/admin/money",    icon: Briefcase, subroutes: ["/admin/email", "/admin/settings"] },

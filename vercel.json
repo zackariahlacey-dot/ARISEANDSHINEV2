@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/cross-sell-to-exterior",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/recurring-bookings",
+      "schedule": "0 8 * * *"
     }
   ]
 }

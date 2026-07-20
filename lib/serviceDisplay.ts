@@ -12,8 +12,23 @@
  * code paths that pass the raw DB name through.
  */
 
+// July 2026 · 3-tier lineup. DB keeps the historical names (Interior Detail,
+// Exterior Detail, Full Detail) so booking history, loyalty tables, and
+// gift-card / coupon logic keep working. Customer-facing labels get the
+// "Basic" prefix here so the tier ladder (Basic → Refresh → Reset) is
+// obvious wherever a service name is rendered.
+//
+// "Full Detail" used to display as "Interior + Exterior" for marketing
+// clarity. That's been rolled into "Basic Full Detail" — same idea, but
+// now it sits alongside "The Refresh — Full" and "The Reset — Full" so
+// the ladder is coherent.
 const FRIENDLY_LABELS: Record<string, string> = {
-  "Full Detail": "Interior + Exterior",
+  "Interior Detail":         "Basic Interior Detail",
+  "Exterior Detail":         "Basic Exterior Detail",
+  "Full Detail":             "Basic Full Detail",
+  // Flagship interior tier — DB name stays "Ultimate Interior Reset" to
+  // preserve booking history, loyalty, gift-card, and coupon references.
+  "Ultimate Interior Reset": "The Reset — Interior",
 };
 
 export function getServiceDisplayName(serviceName: string | null | undefined, _opts: { includeFoundation?: boolean } = {}): string {

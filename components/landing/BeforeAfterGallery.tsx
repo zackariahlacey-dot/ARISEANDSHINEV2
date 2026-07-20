@@ -291,10 +291,10 @@ export function BeforeAfterGallery({ onBookUltimate }: Props = {}) {
             </motion.div>
 
             <h3 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">
-              Book Your <span className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent">Ultimate</span> Transformation Today.
+              Book <span className="bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] bg-clip-text text-transparent">The Reset</span> Today.
             </h3>
             <p className="text-zinc-400 text-sm md:text-base max-w-md leading-relaxed">
-              The same deep-reset service you just saw — in your driveway, on your schedule.
+              The same deep-reset service you just saw — seats out, every crevice, in your driveway on your schedule.
             </p>
 
             <button
@@ -303,7 +303,7 @@ export function BeforeAfterGallery({ onBookUltimate }: Props = {}) {
               className="btn-primary-gold-shimmer group relative mt-2 inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#D4AF37] text-zinc-950 font-black tracking-wide text-base hover:scale-[1.04] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] active:scale-[0.98] transition-all duration-500 ease-in-out"
             >
               <span className="relative z-[1] inline-flex items-center gap-2">
-                Book Your Ultimate Detail
+                Book The Reset
                 <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
               </span>
             </button>

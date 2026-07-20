@@ -202,6 +202,37 @@ const SIZE_LABELS: Record<Size, string> = {
   xl:    "3-Row / Full-Size Truck",
 };
 
+const REFRESH_SERVICE_NAME: Record<Scope, string> = {
+  interior: "The Refresh — Interior",
+  exterior: "The Refresh — Exterior",
+  full:     "The Refresh — Full",
+};
+
+const REFRESH_BAKED_ADDON_IDS: Record<Scope, string[]> = {
+  interior: ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
+  exterior: ["clay_bar", "headlight_restore", "engine_bay"],
+  full:     ["upholstery_shampoo", "salt_stain_removal", "pet_hair", "clay_bar", "headlight_restore", "engine_bay"],
+};
+
+// Reset — Interior (Ultimate Interior Reset) is INTERIOR ONLY: no clay bar.
+// Reset — Full adds clay bar + headlights + engine bay (exterior side baked in).
+const INCLUDED_IN_RESET_INTERIOR = [
+  "upholstery_shampoo", "leather_condition", "pet_hair", "salt_stain_removal",
+];
+const INCLUDED_IN_RESET_FULL = [
+  ...INCLUDED_IN_RESET_INTERIOR, "clay_bar", "headlight_restore", "engine_bay",
+];
+
+// All add-ons the quiz can recommend per scope — used for the customize panel.
+const PURCHASABLE_ADDONS_BY_SCOPE: Record<Scope, string[]> = {
+  interior: ["upholstery_shampoo", "pet_hair", "salt_stain_removal", "ozone_treatment", "leather_condition"],
+  exterior: ["clay_bar", "headlight_restore", "engine_bay", "gentech_5yr_body", "gentech_5yr_wheels"],
+  full:     [
+    "upholstery_shampoo", "pet_hair", "salt_stain_removal", "ozone_treatment", "leather_condition",
+    "clay_bar", "headlight_restore", "engine_bay", "gentech_5yr_body", "gentech_5yr_wheels",
+  ],
+};
+
 type UseBuildArgs = {
   foundation: Scope;
   addonIds: string[];
@@ -211,18 +242,11 @@ type UseBuildArgs = {
     model: string;
     size: VehicleSizeSlug;
   };
-  /** When true, the parent should book Ultimate Interior Reset instead of
-   *  the plain Interior/Full foundation (customer accepted the upgrade). */
-  preferUltimate?: boolean;
+  /** Exact service name the parent should book instead of the default per-scope
+   *  service. Used when the quiz recommends a Refresh or Reset tier. */
+  preferredServiceName?: string;
 };
 
-// Add-ons that Ultimate Interior Reset already bakes in — dropped when the
-// customer accepts the upgrade so they're not double-charged. Ozone is NOT
-// included (it's a separate add-on on the Ultimate flow); salt removal IS.
-// Clay bar is included in Ultimate as a paint-prep step even without +Ext.
-const INCLUDED_IN_ULTIMATE_ADDON_IDS = [
-  "upholstery_shampoo", "leather_condition", "pet_hair", "salt_stain_removal", "clay_bar",
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function BuildForMeQuiz({
@@ -255,6 +279,8 @@ export function BuildForMeQuiz({
   // on the Result screen (via the "-" button). Filtered out of the derived
   // addonIds so the total + rows update live. Cleared on reset.
   const [removedAddonIds, setRemovedAddonIds] = useState<string[]>([]);
+  // Add-ons the customer manually added from the Customize panel.
+  const [addedAddonIds, setAddedAddonIds] = useState<string[]>([]);
   // Which add-on is currently showing the "confirm remove" popover.
   const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
   // Whether to bundle an Exterior Detail with the recommended Ultimate on
@@ -279,6 +305,7 @@ export function BuildForMeQuiz({
     setVehicleCollapsed(false);
     autoCollapsedOnceRef.current = false;
     setRemovedAddonIds([]);
+    setAddedAddonIds([]);
     setConfirmingRemoveId(null);
     setAddExtToUltimate(false);
   };
@@ -329,9 +356,10 @@ export function BuildForMeQuiz({
   const buildSummary = useMemo(() => {
     if (!scope || !severity) return null;
     const derivedAddonIds = painToAddons(pains, severity);
-    // Honor customer-side removals from the Result screen. Empty by default.
     const removed = new Set(removedAddonIds);
-    const addonIds = derivedAddonIds.filter(id => !removed.has(id));
+    const baseIds = derivedAddonIds.filter(id => !removed.has(id));
+    const extraAdded = addedAddonIds.filter(id => !removed.has(id) && !baseIds.includes(id));
+    const addonIds = [...baseIds, ...extraAdded];
     const foundationPrice = getFoundationPriceFor(services, scope, size);
 
     // Ceramic items get the tiered ceramic-package discount (10/20/30%),
@@ -359,64 +387,91 @@ export function BuildForMeQuiz({
     if (bundlePct > 0) labelParts.push(`${Math.round(bundlePct * 100)}% bundle off add-ons`);
     if (ceramicPct > 0) labelParts.push(`${Math.round(ceramicPct * 100)}% off ceramics`);
 
-    // Ultimate upgrade logic. Ultimate Interior Reset bakes in the premium
-    // interior add-ons customers stack (shampoo, salt, leather, pet hair)
-    // PLUS seats-out access. For scope=full ("Both") we compare against
-    // Ultimate + Exterior Detail toggle (the ultimate_ext_addon) so the
-    // recommendation matches the customer's original intent — full-vehicle
-    // service, not interior-only.
-    //
-    // Two thresholds:
-    //   1. Build total >= Ultimate target → auto-default to Ultimate.
-    //   2. Within $100 of Ultimate target → soft nudge card.
-    // Skip both when scope is exterior-only.
-    const ultimateSvc = services.find(s => s.name === "Ultimate Interior Reset");
-    const ultimatePrice = ultimateSvc
-      ? Number(({ sedan: (ultimateSvc as any).price_medium,
-                  suv:   (ultimateSvc as any).price_large,
-                  xl:    (ultimateSvc as any).price_extra_large }[size]) ?? 0)
+    // ── Refresh tier recommendation ──────────────────────────────────────────
+    const refreshSvcName = REFRESH_SERVICE_NAME[scope];
+    const refreshSvc = services.find(s => s.name === refreshSvcName);
+    const refreshPrice = refreshSvc
+      ? Number(({ sedan: (refreshSvc as any).price_medium,
+                  suv:   (refreshSvc as any).price_large,
+                  xl:    (refreshSvc as any).price_extra_large }[size]) ?? 0)
       : 0;
-    // "+ Exterior Detail (Ultimate bundle)" add-on prices — mirror the
-    // BookingModal ALL_ADD_ONS.ultimate_ext_addon size tiers.
-    const ULTIMATE_EXT_PRICES: Record<Size, number> = { sedan: 65, suv: 80, xl: 95 };
-    const extPrice = ULTIMATE_EXT_PRICES[size];
+    const refreshBakedIds = REFRESH_BAKED_ADDON_IDS[scope] ?? [];
+    const overlapRefreshCount = addonIds.filter(id => refreshBakedIds.includes(id)).length;
+
+    // ── Reset tier upgrade logic ──────────────────────────────────────────────
+    // Reset — Interior (DB: "Ultimate Interior Reset") and Reset — Full are
+    // separate service records. For scope=full → Reset Full; interior → Reset
+    // Interior. No ext_addon math — each Reset is its own priced tier.
     const isFullScope = scope === "full";
-    // The TRIGGER threshold for "prefer Ultimate" uses a scope-based fair
-    // comparison: scope=full compares against Ultimate + Ext (customer wanted
-    // both sides), scope=interior compares against just Ultimate. This keeps
-    // the recommendation honest without depending on the toggle state.
-    const triggerExtPrice = isFullScope ? extPrice : 0;
-    const targetUltimatePrice = ultimatePrice + triggerExtPrice;
+    const resetSvcName = isFullScope ? "The Reset — Full" : "Ultimate Interior Reset";
+    const resetSvc = services.find(s => s.name === resetSvcName);
+    const fallbackSvc = isFullScope ? services.find(s => s.name === "Ultimate Interior Reset") : null;
+    const effectiveResetSvc = resetSvc ?? fallbackSvc;
+    const ultimatePrice = effectiveResetSvc
+      ? Number(({ sedan: (effectiveResetSvc as any).price_medium,
+                  suv:   (effectiveResetSvc as any).price_large,
+                  xl:    (effectiveResetSvc as any).price_extra_large }[size]) ?? 0)
+      : 0;
 
     const interiorScope = scope === "interior" || scope === "full";
     const ultimatePreferred =
-      interiorScope && ultimatePrice > 0 && grandTotal >= targetUltimatePrice;
-    const ultimateDelta = targetUltimatePrice - grandTotal;
+      interiorScope && ultimatePrice > 0 && grandTotal >= ultimatePrice;
+    const ultimateDelta = ultimatePrice - grandTotal;
     const eligibleForUltimateNudge =
       interiorScope && ultimatePrice > 0 && !ultimatePreferred &&
       ultimateDelta > 0 && ultimateDelta <= 100;
 
-    // Add-ons absorbed by the Ultimate (or Ultimate + Ext) package.
-    // Clay bar is baked into Ultimate directly (part of the paint-prep step),
-    // so it's covered whether or not the customer adds +Ext.
-    const absorbedByUltimateIds = INCLUDED_IN_ULTIMATE_ADDON_IDS;
+    const refreshPreferred =
+      refreshPrice > 0 && overlapRefreshCount >= 2 &&
+      grandTotal >= refreshPrice && !ultimatePreferred;
+    const refreshDelta = refreshPrice - grandTotal;
+    const eligibleForRefreshNudge =
+      refreshPrice > 0 && overlapRefreshCount >= 2 &&
+      !refreshPreferred && !ultimatePreferred &&
+      refreshDelta > 0 && refreshDelta <= 60;
 
-    // When we're defaulting to Ultimate, compute the bundle. Bundle DISPLAY
-    // price honors the `addExtToUltimate` toggle so interior-scope customers
-    // can opt into Exterior at the last minute, and full-scope customers can
-    // opt out.
-    let ultimateBundle: null | {
-      price: number;      // combined foundation (Ultimate + optional Ext)
+    const absorbedByUltimateIds = isFullScope ? INCLUDED_IN_RESET_FULL : INCLUDED_IN_RESET_INTERIOR;
+
+    // Refresh bundle preview
+    let refreshBundle: null | {
+      price: number;
       extrasRows: typeof addonRows;
       extrasTotal: number;
       grandTotal: number;
-      savings: number;    // vs à la carte base build
+      savings: number;
+    } = null;
+    if (refreshPreferred) {
+      const extraIds = addonIds.filter(id => !refreshBakedIds.includes(id));
+      const extraCeramicIds = extraIds.filter(isCeramic);
+      const extraRegularIds = extraIds.filter(id => !isCeramic(id));
+      const extraBundlePct = bundlePctFor(extraRegularIds.length);
+      const extraCeramicPct = extraCeramicIds.length >= 3 ? 0.25 : extraCeramicIds.length === 2 ? 0.15 : 0;
+      const extrasRows = extraIds.map(id => {
+        const base = getAddonPriceForSize(id, size);
+        const discounted = isCeramic(id)
+          ? Math.round(base * (1 - extraCeramicPct))
+          : addonDiscountedPrice(id, base, extraBundlePct);
+        return { id, label: ADDON_LABELS[id] ?? id, base, discounted, savings: base - discounted };
+      });
+      const extrasTotal = extrasRows.reduce((s, r) => s + r.discounted, 0);
+      refreshBundle = {
+        price: refreshPrice, extrasRows, extrasTotal,
+        grandTotal: refreshPrice + extrasTotal,
+        savings: grandTotal - (refreshPrice + extrasTotal),
+      };
+    }
+
+    // Reset bundle preview
+    let ultimateBundle: null | {
+      price: number;
+      extrasRows: typeof addonRows;
+      extrasTotal: number;
+      grandTotal: number;
+      savings: number;
       includesExtToggle: boolean;
-      extPrice: number;   // what +Ext would cost (for the toggle UI)
+      extPrice: number;
     } = null;
     if (ultimatePreferred) {
-      const displayExtPrice = addExtToUltimate ? extPrice : 0;
-      const displayBundlePrice = ultimatePrice + displayExtPrice;
       const extraIds = addonIds.filter(id => !absorbedByUltimateIds.includes(id));
       const extraCeramicIds = extraIds.filter(isCeramic);
       const extraRegularIds = extraIds.filter(id => !isCeramic(id));
@@ -430,28 +485,30 @@ export function BuildForMeQuiz({
         return { id, label: ADDON_LABELS[id] ?? id, base, discounted, savings: base - discounted };
       });
       const extrasTotal = extrasRows.reduce((s, r) => s + r.discounted, 0);
-      const ultimateGrandTotal = displayBundlePrice + extrasTotal;
       ultimateBundle = {
-        price: displayBundlePrice,
-        extrasRows,
-        extrasTotal,
-        grandTotal: ultimateGrandTotal,
-        savings: grandTotal - ultimateGrandTotal,
-        includesExtToggle: addExtToUltimate,
-        extPrice,
+        price: ultimatePrice, extrasRows, extrasTotal,
+        grandTotal: ultimatePrice + extrasTotal,
+        savings: grandTotal - (ultimatePrice + extrasTotal),
+        includesExtToggle: isFullScope,
+        extPrice: 0,
       };
     }
 
     return {
       foundationPrice, addonRows, addonsTotal, totalSavings, grandTotal,
       pctLabel: labelParts.length > 0 ? labelParts.join(" · ") : null,
+      refreshPreferred,
+      refreshBundle,
+      refreshNudge: eligibleForRefreshNudge
+        ? { price: refreshPrice, delta: refreshDelta, svcName: refreshSvcName }
+        : null,
       ultimatePreferred,
       ultimateBundle,
       ultimateNudge: eligibleForUltimateNudge
         ? { price: ultimatePrice, delta: ultimateDelta }
         : null,
     };
-  }, [scope, severity, pains, services, size, removedAddonIds, addExtToUltimate]);
+  }, [scope, severity, pains, services, size, removedAddonIds, addedAddonIds, addExtToUltimate]);
 
   // ── Closed state — just the trigger button ────────────────────────────────
   if (!open) {
@@ -765,8 +822,11 @@ export function BuildForMeQuiz({
                   onCancelRemove={() => setConfirmingRemoveId(null)}
                   onConfirmRemove={id => {
                     setRemovedAddonIds(prev => prev.includes(id) ? prev : [...prev, id]);
+                    setAddedAddonIds(prev => prev.filter(x => x !== id));
                     setConfirmingRemoveId(null);
                   }}
+                  addedAddonIds={addedAddonIds}
+                  onAddAddon={id => setAddedAddonIds(prev => prev.includes(id) ? prev : [...prev, id])}
                   onUse={() => {
                     onUseBuild({
                       foundation: scope,
@@ -777,25 +837,21 @@ export function BuildForMeQuiz({
                   }}
                   addExtToUltimate={addExtToUltimate}
                   onToggleExt={() => setAddExtToUltimate(v => !v)}
+                  onSwitchToRefresh={() => {
+                    const refreshBaked = REFRESH_BAKED_ADDON_IDS[scope] ?? [];
+                    const kept = buildSummary.addonRows.map(r => r.id).filter(id => !refreshBaked.includes(id));
+                    onUseBuild({ foundation: scope, addonIds: kept, vehicle: { year, make, model, size }, preferredServiceName: REFRESH_SERVICE_NAME[scope] });
+                    close();
+                  }}
                   onSwitchToUltimate={() => {
-                    // Upgrade path — swap to Ultimate and drop the add-ons it
-                    // already covers (shampoo, salt, leather, pet hair, clay bar).
-                    // If the customer toggled +Ext ON (default for "Both" scope,
-                    // opt-in for interior-only), include ultimate_ext_addon so
-                    // the booking flow charges + schedules the Exterior Detail
-                    // bundle at the Ultimate bundle rate.
-                    const absorbed = INCLUDED_IN_ULTIMATE_ADDON_IDS;
-                    const kept = buildSummary.addonRows
-                      .map(r => r.id)
-                      .filter(id => !absorbed.includes(id));
-                    const finalAddonIds = addExtToUltimate
-                      ? ["ultimate_ext_addon", ...kept]
-                      : kept;
+                    const isFullScope = scope === "full";
+                    const activeAbsorbed = isFullScope ? INCLUDED_IN_RESET_FULL : INCLUDED_IN_RESET_INTERIOR;
+                    const kept = buildSummary.addonRows.map(r => r.id).filter(id => !activeAbsorbed.includes(id));
                     onUseBuild({
-                      foundation: "interior",  // maps to Ultimate via preferUltimate
-                      addonIds: finalAddonIds,
+                      foundation: scope,
+                      addonIds: kept,
                       vehicle: { year, make, model, size },
-                      preferUltimate: true,
+                      preferredServiceName: isFullScope ? "The Reset — Full" : "Ultimate Interior Reset",
                     });
                     close();
                   }}
@@ -893,10 +949,13 @@ function ResultCard({
   onCancelRemove,
   onConfirmRemove,
   onUse,
+  onSwitchToRefresh,
   onSwitchToUltimate,
   addExtToUltimate,
   onToggleExt,
   onRestart,
+  addedAddonIds,
+  onAddAddon,
 }: {
   scope: Scope;
   vehicle: { year: string; make: string; model: string; size: Size };
@@ -906,10 +965,13 @@ function ResultCard({
   onCancelRemove: () => void;
   onConfirmRemove: (id: string) => void;
   onUse: () => void;
+  onSwitchToRefresh: () => void;
   onSwitchToUltimate: () => void;
   addExtToUltimate: boolean;
   onToggleExt: () => void;
   onRestart: () => void;
+  addedAddonIds: string[];
+  onAddAddon: (id: string) => void;
 }) {
   // Look up the add-on being confirmed for the popover. Search both the
   // main addon rows and Ultimate-extras rows so the confirmation works in
@@ -977,6 +1039,96 @@ function ResultCard({
       </div>
     </div>
   );
+
+  // ── Auto-default to Refresh ───────────────────────────────────────────
+  if (buildSummary.refreshPreferred && buildSummary.refreshBundle) {
+    const bundle = buildSummary.refreshBundle;
+    const refreshLabel = scope === "full" ? "The Refresh — Full" : scope === "exterior" ? "The Refresh — Exterior" : "The Refresh — Interior";
+    const refreshIncludes = REFRESH_INCLUDES[scope];
+    return (
+      <div className="relative">
+        {confirmDialog}
+        <div className="text-center mb-3">
+          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">✨ Better value for your build</p>
+        </div>
+        <div className="rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/[0.06] px-3 py-2.5 mb-3">
+          <p className="text-[11px] text-zinc-200 leading-snug">
+            Your à la carte build totals <span className="font-black text-white">${buildSummary.grandTotal}</span>.{" "}
+            <span className="font-black text-[#D4AF37]">{refreshLabel}</span> bundles the same add-ons at{" "}
+            <span className="font-black text-[#D4AF37]">${bundle.price}</span>
+            {bundle.savings > 0 && <> — saving you <span className="font-black text-[#D4AF37]">${bundle.savings}</span></>}.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[#D4AF37]/60 bg-gradient-to-br from-[#D4AF37]/[0.10] via-zinc-900 to-zinc-950 p-4 mb-2.5 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+          <div className="flex items-start gap-3 mb-3">
+            <div className="shrink-0 w-11 h-11 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center">
+              <Sparkles size={17} className="text-[#D4AF37]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-black text-white leading-tight">{refreshLabel}</p>
+              <p className="text-[11px] text-[#D4AF37]/70 mt-0.5">Bundled mid-tier · best combo value</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span className="text-lg font-black text-[#D4AF37] tabular-nums">${bundle.price}</span>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mt-0.5">{SIZE_LABELS[vehicle.size]}</p>
+            </div>
+          </div>
+          <div className="rounded-xl bg-zinc-950/60 border border-[#D4AF37]/15 px-3 py-2.5">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/80 mb-1.5">All included</p>
+            <ul className="grid grid-cols-1 gap-1">
+              {refreshIncludes.map(item => (
+                <li key={item} className="flex items-start gap-1.5 text-[11px] text-zinc-300 leading-snug">
+                  <Check size={10} className="text-[#D4AF37] shrink-0 mt-[3px]" strokeWidth={3} /><span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        {bundle.extrasRows.length > 0 && (
+          <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/40 p-3.5 mb-2.5">
+            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2.5">Kept from your build ({bundle.extrasRows.length})</p>
+            <ul className="space-y-2">
+              {bundle.extrasRows.map(r => (
+                <li key={r.id} className="rounded-xl border border-white/[0.05] bg-zinc-950/50 px-2.5 py-2">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="text-[12px] font-bold text-zinc-100 leading-tight flex-1 min-w-0">+ {r.label}</span>
+                    <span className="text-[11px] tabular-nums shrink-0">
+                      {r.savings > 0 ? <><span className="text-zinc-600 line-through mr-1">${r.base}</span><span className="text-[#D4AF37] font-black">${r.discounted}</span></> : <span className="text-zinc-200 font-bold">${r.discounted}</span>}
+                    </span>
+                  </div>
+                  {ADDON_DESCRIPTIONS[r.id] && <p className="text-[10.5px] text-zinc-500 leading-snug">{ADDON_DESCRIPTIONS[r.id]}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <CustomizePanel scope={scope} vehicleSize={vehicle.size} currentAddonIds={bundle.extrasRows.map(r => r.id)} bakedInIds={REFRESH_BAKED_ADDON_IDS[scope] ?? []} onAddAddon={onAddAddon} />
+        <div className="rounded-2xl border border-[#D4AF37]/50 bg-gradient-to-br from-[#D4AF37]/[0.10] via-zinc-900 to-zinc-950 px-4 py-3 mb-3 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
+          <div className="flex items-baseline justify-between">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{vehicleLine} · {SIZE_LABELS[vehicle.size]}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]/80 mt-0.5">Total ({refreshLabel})</p>
+            </div>
+            <div className="text-right">
+              <span className="text-3xl font-black text-[#D4AF37] tabular-nums leading-none">${bundle.grandTotal}</span>
+              {bundle.savings > 0 && <p className="text-[9px] font-black tabular-nums text-emerald-400 mt-1">${bundle.savings} less than à la carte</p>}
+            </div>
+          </div>
+        </div>
+        <button type="button" onClick={onSwitchToRefresh} className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm uppercase tracking-wider bg-gradient-to-r from-[#D4AF37] to-[#F0D060] text-black shadow-[0_6px_22px_rgba(212,175,55,0.35)] active:scale-[0.97] transition-all">
+          <Calendar size={16} /> Pick my date & time <ArrowRight size={15} />
+        </button>
+        <button type="button" onClick={onUse} className="w-full mt-2 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10.5px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:border-white/[0.12]">
+          Keep custom build (${buildSummary.grandTotal}) instead
+        </button>
+        <button type="button" onClick={onRestart} className="w-full mt-2 inline-flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-300">
+          <RotateCcw size={11} /> Start over
+        </button>
+      </div>
+    );
+  }
 
   // ── Auto-default to Ultimate ──────────────────────────────────────────
   // When the à la carte build costs the same or more than the Ultimate
@@ -1150,6 +1302,8 @@ function ResultCard({
           </div>
         </label>
 
+        <CustomizePanel scope={scope} vehicleSize={vehicle.size} currentAddonIds={bundle.extrasRows.map(r => r.id)} bakedInIds={bundle.includesExtToggle ? INCLUDED_IN_RESET_FULL : INCLUDED_IN_RESET_INTERIOR} onAddAddon={onAddAddon} />
+
         {/* Total — Ultimate + extras */}
         <div className="rounded-2xl border border-emerald-400/50 bg-gradient-to-br from-emerald-500/[0.10] via-zinc-900 to-zinc-950 px-4 py-3 mb-3 relative overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent" />
@@ -1288,6 +1442,8 @@ function ResultCard({
         </div>
       )}
 
+      <CustomizePanel scope={scope} vehicleSize={vehicle.size} currentAddonIds={buildSummary.addonRows.map(r => r.id)} bakedInIds={[]} onAddAddon={onAddAddon} />
+
       {/* Ultimate upgrade nudge — fires when Ultimate is within $100 of the
           current build. Shows a comparison: what the customer already has vs
           what Ultimate adds on top (green = extras Ultimate gives you). */}
@@ -1416,6 +1572,80 @@ function ResultCard({
   );
 }
 
+// What each Refresh tier includes — shown on the Refresh result card.
+const REFRESH_INCLUDES: Record<Scope, string[]> = {
+  interior: [
+    "Everything in Basic Interior Detail",
+    "Deep carpet & upholstery shampoo (all seats + floors)",
+    "Salt stain removal + neutralization",
+    "Heavy pet hair extraction",
+  ],
+  exterior: [
+    "Everything in Basic Exterior Detail",
+    "Clay bar paint decontamination",
+    "Headlight restoration (pair, lasts 2+ years)",
+    "Engine bay detail + degrease",
+  ],
+  full: [
+    "Everything in Basic Full Detail",
+    "Deep carpet & upholstery shampoo",
+    "Salt stain removal + neutralization",
+    "Heavy pet hair extraction",
+    "Clay bar paint decontamination",
+    "Headlight restoration (pair)",
+    "Engine bay detail + degrease",
+  ],
+};
+
+// ─── Customize panel ──────────────────────────────────────────────────────────
+function CustomizePanel({
+  scope, vehicleSize, currentAddonIds, bakedInIds, onAddAddon,
+}: {
+  scope: Scope; vehicleSize: Size; currentAddonIds: string[];
+  bakedInIds: string[]; onAddAddon: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const available = PURCHASABLE_ADDONS_BY_SCOPE[scope].filter(
+    id => !currentAddonIds.includes(id) && !bakedInIds.includes(id)
+  );
+  if (available.length === 0) return null;
+  return (
+    <div className="mb-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-dashed border-[#D4AF37]/30 bg-[#D4AF37]/[0.03] text-[11px] font-black uppercase tracking-widest text-[#D4AF37]/70 hover:border-[#D4AF37]/60 hover:bg-[#D4AF37]/[0.07] hover:text-[#D4AF37] transition-all active:scale-[0.99]"
+      >
+        <span>＋ Customize package</span>
+        <span className="text-[10px] font-bold normal-case tracking-normal text-zinc-600">
+          {open ? "▲ hide" : `${available.length} add-on${available.length !== 1 ? "s" : ""} available`}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-zinc-900/50 p-3 space-y-1.5">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-2">
+            Tap to add — price updates instantly
+          </p>
+          {available.map(id => {
+            const price = getAddonPriceForSize(id, vehicleSize);
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onAddAddon(id)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.03] hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.08] active:scale-[0.99] transition-all"
+              >
+                <span className="text-[12px] font-bold text-zinc-200 text-left leading-tight">{ADDON_LABELS[id] ?? id}</span>
+                <span className="text-[12px] font-black text-[#D4AF37] shrink-0 tabular-nums">+${price}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Helper to type ResultCard's props without circular imports.
 function useBuildSummaryStub() {
   return null as null | {
@@ -1425,6 +1655,15 @@ function useBuildSummaryStub() {
     grandTotal: number;
     pctLabel: string | null;
     addonRows: Array<{ id: string; label: string; base: number; discounted: number; savings: number }>;
+    refreshPreferred: boolean;
+    refreshBundle: null | {
+      price: number;
+      extrasRows: Array<{ id: string; label: string; base: number; discounted: number; savings: number }>;
+      extrasTotal: number;
+      grandTotal: number;
+      savings: number;
+    };
+    refreshNudge: null | { price: number; delta: number; svcName: string };
     ultimatePreferred: boolean;
     ultimateBundle: null | {
       price: number;
