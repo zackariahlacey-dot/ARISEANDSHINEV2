@@ -26,9 +26,15 @@ const FRIENDLY_LABELS: Record<string, string> = {
   "Interior Detail":         "Basic Interior Detail",
   "Exterior Detail":         "Basic Exterior Detail",
   "Full Detail":             "Basic Full Detail",
-  // Flagship interior tier — DB name stays "Ultimate Interior Reset" to
-  // preserve booking history, loyalty, gift-card, and coupon references.
-  "Ultimate Interior Reset": "The Reset — Interior",
+  // July 2026 v3 — 2-tier lineup (Basic + Reset). The Refresh services
+  // are now the top tier and display as "The Reset". DB names stay stable
+  // to preserve booking history / loyalty / gift-card / coupon references.
+  "The Refresh — Interior":  "The Reset — Interior",
+  "The Refresh — Exterior":  "The Reset — Exterior",
+  "The Refresh — Full":      "The Reset — Full",
+  // Retired flagship — kept in the map so any historical booking rows
+  // referencing this name still render with a friendly label.
+  "Ultimate Interior Reset": "The Reset — Interior (Ultimate)",
 };
 
 export function getServiceDisplayName(serviceName: string | null | undefined, _opts: { includeFoundation?: boolean } = {}): string {

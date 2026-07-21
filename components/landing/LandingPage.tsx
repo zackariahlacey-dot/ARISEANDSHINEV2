@@ -528,10 +528,11 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
   // renders whatever tiers are actually present in `services` so the
   // homepage doesn't break if the Refresh/Reset SQL migration hasn't
   // run yet on this environment.
+  // July 2026 v3: 2-tier lineup — Basic (0) + Reset (1). DB names for the
+  // top tier are still "The Refresh — …" but they display + rank as Reset.
   const tierRankOf = (name: string): number => {
     const n = name.toLowerCase();
-    if (n.includes("reset") || n.includes("ultimate")) return 2;
-    if (n.includes("refresh")) return 1;
+    if (n.includes("reset") || n.includes("ultimate") || n.includes("refresh")) return 1;
     return 0;
   };
   const foundationTiers = useMemo(() => {
@@ -2237,15 +2238,18 @@ const FOUNDATION_TIER_CARD_LABELS: Record<"interior" | "exterior" | "full", { ti
 /** Tier metadata keyed by DB service name — muted for Basic, popular ribbon for
  *  Refresh, gold for Reset. The `label` collapses the DB name into the short
  *  ladder rung (Basic / The Refresh / The Reset). */
+// July 2026 v3: 2-tier lineup. DB names for the top tier are still
+// "The Refresh — …" but they display + tone as Reset.
 const TIER_LABEL_OF: Record<string, { label: string; tone: "basic" | "refresh" | "reset" }> = {
-  "Interior Detail":         { label: "Basic",       tone: "basic"   },
-  "Exterior Detail":         { label: "Basic",       tone: "basic"   },
-  "Full Detail":             { label: "Basic",       tone: "basic"   },
-  "The Refresh — Interior":  { label: "The Refresh", tone: "refresh" },
-  "The Refresh — Exterior":  { label: "The Refresh", tone: "refresh" },
-  "The Refresh — Full":      { label: "The Refresh", tone: "refresh" },
-  "Ultimate Interior Reset": { label: "The Reset",   tone: "reset"   },
-  "The Reset — Full":        { label: "The Reset",   tone: "reset"   },
+  "Interior Detail":         { label: "Basic",     tone: "basic" },
+  "Exterior Detail":         { label: "Basic",     tone: "basic" },
+  "Full Detail":             { label: "Basic",     tone: "basic" },
+  "The Refresh — Interior":  { label: "The Reset", tone: "reset" },
+  "The Refresh — Exterior":  { label: "The Reset", tone: "reset" },
+  "The Refresh — Full":      { label: "The Reset", tone: "reset" },
+  // Retired flagship — kept for historical bookings that still reference them.
+  "Ultimate Interior Reset": { label: "The Reset (Legacy)", tone: "reset" },
+  "The Reset — Full":        { label: "The Reset (Legacy)", tone: "reset" },
 };
 
 function FoundationTierCard({

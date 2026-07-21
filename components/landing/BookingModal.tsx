@@ -1991,21 +1991,14 @@ export function BookingSection({
     // don't participate in the Basic/Refresh/Reset ladder at all.
     if (n.includes("boat") || n.includes("rv") || n.includes("motorhome") || n.includes("maintenance") || n.includes("paint") || n.includes("correction")) return null;
 
-    // Route the nudge to the correct top-tier per foundation. Basic Full and
-    // Refresh Full get pushed to The Reset — Full (not Ultimate Interior Reset)
-    // so customers don't silently lose their exterior side when accepting the
-    // upgrade. Exterior-only doesn't have a "Reset" — Refresh is the ceiling.
+    // July 2026 v3: 2-tier lineup. Nudge Basic customers up to Reset (DB
+    // name "The Refresh — …"). Reset customers are already at the top.
     const currentName = selectedService.name;
     let targetName: string | null = null;
-    if (currentName === "Interior Detail" || currentName === "The Refresh — Interior") {
-      targetName = "Ultimate Interior Reset";
-    } else if (currentName === "Full Detail" || currentName === "The Refresh — Full") {
-      targetName = "The Reset — Full";
-    } else {
-      // Already on a Reset tier, on an Exterior tier (no Reset exists), or
-      // on something outside the ladder — no nudge.
-      return null;
-    }
+    if (currentName === "Interior Detail")      targetName = "The Refresh — Interior";
+    else if (currentName === "Exterior Detail") targetName = "The Refresh — Exterior";
+    else if (currentName === "Full Detail")     targetName = "The Refresh — Full";
+    else return null;
     const targetService = services.find(s => s.name === targetName);
     if (!targetService) return null;
     // Size-tiered — compare against the customer's actual vehicle size so
@@ -3592,11 +3585,12 @@ export function BookingSection({
                     if (n.includes("exterior")) return "exterior";
                     return null;
                   };
-                  // Tier rank within a foundation — used to sort Basic < Refresh < Reset.
+                  // Tier rank within a foundation. July 2026 v3 lineup is
+                  // Basic (0) + Reset (1). "Refresh" DB entries are now the
+                  // top tier — they display as "Reset" via serviceDisplay.
                   const tierRankOf = (name: string): number => {
                     const n = name.toLowerCase();
-                    if (n.includes("reset") || n.includes("ultimate")) return 2;
-                    if (n.includes("refresh")) return 1;
+                    if (n.includes("reset") || n.includes("ultimate") || n.includes("refresh")) return 1;
                     return 0;
                   };
                   const interiorTier = [
@@ -3618,13 +3612,16 @@ export function BookingSection({
                     "Exterior Detail":         { icon: Droplets, blurb: "Hand wash, wheels/tires, trim + 1–3mo ceramic",                  time: "1–1.5 hrs" },
                     "Full Detail":             { icon: Zap,      blurb: "Basic Interior + Exterior · Save $35–$45",                       time: "2–2.5 hrs" },
                     // Refresh tier (middle) — top popular add-ons baked in at bundle discount.
-                    "The Refresh — Interior":  { icon: Sofa,     blurb: "Basic + Shampoo + Pet Hair — bundled savings",                    time: "3–4 hrs" },
-                    "The Refresh — Exterior":  { icon: Droplets, blurb: "Basic + Clay Bar + Headlight + Engine Bay — bundled savings",     time: "3–4 hrs" },
-                    "The Refresh — Full":      { icon: Zap,      blurb: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay — bundled",     time: "4–5 hrs" },
-                    // Reset tier (top) — seats out, everything baked in. "Ultimate Interior
-                    // Reset" is the DB name; displays as "The Reset — Interior".
-                    "Ultimate Interior Reset": { icon: Crown,    blurb: "Seats REMOVED + full reset · Marquee tier",                      time: "4–6 hrs" },
-                    "The Reset — Full":        { icon: Crown,    blurb: "Reset Interior + full exterior + headlight + engine bay",        time: "6–8 hrs" },
+                    // "Reset" tier (top). DB names stay "The Refresh — …" so
+                    // history/loyalty/etc. keep working; serviceDisplay maps
+                    // them to "The Reset — …" for customers.
+                    "The Refresh — Interior":  { icon: Crown,    blurb: "Basic + Shampoo + Pet Hair — deep interior clean",             time: "3–4 hrs" },
+                    "The Refresh — Exterior":  { icon: Crown,    blurb: "Basic + Clay Bar + Headlight + Engine Bay — deep exterior",     time: "3–4 hrs" },
+                    "The Refresh — Full":      { icon: Crown,    blurb: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay",              time: "4–5 hrs" },
+                    // Retired flagship tier — kept in the map so historical
+                    // bookings that reference this name still render a card.
+                    "Ultimate Interior Reset": { icon: Crown,    blurb: "Legacy Ultimate — book The Reset — Interior instead",           time: "4–6 hrs" },
+                    "The Reset — Full":        { icon: Crown,    blurb: "Legacy — book The Reset — Full (formerly Refresh) instead",     time: "6–8 hrs" },
                   };
 
                   // What each core package DOES include vs what it does NOT
@@ -3643,12 +3640,12 @@ export function BookingSection({
                         "Cabin deodorize",
                       ],
                       notIncluded: [
-                        "Deep shampoo of seats / carpet — upgrade to The Refresh or add à la carte",
-                        "Heavy pet hair extraction — upgrade to The Refresh or add à la carte",
-                        "Salt stain removal — upgrade to The Refresh or add à la carte",
+                        "Deep shampoo of seats / carpet — upgrade to The Reset or add à la carte",
+                        "Heavy pet hair extraction — upgrade to The Reset or add à la carte",
+                        "Salt stain removal (Salt Removal add-on)",
                         "Smoke / pet odor elimination (Ozone Treatment add-on)",
                         "Leather conditioning (Leather Conditioning add-on)",
-                        "Seats REMOVED for deep steam clean — that's The Reset — Interior",
+                        "Clay bar / paint decontamination (Clay Bar add-on)",
                       ],
                     },
                     "Exterior Detail": {
@@ -3660,9 +3657,9 @@ export function BookingSection({
                         "1–3 month ceramic spray sealant INCLUDED",
                       ],
                       notIncluded: [
-                        "Paint decontamination — upgrade to The Refresh or add Clay Bar à la carte",
-                        "Headlight restoration — upgrade to The Refresh or add à la carte",
-                        "Engine bay detail — upgrade to The Refresh or add à la carte",
+                        "Paint decontamination — upgrade to The Reset or add Clay Bar à la carte",
+                        "Headlight restoration — upgrade to The Reset or add à la carte",
+                        "Engine bay detail — upgrade to The Reset or add à la carte",
                         "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
                       ],
                     },
@@ -3674,14 +3671,15 @@ export function BookingSection({
                         "Best value combo — save $35–$45 vs. buying separately",
                       ],
                       notIncluded: [
-                        "Shampoo / Salt / Pet Hair — upgrade to The Refresh — Full",
-                        "Clay Bar / Headlight Restoration / Engine Bay — upgrade to The Refresh — Full",
+                        "Shampoo / Pet Hair — upgrade to The Reset — Full",
+                        "Clay Bar / Engine Bay — upgrade to The Reset — Full",
+                        "Salt Removal (Salt Removal add-on)",
+                        "Headlight Restoration (Headlight Restoration add-on)",
                         "Leather conditioning (Leather Conditioning add-on)",
                         "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
-                        "Seats REMOVED for deep steam clean — that's The Reset — Interior",
                       ],
                     },
-                    // ── REFRESH tier ──
+                    // ── RESET tier (DB name "The Refresh — …") ──
                     "The Refresh — Interior": {
                       included: [
                         "Everything in Basic Interior Detail",
@@ -3691,7 +3689,6 @@ export function BookingSection({
                       ],
                       notIncluded: [
                         "Heavy salt stain removal (Salt Removal add-on)",
-                        "Seats REMOVED for deep steam clean — that's The Reset — Interior",
                         "Leather conditioning (Leather Conditioning add-on)",
                         "Clay bar / paint decontamination (Clay Bar add-on)",
                         "Smoke / pet odor elimination (Ozone Treatment add-on)",
@@ -3722,7 +3719,6 @@ export function BookingSection({
                       notIncluded: [
                         "Heavy salt stain removal (Salt Removal add-on)",
                         "Headlight Restoration (Headlight Restoration add-on)",
-                        "Seats REMOVED for deep steam clean — that's The Reset — Full",
                         "Leather conditioning (Leather Conditioning add-on)",
                         "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
                         "Smoke / pet odor elimination (Ozone Treatment add-on)",
@@ -4014,13 +4010,14 @@ export function BookingSection({
 
                           const tierTone = (svc: Service): "basic" | "refresh" | "reset" => {
                             const n = svc.name.toLowerCase();
-                            if (n.includes("reset") || n.includes("ultimate")) return "reset";
-                            if (n.includes("refresh")) return "refresh";
+                            // July 2026 v3: "Refresh" DB entries are the top
+                            // tier now — display as Reset.
+                            if (n.includes("reset") || n.includes("ultimate") || n.includes("refresh")) return "reset";
                             return "basic";
                           };
                           const TIER_SHORT: Record<string, string> = {
                             basic:   "Basic",
-                            refresh: "Refresh",
+                            refresh: "Reset",
                             reset:   "Reset",
                           };
 

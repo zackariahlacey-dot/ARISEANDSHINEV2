@@ -261,23 +261,25 @@ export type ClientPrefillForBooking = {
 };
 
 // ── Tier grouping for admin service picker ──────────────────────────────────
-const TIER_ORDER = ["Basic", "Refresh", "Reset"];
+// July 2026 v3: 2-tier lineup — Basic + Reset. DB names for the top tier are
+// still "The Refresh — …" but they group + display as Reset.
+const TIER_ORDER = ["Basic", "Reset"];
 const TIER_BADGE: Record<string, { label: string; color: string }> = {
-  Basic:   { label: "Basic",   color: "bg-zinc-700 text-zinc-300" },
-  Refresh: { label: "Refresh", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30" },
-  Reset:   { label: "Reset",   color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" },
+  Basic: { label: "Basic", color: "bg-zinc-700 text-zinc-300" },
+  Reset: { label: "Reset", color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" },
 };
 const TIER_BAKED_IN: Record<string, string[]> = {
-  "The Refresh — Interior": ["Shampoo", "Salt Removal", "Pet Hair"],
+  "The Refresh — Interior": ["Shampoo", "Pet Hair"],
   "The Refresh — Exterior": ["Clay Bar", "Headlights", "Engine Bay"],
-  "The Refresh — Full":     ["Shampoo", "Salt", "Pet Hair", "Clay", "Headlights", "Engine Bay"],
+  "The Refresh — Full":     ["Shampoo", "Pet Hair", "Clay", "Engine Bay"],
+  // Legacy — retained so historical bookings still render
   "Ultimate Interior Reset": ["Shampoo", "Salt", "Pet Hair", "Leather", "Clay", "Seats Out"],
   "The Reset — Full":       ["Shampoo", "Salt", "Pet Hair", "Leather", "Clay", "Headlights", "Engine Bay", "Seats Out"],
 };
 function svcTier(name: string): string {
   const n = name.toLowerCase();
-  if (n.includes("reset") || n.includes("ultimate")) return "Reset";
-  if (n.includes("refresh")) return "Refresh";
+  // "Refresh" DB entries are the top (Reset) tier in the new 2-tier lineup.
+  if (n.includes("reset") || n.includes("ultimate") || n.includes("refresh")) return "Reset";
   return "Basic";
 }
 function svcFoundation(name: string): string {
@@ -678,18 +680,20 @@ export function NewBookingForm({
       ].includes(a.id));
     }
 
-    // Refresh — Full bakes in all 6 add-ons. Extras: ozone, leather, ceramics.
+    // Refresh — Full bakes in shampoo + pet hair + clay + engine bay.
+    // Extras: ozone, leather, salt, headlight, ceramics.
     if (n.includes("refresh") && n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
+        "salt_stain_removal", "headlight_restore",
         "ozone_treatment", "leather_condition",
         "ceramic_6_10_upgrade", ...premiumCeramicIds, ...gentechIds,
       ].includes(a.id));
     }
 
-    // Refresh — Interior bakes in shampoo + salt + pet hair. Extras: ozone, leather.
+    // Refresh — Interior bakes in shampoo + pet hair. Extras: salt, ozone, leather.
     if (n.includes("refresh") && n.includes("interior")) {
       return ADMIN_ADDONS.filter(a => [
-        "ozone_treatment", "leather_condition",
+        "salt_stain_removal", "ozone_treatment", "leather_condition",
       ].includes(a.id));
     }
 
