@@ -21,18 +21,22 @@ export const SERVICE_DURATIONS: Record<string, Record<string, number>> = {
     small: 90, medium: 90, large: 90, extra_large: 90,
     sedan: 90, suv: 90, xl: 90,
   },
-  // Refresh tier — Interior/Exterior/Full mid-tier bundles
+  // Reset tier (July 2026 v3 — DB names kept as "The Refresh — …" for
+  // history stability; displayed as "The Reset — …" to customers).
   "The Refresh — Interior": {
-    small: 210, medium: 210, large: 240, extra_large: 240,
-    sedan: 210, suv: 240, xl: 240,
+    // 2.5 hrs — matches Basic Interior duration; extra work absorbed
+    small: 150, medium: 150, large: 165, extra_large: 180,
+    sedan: 150, suv: 165, xl: 180,
   },
   "The Refresh — Exterior": {
     small: 150, medium: 150, large: 180, extra_large: 180,
     sedan: 150, suv: 180, xl: 180,
   },
   "The Refresh — Full": {
-    small: 300, medium: 300, large: 360, extra_large: 360,
-    sedan: 300, suv: 360, xl: 360,
+    // 4 hrs base (Reset — Full) — tuned so Basic Full (3 hrs) is a
+    // meaningful step down and Reset actually reflects the deeper work.
+    small: 240, medium: 240, large: 270, extra_large: 300,
+    sedan: 240, suv: 270, xl: 300,
   },
   // Reset — Full: Reset Interior + full exterior + headlight + engine bay
   "The Reset — Full": {

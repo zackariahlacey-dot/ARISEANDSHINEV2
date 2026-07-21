@@ -75,7 +75,7 @@ const SERVICE_INCLUSIONS: Record<string, string[]> = {
 
 const FAQ = [
   { q: "Do you come to my location?", a: "Yes — we're 100% mobile. We come to your home, office, or anywhere in Vermont. No shop visit needed." },
-  { q: "How long does a detail take?", a: "Interior typically takes 1.5–2 hours, Exterior 1–1.5 hours, Full Detail (Interior + Exterior) 2–2.5 hours. Ultimate Interior Reset runs 3.5–4.5 hours (seats are removed for deep clean); add + Exterior at checkout for a full-vehicle reset in one visit." },
+  { q: "How long does a detail take?", a: "Basic Interior takes about 2.5 hours, Basic Exterior 1.5 hours, and Basic Full (Interior + Exterior) about 3 hours. The Reset — Interior runs 2.5 hours, The Reset — Exterior 2.5 hours, and The Reset — Full about 4 hours. Light Detailing is scheduled for 1 hour (up to 90 minutes if you pick everything)." },
   { q: "What products do you use?", a: "We use professional-grade, eco-friendly products including pH-neutral soaps, ceramic-grade protectants, and premium interior dressings — safe for all surfaces." },
   { q: "What's the cancellation policy?", a: "Cancellations must be made at least 24 hours in advance. Same-day cancellations may incur a $50 fee. We'll never charge you if we reschedule due to weather." },
 ];
@@ -200,7 +200,11 @@ export function ServicesPage({ services }: { services: Service[] }) {
         <ServiceComparisonTable />
       </section>
 
-      {/* ── 3. Ultimate Packages ── */}
+      {/* ── 3. Ultimate Packages (RETIRED July 2026 v3) ──
+          Kept behind {false} — the underlying Ultimate Interior Reset service
+          is deactivated. Reset — Interior is now the top tier and lives in
+          the main service comparison table above. */}
+      {false && (
       <motion.section id="ultimate-packages" initial="hidden" whileInView="visible" viewport={viewport} variants={sectionVariants}
         className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 border-t border-white/[0.06]"
       >
@@ -220,6 +224,7 @@ export function ServicesPage({ services }: { services: Service[] }) {
           </div>
         </div>
       </motion.section>
+      )}
 
       {/* ── Booking Section ── */}
       <div id="booking-section" className="px-4 sm:px-6 lg:px-8 pb-16">

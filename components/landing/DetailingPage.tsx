@@ -406,11 +406,13 @@ export function DetailingPage({ services }: { services: Service[] }) {
         </div>
       </motion.section>
 
-      {/* ── Ultimate Series — premium upsell tier ─────────────────────────────
-          Re-enabled 2026-06 alongside Core Packages. These are the high-ticket
-          packages (Ultimate Interior Reset / Ultimate Full Reset) — same
-          cards customers see on the homepage, surfaced here too so /detailing
-          deep-links don't miss the premium option. */}
+      {/* ── Ultimate Series (RETIRED July 2026 v3) ────────────────────────────
+          Kept behind {false} because the underlying "Ultimate Interior Reset"
+          service was deactivated when the 2-tier lineup shipped. The Reset —
+          Interior (formerly Refresh) is now the top tier and is rendered by
+          the FoundationTierCard grid above. Safe to fully delete once
+          confident nothing else references openUltimateBooking. */}
+      {false && (
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}
         className="py-10 md:py-14 px-4 sm:px-6 lg:px-8 border-t border-white/[0.05]"
       >
@@ -500,6 +502,7 @@ export function DetailingPage({ services }: { services: Service[] }) {
           </div>
         </div>
       </motion.section>
+      )}
 
       {/* ── Why Us ───────────────────────────────────────────────────────────── */}
       <motion.section initial="hidden" whileInView="visible" viewport={vp} variants={sv}

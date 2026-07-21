@@ -52,11 +52,15 @@ const SERVICE_TYPES = [
   { id: "rv",   label: "RV",    icon: Truck  },
 ] as const;
 
+// July 2026 v3 · Basic + Reset lineup. Prices reflect sedan → 3-row range.
 const AUTO_SERVICES = [
-  { label: "Exterior Detail",              price: "$120–$150",  desc: "Hand wash, wheels, tires + INCLUDED 1–3 mo ceramic spray sealant" },
-  { label: "Interior Detail",              price: "$150–$190",  desc: "Full vacuum, wipe-down, mats & interior glass"                    },
-  { label: "Full Detail",                  price: "$235–$285",  desc: "Interior + exterior combined · Save $35–$45"                      },
-  { label: "Ultimate Interior Reset",      price: "$325–$395",  desc: "Seats REMOVED · deep steam clean, shampoo, sanitation"           },
+  { label: "Basic Exterior Detail",        price: "$120–$170",  desc: "Hand wash, wheels, tires + INCLUDED 1–3 mo ceramic spray sealant" },
+  { label: "Basic Interior Detail",        price: "$150–$200",  desc: "Full vacuum, wipe-down, mats & interior glass"                    },
+  { label: "Basic Full Detail",            price: "$235–$300",  desc: "Interior + exterior combined · Save $35–$45"                      },
+  { label: "The Reset — Interior",         price: "$235–$265",  desc: "Basic + Shampoo + Pet Hair Extraction — deep interior clean"      },
+  { label: "The Reset — Exterior",         price: "$245–$305",  desc: "Basic + Clay Bar + Headlight Restoration + Engine Bay"            },
+  { label: "The Reset — Full",             price: "$325–$375",  desc: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay"                },
+  { label: "Light Detailing",              price: "$65–$155",   desc: "Quick maintenance — pick 2+ items · 1 hr · maintained cars only"  },
   { label: "Paint Correction — 1 Step",    price: "$449–$599",  desc: "Single-pass polish · lifts 60–75% of light swirls + oxidation"    },
   { label: "Paint Correction — 2 Step",    price: "$675–$875",  desc: "Compound + polish · lifts 85–95% of correctable defects"          },
   { label: "Not sure yet",                 price: "",           desc: "We'll figure it out together"                                     },

@@ -3608,16 +3608,16 @@ export function BookingSection({
                   // it works transparently with the display-mapping layer.
                   const SERVICE_META: Record<string, { icon: React.ElementType; blurb: string; time: string }> = {
                     // Basic tier (entry) — DB name unchanged; getServiceDisplayName renames.
-                    "Interior Detail":         { icon: Sofa,     blurb: "Vacuum, wipe-down, glass, floor mats",                          time: "1.5–2 hrs" },
-                    "Exterior Detail":         { icon: Droplets, blurb: "Hand wash, wheels/tires, trim + 1–3mo ceramic",                  time: "1–1.5 hrs" },
-                    "Full Detail":             { icon: Zap,      blurb: "Basic Interior + Exterior · Save $35–$45",                       time: "2–2.5 hrs" },
+                    "Interior Detail":         { icon: Sofa,     blurb: "Vacuum, wipe-down, glass, floor mats",                          time: "2.5 hrs" },
+                    "Exterior Detail":         { icon: Droplets, blurb: "Hand wash, wheels/tires, trim + 1–3mo ceramic",                  time: "1.5 hrs" },
+                    "Full Detail":             { icon: Zap,      blurb: "Basic Interior + Exterior · Save $35–$45",                       time: "3 hrs" },
                     // Refresh tier (middle) — top popular add-ons baked in at bundle discount.
                     // "Reset" tier (top). DB names stay "The Refresh — …" so
                     // history/loyalty/etc. keep working; serviceDisplay maps
                     // them to "The Reset — …" for customers.
-                    "The Refresh — Interior":  { icon: Crown,    blurb: "Basic + Shampoo + Pet Hair — deep interior clean",             time: "3–4 hrs" },
-                    "The Refresh — Exterior":  { icon: Crown,    blurb: "Basic + Clay Bar + Headlight + Engine Bay — deep exterior",     time: "3–4 hrs" },
-                    "The Refresh — Full":      { icon: Crown,    blurb: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay",              time: "4–5 hrs" },
+                    "The Refresh — Interior":  { icon: Crown,    blurb: "Basic + Shampoo + Pet Hair — deep interior clean",             time: "2.5 hrs" },
+                    "The Refresh — Exterior":  { icon: Crown,    blurb: "Basic + Clay Bar + Headlight + Engine Bay — deep exterior",     time: "2.5 hrs" },
+                    "The Refresh — Full":      { icon: Crown,    blurb: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay",              time: "4 hrs" },
                     // Retired flagship tier — kept in the map so historical
                     // bookings that reference this name still render a card.
                     "Ultimate Interior Reset": { icon: Crown,    blurb: "Legacy Ultimate — book The Reset — Interior instead",           time: "4–6 hrs" },
