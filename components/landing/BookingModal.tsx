@@ -285,9 +285,11 @@ const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "leather_condition", "pe
  *  them (and can't accidentally double-charge). Keyed by DB name. */
 const INCLUDED_ADDONS_BY_SERVICE: Record<string, readonly string[]> = {
   // Refresh tier — top popular add-ons per foundation.
-  "The Refresh — Interior": ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
+  // (July 2026 v2 reprice: salt dropped from Refresh Interior; headlight
+  // dropped from Refresh Full — both are now à-la-carte add-ons only.)
+  "The Refresh — Interior": ["upholstery_shampoo", "pet_hair"],
   "The Refresh — Exterior": ["clay_bar", "headlight_restore", "engine_bay"],
-  "The Refresh — Full":     ["upholstery_shampoo", "salt_stain_removal", "pet_hair", "clay_bar", "headlight_restore", "engine_bay"],
+  "The Refresh — Full":     ["upholstery_shampoo", "pet_hair", "clay_bar", "engine_bay"],
   // Reset tier — Ultimate Interior Reset kept under its DB name.
   "Ultimate Interior Reset": INCLUDED_IN_ULTIMATE_IDS,
   "The Reset — Full":        [...INCLUDED_IN_ULTIMATE_IDS, "headlight_restore", "engine_bay"],
@@ -3616,9 +3618,9 @@ export function BookingSection({
                     "Exterior Detail":         { icon: Droplets, blurb: "Hand wash, wheels/tires, trim + 1–3mo ceramic",                  time: "1–1.5 hrs" },
                     "Full Detail":             { icon: Zap,      blurb: "Basic Interior + Exterior · Save $35–$45",                       time: "2–2.5 hrs" },
                     // Refresh tier (middle) — top popular add-ons baked in at bundle discount.
-                    "The Refresh — Interior":  { icon: Sofa,     blurb: "Basic + Shampoo + Salt + Pet Hair · Save $95",                    time: "3–4 hrs" },
-                    "The Refresh — Exterior":  { icon: Droplets, blurb: "Basic + Clay Bar + Headlight + Engine Bay · Save $65",           time: "3–4 hrs" },
-                    "The Refresh — Full":      { icon: Zap,      blurb: "Full + all interior + all exterior refresh add-ons · Save $190", time: "4–5 hrs" },
+                    "The Refresh — Interior":  { icon: Sofa,     blurb: "Basic + Shampoo + Pet Hair — bundled savings",                    time: "3–4 hrs" },
+                    "The Refresh — Exterior":  { icon: Droplets, blurb: "Basic + Clay Bar + Headlight + Engine Bay — bundled savings",     time: "3–4 hrs" },
+                    "The Refresh — Full":      { icon: Zap,      blurb: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay — bundled",     time: "4–5 hrs" },
                     // Reset tier (top) — seats out, everything baked in. "Ultimate Interior
                     // Reset" is the DB name; displays as "The Reset — Interior".
                     "Ultimate Interior Reset": { icon: Crown,    blurb: "Seats REMOVED + full reset · Marquee tier",                      time: "4–6 hrs" },
@@ -3684,11 +3686,11 @@ export function BookingSection({
                       included: [
                         "Everything in Basic Interior Detail",
                         "Carpet & Upholstery Shampoo (deep steam clean)",
-                        "Mild–Medium Salt Removal + neutralization",
                         "Heavy Pet Hair Extraction",
-                        "Bundle savings: ~$95 vs à la carte",
+                        "Bundle savings vs à la carte",
                       ],
                       notIncluded: [
+                        "Heavy salt stain removal (Salt Removal add-on)",
                         "Seats REMOVED for deep steam clean — that's The Reset — Interior",
                         "Leather conditioning (Leather Conditioning add-on)",
                         "Clay bar / paint decontamination (Clay Bar add-on)",
@@ -3712,12 +3714,14 @@ export function BookingSection({
                     "The Refresh — Full": {
                       included: [
                         "Everything in Basic Full Detail",
-                        "Carpet & Upholstery Shampoo + Salt Removal + Pet Hair Extraction",
-                        "Clay Bar + Headlight Restoration + Engine Bay Detail",
+                        "Carpet & Upholstery Shampoo + Pet Hair Extraction",
+                        "Clay Bar + Engine Bay Detail",
                         "1–3 month ceramic spray sealant INCLUDED",
-                        "Bundle savings: ~$190 vs à la carte",
+                        "Bundle savings vs à la carte",
                       ],
                       notIncluded: [
+                        "Heavy salt stain removal (Salt Removal add-on)",
+                        "Headlight Restoration (Headlight Restoration add-on)",
                         "Seats REMOVED for deep steam clean — that's The Reset — Full",
                         "Leather conditioning (Leather Conditioning add-on)",
                         "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",

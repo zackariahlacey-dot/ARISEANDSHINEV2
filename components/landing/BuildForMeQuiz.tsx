@@ -209,9 +209,11 @@ const REFRESH_SERVICE_NAME: Record<Scope, string> = {
 };
 
 const REFRESH_BAKED_ADDON_IDS: Record<Scope, string[]> = {
-  interior: ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
+  // July 2026 v2 reprice: salt dropped from Refresh Interior; headlight
+  // dropped from Refresh Full. Both are now à-la-carte add-ons only.
+  interior: ["upholstery_shampoo", "pet_hair"],
   exterior: ["clay_bar", "headlight_restore", "engine_bay"],
-  full:     ["upholstery_shampoo", "salt_stain_removal", "pet_hair", "clay_bar", "headlight_restore", "engine_bay"],
+  full:     ["upholstery_shampoo", "pet_hair", "clay_bar", "engine_bay"],
 };
 
 // Reset — Interior (Ultimate Interior Reset) is INTERIOR ONLY: no clay bar.
@@ -1577,7 +1579,6 @@ const REFRESH_INCLUDES: Record<Scope, string[]> = {
   interior: [
     "Everything in Basic Interior Detail",
     "Deep carpet & upholstery shampoo (all seats + floors)",
-    "Salt stain removal + neutralization",
     "Heavy pet hair extraction",
   ],
   exterior: [
@@ -1589,10 +1590,8 @@ const REFRESH_INCLUDES: Record<Scope, string[]> = {
   full: [
     "Everything in Basic Full Detail",
     "Deep carpet & upholstery shampoo",
-    "Salt stain removal + neutralization",
     "Heavy pet hair extraction",
     "Clay bar paint decontamination",
-    "Headlight restoration (pair)",
     "Engine bay detail + degrease",
   ],
 };
