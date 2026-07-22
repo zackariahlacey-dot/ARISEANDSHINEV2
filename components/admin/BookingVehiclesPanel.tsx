@@ -368,7 +368,13 @@ function VehicleEditor({
           className="flex-1 bg-white/[0.05] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50" />
       </div>
 
-      {/* Addons — chip picker from canonical catalogue */}
+      {/* Addons — chip picker. Only shows currently active add-ons (legacy
+          items retired in July 2026 v5 stay in the ADMIN_ADDONS array so
+          historical bookings still render their line items, but they never
+          surface in the "add new" picker). Anything already selected on
+          this booking still shows below in the selected list even if it's a
+          legacy item. Custom add-ons (id starts with "custom-") are handled
+          in the section below this. */}
       <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-2 space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Add-ons · tap to toggle</p>
@@ -378,7 +384,7 @@ function VehicleEditor({
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {ADMIN_ADDONS.map(cat => {
+          {ADMIN_ADDONS.filter(cat => !cat.label.startsWith("[legacy]")).map(cat => {
             const on = selectedIds.has(cat.id);
             const price = getAddonPrice(cat.id, size);
             return (
