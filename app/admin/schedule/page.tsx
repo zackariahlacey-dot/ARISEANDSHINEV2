@@ -124,37 +124,42 @@ const ADMIN_ADDONS = [
   // ── The 8 basics ──
   { id: "engine_bay",        label: "Engine Bay Detail",                     price: 65  },
   { id: "headlight_restore", label: "Headlight Restoration (pair)",          price: 75  },
-  { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 95  },
+  { id: "upholstery_shampoo",label: "Carpet & Upholstery Shampoo",           price: 75  },
   { id: "salt_stain_removal",label: "Mild–Medium Salt Removal",              price: 65  },
   { id: "leather_condition", label: "Leather Conditioning",                  price: 40  },
   { id: "ozone_treatment",   label: "Ozone Treatment",                       price: 60  },
   { id: "clay_bar",          label: "Clay Bar Treatment",                    price: 50  },
   { id: "pet_hair",          label: "Heavy Pet Hair Removal",                price: 50  },
   // ── Specials ──
-  { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade",   price: 45  },
+  // (ceramic_6_10_upgrade retired July 2026 v4)
   { id: "ultimate_ext_addon",   label: "+ Exterior Detail (Ultimate bundle)", price: 65 },
-  // ── Premium Ceramic (2-year) sections ──
-  { id: "premium_ceramic_hood",            label: "Premium Ceramic — Hood",              price: 85  },
-  { id: "premium_ceramic_roof",            label: "Premium Ceramic — Roof",              price: 75  },
-  { id: "premium_ceramic_trunk",           label: "Premium Ceramic — Trunk",             price: 60  },
-  { id: "premium_ceramic_front_bumper",    label: "Premium Ceramic — Front Bumper",      price: 65  },
-  { id: "premium_ceramic_rear_bumper",     label: "Premium Ceramic — Rear Bumper",       price: 65  },
-  { id: "premium_ceramic_doors",           label: "Premium Ceramic — All Doors",         price: 110 },
-  { id: "premium_ceramic_fenders",         label: "Premium Ceramic — All Fenders",       price: 75  },
-  { id: "premium_ceramic_mirrors",         label: "Premium Ceramic — Mirrors",           price: 30  },
-  { id: "premium_ceramic_wheels",          label: "Premium Ceramic — Wheels + Calipers", price: 150 },
-  { id: "premium_ceramic_windshield",      label: "Premium Ceramic — Windshield",        price: 95  },
-  { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", price: 175 },
-  { id: "premium_ceramic_full_glass",      label: "Premium Ceramic — Full Glass",        price: 250 },
-  { id: "premium_ceramic_full_body",       label: "Premium Ceramic — Full Body (sedan)", price: 650 },
-  // ── 5-Yr Gentech Graphene (application only) ──
-  { id: "gentech_5yr_body",            label: "5-Yr Gentech — Full Body (sedan)",       price: 350 },
-  { id: "gentech_5yr_wheels",          label: "5-Yr Gentech — Wheels + Calipers",       price: 125 },
-  { id: "gentech_5yr_windshield",      label: "5-Yr Gentech — Windshield Only",         price: 50  },
-  { id: "gentech_5yr_windows_front",   label: "5-Yr Gentech — Windshield + Front 3",    price: 85  },
-  { id: "gentech_5yr_windows_all",     label: "5-Yr Gentech — All Windows",             price: 145 },
-  { id: "gentech_5yr_full",            label: "5-Yr Gentech — Full Package (sedan)",    price: 525 },
+  // ── 5-Yr Gentech Graphene — the 3 clean options (July 2026 v5) ──
+  { id: "gentech_5yr_body",          label: "5-Yr Gentech — Body Coating (sedan)",                       price: 295 },
+  { id: "gentech_5yr_body_wheels",   label: "5-Yr Gentech — Body + Wheels (sedan)",                      price: 395 },
+  { id: "gentech_5yr_full_vehicle",  label: "5-Yr Gentech — Full Vehicle (Body + Wheels + Windows) (sedan)", price: 495 },
   // ── LEGACY — retained so historical bookings' line items still render ──
+  // Premium Ceramic 2-year sections — retired July 2026 v5. Prefixed [legacy]
+  // so admin can still see + edit old bookings that reference these IDs.
+  { id: "premium_ceramic_hood",            label: "[legacy] Premium Ceramic — Hood",              price: 85  },
+  { id: "premium_ceramic_roof",            label: "[legacy] Premium Ceramic — Roof",              price: 75  },
+  { id: "premium_ceramic_trunk",           label: "[legacy] Premium Ceramic — Trunk",             price: 60  },
+  { id: "premium_ceramic_front_bumper",    label: "[legacy] Premium Ceramic — Front Bumper",      price: 65  },
+  { id: "premium_ceramic_rear_bumper",     label: "[legacy] Premium Ceramic — Rear Bumper",       price: 65  },
+  { id: "premium_ceramic_doors",           label: "[legacy] Premium Ceramic — All Doors",         price: 110 },
+  { id: "premium_ceramic_fenders",         label: "[legacy] Premium Ceramic — All Fenders",       price: 75  },
+  { id: "premium_ceramic_mirrors",         label: "[legacy] Premium Ceramic — Mirrors",           price: 30  },
+  { id: "premium_ceramic_wheels",          label: "[legacy] Premium Ceramic — Wheels + Calipers", price: 150 },
+  { id: "premium_ceramic_windshield",      label: "[legacy] Premium Ceramic — Windshield",        price: 95  },
+  { id: "premium_ceramic_side_rear_glass", label: "[legacy] Premium Ceramic — Side + Rear Glass", price: 175 },
+  { id: "premium_ceramic_full_glass",      label: "[legacy] Premium Ceramic — Full Glass",        price: 250 },
+  { id: "premium_ceramic_full_body",       label: "[legacy] Premium Ceramic — Full Body (sedan)", price: 650 },
+  // Older Gentech SKU set (2024) — replaced by the 3 clean options above.
+  { id: "gentech_5yr_wheels",          label: "[legacy] 5-Yr Gentech — Wheels + Calipers",       price: 125 },
+  { id: "gentech_5yr_windshield",      label: "[legacy] 5-Yr Gentech — Windshield Only",         price: 50  },
+  { id: "gentech_5yr_windows_front",   label: "[legacy] 5-Yr Gentech — Windshield + Front 3",    price: 85  },
+  { id: "gentech_5yr_windows_all",     label: "[legacy] 5-Yr Gentech — All Windows",             price: 145 },
+  { id: "gentech_5yr_full",            label: "[legacy] 5-Yr Gentech — Full Package (sedan)",    price: 525 },
+  // ── Retired basic add-ons — retained so historical bookings' line items still render ──
   { id: "odor_bomb",              label: "[legacy] Strong Odor Elimination",           price: 75  },
   { id: "uv_interior",            label: "[legacy] UV Protection",                     price: 35  },
   { id: "tar_bug",                label: "[legacy] Tar, Bug & Sap Removal",            price: 35  },
@@ -207,6 +212,17 @@ const CERAMIC_3YR_PRICES_ADMIN: Record<string, number> = {
   sedan: 300, suv: 350, xl: 400,
 };
 
+/** 5-Year Gentech — size-tier pricing for the 3 clean options (July 2026 v5). */
+const GENTECH_5YR_BODY_PRICES_ADMIN: Record<string, number> = {
+  sedan: 295, suv: 375, xl: 450,
+};
+const GENTECH_5YR_BODY_WHEELS_PRICES_ADMIN: Record<string, number> = {
+  sedan: 395, suv: 475, xl: 550,
+};
+const GENTECH_5YR_FULL_VEHICLE_PRICES_ADMIN: Record<string, number> = {
+  sedan: 495, suv: 575, xl: 650,
+};
+
 function getAdminAddonPrice(id: string, vehicleSize: string): number {
   const a = ADMIN_ADDONS.find(x => x.id === id);
   if (!a) return 0;
@@ -214,6 +230,9 @@ function getAdminAddonPrice(id: string, vehicleSize: string): number {
   if (id === "window_coat_front")      return WINDOW_COAT_FRONT_PRICE;
   if (id === "window_coat_all")        return WINDOW_COAT_ALL_PRICE;
   if (id === "ceramic_3yr")            return CERAMIC_3YR_PRICES_ADMIN[vehicleSize] ?? a.price;
+  if (id === "gentech_5yr_body")         return GENTECH_5YR_BODY_PRICES_ADMIN[vehicleSize] ?? a.price;
+  if (id === "gentech_5yr_body_wheels")  return GENTECH_5YR_BODY_WHEELS_PRICES_ADMIN[vehicleSize] ?? a.price;
+  if (id === "gentech_5yr_full_vehicle") return GENTECH_5YR_FULL_VEHICLE_PRICES_ADMIN[vehicleSize] ?? a.price;
   // Shampoo is flat $95 — no XL surcharge (July 2026).
   return a.price;
 }
@@ -269,9 +288,9 @@ const TIER_BADGE: Record<string, { label: string; color: string }> = {
   Reset: { label: "Reset", color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" },
 };
 const TIER_BAKED_IN: Record<string, string[]> = {
-  "The Refresh — Interior": ["Shampoo", "Pet Hair"],
-  "The Refresh — Exterior": ["Clay Bar", "Headlights", "Engine Bay"],
-  "The Refresh — Full":     ["Shampoo", "Pet Hair", "Clay", "Engine Bay"],
+  "The Refresh — Interior": ["Shampoo", "Salt Removal", "Pet Hair"],
+  "The Refresh — Exterior": [],
+  "The Refresh — Full":     ["Shampoo", "Salt Removal", "Pet Hair"],
   // Legacy — retained so historical bookings still render
   "Ultimate Interior Reset": ["Shampoo", "Salt", "Pet Hair", "Leather", "Clay", "Seats Out"],
   "The Reset — Full":       ["Shampoo", "Salt", "Pet Hair", "Leather", "Clay", "Headlights", "Engine Bay", "Seats Out"],
@@ -653,21 +672,22 @@ export function NewBookingForm({
   // customers book "The Reset — Full" as its own tier now.
   const vehicleAddonsForServiceName = (name: string) => {
     const n = (name ?? "").toLowerCase();
-    const premiumCeramicIds = ADMIN_ADDONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
-    const gentechIds = ADMIN_ADDONS.filter(a => a.id.startsWith("gentech_5yr_")).map(a => a.id);
+    // July 2026 v5: Premium Ceramic sections retired. The 3 clean Gentech
+    // options are the only long-term coating add-ons offered on new bookings.
+    const gentechIds = ["gentech_5yr_body", "gentech_5yr_body_wheels", "gentech_5yr_full_vehicle"];
 
     if (n.includes("paint") || n.includes("correction")) {
       return ADMIN_ADDONS.filter(a => [
-        "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
-        ...premiumCeramicIds, ...gentechIds,
+        "engine_bay", "headlight_restore", "clay_bar",
+        ...gentechIds,
       ].includes(a.id));
     }
 
     // Reset — Full bakes in Ultimate add-ons + headlight + engine bay
     if (n.includes("reset") && n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
-        "ozone_treatment", "ceramic_6_10_upgrade",
-        ...premiumCeramicIds, ...gentechIds,
+        "ozone_treatment",
+        ...gentechIds,
       ].includes(a.id));
     }
 
@@ -675,40 +695,45 @@ export function NewBookingForm({
     // pet hair, leather, clay bar. Extra add-ons: ozone + ceramics.
     if (n.includes("ultimate") || (n.includes("reset") && n.includes("interior"))) {
       return ADMIN_ADDONS.filter(a => [
-        "ozone_treatment", "ceramic_6_10_upgrade",
+        "ozone_treatment",
         ...gentechIds,
       ].includes(a.id));
     }
 
-    // Refresh — Full bakes in shampoo + pet hair + clay + engine bay.
-    // Extras: ozone, leather, salt, headlight, ceramics.
+    // Refresh — Full bakes in shampoo + salt + pet hair. Clay bar is NO
+    // LONGER baked in (July 2026 v5) — surfaced here as an extra so admin
+    // can add it à la carte. Extras: engine bay, headlight, clay bar,
+    // ozone, leather, Gentech.
     if (n.includes("refresh") && n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
-        "salt_stain_removal", "headlight_restore",
+        "engine_bay", "headlight_restore", "clay_bar",
         "ozone_treatment", "leather_condition",
-        "ceramic_6_10_upgrade", ...premiumCeramicIds, ...gentechIds,
+        ...gentechIds,
       ].includes(a.id));
     }
 
-    // Refresh — Interior bakes in shampoo + pet hair. Extras: salt, ozone, leather.
+    // Refresh — Interior bakes in shampoo + salt + pet hair. Extras: ozone, leather.
     if (n.includes("refresh") && n.includes("interior")) {
       return ADMIN_ADDONS.filter(a => [
-        "salt_stain_removal", "ozone_treatment", "leather_condition",
+        "ozone_treatment", "leather_condition",
       ].includes(a.id));
     }
 
-    // Refresh — Exterior bakes in clay bar + headlight + engine bay. Extras: ceramics.
+    // Refresh — Exterior. Clay bar is NO LONGER baked in (July 2026 v5) —
+    // surfaced here as an extra so admin can add it à la carte. Extras:
+    // engine bay, headlight, clay bar, Gentech.
     if (n.includes("refresh") && n.includes("exterior")) {
       return ADMIN_ADDONS.filter(a => [
-        "ceramic_6_10_upgrade", ...premiumCeramicIds, ...gentechIds,
+        "engine_bay", "headlight_restore", "clay_bar",
+        ...gentechIds,
       ].includes(a.id));
     }
 
     // Basic Exterior
     if (n.includes("exterior") && !n.includes("full")) {
       return ADMIN_ADDONS.filter(a => [
-        "engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade",
-        ...premiumCeramicIds, ...gentechIds,
+        "engine_bay", "headlight_restore", "clay_bar",
+        ...gentechIds,
       ].includes(a.id));
     }
 
@@ -729,7 +754,7 @@ export function NewBookingForm({
       "engine_bay", "headlight_restore", "clay_bar",
       "upholstery_shampoo", "salt_stain_removal", "leather_condition",
       "ozone_treatment", "pet_hair",
-      "ceramic_6_10_upgrade", ...premiumCeramicIds,
+      ...gentechIds,
     ].includes(a.id));
   };
 

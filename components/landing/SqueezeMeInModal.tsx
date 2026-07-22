@@ -52,14 +52,14 @@ const SERVICE_TYPES = [
   { id: "rv",   label: "RV",    icon: Truck  },
 ] as const;
 
-// July 2026 v3 · Basic + Reset lineup. Prices reflect sedan → 3-row range.
+// July 2026 v4 · Basic + Reset lineup. Reset adds 50% off ALL à-la-carte add-ons.
 const AUTO_SERVICES = [
   { label: "Basic Exterior Detail",        price: "$120–$170",  desc: "Hand wash, wheels, tires + INCLUDED 1–3 mo ceramic spray sealant" },
   { label: "Basic Interior Detail",        price: "$150–$200",  desc: "Full vacuum, wipe-down, mats & interior glass"                    },
   { label: "Basic Full Detail",            price: "$235–$300",  desc: "Interior + exterior combined · Save $35–$45"                      },
-  { label: "The Reset — Interior",         price: "$235–$265",  desc: "Basic + Shampoo + Pet Hair Extraction — deep interior clean"      },
-  { label: "The Reset — Exterior",         price: "$245–$305",  desc: "Basic + Clay Bar + Headlight Restoration + Engine Bay"            },
-  { label: "The Reset — Full",             price: "$325–$375",  desc: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay"                },
+  { label: "The Reset — Interior",         price: "$235–$265",  desc: "Basic + Shampoo + Salt Removal + Pet Hair · 50% off any add-ons"  },
+  { label: "The Reset — Exterior",         price: "$245–$305",  desc: "Deeper exterior work · 50% off any add-ons (clay/headlight/etc.)" },
+  { label: "The Reset — Full",             price: "$325–$375",  desc: "Full + Shampoo + Salt + Pet Hair · 50% off any add-ons"           },
   { label: "Light Detailing",              price: "$65–$155",   desc: "Quick maintenance — pick 2+ items · 1 hr · maintained cars only"  },
   { label: "Paint Correction — 1 Step",    price: "$449–$599",  desc: "Single-pass polish · lifts 60–75% of light swirls + oxidation"    },
   { label: "Paint Correction — 2 Step",    price: "$675–$875",  desc: "Compound + polish · lifts 85–95% of correctable defects"          },

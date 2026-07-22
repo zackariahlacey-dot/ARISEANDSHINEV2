@@ -1,6 +1,6 @@
 // Canonical metadata for every customer-facing passenger-vehicle add-on.
-// July 2026 lineup — simplified to 8 basics + special (ceramic upgrade,
-// Ultimate + Ext toggle) + Premium Ceramic section-by-section tier.
+// July 2026 lineup — simplified to 8 basics + special (Ultimate + Ext toggle)
+// + 5-Year Gentech Graphene tier (Body / Body + Wheels / Full Vehicle).
 //
 // Marine, RV, Truck, Heavy Equipment add-ons live in their own catalogues
 // under components/landing/* (this file is passenger-vehicle only).
@@ -17,8 +17,8 @@ export type AddonMeta = {
   basePrice: number | Record<AddonSize, number>;
   /** Base duration in minutes, per size. 0 = doesn't extend booking. */
   baseDuration: number | Record<AddonSize, number>;
-  /** Not counted toward the basic bundle discount tier (Premium Ceramic
-   *  has its own volume tier; Ultimate + Ext toggle is a special modifier). */
+  /** Not counted toward the basic bundle discount tier (Gentech + Ultimate +
+   *  Ext toggle are special modifiers with their own discount rules). */
   excludedFromBundleCount?: boolean;
   /** Only shown / applicable when Ultimate Interior Reset is the base package. */
   ultimateOnly?: boolean;
@@ -27,7 +27,7 @@ export type AddonMeta = {
 export const ADDON_META: AddonMeta[] = [
   // ── The 8 basics (interior) ──────────────────────────────────────────
   { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo", side: "interior",
-    basePrice: 95, baseDuration: 0 },
+    basePrice: 75, baseDuration: 0 },
   { id: "salt_stain_removal", label: "Mild–Medium Salt Removal", side: "interior",
     basePrice: 65, baseDuration: 45 },
   { id: "leather_condition",  label: "Leather Conditioning", side: "interior",
@@ -45,9 +45,8 @@ export const ADDON_META: AddonMeta[] = [
   { id: "headlight_restore", label: "Headlight Restoration (pair)", side: "exterior",
     basePrice: 75, baseDuration: 30 },
 
-  // ── Ceramic upgrade (special — replaces the free 1–3mo included) ─────
-  { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade", side: "special",
-    basePrice: 45, baseDuration: 0, excludedFromBundleCount: true },
+  // ── Ceramic upgrade — RETIRED July 2026 v4 ─────
+  // (kept out of the ADDON_META so it can't be selected anywhere new)
 
   // ── Ultimate + Exterior toggle (special — only on Ultimate Interior Reset) ──
   { id: "ultimate_ext_addon", label: "+ Exterior Detail (bundled)", side: "special",
@@ -55,34 +54,22 @@ export const ADDON_META: AddonMeta[] = [
     baseDuration: { sedan: 60, suv: 75, xl: 90 },
     excludedFromBundleCount: true, ultimateOnly: true },
 
-  // ── Premium Ceramic sections (own volume tier) ───────────────────────
-  { id: "premium_ceramic_hood",           label: "Premium Ceramic — Hood",             side: "ceramic",
-    basePrice: 85,  baseDuration: 30, excludedFromBundleCount: true },
-  { id: "premium_ceramic_roof",           label: "Premium Ceramic — Roof",             side: "ceramic",
-    basePrice: 75,  baseDuration: 30, excludedFromBundleCount: true },
-  { id: "premium_ceramic_trunk",          label: "Premium Ceramic — Trunk / Rear Hatch", side: "ceramic",
-    basePrice: 60,  baseDuration: 20, excludedFromBundleCount: true },
-  { id: "premium_ceramic_front_bumper",   label: "Premium Ceramic — Front Bumper",     side: "ceramic",
-    basePrice: 65,  baseDuration: 25, excludedFromBundleCount: true },
-  { id: "premium_ceramic_rear_bumper",    label: "Premium Ceramic — Rear Bumper",      side: "ceramic",
-    basePrice: 65,  baseDuration: 25, excludedFromBundleCount: true },
-  { id: "premium_ceramic_doors",          label: "Premium Ceramic — All Doors",        side: "ceramic",
-    basePrice: 110, baseDuration: 60, excludedFromBundleCount: true },
-  { id: "premium_ceramic_fenders",        label: "Premium Ceramic — All Fenders",      side: "ceramic",
-    basePrice: 75,  baseDuration: 30, excludedFromBundleCount: true },
-  { id: "premium_ceramic_mirrors",        label: "Premium Ceramic — Mirrors (pair)",   side: "ceramic",
-    basePrice: 30,  baseDuration: 15, excludedFromBundleCount: true },
-  { id: "premium_ceramic_wheels",         label: "Premium Ceramic — Wheels + Calipers", side: "ceramic",
-    basePrice: 150, baseDuration: 60, excludedFromBundleCount: true },
-  { id: "premium_ceramic_windshield",     label: "Premium Ceramic — Windshield",       side: "ceramic",
-    basePrice: 95,  baseDuration: 30, excludedFromBundleCount: true },
-  { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", side: "ceramic",
-    basePrice: 175, baseDuration: 45, excludedFromBundleCount: true },
-  { id: "premium_ceramic_full_glass",     label: "Premium Ceramic — Full Glass (all)", side: "ceramic",
-    basePrice: 250, baseDuration: 60, excludedFromBundleCount: true },
-  { id: "premium_ceramic_full_body",      label: "Premium Ceramic — Full Body Bundle (best value)", side: "ceramic",
-    basePrice:    { sedan: 650, suv: 775, xl: 895 },
-    baseDuration: { sedan: 60, suv: 60, xl: 60 },
+  // ── Premium Ceramic sections — RETIRED July 2026 v5 ─────
+  // Replaced by the 3 clean Gentech options below. Historical bookings
+  // still render their line items via ADMIN_ADDONS legacy entries.
+
+  // ── 5-Year Gentech Graphene Ceramic (the 3 clean options) ───────────
+  { id: "gentech_5yr_body",         label: "5-Yr Gentech — Body Coating", side: "ceramic",
+    basePrice: { sedan: 295, suv: 375, xl: 450 },
+    baseDuration: { sedan: 60, suv: 75, xl: 90 },
+    excludedFromBundleCount: true },
+  { id: "gentech_5yr_body_wheels",  label: "5-Yr Gentech — Body + Wheels", side: "ceramic",
+    basePrice: { sedan: 395, suv: 475, xl: 550 },
+    baseDuration: { sedan: 90, suv: 105, xl: 120 },
+    excludedFromBundleCount: true },
+  { id: "gentech_5yr_full_vehicle", label: "5-Yr Gentech — Full Vehicle (Body + Wheels + Windows)", side: "ceramic",
+    basePrice: { sedan: 495, suv: 575, xl: 650 },
+    baseDuration: { sedan: 120, suv: 135, xl: 150 },
     excludedFromBundleCount: true },
 ];
 
@@ -103,24 +90,10 @@ export const ULTIMATE_INTERIOR_INCLUDED_ADDONS = new Set<string>([
   "clay_bar",            // paint decontamination prep baked into Ultimate
 ]);
 
-/** Sections available in the Premium Ceramic add-on picker (in display order). */
-export const PREMIUM_CERAMIC_SECTION_IDS = [
-  "premium_ceramic_hood",
-  "premium_ceramic_roof",
-  "premium_ceramic_trunk",
-  "premium_ceramic_front_bumper",
-  "premium_ceramic_rear_bumper",
-  "premium_ceramic_doors",
-  "premium_ceramic_fenders",
-  "premium_ceramic_mirrors",
-  "premium_ceramic_wheels",
-  "premium_ceramic_windshield",
-  "premium_ceramic_side_rear_glass",
-  "premium_ceramic_full_glass",
-];
-
-/** Full Body Bundle — separate from the section picker. */
-export const PREMIUM_CERAMIC_FULL_BODY_ID = "premium_ceramic_full_body";
+/** Retired July 2026 v5 — Premium Ceramic sections were replaced by the
+ *  3 clean Gentech options. Kept as an empty tuple so any surviving
+ *  reference still compiles + iterates without side-effects. */
+export const PREMIUM_CERAMIC_SECTION_IDS = [] as const;
 
 export function getBasePriceForSize(meta: AddonMeta, size: AddonSize): number {
   return typeof meta.basePrice === "number" ? meta.basePrice : meta.basePrice[size];

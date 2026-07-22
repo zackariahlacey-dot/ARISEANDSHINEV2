@@ -68,7 +68,7 @@ import { trackFbPurchase } from "@/lib/analytics/metaPixel";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
 import { BuildForMeQuiz } from "./BuildForMeQuiz";
 import { todayInBusinessTz } from "@/lib/dates";
-import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, PREMIUM_ADDON_BONUS_PCT } from "@/lib/bundleDiscount";
+import { bundlePctFor, effectiveBundlePctFor, addonDiscountAmount, addonDiscountedPrice, PREMIUM_ADDON_BONUS_PCT, flatBundleSavings, nextAddonSavings, serviceAddonDiscountPct } from "@/lib/bundleDiscount";
 import {
   filterMakesByQuery,
   filterModelsByQuery,
@@ -100,7 +100,7 @@ const ALL_ADD_ONS = [
   { id: "engine_bay",        label: "Engine Bay Detail",                    price: 65,  desc: "Deep degrease, dressing, and plastic care. Customers love the \"open the hood and it looks new\" moment. Skipped on vehicles with sensitive electronics by your request." },
   { id: "headlight_restore",   label: "Headlight Restoration (pair)",        price: 75,  desc: "Sand, polish, and UV-seal cloudy or yellowed lenses to like-new clarity. Visible result, lasts 2+ years. Pair pricing." },
   { id: "odor_bomb",           label: "Strong Odor Elimination",             price: 75,  desc: "Heavy-duty neutralizer bombs combat embedded smoke, food & pet odors throughout the cabin." },
-  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 95,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. ⚠️ Highly recommended when carpets or seats are heavily soiled or stained — a standard interior clean alone will NOT lift set-in dirt or discoloration without this." },
+  { id: "upholstery_shampoo",  label: "Carpet & Upholstery Shampoo",        price: 75,  desc: "Deep steam shampoo of all seats, upholstery panels, and floorboards — removes stains, grime & odor at the source. ⚠️ Highly recommended when carpets or seats are heavily soiled or stained — a standard interior clean alone will NOT lift set-in dirt or discoloration without this." },
   { id: "uv_interior",         label: "UV Protection & Interior Restoration", price: 35, desc: "UV-protective coating applied to all interior plastics, vinyl, and trim — prevents fading, cracking, and sun damage while restoring a rich, factory finish." },
   { id: "leather_condition",   label: "Leather Conditioning",                 price: 40, desc: "Deep-clean and condition all leather surfaces with premium conditioner — restores softness, prevents cracking, and leaves a clean matte finish." },
   { id: "floor_1",           label: "Floorboard Shampoo – 1 Section",       price: 30,  desc: "Deep shampoo for one section of floorboards" },
@@ -126,33 +126,18 @@ const ALL_ADD_ONS = [
   { id: "polish_ceramic",    label: "1-Step Polish + 2-Year Ceramic Coating", price: 350, desc: "Targets light swirls and oxidation with a 1-step machine polish, then protects the paint with a professional 2-year ceramic coat. Requires a full-day appointment." },
   { id: "ozone_treatment",   label: "Ozone Treatment",                       price: 60,  desc: "Professional-grade ozone treatment permanently neutralises smoke, pet odor & mildew at the source." },
   // ── July 2026 special add-ons ────────────────────────────────────────────
-  { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade",   price: 45,  desc: "Upgrade the INCLUDED 1–3 month ceramic spray to a 6–10 month professional sealant. Discounted to $30 when Ultimate + Exterior is toggled." },
+  // (ceramic_6_10_upgrade retired July 2026 v4 — the 1–3 mo included spray is
+  // enough for most customers; the Premium Ceramic per-section options cover
+  // the long-term protection use case.)
   { id: "ultimate_ext_addon",   label: "+ Exterior Detail (Ultimate bundle)", price: 65, desc: "Add a full Exterior Detail to your Ultimate Interior Reset. Saves ~$55 vs. buying separately AND unlocks 20% off all other add-ons. Sedan $65 / SUV $80 / 3-row $95." },
-  // ── Premium Ceramic — section-by-section (own volume tier: 5/10/15/20%) ──
-  { id: "premium_ceramic_hood",           label: "Premium Ceramic — Hood",              price: 85,  desc: "Premium 2-year ceramic coating bonded to the hood." },
-  { id: "premium_ceramic_roof",           label: "Premium Ceramic — Roof",              price: 75,  desc: "Premium 2-year ceramic coating on the roof." },
-  { id: "premium_ceramic_trunk",          label: "Premium Ceramic — Trunk / Rear Hatch", price: 60, desc: "Premium 2-year ceramic on the trunk lid or rear hatch." },
-  { id: "premium_ceramic_front_bumper",   label: "Premium Ceramic — Front Bumper",      price: 65,  desc: "Premium 2-year ceramic on the front bumper." },
-  { id: "premium_ceramic_rear_bumper",    label: "Premium Ceramic — Rear Bumper",       price: 65,  desc: "Premium 2-year ceramic on the rear bumper." },
-  { id: "premium_ceramic_doors",          label: "Premium Ceramic — All Doors",         price: 110, desc: "Premium 2-year ceramic on all 4 doors." },
-  { id: "premium_ceramic_fenders",        label: "Premium Ceramic — All Fenders",       price: 75,  desc: "Premium 2-year ceramic on all fenders." },
-  { id: "premium_ceramic_mirrors",        label: "Premium Ceramic — Mirrors (pair)",    price: 30,  desc: "Premium 2-year ceramic on both mirror housings." },
-  { id: "premium_ceramic_wheels",         label: "Premium Ceramic — Wheels + Calipers", price: 150, desc: "Premium 2-year ceramic on all 4 wheels + brake calipers." },
-  { id: "premium_ceramic_windshield",     label: "Premium Ceramic — Windshield",        price: 95,  desc: "Premium 2-year ceramic on the windshield." },
-  { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", price: 175, desc: "Premium 2-year ceramic on all side + rear glass (not windshield)." },
-  { id: "premium_ceramic_full_glass",     label: "Premium Ceramic — Full Glass (all)",  price: 250, desc: "Premium 2-year ceramic on every piece of glass on the vehicle." },
-  { id: "premium_ceramic_full_body",      label: "Premium Ceramic — Full Body Bundle",  price: 650, desc: "Best value — every body panel coated. Sedan $650 / SUV $775 / 3-row $895." },
-  // ── Top-tier: 5-Year Gentech Graphene Ceramic (mobile application-only pricing) ──
+  // ── Top-tier: 5-Year Gentech Graphene Ceramic (July 2026 v5 — 3 clean options) ──
   // Note: This is APPLICATION ONLY on already-prepped paint. No paint correction
   // (shops charge $1400+ because that includes correction). Prep runs in parallel
   // with the base service (Ultimate + Ext, Full Detail, etc.) so we only price
   // for coating labor + product allocation.
-  { id: "gentech_5yr_body",           label: "5-Yr Gentech — Full Body",           price: 350, desc: "Graphene-infused 5-year ceramic on every body panel. Sedan $350 / SUV $425 / 3-row $500." },
-  { id: "gentech_5yr_wheels",         label: "5-Yr Gentech — Wheels + Calipers",   price: 125, desc: "5-year graphene ceramic bonded to all 4 wheels + brake calipers. Brake dust wipes off, road grime can't grip." },
-  { id: "gentech_5yr_windshield",     label: "5-Yr Gentech — Windshield Only",     price: 50, desc: "Hydrophobic 5-year graphene ceramic on the windshield. Rain beads at speed." },
-  { id: "gentech_5yr_windows_front",  label: "5-Yr Gentech — Windshield + Front 3", price: 85, desc: "Windshield plus both front side windows. Full driver-zone visibility." },
-  { id: "gentech_5yr_windows_all",    label: "5-Yr Gentech — All Windows",         price: 145, desc: "Every piece of glass on the vehicle." },
-  { id: "gentech_5yr_full",           label: "5-Yr Gentech — Full Package (Body + Wheels + All Glass)",  price: 525, desc: "Flagship graphene package — body, wheels + calipers, all glass. Sedan $525 / SUV $650 / 3-row $775. Best value bundle." },
+  { id: "gentech_5yr_body",          label: "5-Yr Gentech — Body Coating",           price: 295, desc: "Graphene-infused 5-year ceramic bonded to every body panel. UV, salt, and water-spot resistance for 5 years. Hydrophobic + anti-static. Sedan $295 / SUV $375 / 3-row $450." },
+  { id: "gentech_5yr_body_wheels",   label: "5-Yr Gentech — Body + Wheels",          price: 395, desc: "Everything in Body Coating PLUS all 4 wheels + brake calipers. Brake dust wipes off, road grime can't grip. Sedan $395 / SUV $475 / 3-row $550." },
+  { id: "gentech_5yr_full_vehicle",  label: "5-Yr Gentech — Full Vehicle (Body + Wheels + Windows)", price: 495, desc: "The complete package — body panels + wheels + all glass. Everything protected for 5 years. Sedan $495 / SUV $575 / 3-row $650." },
   // ── Paint Correction add-ons ─────────────────────────────────────────────
   { id: "ceramic_3yr",       label: "5-Year Gentech Graphene Coating",       price: 250, desc: "Pro-grade graphene-infused ceramic — 5 years of UV, salt, and water-spot protection. Hydrophobic, anti-static, locks in deep gloss. Adds 1.5–2.5 hrs to the appointment. Pricing scales by size: $250 sedan · $350 SUV · $400 3-row / work van." },
   { id: "ultimate_interior", label: "Ultimate Interior Add-on",              price: 175, desc: "Add the full Ultimate Interior service to your paint correction — hot water extraction, steam sanitation, salt neutralization. Adds 3 hrs to the appointment. Flat $175." },
@@ -216,28 +201,24 @@ const HE_ADDON_IDS       = ["he_grime", "he_seat_shampoo", "he_floor_shampoo", "
 const SEAT_REMOVAL_ADDON_IDS = ["seat_removal_driver", "seat_removal_passenger", "seat_removal_rear", "seat_removal_3rd_row", "seat_removal_all_2row", "seat_removal_all_3row"] as const;
 const isSeatRemovalAddonId = (id: string): boolean =>
   (SEAT_REMOVAL_ADDON_IDS as readonly string[]).includes(id);
-/** Premium Ceramic section-by-section add-ons (own volume tier: 5/10/15/20%). */
-const PREMIUM_CERAMIC_SECTION_IDS = [
-  "premium_ceramic_hood", "premium_ceramic_roof", "premium_ceramic_trunk",
-  "premium_ceramic_front_bumper", "premium_ceramic_rear_bumper", "premium_ceramic_doors",
-  "premium_ceramic_fenders", "premium_ceramic_mirrors", "premium_ceramic_wheels",
-  "premium_ceramic_windshield", "premium_ceramic_side_rear_glass", "premium_ceramic_full_glass",
-] as const;
-const isPremiumCeramicSection = (id: string): boolean =>
-  (PREMIUM_CERAMIC_SECTION_IDS as readonly string[]).includes(id);
+/** Premium Ceramic section-by-section add-ons — RETIRED July 2026 v5.
+ *  Kept as an empty tuple so any surviving reference silently no-ops. */
+const PREMIUM_CERAMIC_SECTION_IDS = [] as const;
+const isPremiumCeramicSection = (id: string): boolean => {
+  void id;
+  return false;
+};
 /** Ultimate Interior Reset — the 8 basics visible on the Ultimate flow.
  *  Shampoo, Leather, Pet Hair are INCLUDED so they don't surface as add-ons here. */
 const ULTIMATE_ADDON_IDS = [
   "engine_bay", "salt_stain_removal", "ozone_treatment",
   "clay_bar", "headlight_restore",
-  "ceramic_6_10_upgrade",  // ceramic spray upgrade
   "ultimate_ext_addon",     // the special "+ Exterior Detail" toggle
 ];
 /** The 8 basics for Interior, Exterior, and Full Detail (July 2026 lineup). */
 const STANDARD_ADDON_IDS = [
   "engine_bay", "upholstery_shampoo", "salt_stain_removal", "leather_condition",
   "ozone_treatment", "clay_bar", "pet_hair", "headlight_restore",
-  "ceramic_6_10_upgrade",  // ceramic spray upgrade available on all base packages
 ];
 /** Build Your Package — Interior side add-ons (surfaces on Interior + Full foundations) */
 // Basic services (Interior / Exterior / Full Detail) get a slimmed-down add-on
@@ -276,23 +257,30 @@ function ceramicPackagePct(count: number): number {
   if (count === 2) return 0.15;
   return 0.25;
 }
-/** Add-ons functionally INCLUDED in Ultimate Interior Reset (July 2026 scope).
- *  Selecting these on a base package triggers the upgrade nudge to Ultimate. */
-const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "leather_condition", "pet_hair", "salt_stain_removal", "clay_bar"];
+/** Add-ons functionally INCLUDED in some Reset tier (July 2026 v5 scope).
+ *  Reset has: shampoo, pet_hair, salt_stain_removal.
+ *  Reset does NOT have: clay_bar, headlight_restore, engine_bay,
+ *  leather_condition, ozone. Selecting one of these on a Basic package flags
+ *  "Included in the Reset". Clay bar was removed from Reset in v5 — it's now
+ *  always an à-la-carte add-on. */
+const INCLUDED_IN_ULTIMATE_IDS = ["upholstery_shampoo", "pet_hair", "salt_stain_removal"];
 
 /** Add-ons baked into each Refresh / Reset tier — used to flag them as
  *  "Included" in the add-on picker so customers see they're already getting
  *  them (and can't accidentally double-charge). Keyed by DB name. */
 const INCLUDED_ADDONS_BY_SERVICE: Record<string, readonly string[]> = {
-  // Refresh tier — top popular add-ons per foundation.
-  // (July 2026 v2 reprice: salt dropped from Refresh Interior; headlight
-  // dropped from Refresh Full — both are now à-la-carte add-ons only.)
-  "The Refresh — Interior": ["upholstery_shampoo", "pet_hair"],
-  "The Refresh — Exterior": ["clay_bar", "headlight_restore", "engine_bay"],
-  "The Refresh — Full":     ["upholstery_shampoo", "pet_hair", "clay_bar", "engine_bay"],
-  // Reset tier — Ultimate Interior Reset kept under its DB name.
-  "Ultimate Interior Reset": INCLUDED_IN_ULTIMATE_IDS,
-  "The Reset — Full":        [...INCLUDED_IN_ULTIMATE_IDS, "headlight_restore", "engine_bay"],
+  // Reset tier (July 2026 v5 scope). No clay bar, no headlight_restore, no
+  // engine_bay, no leather, no ozone in ANY Reset — those are always
+  // à-la-carte add-ons now.
+  //   Reset — Interior: shampoo + salt + pet hair
+  //   Reset — Exterior: (nothing baked in — clay bar is à-la-carte)
+  //   Reset — Full:     shampoo + salt + pet hair
+  "The Refresh — Interior": ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
+  "The Refresh — Exterior": [],
+  "The Refresh — Full":     ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
+  // Legacy Reset services (retired) — kept for historical bookings only.
+  "Ultimate Interior Reset": ["upholstery_shampoo", "salt_stain_removal", "pet_hair", "leather_condition", "clay_bar"],
+  "The Reset — Full":        ["upholstery_shampoo", "salt_stain_removal", "pet_hair", "leather_condition", "clay_bar", "headlight_restore", "engine_bay"],
 };
 
 /** Returns true if the given add-on id is already included in the selected
@@ -342,22 +330,8 @@ const DURATION_EXTENDING_ADDONS: Record<string, number> = {
   // Body ceramic (ceramic_3yr) — uses size-tiered CERAMIC_3YR_DURATION_MINS
   // already mapped in getAddonExtraDurationMins (90/90/120/150).
   // July 2026 additions:
-  ceramic_6_10_upgrade: 0,   // spray upgrade — no extra time
   // ultimate_ext_addon — size-tiered, mapped in getAddonExtraDurationMins below
-  // Premium Ceramic sections — each adds application + flash time
-  premium_ceramic_hood: 30,
-  premium_ceramic_roof: 30,
-  premium_ceramic_trunk: 20,
-  premium_ceramic_front_bumper: 25,
-  premium_ceramic_rear_bumper: 25,
-  premium_ceramic_doors: 60,
-  premium_ceramic_fenders: 30,
-  premium_ceramic_mirrors: 15,
-  premium_ceramic_wheels: 60,
-  premium_ceramic_windshield: 30,
-  premium_ceramic_side_rear_glass: 45,
-  premium_ceramic_full_glass: 60,
-  // premium_ceramic_full_body — size-tiered, mapped in getAddonExtraDurationMins below
+  // Gentech 5-Yr (the 3 clean options) — size-tiered, mapped below.
 };
 
 /** Ultimate + Ext toggle — size-tiered duration. */
@@ -366,29 +340,18 @@ const ULTIMATE_EXT_ADDON_DURATION_MINS: Record<string, number> = {
   medium: 60, large: 75, extra_large: 90,
 };
 
-/** Premium Ceramic — Full Body Bundle duration. Flat 1 hr (July 2026). */
-const PREMIUM_CERAMIC_FULL_BODY_DURATION_MINS: Record<string, number> = {
-  sedan: 60, suv: 60, xl: 60,
-  medium: 60, large: 60, extra_large: 60,
-};
-
-/** 5-Year Gentech Ceramic — size-tiered section pricing. */
-const GENTECH_5YR_FULL_PRICES: Record<string, number> = {
-  sedan: 525, suv: 650, xl: 775,
-  medium: 525, large: 650, extra_large: 775,
-};
+/** 5-Year Gentech Ceramic — size-tiered pricing (July 2026 v5, 3 clean options). */
 const GENTECH_5YR_BODY_PRICES: Record<string, number> = {
-  sedan: 350, suv: 425, xl: 500,
-  medium: 350, large: 425, extra_large: 500,
+  sedan: 295, suv: 375, xl: 450,
+  medium: 295, large: 375, extra_large: 450,
 };
-/** 5-Year Gentech application + flash times. */
-const GENTECH_5YR_FULL_DURATION_MINS: Record<string, number> = {
-  sedan: 180, suv: 210, xl: 240,
-  medium: 180, large: 210, extra_large: 240,
+const GENTECH_5YR_BODY_WHEELS_PRICES: Record<string, number> = {
+  sedan: 395, suv: 475, xl: 550,
+  medium: 395, large: 475, extra_large: 550,
 };
-const GENTECH_5YR_BODY_DURATION_MINS: Record<string, number> = {
-  sedan: 120, suv: 150, xl: 180,
-  medium: 120, large: 150, extra_large: 180,
+const GENTECH_5YR_FULL_VEHICLE_PRICES: Record<string, number> = {
+  sedan: 495, suv: 575, xl: 650,
+  medium: 495, large: 575, extra_large: 650,
 };
 
 /** Carpet & Upholstery Shampoo — July 2026: no booking time bump.
@@ -444,15 +407,10 @@ function getEffectiveAddonPrice(
     if (vehicleSize === "suv" || vehicleSize === "large")      return 80;
     return 65;
   }
-  // Premium Ceramic Full Body Bundle — size-tiered.
-  if (addon.id === "premium_ceramic_full_body") {
-    if (vehicleSize === "xl" || vehicleSize === "extra_large") return 895;
-    if (vehicleSize === "suv" || vehicleSize === "large")      return 775;
-    return 650;
-  }
-  // 5-Year Gentech Ceramic — size-tiered on body + full package.
-  if (addon.id === "gentech_5yr_full") return GENTECH_5YR_FULL_PRICES[vehicleSize] ?? addon.price;
-  if (addon.id === "gentech_5yr_body") return GENTECH_5YR_BODY_PRICES[vehicleSize] ?? addon.price;
+  // 5-Year Gentech Ceramic — size-tiered on all 3 clean options (July 2026 v5).
+  if (addon.id === "gentech_5yr_body")          return GENTECH_5YR_BODY_PRICES[vehicleSize] ?? addon.price;
+  if (addon.id === "gentech_5yr_body_wheels")   return GENTECH_5YR_BODY_WHEELS_PRICES[vehicleSize] ?? addon.price;
+  if (addon.id === "gentech_5yr_full_vehicle")  return GENTECH_5YR_FULL_VEHICLE_PRICES[vehicleSize] ?? addon.price;
   return addon.price;
 }
 
@@ -479,16 +437,24 @@ function getAddonExtraDurationMins(
     if (a.id === "ceramic_3yr") return sum + (CERAMIC_3YR_DURATION_MINS[vehicleSize] ?? 90);
     if (a.id === "upholstery_shampoo") return sum + (UPHOLSTERY_SHAMPOO_DURATION_MINS[vehicleSize] ?? 30);
     if (a.id === "ultimate_ext_addon") return sum + (ULTIMATE_EXT_ADDON_DURATION_MINS[vehicleSize] ?? 60);
-    if (a.id === "premium_ceramic_full_body") return sum + (PREMIUM_CERAMIC_FULL_BODY_DURATION_MINS[vehicleSize] ?? 240);
-    // Gentech application-only times per user spec (July 2026):
-    // body = 1 hr, wheels + calipers = 30 min, any window tier = 30 min.
-    if (a.id === "gentech_5yr_body")             return sum + 60;
-    if (a.id === "gentech_5yr_wheels")           return sum + 30;
-    if (a.id === "gentech_5yr_windshield")       return sum + 30;
-    if (a.id === "gentech_5yr_windows_front")    return sum + 30;
-    if (a.id === "gentech_5yr_windows_all")      return sum + 30;
-    // Full Package = body (60) + wheels (30) + all windows (30) = 120 min.
-    if (a.id === "gentech_5yr_full")             return sum + 120;
+    // Gentech (July 2026 v5, 3 clean options) — application-only times:
+    // Body = 1 hr, Body + Wheels = 90 min, Full Vehicle = 2 hrs. Larger
+    // vehicles add ~15 min per tier size step.
+    if (a.id === "gentech_5yr_body") {
+      if (vehicleSize === "xl" || vehicleSize === "extra_large") return sum + 90;
+      if (vehicleSize === "suv" || vehicleSize === "large")      return sum + 75;
+      return sum + 60;
+    }
+    if (a.id === "gentech_5yr_body_wheels") {
+      if (vehicleSize === "xl" || vehicleSize === "extra_large") return sum + 120;
+      if (vehicleSize === "suv" || vehicleSize === "large")      return sum + 105;
+      return sum + 90;
+    }
+    if (a.id === "gentech_5yr_full_vehicle") {
+      if (vehicleSize === "xl" || vehicleSize === "extra_large") return sum + 150;
+      if (vehicleSize === "suv" || vehicleSize === "large")      return sum + 135;
+      return sum + 120;
+    }
     return sum + (DURATION_EXTENDING_ADDONS[a.id] ?? 0);
   }, 0);
 }
@@ -547,9 +513,12 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
   // ── JULY 2026 LINEUP — Passenger vehicle services ─────────────────────
   // Retired for the new lineup (never surface anywhere below):
   //  • seat_removal_* (built into Ultimate Interior Reset)
-  //  • ceramic_3yr (5-Year Gentech Graphene)
+  //  • ceramic_3yr (5-Year Gentech Graphene — old flat SKU)
   //  • wheel_ceramic, polish_ceramic (legacy)
-  //  • window_coat_* (replaced by Premium Ceramic sections)
+  //  • window_coat_* (replaced by Premium Ceramic sections, since also retired)
+  //  • premium_ceramic_* (July 2026 v5 — replaced by the 3 clean Gentech options)
+  //  • gentech_5yr_wheels/windshield/windows_front/windows_all/full (July 2026 v5 —
+  //    replaced by gentech_5yr_body / body_wheels / full_vehicle)
   //  • uv_interior, odor_bomb, headliner_clean, tar_bug, mech_chem_decon,
   //    salt_recovery_addon, floor_1/2/all, steam_sanitation, trim_dressing
   const RETIRED_IDS = new Set<string>([
@@ -560,21 +529,28 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     "uv_interior", "odor_bomb", "headliner_clean", "tar_bug",
     "mech_chem_decon", "salt_recovery_addon", "floor_1", "floor_2", "floor_all",
     "steam_sanitation", "trim_dressing", "ultimate_interior",
+    // v5 retirements — Premium Ceramic sections + older Gentech SKUs
+    "premium_ceramic_hood", "premium_ceramic_roof", "premium_ceramic_trunk",
+    "premium_ceramic_front_bumper", "premium_ceramic_rear_bumper", "premium_ceramic_doors",
+    "premium_ceramic_fenders", "premium_ceramic_mirrors", "premium_ceramic_wheels",
+    "premium_ceramic_windshield", "premium_ceramic_side_rear_glass", "premium_ceramic_full_glass",
+    "premium_ceramic_full_body",
+    "gentech_5yr_wheels", "gentech_5yr_windshield",
+    "gentech_5yr_windows_front", "gentech_5yr_windows_all", "gentech_5yr_full",
   ]);
   const july2026Filter = (addons: readonly AddonItem[]): readonly AddonItem[] =>
     addons.filter(a => !RETIRED_IDS.has(a.id));
 
-  // Paint correction: add Premium Ceramic sections + full-body bundle.
+  // Gentech 5-Yr (the 3 clean options) — the only long-term coating SKUs on
+  // new bookings. Shared across paint correction / exterior / full flows.
+  const GENTECH_5YR_IDS = ["gentech_5yr_body", "gentech_5yr_body_wheels", "gentech_5yr_full_vehicle"];
+
+  // Paint correction: base add-ons + Gentech 5-Yr.
   if (isPaintCorrectionService(serviceName)) {
-    const premiumCeramicIds = ALL_ADD_ONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
     return july2026Filter((
       ALL_ADD_ONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar",
-        "ceramic_6_10_upgrade",
-        ...premiumCeramicIds,
-        "gentech_5yr_body", "gentech_5yr_wheels",
-        "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all",
-        "gentech_5yr_full",
+        ...GENTECH_5YR_IDS,
       ].includes(a.id))
     ));
   }
@@ -588,27 +564,20 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
       ALL_ADD_ONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar",
         "salt_stain_removal", "ozone_treatment",
-        "ceramic_6_10_upgrade",
-        "gentech_5yr_body", "gentech_5yr_wheels",
-        "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all",
-        "gentech_5yr_full",
+        ...GENTECH_5YR_IDS,
       ].includes(a.id))
     )), serviceName);
   }
 
-  // Exterior Detail — the 8 basics on the exterior side + ceramic upgrade + Premium Ceramic.
+  // Exterior Detail — the 8 basics on the exterior side + Gentech 5-Yr.
   // Matches Basic Exterior AND The Refresh — Exterior; stripBakedIn removes
-  // whatever's already baked into Refresh Exterior (clay bar, headlight, engine bay).
+  // whatever's baked into Refresh Exterior (currently nothing — clay bar is
+  // an à-la-carte add-on in July 2026 v5).
   if (n.includes("exterior") && !n.includes("full")) {
-    const premiumCeramicIds = ALL_ADD_ONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
     return stripBakedIn(july2026Filter((
       ALL_ADD_ONS.filter(a => [
         "engine_bay", "headlight_restore", "clay_bar",
-        "ceramic_6_10_upgrade",
-        ...premiumCeramicIds,
-        "gentech_5yr_body", "gentech_5yr_wheels",
-        "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all",
-        "gentech_5yr_full",
+        ...GENTECH_5YR_IDS,
       ].includes(a.id))
     )), serviceName);
   }
@@ -630,17 +599,15 @@ function getAddonsForService(serviceName: string, vehicleSize?: string): readonl
     return july2026Filter((ALL_ADD_ONS.filter(a => a.id === "engine_bay")));
   }
 
-  // Full Detail — the full 8 basics + ceramic upgrade + Premium Ceramic.
-  // Matches Basic Full, The Refresh — Full, and The Reset — Full; stripBakedIn
-  // removes whatever's already included per package.
-  const premiumCeramicIds = ALL_ADD_ONS.filter(a => a.id.startsWith("premium_ceramic_")).map(a => a.id);
+  // Full Detail — the full 8 basics + Gentech 5-Yr. Matches Basic Full,
+  // The Refresh — Full, and The Reset — Full; stripBakedIn removes whatever's
+  // already included per package.
   return stripBakedIn(july2026Filter((
     ALL_ADD_ONS.filter(a => [
       "engine_bay", "headlight_restore", "clay_bar",
       "upholstery_shampoo", "salt_stain_removal", "leather_condition",
       "ozone_treatment", "pet_hair",
-      "ceramic_6_10_upgrade",
-      ...premiumCeramicIds,
+      ...GENTECH_5YR_IDS,
     ].includes(a.id))
   )), serviceName);
 }
@@ -1494,23 +1461,20 @@ export function BookingSection({
     }
   }, [selectedAddons, selectedService?.name]);
 
-  // Gentech exclusivity — "All Windows" supersedes windshield + front-3;
-  // "Full Package" supersedes every individual gentech section. Auto-drop
-  // the redundant picks so the customer never pays twice for the same coating.
+  // Gentech exclusivity — the 3 tiers (Body / Body+Wheels / Full Vehicle) are
+  // mutually exclusive. pickGentechTier already handles the swap at click
+  // time; this effect is a safety net for legacy state that somehow ended up
+  // with more than one Gentech tier selected simultaneously.
   useEffect(() => {
-    const ids = new Set(selectedAddons.map(a => a.id));
-    const hasAllWindows = ids.has("gentech_5yr_windows_all");
-    const hasFullPackage = ids.has("gentech_5yr_full");
-    const REDUNDANT_UNDER_ALL_WINDOWS = ["gentech_5yr_windshield", "gentech_5yr_windows_front"];
-    const REDUNDANT_UNDER_FULL_PACKAGE = [
-      "gentech_5yr_body", "gentech_5yr_wheels",
-      "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all",
-    ];
-    const toRemove = new Set<string>();
-    if (hasAllWindows) REDUNDANT_UNDER_ALL_WINDOWS.forEach(id => { if (ids.has(id)) toRemove.add(id); });
-    if (hasFullPackage) REDUNDANT_UNDER_FULL_PACKAGE.forEach(id => { if (ids.has(id)) toRemove.add(id); });
-    if (toRemove.size > 0) {
-      setSelectedAddons(prev => prev.filter(a => !toRemove.has(a.id)));
+    const gentechTierIds = ["gentech_5yr_body", "gentech_5yr_body_wheels", "gentech_5yr_full_vehicle"];
+    const selected = selectedAddons.filter(a => gentechTierIds.includes(a.id));
+    if (selected.length > 1) {
+      // Keep the highest tier only.
+      const priority = ["gentech_5yr_full_vehicle", "gentech_5yr_body_wheels", "gentech_5yr_body"];
+      const keeper = priority.find(id => selected.some(s => s.id === id));
+      setSelectedAddons(prev => prev.filter(a =>
+        !gentechTierIds.includes(a.id) || a.id === keeper,
+      ));
     }
   }, [selectedAddons]);
 
@@ -1529,7 +1493,7 @@ export function BookingSection({
       const updated = { ...v, ...patch };
       if ("vehicleSize" in patch) {
         // Shampoo is flat $95 across all sizes (July 2026) — no XL surcharge.
-        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 95;
+        const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
         updated.selectedAddons = updated.selectedAddons.map(a =>
           a.id === "upholstery_shampoo" ? { ...a, price: base } : a
         );
@@ -1758,7 +1722,7 @@ export function BookingSection({
   const LIGHT_DETAIL_IDS = new Set(["vacuum", "wipe_down", "floor_mats", "windows", "exterior_rinse", "tire_shine"]);
   const isCeramicOrSpecial = (id: string) =>
     isPremiumCeramicId(id) || isGentechId(id) ||
-    id === "ultimate_ext_addon" || id === "ceramic_6_10_upgrade" ||
+    id === "ultimate_ext_addon" ||
     LIGHT_DETAIL_IDS.has(id);
   const isSpecialAddonId = isCeramicOrSpecial; // legacy alias
   const qualifyingAddons = selectedAddons.filter(a => a.price > 0 && !isCeramicOrSpecial(a.id));
@@ -1771,12 +1735,25 @@ export function BookingSection({
   // `hasPremiumAddon` keeps compiling until the JSX cleanup pass.
   const hasPremiumAddon = ultimateExtToggled;
   const bundlePctRaw = bundlePctFor(qualifyingAddons.length);
-  const bundlePct = effectiveBundlePctFor(qualifyingAddons.length, ultimateExtToggled);
-  const addonsBundleSavings = qualifyingAddons.reduce(
-    (sum, a) => sum + addonDiscountAmount(a.id, a.price, bundlePct),
+  // July 2026 v5 — Reset perk: every add-on stacked on a Reset service is 50%
+  // off. This REPLACES the flat-dollar bundle savings ($15 on 2nd + $20 each
+  // after) — the two systems don't stack. Basic packages keep the flat ladder.
+  const resetAddonPct = serviceAddonDiscountPct(selectedService?.name);
+  const perItemPct = resetAddonPct;              // 0.5 on Reset, else 0
+  const bundlePct = perItemPct;                  // used by tile strikethrough
+  const addonsPerItemSavings = qualifyingAddons.reduce(
+    (sum, a) => sum + Math.round(a.price * perItemPct),
     0,
   );
+  const addonsFlatSavings = perItemPct > 0 ? 0 : flatBundleSavings(qualifyingAddons.length);
+  const addonsBundleSavings = addonsPerItemSavings + addonsFlatSavings;
   const bundleDiscount = addonsBundleSavings;
+  // Local helper — the shared `addonDiscountedPrice` was neutered in the July
+  // v4 refactor (returns base for any pct). We re-introduce a straight
+  // "apply this percent" helper for the tile strikethrough + prediction UI so
+  // the 50% Reset perk shows up as `$50 → $25` on each add-on tile.
+  const localAddonDiscountedPrice = (base: number, pct: number) =>
+    Math.max(0, Math.round(base * (1 - pct)));
   const ceramicSubtotalRaw = ceramicAddons.reduce((s, a) => s + a.price, 0);
   const ceramicPct = ceramicPackagePct(ceramicAddons.length);
   const ceramicSavings = Math.round(ceramicSubtotalRaw * ceramicPct);
@@ -2482,7 +2459,7 @@ export function BookingSection({
   // as a no-op re-sync so any stale price from an older draft gets snapped
   // back to the current flat rate whenever size changes.
   useEffect(() => {
-    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 95;
+    const base = ALL_ADD_ONS.find(a => a.id === "upholstery_shampoo")?.price ?? 75;
     setSelectedAddons(prev => prev.map(a =>
       a.id === "upholstery_shampoo" ? { ...a, price: base } : a
     ));
@@ -3615,9 +3592,9 @@ export function BookingSection({
                     // "Reset" tier (top). DB names stay "The Refresh — …" so
                     // history/loyalty/etc. keep working; serviceDisplay maps
                     // them to "The Reset — …" for customers.
-                    "The Refresh — Interior":  { icon: Crown,    blurb: "Basic + Shampoo + Pet Hair — deep interior clean",             time: "2.5 hrs" },
-                    "The Refresh — Exterior":  { icon: Crown,    blurb: "Basic + Clay Bar + Headlight + Engine Bay — deep exterior",     time: "2.5 hrs" },
-                    "The Refresh — Full":      { icon: Crown,    blurb: "Full + Shampoo + Pet Hair + Clay Bar + Engine Bay",              time: "4 hrs" },
+                    "The Refresh — Interior":  { icon: Crown,    blurb: "Basic + Shampoo + Salt Removal + Pet Hair — deep interior",     time: "2.5 hrs" },
+                    "The Refresh — Exterior":  { icon: Crown,    blurb: "Deep exterior clean with 50% off add-ons",                       time: "2.5 hrs" },
+                    "The Refresh — Full":      { icon: Crown,    blurb: "Full + Shampoo + Salt + Pet Hair",                               time: "4 hrs" },
                     // Retired flagship tier — kept in the map so historical
                     // bookings that reference this name still render a card.
                     "Ultimate Interior Reset": { icon: Crown,    blurb: "Legacy Ultimate — book The Reset — Interior instead",           time: "4–6 hrs" },
@@ -3684,11 +3661,11 @@ export function BookingSection({
                       included: [
                         "Everything in Basic Interior Detail",
                         "Carpet & Upholstery Shampoo (deep steam clean)",
+                        "Salt Stain Removal + neutralization",
                         "Heavy Pet Hair Extraction",
                         "Bundle savings vs à la carte",
                       ],
                       notIncluded: [
-                        "Heavy salt stain removal (Salt Removal add-on)",
                         "Leather conditioning (Leather Conditioning add-on)",
                         "Clay bar / paint decontamination (Clay Bar add-on)",
                         "Smoke / pet odor elimination (Ozone Treatment add-on)",
@@ -3697,30 +3674,33 @@ export function BookingSection({
                     "The Refresh — Exterior": {
                       included: [
                         "Everything in Basic Exterior Detail",
-                        "Clay Bar paint decontamination",
-                        "Headlight Restoration (pair)",
-                        "Engine Bay Detail (degrease + dressing)",
+                        "50% off every à-la-carte add-on stacked on this package",
                         "1–3 month ceramic spray sealant INCLUDED",
-                        "Bundle savings: ~$65 vs à la carte",
                       ],
                       notIncluded: [
-                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                        "Clay bar / paint decontamination (Clay Bar add-on)",
+                        "Headlight Restoration (Headlight Restoration add-on)",
+                        "Engine Bay Detail (Engine Bay add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Gentech add-on)",
                         "Paint correction (separate service — swirls / oxidation)",
                       ],
                     },
                     "The Refresh — Full": {
                       included: [
                         "Everything in Basic Full Detail",
-                        "Carpet & Upholstery Shampoo + Pet Hair Extraction",
-                        "Clay Bar + Engine Bay Detail",
+                        "Carpet & Upholstery Shampoo (deep steam clean)",
+                        "Salt Stain Removal + neutralization",
+                        "Heavy Pet Hair Extraction",
+                        "50% off every à-la-carte add-on stacked on this package",
                         "1–3 month ceramic spray sealant INCLUDED",
                         "Bundle savings vs à la carte",
                       ],
                       notIncluded: [
-                        "Heavy salt stain removal (Salt Removal add-on)",
+                        "Clay bar / paint decontamination (Clay Bar add-on)",
                         "Headlight Restoration (Headlight Restoration add-on)",
+                        "Engine Bay Detail (Engine Bay add-on)",
                         "Leather conditioning (Leather Conditioning add-on)",
-                        "Long-term 5-year Gentech ceramic coating (Premium Ceramic add-on)",
+                        "Long-term 5-year Gentech ceramic coating (Gentech add-on)",
                         "Smoke / pet odor elimination (Ozone Treatment add-on)",
                       ],
                     },
@@ -5130,13 +5110,18 @@ export function BookingSection({
                                 like customising a build than checking boxes off a list. */}
                             {!isMarine && !isRV && (() => {
                               // Use the same totals the checkout flow uses so the running total
-                              // in this preview matches the final Total exactly — including
-                              // ceramic products being excluded from the bundle discount.
+                              // in this preview matches the final Total exactly.
                               const runningTotal = Math.max(0, Math.round(totalAfterDiscount));
                               const savings = Math.max(0, Math.round(bundleDiscount + ceramicSavings));
-                              const addonCount = selectedAddons.length;
-                              const nextTierAt = addonCount < 2 ? 2 : addonCount < 3 ? 3 : addonCount < 4 ? 4 : addonCount < 5 ? 5 : null;
-                              const nextTierPct = nextTierAt === 2 ? 5 : nextTierAt === 3 ? 10 : nextTierAt === 4 ? 12 : nextTierAt === 5 ? 15 : null;
+                              const addonCount = qualifyingAddons.length;
+                              const nextSave = nextAddonSavings(addonCount);
+                              // Tier steps: 2nd add-on saves $15, 3rd (and each after) saves $20
+                              const TIER_STEPS = [
+                                { at: 2, save: 15, label: "2nd" },
+                                { at: 3, save: 20, label: "3rd" },
+                                { at: 4, save: 20, label: "4th" },
+                                { at: 5, save: 20, label: "5th" },
+                              ];
                               return (
                                 <div className="mb-4 rounded-2xl overflow-hidden border border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.06] via-zinc-900/50 to-zinc-950/50 shadow-[0_0_24px_rgba(212,175,55,0.06)]">
                                   {/* Top strip — Building label + count */}
@@ -5148,7 +5133,7 @@ export function BookingSection({
                                       </span>
                                     </div>
                                     <span className="text-[10px] font-bold text-zinc-400 tabular-nums">
-                                      {addonCount} {addonCount === 1 ? "add-on" : "add-ons"}
+                                      {selectedAddons.length} {selectedAddons.length === 1 ? "add-on" : "add-ons"}
                                     </span>
                                   </div>
                                   {/* Middle — running total + savings */}
@@ -5166,47 +5151,52 @@ export function BookingSection({
                                         ${runningTotal}
                                       </div>
                                     </div>
-                                    {/* Next tier chip */}
-                                    {nextTierAt != null && nextTierPct != null && (
+                                    {/* Next unlock chip — shows what adding one more add-on saves.
+                                        Hidden when the Reset perk is active (every add-on is
+                                        already 50% off, so there's no "next tier" to unlock). */}
+                                    {nextSave > 0 && resetAddonPct === 0 && (
                                       <div className="shrink-0 text-right">
                                         <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">Next Unlock</div>
                                         <div className="flex items-center gap-1 justify-end">
-                                          <span className="text-[10px] font-bold text-zinc-400">Add {nextTierAt - addonCount} more →</span>
-                                          <span className="text-xs font-black text-emerald-300 tabular-nums">{nextTierPct}% off</span>
+                                          <span className="text-[10px] font-bold text-zinc-400">Add 1 more →</span>
+                                          <span className="text-xs font-black text-emerald-300 tabular-nums">−${nextSave}</span>
                                         </div>
                                       </div>
                                     )}
-                                    {nextTierAt == null && bundlePct > 0 && (
-                                      <div className="shrink-0 text-right">
-                                        <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-0.5">Max Tier</div>
-                                        <div className="text-xs font-black text-emerald-300">15% off each</div>
+                                  </div>
+                                  {/* Bottom — tier ladder progress (flat $ per-item), OR
+                                      the Reset perk callout when a Reset package is picked.
+                                      The two systems don't stack — Reset customers get 50%
+                                      off every add-on and skip the flat ladder entirely. */}
+                                  {resetAddonPct > 0 ? (
+                                    <div className="px-4 pb-3">
+                                      <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-500/[0.12] py-2 px-3">
+                                        <span className="text-base leading-none">🎁</span>
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-emerald-300">
+                                          Reset perk: 50% off every add-on
+                                        </span>
                                       </div>
-                                    )}
-                                  </div>
-                                  {/* Bottom — tier ladder progress */}
-                                  <div className="px-4 pb-3 flex items-center gap-1.5">
-                                    {[
-                                      { c: 2, pct: 5 },
-                                      { c: 3, pct: 10 },
-                                      { c: 4, pct: 12 },
-                                      { c: 5, pct: 15 },
-                                    ].map((t) => {
-                                      const reached = addonCount >= t.c;
-                                      return (
-                                        <div
-                                          key={t.c}
-                                          className={`flex-1 flex items-center justify-center gap-1 px-1 py-1 rounded-lg border text-[9px] font-black transition-all ${
-                                            reached
-                                              ? "border-emerald-400/50 bg-emerald-500/[0.12] text-emerald-300"
-                                              : "border-white/[0.06] bg-white/[0.02] text-zinc-600"
-                                          }`}
-                                        >
-                                          {reached ? <Check size={8} strokeWidth={3} /> : <span>{t.c}+</span>}
-                                          <span>{t.pct}%</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                    </div>
+                                  ) : (
+                                    <div className="px-4 pb-3 flex items-center gap-1.5">
+                                      {TIER_STEPS.map((t) => {
+                                        const reached = addonCount >= t.at;
+                                        return (
+                                          <div
+                                            key={t.at}
+                                            className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-lg border text-[9px] font-black transition-all ${
+                                              reached
+                                                ? "border-emerald-400/50 bg-emerald-500/[0.12] text-emerald-300"
+                                                : "border-white/[0.06] bg-white/[0.02] text-zinc-600"
+                                            }`}
+                                          >
+                                            <span className="leading-none">{reached ? <Check size={8} strokeWidth={3} /> : t.label}</span>
+                                            <span className="tabular-nums leading-none mt-0.5">−${t.save}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}
@@ -5278,17 +5268,17 @@ export function BookingSection({
                                 leather_condition:     Palette,
                                 ozone_treatment:       Wind,
                                 pet_hair:              PawPrint,
-                                ceramic_6_10_upgrade:  Shield,
                                 ultimate_ext_addon:    Zap,
-                                premium_ceramic_full_body: Gem,
                               };
-                              const isPremiumCeramic = (id: string) => id.startsWith("premium_ceramic_") && id !== "premium_ceramic_full_body";
+                              // July 2026 v5 — Premium Ceramic sections retired; helper kept
+                              // as a no-op so the surrounding logic keeps compiling.
+                              const isPremiumCeramic = (id: string) => { void id; return false; };
                               // On the Ultimate Interior Reset flow, the "+ Exterior Detail" toggle
                               // gets pulled out of the regular tile list and rendered as a large
                               // premium hero card at the top. Exterior-side boosts (engine bay,
                               // headlight restore, clay bar, ceramic upgrade) stay hidden until
                               // the customer toggles that card on.
-                              const EXTERIOR_BOOST_IDS = new Set(["engine_bay", "headlight_restore", "clay_bar", "ceramic_6_10_upgrade"]);
+                              const EXTERIOR_BOOST_IDS = new Set(["engine_bay", "headlight_restore", "clay_bar"]);
                               const ultimateExtToggleCard = standAlone.find(a => a.id === "ultimate_ext_addon");
                               const ultimateExtToggleOn = selectedAddons.some(a => a.id === "ultimate_ext_addon");
                               const boosts = standAlone.filter(a => !isPremiumCeramic(a.id) && a.id !== "ultimate_ext_addon" && !a.id.startsWith("gentech_5yr_"));
@@ -5403,7 +5393,7 @@ export function BookingSection({
                                         // covered" in the picker.
                                         const isBakedIntoService = isAddonIncludedInService(selectedService?.name, addon.id);
                                         const isIncluded = isBakedIntoService || (isUltimateUpgradeable && INCLUDED_IN_ULTIMATE_IDS.includes(addon.id));
-                                        const isSpecial = addon.id === "ultimate_ext_addon" || addon.id === "premium_ceramic_full_body";
+                                        const isSpecial = addon.id === "ultimate_ext_addon";
                                         // Clay Bar is baked into the Ultimate + Exterior bundle. When the toggle
                                         // is on, mark it "Included" so the customer sees they're getting it
                                         // without charging or double-toggling. Non-clickable in that state.
@@ -5411,18 +5401,20 @@ export function BookingSection({
                                         const effectiveIncluded = isIncluded || isBundleIncluded;
                                         const AddonIcon = ADDON_ICON[addon.id] ?? Sparkles;
                                         const base = getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides);
-                                        // Ceramic products (6-10mo spray, Premium Ceramic, Gentech) never receive
-                                        // the basic bundle discount — they're flat-priced premium items.
+                                        // Ceramic products (Gentech) never receive the basic bundle
+                                        // discount — they're flat-priced premium items.
                                         const ceramicShieldsDiscount = isCeramicOrSpecial(addon.id);
-                                        const discounted = ceramicShieldsDiscount ? base : addonDiscountedPrice(addon.id, base, bundlePct);
+                                        // Use the local helper (not the neutered lib fn) so the 50%
+                                        // Reset perk actually reflects in the tile pricing.
+                                        const discounted = ceramicShieldsDiscount ? base : localAddonDiscountedPrice(base, bundlePct);
                                         const isDiscounted = isSelected && !isBundleIncluded && !ceramicShieldsDiscount && bundlePct > 0 && discounted < base;
-                                        // Predicted price if the customer adds this tile — factors in the
-                                        // NEXT tier they'd land on after adding one more qualifying add-on.
-                                        // Skips ceramic sections + special add-ons + already-selected items.
+                                        // Predicted price if the customer adds this tile — on the
+                                        // Reset flow the perk is a flat 50% off (no tiering) so the
+                                        // prediction pct is just the current per-item pct.
                                         const contributesToBundle = !ceramicShieldsDiscount && !isBundleIncluded && !isSelected;
-                                        const predictedCount = contributesToBundle ? qualifyingAddons.length + 1 : qualifyingAddons.length;
-                                        const predictedPct = effectiveBundlePctFor(predictedCount, ultimateExtToggled);
-                                        const predictedPrice = ceramicShieldsDiscount ? base : addonDiscountedPrice(addon.id, base, predictedPct);
+                                        void contributesToBundle;
+                                        const predictedPct = bundlePct;
+                                        const predictedPrice = ceramicShieldsDiscount ? base : localAddonDiscountedPrice(base, predictedPct);
                                         const showPrediction = !isSelected && !isBundleIncluded && !ceramicShieldsDiscount && predictedPct > 0 && predictedPrice < base;
                                         return (
                                           <button
@@ -5461,7 +5453,7 @@ export function BookingSection({
                                               {(effectiveIncluded || isSpecial) && (
                                                 <div className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-[#D4AF37]/80 mt-0.5">
                                                   {effectiveIncluded ? <Crown size={7} fill="currentColor" /> : <Sparkles size={7} />}
-                                                  {isBundleIncluded ? "Included in bundle" : effectiveIncluded ? "Included in Ultimate" : "Bundle"}
+                                                  {isBundleIncluded ? "Included in bundle" : effectiveIncluded ? "Included in the Reset" : "Bundle"}
                                                 </div>
                                               )}
                                             </div>
@@ -5594,79 +5586,89 @@ export function BookingSection({
                                   })()}
 
                                   {/* ── 5-Year Gentech Graphene — flagship expandable premium card ──
-                                      Categorised sections (Windows / Body / Wheels) + Full Package
-                                      bundle. Redundant picks auto-disable + darken. */}
+                                      July 2026 v5 — 3 clean mutually-exclusive tiers:
+                                      Body → Body + Wheels → Full Vehicle. Picking any one
+                                      swaps out the previously-selected tier. */}
                                   {(() => {
-                                    const gentechIds = ["gentech_5yr_body", "gentech_5yr_wheels", "gentech_5yr_windshield", "gentech_5yr_windows_front", "gentech_5yr_windows_all", "gentech_5yr_full"];
+                                    const gentechIds = ["gentech_5yr_body", "gentech_5yr_body_wheels", "gentech_5yr_full_vehicle"];
                                     const gentechAddons = standAlone.filter(a => gentechIds.includes(a.id));
                                     if (gentechAddons.length === 0) return null;
                                     const bodyOpt = gentechAddons.find(a => a.id === "gentech_5yr_body");
-                                    const wheelsOpt = gentechAddons.find(a => a.id === "gentech_5yr_wheels");
-                                    const windshieldOpt = gentechAddons.find(a => a.id === "gentech_5yr_windshield");
-                                    const frontWindowsOpt = gentechAddons.find(a => a.id === "gentech_5yr_windows_front");
-                                    const allWindowsOpt = gentechAddons.find(a => a.id === "gentech_5yr_windows_all");
-                                    const fullBundleOpt = gentechAddons.find(a => a.id === "gentech_5yr_full");
-                                    const windowOpts = [windshieldOpt, frontWindowsOpt, allWindowsOpt].filter(Boolean) as typeof gentechAddons;
+                                    const bodyWheelsOpt = gentechAddons.find(a => a.id === "gentech_5yr_body_wheels");
+                                    const fullVehicleOpt = gentechAddons.find(a => a.id === "gentech_5yr_full_vehicle");
 
-                                    // Selection state
                                     const anyGentechSelected = selectedAddons.some(a => gentechIds.includes(a.id));
-                                    const gentechCount = selectedAddons.filter(a => gentechIds.includes(a.id)).length;
-                                    const fullPackageSelected = selectedAddons.some(a => a.id === "gentech_5yr_full");
-                                    const allWindowsSelected = selectedAddons.some(a => a.id === "gentech_5yr_windows_all");
 
-                                    // Compute the "supersede" state for each addon.
-                                    const isSupersededByFull = (id: string) =>
-                                      fullPackageSelected && id !== "gentech_5yr_full";
-                                    const isSupersededByAllWindows = (id: string) =>
-                                      allWindowsSelected && (id === "gentech_5yr_windshield" || id === "gentech_5yr_windows_front");
+                                    // The 3 tiers are mutually exclusive — picking one swaps out
+                                    // whatever was previously chosen so the customer never pays
+                                    // for overlapping coatings.
+                                    const pickGentechTier = (tierAddon: typeof gentechAddons[number]) => {
+                                      const isAlreadySelected = selectedAddons.some(a => a.id === tierAddon.id);
+                                      if (isAlreadySelected) {
+                                        // Toggle off — just drop it from the selection.
+                                        toggleAddon(tierAddon);
+                                        return;
+                                      }
+                                      // Drop any other gentech tier first, then add this one.
+                                      setSelectedAddons(prev => {
+                                        const withoutOtherGentech = prev.filter(a => !gentechIds.includes(a.id));
+                                        return [
+                                          ...withoutOtherGentech,
+                                          { id: tierAddon.id, label: tierAddon.label,
+                                            price: getEffectiveAddonPrice(tierAddon, vehicleSize as string, addonOverrides) },
+                                        ];
+                                      });
+                                    };
 
-                                    const renderSectionButton = (addon: typeof gentechAddons[number]) => {
+                                    const renderTierCard = (
+                                      addon: typeof gentechAddons[number],
+                                      shortLabel: string,
+                                      description: string,
+                                      Icon: React.ElementType,
+                                      isFlagship: boolean,
+                                    ) => {
                                       const isSelected = selectedAddons.some(a => a.id === addon.id);
                                       const price = getEffectiveAddonPrice(addon, vehicleSize as string, addonOverrides);
-                                      const shortLabel = addon.label.replace("5-Yr Gentech — ", "").replace("Full Package (Body + Wheels + All Glass)", "Full Package");
-                                      const superseded = isSupersededByFull(addon.id) || isSupersededByAllWindows(addon.id);
-                                      const supersedeSource = isSupersededByFull(addon.id) ? "Full Package" : "All Windows";
                                       return (
                                         <button
                                           key={addon.id}
                                           type="button"
-                                          onClick={() => { if (!superseded) toggleAddon(addon); }}
+                                          onClick={() => pickGentechTier(addon)}
                                           aria-pressed={isSelected}
-                                          disabled={superseded}
-                                          title={superseded ? `Already included in ${supersedeSource}` : undefined}
-                                          className={`relative rounded-xl px-2 py-2 text-center border transition-all active:scale-[0.97] overflow-hidden ${
-                                            superseded
-                                              ? "border-white/[0.04] bg-zinc-950/50 opacity-40 cursor-not-allowed"
-                                              : isSelected
-                                                ? "border-[#D4AF37]/70 bg-gradient-to-b from-[#D4AF37]/25 to-[#D4AF37]/[0.06] shadow-[0_0_10px_rgba(212,175,55,0.18)]"
-                                                : "border-white/[0.06] bg-zinc-900/40 hover:border-[#D4AF37]/40 hover:bg-zinc-900/60"
+                                          className={`relative w-full rounded-xl overflow-hidden text-left transition-all active:scale-[0.98] border ${
+                                            isSelected
+                                              ? "border-[#D4AF37]/80 bg-gradient-to-r from-[#D4AF37]/[0.22] via-[#D4AF37]/[0.09] to-[#D4AF37]/[0.04] shadow-[0_0_18px_rgba(212,175,55,0.25)]"
+                                              : isFlagship
+                                                ? "border-[#D4AF37]/50 bg-gradient-to-r from-[#D4AF37]/[0.08] via-[#D4AF37]/[0.03] to-transparent hover:border-[#D4AF37]/80 hover:shadow-[0_0_16px_rgba(212,175,55,0.14)]"
+                                                : "border-white/[0.08] bg-zinc-900/50 hover:border-[#D4AF37]/45 hover:bg-zinc-900/70"
                                           }`}
                                         >
-                                          {superseded && (
-                                            <div className="absolute top-1 right-1">
-                                              <Lock size={9} className="text-zinc-600" strokeWidth={2} />
+                                          <div className="p-3">
+                                            <div className="flex items-start justify-between gap-2">
+                                              <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                                <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                  isSelected ? "bg-[#D4AF37]/25 border border-[#D4AF37]/60" : "bg-white/[0.04] border border-white/[0.08]"
+                                                }`}>
+                                                  <Icon size={15} className={isSelected ? "text-[#D4AF37]" : "text-zinc-400"} strokeWidth={1.75} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                  <div className="text-[12px] font-black text-white leading-tight tracking-tight">{shortLabel}</div>
+                                                  <div className="text-[10px] text-zinc-400 leading-snug mt-0.5">{description}</div>
+                                                </div>
+                                              </div>
+                                              <div className="shrink-0 text-right">
+                                                <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">Add</div>
+                                                <div className={`text-base font-black tabular-nums leading-none mt-0.5 ${
+                                                  isSelected ? "text-[#D4AF37]" : "text-zinc-200"
+                                                }`}>+${price}</div>
+                                              </div>
                                             </div>
-                                          )}
-                                          {isSelected && !superseded && (
-                                            <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#D4AF37] flex items-center justify-center">
-                                              <Check size={7} className="text-black" strokeWidth={3.5} />
-                                            </div>
-                                          )}
-                                          <div className={`text-[9px] font-black uppercase tracking-wider leading-tight ${
-                                            superseded ? "text-zinc-600" : isSelected ? "text-[#D4AF37]" : "text-zinc-200"
-                                          }`}>
-                                            {shortLabel}
+                                            {isSelected && (
+                                              <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#D4AF37] flex items-center justify-center">
+                                                <Check size={7} className="text-black" strokeWidth={3.5} />
+                                              </div>
+                                            )}
                                           </div>
-                                          <div className={`text-[11px] font-black mt-1 tabular-nums leading-none ${
-                                            superseded ? "text-zinc-700 line-through" : isSelected ? "text-white" : "text-zinc-400"
-                                          }`}>
-                                            +${price}
-                                          </div>
-                                          {superseded && (
-                                            <div className="text-[7px] font-bold uppercase tracking-widest text-zinc-600 mt-1 leading-tight">
-                                              Included
-                                            </div>
-                                          )}
                                         </button>
                                       );
                                     };
@@ -5696,116 +5698,41 @@ export function BookingSection({
                                                 <span className="text-[8px] font-black uppercase tracking-[0.22em] text-[#F3E5AB]">Flagship · 5-Year Warranty</span>
                                               </div>
                                               <div className="text-[14px] font-black text-white leading-tight tracking-tight">Gentech Graphene Ceramic</div>
-                                              <div className="text-[10px] text-zinc-400 leading-tight mt-0.5">5-year application · Pick your sections</div>
+                                              <div className="text-[10px] text-zinc-400 leading-tight mt-0.5">Pick one tier · 5-year graphene protection</div>
                                             </div>
                                           </div>
                                           <div className="flex items-center gap-1.5 shrink-0">
                                             {anyGentechSelected && (
                                               <span className="text-[9px] font-black text-[#D4AF37] bg-[#D4AF37]/15 border border-[#D4AF37]/40 rounded-full px-2 py-0.5 tabular-nums">
-                                                {gentechCount} picked
+                                                1 picked
                                               </span>
                                             )}
                                             <ChevronRight size={15} className="text-[#D4AF37]/70 group-open:rotate-90 transition-transform" />
                                           </div>
                                         </summary>
 
-                                        <div className="relative px-4 pb-4 pt-2 border-t border-[#D4AF37]/25 space-y-3.5">
-                                          {/* Windows */}
-                                          {windowOpts.length > 0 && (
-                                            <div>
-                                              <div className="flex items-center justify-between gap-1.5 mb-2 px-0.5">
-                                                <div className="flex items-center gap-1.5">
-                                                  <Droplets size={11} className="text-[#D4AF37]/90" strokeWidth={2} />
-                                                  <span className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-300">Windows</span>
-                                                </div>
-                                                <span className="text-[8px] text-zinc-600 italic">pick one</span>
-                                              </div>
-                                              <div className="grid grid-cols-3 gap-2">
-                                                {windowOpts.map(o => renderSectionButton(o))}
-                                              </div>
-                                            </div>
+                                        <div className="relative px-4 pb-4 pt-2 border-t border-[#D4AF37]/25 space-y-2">
+                                          {bodyOpt && renderTierCard(
+                                            bodyOpt,
+                                            "Body Coating",
+                                            "Every body panel · UV, salt & water-spot resistance",
+                                            Car,
+                                            false,
                                           )}
-
-                                          {/* Body */}
-                                          {bodyOpt && (
-                                            <div>
-                                              <div className="flex items-center gap-1.5 mb-2 px-0.5">
-                                                <Car size={11} className="text-[#D4AF37]/90" strokeWidth={2} />
-                                                <span className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-300">Body</span>
-                                              </div>
-                                              {renderSectionButton(bodyOpt)}
-                                            </div>
+                                          {bodyWheelsOpt && renderTierCard(
+                                            bodyWheelsOpt,
+                                            "Body + Wheels",
+                                            "Body panels + all 4 wheels + brake calipers",
+                                            Layers,
+                                            false,
                                           )}
-
-                                          {/* Wheels + Calipers */}
-                                          {wheelsOpt && (
-                                            <div>
-                                              <div className="flex items-center gap-1.5 mb-2 px-0.5">
-                                                <Layers size={11} className="text-[#D4AF37]/90" strokeWidth={2} />
-                                                <span className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-300">Wheels + Calipers</span>
-                                              </div>
-                                              {renderSectionButton(wheelsOpt)}
-                                            </div>
+                                          {fullVehicleOpt && renderTierCard(
+                                            fullVehicleOpt,
+                                            "Full Vehicle · Everything Coated",
+                                            "Body + wheels + all glass — the complete package",
+                                            Gem,
+                                            true,
                                           )}
-
-                                          {/* Full Package Bundle — headline treatment */}
-                                          {fullBundleOpt && (() => {
-                                            const isSelected = selectedAddons.some(a => a.id === fullBundleOpt.id);
-                                            const price = getEffectiveAddonPrice(fullBundleOpt, vehicleSize as string, addonOverrides);
-                                            // Calculate what customer would pay if they picked everything separately
-                                            const bodyPrice = bodyOpt ? getEffectiveAddonPrice(bodyOpt, vehicleSize as string, addonOverrides) : 0;
-                                            const wheelsPrice = wheelsOpt ? getEffectiveAddonPrice(wheelsOpt, vehicleSize as string, addonOverrides) : 0;
-                                            const allWindowsPrice = allWindowsOpt ? getEffectiveAddonPrice(allWindowsOpt, vehicleSize as string, addonOverrides) : 0;
-                                            const separateTotal = bodyPrice + wheelsPrice + allWindowsPrice;
-                                            const savings = Math.max(0, separateTotal - price);
-                                            return (
-                                              <div className="mt-1 pt-3.5 border-t border-[#D4AF37]/30">
-                                                <div className="flex items-center gap-1.5 mb-2 px-0.5">
-                                                  <Sparkles size={11} className="text-[#D4AF37]" fill="currentColor" />
-                                                  <span className="text-[9px] font-black uppercase tracking-[0.22em] text-[#D4AF37]">Best Value · Complete Package</span>
-                                                </div>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => toggleAddon(fullBundleOpt)}
-                                                  aria-pressed={isSelected}
-                                                  className={`relative w-full rounded-xl overflow-hidden text-left transition-all active:scale-[0.98] border ${
-                                                    isSelected
-                                                      ? "border-[#D4AF37]/80 bg-gradient-to-r from-[#D4AF37]/[0.24] via-[#D4AF37]/[0.10] to-[#D4AF37]/[0.05] shadow-[0_0_20px_rgba(212,175,55,0.28)]"
-                                                      : "border-[#D4AF37]/50 bg-gradient-to-r from-[#D4AF37]/[0.08] via-[#D4AF37]/[0.03] to-transparent hover:border-[#D4AF37]/80 hover:shadow-[0_0_18px_rgba(212,175,55,0.15)]"
-                                                  }`}
-                                                >
-                                                  <div className="p-3.5">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                      <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                          <Crown size={11} className="text-[#D4AF37]" fill="currentColor" />
-                                                          <div className="text-[13px] font-black text-white tracking-tight leading-tight">Full Package · Everything Coated</div>
-                                                        </div>
-                                                        <div className="text-[10px] text-zinc-400 leading-snug">
-                                                          Every body panel · Wheels + calipers · All glass
-                                                        </div>
-                                                        {savings > 0 && (
-                                                          <div className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/40">
-                                                            <Check size={7} className="text-emerald-400" strokeWidth={3.5} />
-                                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-300">Save ${savings}</span>
-                                                          </div>
-                                                        )}
-                                                      </div>
-                                                      <div className="shrink-0 text-right">
-                                                        {savings > 0 && (
-                                                          <div className="text-[9px] font-bold text-zinc-600 line-through tabular-nums leading-none">
-                                                            ${separateTotal}
-                                                          </div>
-                                                        )}
-                                                        <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-500 mt-0.5">Add</div>
-                                                        <div className="text-lg font-black text-[#D4AF37] tabular-nums leading-none mt-0.5">+${price}</div>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                </button>
-                                              </div>
-                                            );
-                                          })()}
                                         </div>
                                       </details>
                                     );

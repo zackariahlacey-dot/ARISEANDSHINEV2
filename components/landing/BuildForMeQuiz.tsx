@@ -47,7 +47,7 @@ const PAIN_OPTIONS: PainOption[] = [
   { id: "foggy_lights",   emoji: "💡", label: "Cloudy or yellow headlights",       scopes: ["exterior"], addonIds: ["headlight_restore"] },
   { id: "engine_bay",     emoji: "🔧", label: "Engine bay looks dirty",            scopes: ["exterior"], addonIds: ["engine_bay"] },
   { id: "want_shine",     emoji: "✨", label: "Want long-term ceramic shine",       scopes: ["exterior"], addonIds: ["gentech_5yr_body"] },
-  { id: "brake_dust",     emoji: "🛞", label: "Brake dust caked on wheels",         scopes: ["exterior"], addonIds: ["gentech_5yr_wheels"] },
+  { id: "brake_dust",     emoji: "🛞", label: "Brake dust caked on wheels",         scopes: ["exterior"], addonIds: ["gentech_5yr_body_wheels"] },
 ];
 
 const FOUNDATION_DISPLAY: Record<Scope, { name: string; subtitle: string; icon: typeof Sofa; blurb: string }> = {
@@ -135,7 +135,7 @@ function getFoundationPriceFor(services: Service[], scope: Scope, size: Size = "
 // for the specific add-ons the quiz recommends so the result card total
 // matches what the customer sees in checkout.
 const ADDON_BASE_PRICES: Record<string, number> = {
-  upholstery_shampoo:  95,
+  upholstery_shampoo:  75,
   pet_hair:            50,
   salt_stain_removal:  65,
   ozone_treatment:     60,
@@ -143,18 +143,23 @@ const ADDON_BASE_PRICES: Record<string, number> = {
   clay_bar:            50,
   headlight_restore:   75,
   engine_bay:          65,
-  gentech_5yr_body:   350,   // sedan default — size-tiered below
-  gentech_5yr_wheels: 125,
+  gentech_5yr_body:         295,   // sedan default — size-tiered below
+  gentech_5yr_body_wheels:  395,   // sedan default — size-tiered below
 };
 
 function getAddonPriceForSize(id: string, size: Size): number {
   const base = ADDON_BASE_PRICES[id] ?? 0;
   // Shampoo is flat $95 — no XL surcharge (July 2026).
-  // Gentech body coating is size-tiered — mirrors BookingModal pricing.
+  // Gentech tiers are size-tiered — mirrors BookingModal pricing.
   if (id === "gentech_5yr_body") {
-    if (size === "suv") return 425;
-    if (size === "xl")  return 500;
-    return 350;
+    if (size === "suv") return 375;
+    if (size === "xl")  return 450;
+    return 295;
+  }
+  if (id === "gentech_5yr_body_wheels") {
+    if (size === "suv") return 475;
+    if (size === "xl")  return 550;
+    return 395;
   }
   return base;
 }
@@ -168,8 +173,8 @@ const ADDON_LABELS: Record<string, string> = {
   clay_bar:           "Clay Bar Treatment",
   headlight_restore:  "Headlight Restoration",
   engine_bay:         "Engine Bay Detail",
-  gentech_5yr_body:   "5-Yr Gentech — Full Body",
-  gentech_5yr_wheels: "5-Yr Gentech — Wheels + Calipers",
+  gentech_5yr_body:         "5-Yr Gentech — Body Coating",
+  gentech_5yr_body_wheels:  "5-Yr Gentech — Body + Wheels",
 };
 
 // Short customer-facing descriptions so the ResultCard tells them exactly
@@ -209,11 +214,11 @@ const REFRESH_SERVICE_NAME: Record<Scope, string> = {
 };
 
 const REFRESH_BAKED_ADDON_IDS: Record<Scope, string[]> = {
-  // July 2026 v2 reprice: salt dropped from Refresh Interior; headlight
-  // dropped from Refresh Full. Both are now à-la-carte add-ons only.
+  // July 2026 v5: clay bar removed from Reset (it's now always à-la-carte,
+  // reduces friction for exterior-only Reset customers who don't need it).
   interior: ["upholstery_shampoo", "pet_hair"],
-  exterior: ["clay_bar", "headlight_restore", "engine_bay"],
-  full:     ["upholstery_shampoo", "pet_hair", "clay_bar", "engine_bay"],
+  exterior: [],
+  full:     ["upholstery_shampoo", "salt_stain_removal", "pet_hair"],
 };
 
 // Reset — Interior (Ultimate Interior Reset) is INTERIOR ONLY: no clay bar.
@@ -228,10 +233,10 @@ const INCLUDED_IN_RESET_FULL = [
 // All add-ons the quiz can recommend per scope — used for the customize panel.
 const PURCHASABLE_ADDONS_BY_SCOPE: Record<Scope, string[]> = {
   interior: ["upholstery_shampoo", "pet_hair", "salt_stain_removal", "ozone_treatment", "leather_condition"],
-  exterior: ["clay_bar", "headlight_restore", "engine_bay", "gentech_5yr_body", "gentech_5yr_wheels"],
+  exterior: ["clay_bar", "headlight_restore", "engine_bay", "gentech_5yr_body", "gentech_5yr_body_wheels"],
   full:     [
     "upholstery_shampoo", "pet_hair", "salt_stain_removal", "ozone_treatment", "leather_condition",
-    "clay_bar", "headlight_restore", "engine_bay", "gentech_5yr_body", "gentech_5yr_wheels",
+    "clay_bar", "headlight_restore", "engine_bay", "gentech_5yr_body", "gentech_5yr_body_wheels",
   ],
 };
 
@@ -1583,16 +1588,13 @@ const REFRESH_INCLUDES: Record<Scope, string[]> = {
   ],
   exterior: [
     "Everything in Basic Exterior Detail",
-    "Clay bar paint decontamination",
-    "Headlight restoration (pair, lasts 2+ years)",
-    "Engine bay detail + degrease",
+    "50% off every à-la-carte add-on stacked on this package",
   ],
   full: [
     "Everything in Basic Full Detail",
     "Deep carpet & upholstery shampoo",
     "Heavy pet hair extraction",
-    "Clay bar paint decontamination",
-    "Engine bay detail + degrease",
+    "50% off every à-la-carte add-on stacked on this package",
   ],
 };
 

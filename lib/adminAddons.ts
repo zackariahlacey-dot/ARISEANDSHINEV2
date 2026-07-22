@@ -1,12 +1,12 @@
 // Canonical add-on catalogue for admin (Quick Book + BookingVehiclesPanel).
 // Mirrors the customer-facing list in lib/addonMeta.ts so prices stay in sync.
-// July 2026 lineup — 8 basics + special + Premium Ceramic sections.
+// July 2026 lineup — 8 basics + special + Gentech 5-yr coatings.
 export type AdminAddon = { id: string; label: string; price: number };
 
 export const ADMIN_ADDONS: AdminAddon[] = [
   // ── The 8 basics ──────────────────────────────────────────────────────
   { id: "engine_bay",         label: "Engine Bay Detail",              price: 65 },
-  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo",    price: 95 },
+  { id: "upholstery_shampoo", label: "Carpet & Upholstery Shampoo",    price: 75 },
   { id: "salt_stain_removal", label: "Mild–Medium Salt Removal",       price: 65 },
   { id: "leather_condition",  label: "Leather Conditioning",           price: 40 },
   { id: "ozone_treatment",    label: "Ozone Treatment",                price: 60 },
@@ -15,23 +15,14 @@ export const ADMIN_ADDONS: AdminAddon[] = [
   { id: "headlight_restore",  label: "Headlight Restoration (pair)",   price: 75 },
 
   // ── Special add-ons ───────────────────────────────────────────────────
-  { id: "ceramic_6_10_upgrade", label: "6–10 Month Ceramic Spray Upgrade", price: 45 },
+  // (ceramic_6_10_upgrade retired July 2026 v4)
+  // (Premium Ceramic 2-year sections retired July 2026 v5 — see Gentech below)
   { id: "ultimate_ext_addon",   label: "+ Exterior Detail (Ultimate bundle, sedan)", price: 65 },
 
-  // ── Premium Ceramic — section-by-section ──────────────────────────────
-  { id: "premium_ceramic_hood",            label: "Premium Ceramic — Hood",              price: 85  },
-  { id: "premium_ceramic_roof",            label: "Premium Ceramic — Roof",              price: 75  },
-  { id: "premium_ceramic_trunk",           label: "Premium Ceramic — Trunk / Rear Hatch", price: 60 },
-  { id: "premium_ceramic_front_bumper",    label: "Premium Ceramic — Front Bumper",      price: 65  },
-  { id: "premium_ceramic_rear_bumper",     label: "Premium Ceramic — Rear Bumper",       price: 65  },
-  { id: "premium_ceramic_doors",           label: "Premium Ceramic — All Doors",         price: 110 },
-  { id: "premium_ceramic_fenders",         label: "Premium Ceramic — All Fenders",       price: 75  },
-  { id: "premium_ceramic_mirrors",         label: "Premium Ceramic — Mirrors (pair)",    price: 30  },
-  { id: "premium_ceramic_wheels",          label: "Premium Ceramic — Wheels + Calipers", price: 150 },
-  { id: "premium_ceramic_windshield",      label: "Premium Ceramic — Windshield",        price: 95  },
-  { id: "premium_ceramic_side_rear_glass", label: "Premium Ceramic — Side + Rear Glass", price: 175 },
-  { id: "premium_ceramic_full_glass",      label: "Premium Ceramic — Full Glass",        price: 250 },
-  { id: "premium_ceramic_full_body",       label: "Premium Ceramic — Full Body (sedan)", price: 650 },
+  // ── 5-Year Gentech Graphene Ceramic — the 3 clean options (July 2026 v5) ──
+  { id: "gentech_5yr_body",          label: "5-Yr Gentech — Body Coating (sedan)",                       price: 295 },
+  { id: "gentech_5yr_body_wheels",   label: "5-Yr Gentech — Body + Wheels (sedan)",                      price: 395 },
+  { id: "gentech_5yr_full_vehicle",  label: "5-Yr Gentech — Full Vehicle (Body + Wheels + Windows) (sedan)", price: 495 },
 
   // ── Marine (unchanged — separate flow) ────────────────────────────────
   { id: "marine_isinglass",  label: "Isinglass & Vinyl Windows", price: 100 },
@@ -51,10 +42,21 @@ const ULTIMATE_EXT_ADDON_PRICES: Record<string, number> = {
   suv: 80, large: 80,
   xl: 95, extra_large: 95,
 };
-const PREMIUM_CERAMIC_FULL_BODY_PRICES: Record<string, number> = {
-  sedan: 650, medium: 650,
-  suv: 775, large: 775,
-  xl: 895, extra_large: 895,
+/** 5-Year Gentech — size-tiered pricing for the 3 clean options. */
+const GENTECH_5YR_BODY_PRICES: Record<string, number> = {
+  sedan: 295, medium: 295,
+  suv: 375, large: 375,
+  xl: 450, extra_large: 450,
+};
+const GENTECH_5YR_BODY_WHEELS_PRICES: Record<string, number> = {
+  sedan: 395, medium: 395,
+  suv: 475, large: 475,
+  xl: 550, extra_large: 550,
+};
+const GENTECH_5YR_FULL_VEHICLE_PRICES: Record<string, number> = {
+  sedan: 495, medium: 495,
+  suv: 575, large: 575,
+  xl: 650, extra_large: 650,
 };
 
 /** Returns the effective price for an add-on given the vehicle size. */
@@ -62,7 +64,9 @@ export function getAddonPrice(id: string, vehicleSize: string): number {
   const a = ADMIN_ADDONS.find(x => x.id === id);
   if (!a) return 0;
   if (id === "ultimate_ext_addon")        return ULTIMATE_EXT_ADDON_PRICES[vehicleSize] ?? a.price;
-  if (id === "premium_ceramic_full_body") return PREMIUM_CERAMIC_FULL_BODY_PRICES[vehicleSize] ?? a.price;
+  if (id === "gentech_5yr_body")          return GENTECH_5YR_BODY_PRICES[vehicleSize] ?? a.price;
+  if (id === "gentech_5yr_body_wheels")   return GENTECH_5YR_BODY_WHEELS_PRICES[vehicleSize] ?? a.price;
+  if (id === "gentech_5yr_full_vehicle")  return GENTECH_5YR_FULL_VEHICLE_PRICES[vehicleSize] ?? a.price;
   return a.price;
 }
 
