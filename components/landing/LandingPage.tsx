@@ -78,6 +78,7 @@ import { NextAvailableBanner } from "./NextAvailableBanner";
 import type { NextAvailableSlot } from "@/lib/nextAvailable";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
 import { trackFbInitiateCheckout, trackFbPurchase } from "@/lib/analytics/metaPixel";
+import { trackGoogleAdsPurchase } from "@/lib/analytics/googleAds";
 
 const sectionViewport = { once: true, margin: "-100px" };
 const sectionVariants = {
@@ -324,6 +325,13 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             currency: "USD",
             content_name: service?.name ?? "Detailing Service",
             content_ids: service ? [service.id] : undefined,
+          });
+          // Google Ads Purchase conversion — Stripe redirect return path.
+          // Use the Stripe session id as the transaction_id so Google can dedupe.
+          trackGoogleAdsPurchase({
+            transactionId: sessionId ?? "",
+            value: draft.totalPaid,
+            currency: "USD",
           });
         }
 

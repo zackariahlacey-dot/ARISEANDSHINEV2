@@ -65,6 +65,7 @@ import { getBookingsForDate, type BookingOnDate } from "@/app/actions/getBooking
 import { getNextAvailableDays, type AvailableDay } from "@/app/actions/getNextAvailableDays";
 import { detectVehicleSize } from "@/lib/detectVehicleSize";
 import { trackFbPurchase } from "@/lib/analytics/metaPixel";
+import { trackGoogleAdsPurchase } from "@/lib/analytics/googleAds";
 import { getServiceDisplayName } from "@/lib/serviceDisplay";
 import { BuildForMeQuiz } from "./BuildForMeQuiz";
 import { todayInBusinessTz } from "@/lib/dates";
@@ -2817,6 +2818,12 @@ export function BookingSection({
         content_name: selectedService.name,
         content_ids: [selectedService.id],
       });
+      // Google Ads: same Purchase conversion, sends to AW-…/09e6CMqpq8ccEKOvw41E.
+      trackGoogleAdsPurchase({
+        transactionId: result.bookingId,
+        value: totalAfterDiscount,
+        currency: "USD",
+      });
       onClose();
       router.refresh();
       onBookingSuccess?.({
@@ -2937,6 +2944,19 @@ export function BookingSection({
       setIsStripeLoading(false);
       setBookingResult(result);
       if (result.success && onBookingSuccess && selectedService) {
+        // Meta + Google Ads: Purchase conversion for the Stripe pay-now path
+        // that returned inline (no redirect). Mirror of the pay-at-arrival path.
+        trackFbPurchase({
+          value: totalAfterDiscount,
+          currency: "USD",
+          content_name: selectedService.name,
+          content_ids: [selectedService.id],
+        });
+        trackGoogleAdsPurchase({
+          transactionId: result.bookingId,
+          value: totalAfterDiscount,
+          currency: "USD",
+        });
         onClose();
         router.refresh();
         onBookingSuccess?.({
