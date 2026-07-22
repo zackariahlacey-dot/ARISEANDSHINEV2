@@ -327,11 +327,20 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
             content_ids: service ? [service.id] : undefined,
           });
           // Google Ads Purchase conversion — Stripe redirect return path.
-          // Use the Stripe session id as the transaction_id so Google can dedupe.
+          // Use the Stripe session id as the transaction_id so Google can
+          // dedupe against the pay-at-arrival firing on other paths. Pass
+          // Enhanced Conversions user data from the draft so Google Ads
+          // can attribute this conversion to a click even without a cookie.
           trackGoogleAdsPurchase({
             transactionId: sessionId ?? "",
             value: draft.totalPaid,
             currency: "USD",
+            userEmail: draft.email,
+            userPhone: draft.phone,
+            userFullName: draft.name,
+            userStreet: draft.serviceAddress,
+            userRegion: "VT",
+            userCountry: "US",
           });
         }
 

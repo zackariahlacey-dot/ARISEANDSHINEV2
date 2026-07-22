@@ -2818,11 +2818,20 @@ export function BookingSection({
         content_name: selectedService.name,
         content_ids: [selectedService.id],
       });
-      // Google Ads: same Purchase conversion, sends to AW-…/09e6CMqpq8ccEKOvw41E.
+      // Google Ads: Purchase conversion + Enhanced Conversions user_data.
+      // Passing email/phone/name lets Google attribute more of our bookings
+      // to actual clicks, which is what unblocks the "conversion tracking
+      // setup is incomplete" warning in the Ads dashboard.
       trackGoogleAdsPurchase({
         transactionId: result.bookingId,
         value: totalAfterDiscount,
         currency: "USD",
+        userEmail: email.trim() || undefined,
+        userPhone: phone.trim() || undefined,
+        userFullName: name.trim() || undefined,
+        userStreet: serviceAddress.trim() || undefined,
+        userRegion: "VT",
+        userCountry: "US",
       });
       onClose();
       router.refresh();
