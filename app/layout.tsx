@@ -11,6 +11,10 @@ import { CrossSellCouponCapture } from "@/components/landing/CrossSellCouponCapt
 import "./globals.css";
 
 const META_PIXEL_ID = "1007604245608620";
+// Google Ads (gtag.js) — AW-prefixed conversion ID from Google Ads dashboard.
+// Fire conversion events with:
+//   window.gtag('event', 'conversion', { send_to: 'AW-18281977763/LABEL' });
+const GOOGLE_ADS_ID = "AW-18281977763";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -177,6 +181,23 @@ export default function RootLayout({
             alt=""
           />
         </noscript>
+        {/* Google Ads (gtag.js) — loads the conversion library + initializes
+            the AW-… config. Fire conversions from booking success with:
+              window.gtag('event','conversion',{send_to:'AW-18281977763/LABEL'}); */}
+        <Script
+          id="google-ads-src"
+          strategy="afterInteractive"
+          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
+        />
+        <Script id="google-ads-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', '${GOOGLE_ADS_ID}');
+          `}
+        </Script>
         {/* Capture inbound ?coupon=… cross-sell codes from the exterior site
             into localStorage; the booking modal auto-applies on open. */}
         <Suspense fallback={null}>
