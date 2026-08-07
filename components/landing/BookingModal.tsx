@@ -2987,7 +2987,7 @@ export function BookingSection({
       if (stripeAbortRef.current) return;
       setIsStripeLoading(false);
       if (err instanceof Error && err.message === "TIMEOUT") {
-        setStripeError("This is taking longer than expected. Please try again — if the problem persists, call us at 802-585-5563.");
+        setStripeError("This is taking longer than expected. Please try again — if the problem persists, call us at .");
       } else {
         setStripeError(err instanceof Error ? err.message : "Something went wrong.");
       }
@@ -6687,8 +6687,8 @@ className={`min-h-[44px] py-3 rounded-xl border flex flex-col items-center justi
                     {/* Contact info for customers */}
                     <div className="rounded-xl border border-[#252525] bg-[#141414] px-4 py-3 text-center text-sm text-zinc-400">
                       Questions? Reach us at{" "}
-                      <a href="tel:802-585-5563" className="font-semibold text-white hover:text-zinc-200 transition-colors">
-                        802-585-5563
+                      <a href="#" className="font-semibold text-white hover:text-zinc-200 transition-colors">
+                        
                       </a>
                       {" "}or{" "}
                       <a href="mailto:contact@ariseandshinedetailing.com" className="font-semibold text-white hover:text-zinc-200 transition-colors">

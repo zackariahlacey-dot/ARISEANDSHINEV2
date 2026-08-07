@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { DEFAULT_TIER_LADDER, DOC_DEFINITIONS, type DocKind } from "@/lib/contractorAgreement";
 
 // ── Auth helpers ─────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ export async function inviteContractor(args: InviteContractorArgs): Promise<{ ok
   //    Supabase's magic-link invite). Best-effort; never block the action.
   try {
     if (process.env.RESEND_API_KEY) {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resend = createResend();
       const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
       await resend.emails.send({
         from: process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>",

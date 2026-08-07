@@ -204,10 +204,8 @@ export async function sendSplitPaymentLinks(
 ): Promise<{ ok: boolean; sent: number; errors: number; error?: string }> {
   if (!(await requireAdmin())) return { ok: false, sent: 0, errors: 0, error: "Admin only." };
 
-  const { Resend } = await import("resend");
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) return { ok: false, sent: 0, errors: 0, error: "Resend not configured." };
-  const resend = new Resend(resendKey);
+  const { createResend } = await import("@/lib/mailer");
+  const resend = createResend();
   const FROM = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
   const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ariseandshinedetailing.com").replace(/\/$/, "");
 
@@ -329,7 +327,7 @@ function renderSplitEmailHtml(opts: {
         <p style="color:#52525b;font-size:11px;margin:16px 0 0;text-align:center;">Secure payment via Stripe. Card info never touches our servers.</p>
       </td></tr>
       <tr><td style="padding:18px 30px 24px;text-align:center;border-top:1px solid #1f1f22;">
-        <p style="color:#52525b;font-size:11px;margin:0;">Questions? Reply to this email or call <a href="tel:8025855563" style="color:#D4AF37;text-decoration:none;">802-585-5563</a>.</p>
+        <p style="color:#52525b;font-size:11px;margin:0;">Questions? Reply to this email or call <a href="#" style="color:#D4AF37;text-decoration:none;"></a>.</p>
       </td></tr>
     </table>
   </td></tr></table>

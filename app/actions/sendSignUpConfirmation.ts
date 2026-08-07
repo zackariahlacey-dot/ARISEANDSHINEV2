@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfirmEmailHtml } from "@/emails/ConfirmEmail";
 import { sendAdminNewUserAlert } from "@/app/actions/sendAdminNewUserAlert";
@@ -58,7 +58,7 @@ export async function sendSignUpConfirmationEmails(
     // Send premium confirmation email via Resend
     const key = process.env.RESEND_API_KEY;
     if (key?.trim()) {
-      const resend = new Resend(key);
+      const resend = createResend();
       const html = getConfirmEmailHtml({
         confirmation_url: confirmUrl,
       });

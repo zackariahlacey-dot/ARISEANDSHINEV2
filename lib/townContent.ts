@@ -366,7 +366,7 @@ export const TOWNS: TownContent[] = [
     localFaq: [
       {
         q: "Can you detail multiple vehicles at our Charlotte estate in one visit?",
-        a: "Yes — multi-vehicle visits are a huge part of what we do here. Each additional vehicle gets a discount (2% per vehicle, up to 20% off the total), and a full-day fleet visit covers 4-8 vehicles. Get an instant quote on /fleet or call 802-585-5563 to coordinate.",
+        a: "Yes — multi-vehicle visits are a huge part of what we do here. Each additional vehicle gets a discount (2% per vehicle, up to 20% off the total), and a full-day fleet visit covers 4-8 vehicles. Get an instant quote on /fleet or call  to coordinate.",
       },
       {
         q: "Do you do the 5-Year Gentech Graphene Coating on-site in Charlotte?",

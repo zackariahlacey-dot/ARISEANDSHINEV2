@@ -136,9 +136,9 @@ export default function FleetPage() {
             For urgent fleets or custom scheduling, call us directly. We&apos;ll work with you.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="tel:8025855563"
+            <a href="#"
               className="btn-primary-gold-shimmer h-14 px-8 rounded-xl font-bold tracking-wide bg-zinc-900/80 backdrop-blur-sm border border-[#D4AF37]/50 text-[#D4AF37] hover:text-black hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-500 ease-in-out overflow-hidden inline-flex items-center gap-2 text-base">
-              <Phone size={15} /><span className="relative z-[1]">802-585-5563</span>
+              <Phone size={15} /><span className="relative z-[1]"></span>
             </a>
             <a href="mailto:contact@ariseandshinedetailing.com" className="text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm">
               contact@ariseandshinedetailing.com

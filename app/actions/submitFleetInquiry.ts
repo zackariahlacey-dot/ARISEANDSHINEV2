@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 
 export type FleetSizeMix = { sedan: number; suv: number; xl: number };
 
@@ -71,14 +71,14 @@ export async function submitFleetInquiry(payload: FleetInquiryPayload): Promise<
 
   if (error || !data) {
     console.error("[submitFleetInquiry] insert error:", error?.message);
-    return { status: "error", message: "We couldn't save your inquiry. Please call us at 802-585-5563." };
+    return { status: "error", message: "We couldn't save your inquiry. Please call us at ." };
   }
 
   // ── Notify admin via email ─────────────────────────────────────────────
   try {
     const apiKey = process.env.RESEND_API_KEY;
     if (apiKey) {
-      const resend = new Resend(apiKey);
+      const resend = createResend();
       const mix = payload.vehicleMix;
       const mixLine = [
         mix.sedan > 0 ? `${mix.sedan} sedan/coupe` : null,

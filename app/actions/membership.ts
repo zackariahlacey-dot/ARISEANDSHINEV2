@@ -1,7 +1,7 @@
 "use server";
 
 import Stripe from "stripe";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -28,7 +28,7 @@ async function sendMembershipAdminAlert(args: {
   try {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
-    const resend = new Resend(apiKey);
+    const resend = createResend();
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#111;">
         <div style="background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);padding:24px;color:#000;border-radius:10px 10px 0 0;">

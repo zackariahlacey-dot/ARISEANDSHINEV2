@@ -12,10 +12,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getReviewRequestHtml } from "@/emails/ReviewRequest";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = createResend();
 const FROM = "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 const SUBJECT = "How's the shine holding up? ✨ — Arise And Shine Detailing";
 

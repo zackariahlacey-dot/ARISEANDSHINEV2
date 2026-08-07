@@ -300,7 +300,7 @@ export function FleetQuoteCalculator() {
 
       <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
         We&apos;ll review your request and reach out within 24 hours to confirm scheduling.<br />
-        For urgent fleets, call <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a>.
+        For urgent fleets, call <a href="#" className="text-[#D4AF37] hover:underline"></a>.
       </p>
 
       <AnimatePresence>

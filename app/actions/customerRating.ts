@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 
 const RATING_TOKEN_BYTES = 24;       // 32-char URL-safe token
 const RATING_LINK_EXPIRY_DAYS = 30;
@@ -100,7 +100,7 @@ export async function sendRatingEmail(ratingId: string): Promise<{ ok: boolean; 
     return { ok: false, error: "RESEND_API_KEY missing." };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const link = `${siteOrigin()}/rate/${(r as any).token}`;
   const firstName = (((b as any).customer_name as string) ?? "there").trim().split(/\s+/)[0] ?? "there";
   const vehicle = `${(b as any).vehicle_year ?? ""} ${(b as any).vehicle_make ?? ""} ${(b as any).vehicle_model ?? ""}`.trim();
@@ -315,7 +315,7 @@ async function sendLowRatingAlert(args: { ratingId: string; overall: number; att
   const b = bookingRes.data as any;
   const c = contractorRes.data as any;
   const ownerEmail = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "zackariahlacey@gmail.com").split(",")[0].trim();
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
 
   const contractorName = c ? `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() : "Unassigned";
   const subject = `⚠️ Low rating · ${args.overall}★ · ${b?.customer_name ?? "—"} · ${contractorName}`;

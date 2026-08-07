@@ -350,7 +350,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
         content_name: specificService !== "Not sure yet" ? specificService : serviceType,
       });
     } else {
-      setSubmitError("Something went wrong — please try again or call 802-585-5563.");
+      setSubmitError("Something went wrong — please try again or call .");
     }
   }
 
@@ -473,7 +473,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
                             <Phone size={13} className="text-[#D4AF37] mt-0.5 shrink-0" />
                             <span>
                               Need it faster?{" "}
-                              <a href="tel:8025855563" className="text-[#D4AF37] font-semibold hover:underline">802-585-5563</a>
+                              <a href="#" className="text-[#D4AF37] font-semibold hover:underline"></a>
                             </span>
                           </div>
                         </div>
@@ -775,7 +775,7 @@ export function SqueezeMeInModal({ isOpen, onClose }: SqueezeMeInModalProps) {
 
                               <p className="text-center text-[12px] text-zinc-700 pt-1">
                                 Or call/text{" "}
-                                <a href="tel:8025855563" className="text-zinc-500 hover:text-[#D4AF37] transition-colors font-medium">802-585-5563</a>
+                                <a href="#" className="text-zinc-500 hover:text-[#D4AF37] transition-colors font-medium"></a>
                               </p>
                             </>
                           )}

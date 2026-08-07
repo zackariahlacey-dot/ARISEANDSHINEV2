@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getAdminBookingAlertHtml } from "@/emails/AdminBookingAlert";
 import { getEmailLayoutHtml } from "@/emails/Layout";
 import { getReviewRequestHtml } from "@/emails/ReviewRequest";
@@ -637,7 +637,7 @@ export async function sendOnMyWayEmailNotification(data: {
   serviceAddress?: string;
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.customerEmail,
@@ -753,7 +753,7 @@ export async function sendBookingCancellationEmails(data: CancellationEmailData)
     console.warn("[email] RESEND_API_KEY is not set — skipping cancellation emails.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const formattedDate = formatDate(data.bookingDate);
 
   const [customerResult, adminResult] = await Promise.allSettled([
@@ -902,7 +902,7 @@ export async function sendUpdatedBookingEmail(data: UpdatedBookingEmailData): Pr
     console.warn("[email] RESEND_API_KEY is not set — skipping updated booking email.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const formattedDate = formatDate(data.newDate);
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
@@ -969,7 +969,7 @@ export async function sendBookingDeletionAuditEmail(data: DeletionAuditData): Pr
     console.warn("[email] RESEND_API_KEY is not set — skipping deletion audit email.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: OWNER_EMAIL,
@@ -1186,7 +1186,7 @@ export async function sendJobCompletedEmail(data: {
     console.warn("[email] RESEND_API_KEY is not set — skipping completion email.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.customerEmail,
@@ -1207,7 +1207,7 @@ export async function sendReviewFollowupEmail(data: {
   customerEmail: string;
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
 
   await resend.emails.send({
     from: FROM_ADDRESS,
@@ -1333,7 +1333,7 @@ export async function sendReminderEmail(data: ReminderEmailData, daysOut: 1 | 3 
     console.warn("[email] RESEND_API_KEY not set — skipping reminder email.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const formattedDate = formatDate(data.bookingDate);
 
   const subject =
@@ -1472,7 +1472,7 @@ export async function sendGiftCardEmail(data: GiftCardEmailData): Promise<void> 
     console.warn("[email] RESEND_API_KEY not set — skipping gift card email.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const result = await resend.emails.send({
     from: FROM_ADDRESS,
     to: data.toEmail,
@@ -1506,7 +1506,7 @@ export async function sendBookingEmails(
     return;
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const formattedDate = formatDate(data.bookingDate);
   const shortRef = data.bookingId.slice(0, 8).toUpperCase();
   const skipCustomer = options?.skipCustomerEmail === true;
@@ -1731,7 +1731,7 @@ function paymentThankYouHtml(data: PaymentReceivedData, formattedDate: string, s
 
               <p style="font-size:13px;color:#666666;margin:0 0 8px;line-height:1.7;text-align:center;">
                 Questions about this charge? Reply to this email or call
-                <a href="tel:8025855563" style="color:#111111;font-weight:700;text-decoration:none;">802-585-5563</a>.
+                <a href="#" style="color:#111111;font-weight:700;text-decoration:none;"></a>.
               </p>
               <p style="text-align:center;font-size:11px;color:#cccccc;margin:18px 0 0;font-family:monospace;">
                 Receipt #${shortRef}
@@ -1918,7 +1918,7 @@ export async function sendPaymentReceivedEmails(data: PaymentReceivedData): Prom
     return { ok: false, ownerSent: false, customerSent: false, error: "RESEND_API_KEY missing" };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const formattedDate = formatDate(data.bookingDate);
   const shortRef = data.bookingId.slice(0, 8).toUpperCase();
 
@@ -2005,7 +2005,7 @@ export async function sendPriceUpdatedEmail(data: {
   newPrice: number;
 }): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const firstName = (data.customerName.trim().split(/\s+/)[0] ?? "there");
   let formattedDate = data.bookingDate;
   try {
@@ -2154,7 +2154,7 @@ export async function sendWinbackEmail(data: {
     console.warn("[email] RESEND_API_KEY not set — skipping win-back email.");
     return;
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const copy = WINBACK_COPY[data.daysSince];
   const result = await resend.emails.send({
     from:    FROM_ADDRESS,

@@ -117,7 +117,7 @@ export function MonthlySchedulePicker({ data, token }: Props) {
         {availableDays.length === 0 ? (
           <div className="text-center bg-zinc-900/60 border border-white/[0.07] rounded-2xl p-8">
             <p className="text-zinc-400 text-sm mb-2">No available slots found for {monthLabel(month)}.</p>
-            <p className="text-zinc-600 text-xs">Please contact us at <strong className="text-zinc-400">contact@ariseandshinedetailing.com</strong> or call 802-585-5563 to schedule.</p>
+            <p className="text-zinc-600 text-xs">Please contact us at <strong className="text-zinc-400">contact@ariseandshinedetailing.com</strong> or call  to schedule.</p>
           </div>
         ) : (
           <>

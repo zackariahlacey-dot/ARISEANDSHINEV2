@@ -113,9 +113,9 @@ export default function AboutPage() {
                 <div className="mt-8 pt-6 border-t border-white/[0.06] w-full flex flex-col items-center">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4AF37] mb-4">Get In Touch</p>
                   <div className="space-y-2.5">
-                    <a href="tel:8025855563" className="flex items-center justify-center gap-2.5 text-sm text-zinc-300 hover:text-white transition-colors">
+                    <a href="#" className="flex items-center justify-center gap-2.5 text-sm text-zinc-300 hover:text-white transition-colors">
                       <Phone size={13} className="text-[#D4AF37]" />
-                      802-585-5563
+                      
                     </a>
                     <a href="mailto:contact@ariseandshinedetailing.com" className="flex items-center justify-center gap-2.5 text-sm text-zinc-300 hover:text-white transition-colors">
                       <Mail size={13} className="text-[#D4AF37]" />

@@ -398,8 +398,8 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
             >
               <span className="relative z-[1]">Book Your Boat Detail</span>
             </button>
-            <a href="tel:8025855563" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
-              <Phone size={15} />Call 802-585-5563
+            <a href="#" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
+              <Phone size={15} />Call 
             </a>
           </div>
 
@@ -685,7 +685,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
             ))}
           </div>
           <p className="text-center text-[11px] text-zinc-600 mt-6 leading-relaxed">
-            Don&apos;t see your lake? We travel statewide — call <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a> for a quote.
+            Don&apos;t see your lake? We travel statewide — call <a href="#" className="text-[#D4AF37] hover:underline"></a> for a quote.
           </p>
         </div>
       </motion.section>
@@ -709,8 +709,8 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
             >
               <span className="relative z-[1]">Book Your Boat Detail</span>
             </button>
-            <a href="tel:8025855563" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
-              <Phone size={15} />802-585-5563
+            <a href="#" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
+              <Phone size={15} />
             </a>
           </div>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -777,7 +777,7 @@ export function BoatDetailingPage({ services }: { services: Service[] }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-zinc-100 mb-1">Payment received — booking needs attention</p>
               <p className="text-xs text-zinc-400 leading-relaxed">{stripeRecoveryError}</p>
-              <a href="tel:8025855563" className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline">Call or text us →</a>
+              <a href="#" className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline">Call or text us →</a>
             </div>
             <button type="button" onClick={() => setStripeRecoveryError(null)} className="text-zinc-600 hover:text-zinc-300 shrink-0">
               <X size={16} />

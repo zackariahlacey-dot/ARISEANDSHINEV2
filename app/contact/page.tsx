@@ -5,10 +5,10 @@ import { SiteHeader } from "@/components/landing/SiteHeader";
 
 export const metadata: Metadata = {
   title: "Contact Arise And Shine Detailing | Mobile Detailing in Burlington & Williston, VT",
-  description: "Call or text Arise And Shine Detailing at 802-585-5563 — Vermont's mobile auto, boat, and RV detailing service. Book online or reach us by phone or email.",
+  description: "Call or text Arise And Shine Detailing at  — Vermont's mobile auto, boat, and RV detailing service. Book online or reach us by phone or email.",
   openGraph: {
     title: "Contact Arise And Shine Detailing | Mobile Detailing in Burlington & Williston, VT",
-    description: "Call or text 802-585-5563 — we serve Burlington, Williston, South Burlington, and all of Chittenden County.",
+    description: "Call or text  — we serve Burlington, Williston, South Burlington, and all of Chittenden County.",
     url: "https://www.ariseandshinedetailing.com/contact",
   },
 };
@@ -69,14 +69,14 @@ export default function ContactPage() {
           <div className="grid sm:grid-cols-2 gap-4">
 
             {/* Call */}
-            <a href="tel:8025855563"
+            <a href="#"
               className="group rounded-2xl border border-white/[0.06] bg-zinc-900/60 backdrop-blur-sm p-6 flex flex-col items-center text-center hover:border-[#D4AF37]/30 hover:bg-zinc-900/80 transition-all"
             >
               <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center mb-4">
                 <Phone size={20} className="text-[#D4AF37]" />
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] mb-1">Call Us</p>
-              <p className="text-white font-bold text-xl mb-1 group-hover:text-[#D4AF37] transition-colors">802-585-5563</p>
+              <p className="text-white font-bold text-xl mb-1 group-hover:text-[#D4AF37] transition-colors"></p>
               <p className="text-zinc-500 text-xs">Tap to call — we pick up!</p>
             </a>
 

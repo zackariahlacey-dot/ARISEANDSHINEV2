@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { signInviteToken, signScheduleToken } from "@/lib/monthlyToken";
 import { getMonthlyPlanInviteHtml } from "@/emails/MonthlyPlanInvite";
 import { getMonthlyPlanConfirmationHtml } from "@/emails/MonthlyPlanConfirmation";
@@ -15,7 +15,7 @@ export async function sendTestMonthlyEmail(
   toEmail: string,
   emailType: TestEmailType
 ): Promise<{ ok: boolean; error?: string }> {
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
 
   const DEMO_FIRST   = "Sarah";
   const DEMO_PLAN    = "Full Maintenance";

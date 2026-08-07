@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 
 const FROM_ADDRESS = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 const OWNER_EMAIL  = process.env.ADMIN_EMAIL  ?? "zackariahlacey@gmail.com";
@@ -70,7 +70,7 @@ export async function logError(opts: LogErrorInput) {
       .limit(1);
     if (recent && recent.length > 0) return;
 
-    const resend = new Resend(resendKey);
+    const resend = createResend();
     const html =
       opts.type === "booking_attempt"
         ? renderBookingAttemptHtml(opts)

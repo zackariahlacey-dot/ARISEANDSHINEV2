@@ -591,7 +591,7 @@ export function SuccessModal({ isOpen, onClose, data }: SuccessModalProps) {
 
                   <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600">
                     <Smartphone size={10} />
-                    <span>Questions? Call or text <span className="text-zinc-400 font-medium">802-585-5563</span></span>
+                    <span>Questions? Call or text <span className="text-zinc-400 font-medium"></span></span>
                   </div>
                 </motion.div>
               </div>

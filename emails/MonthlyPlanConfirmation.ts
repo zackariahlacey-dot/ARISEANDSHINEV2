@@ -120,7 +120,7 @@ export function getMonthlyPlanConfirmationHtml(
 
           <tr><td align="center" style="padding:28px 48px 36px;">
             <p style="margin:0;font-size:13px;color:#71717a;line-height:1.6;text-align:center;">
-              Questions? Reply to this email or call <a href="tel:8025855563" style="color:#d4af37;text-decoration:none;">802-585-5563</a>.
+              Questions? Reply to this email or call <a href="#" style="color:#d4af37;text-decoration:none;"></a>.
             </p>
           </td></tr>
 

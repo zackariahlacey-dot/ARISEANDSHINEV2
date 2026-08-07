@@ -117,11 +117,11 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
                 {guide.primaryCta.label}
                 <ChevronRight size={14} />
               </Link>
-              <a href="tel:8025855563"
+              <a href="#"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-zinc-900 border border-white/[0.08] text-zinc-200 font-semibold text-sm hover:border-[#D4AF37]/40 hover:text-white transition-all"
               >
                 <Phone size={14} className="text-[#D4AF37]" />
-                802-585-5563
+                
               </a>
             </div>
           </section>

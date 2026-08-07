@@ -808,11 +808,11 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
           <p className="mt-10 md:mt-12 mb-8 md:mb-12 text-zinc-500 text-sm text-center w-full">
             Prefer to speak with us?{" "}
             <a
-              href="tel:8025855563"
+              href="#"
               className="text-[#D4AF37] hover:underline font-medium inline-flex items-center gap-1.5"
             >
               <Phone className="w-3 h-3" />
-              Call 802-585-5563
+              Call 
             </a>
           </p>
 
@@ -1788,11 +1788,11 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
                 <span className="relative z-[1]">See Open Slots</span>
               </button>
               <a
-                href="tel:8025855563"
+                href="#"
                 className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-lg border border-zinc-800 text-zinc-300 hover:border-[#D4AF37]/50 hover:text-[#D4AF37] hover:bg-[#D4AF37]/5 transition-all duration-300 font-semibold"
               >
                 <Phone className="w-4 h-4 shrink-0" />
-                Or Call Me — 802-585-5563
+                Or Call Me — 
               </a>
             </div>
           </div>
@@ -1853,10 +1853,10 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
               </a>
               {" "}&middot;{" "}
               <a
-                href="tel:802-585-5563"
+                href="#"
                 className="hover:text-white transition-colors"
               >
-                802-585-5563
+                
               </a>
             </div>
 
@@ -2067,7 +2067,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </LegalSection>
 
         <LegalSection title="7. Contact Us">
-          <p>If you have questions about this Privacy Policy, please contact us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span> or by phone at <span className="text-zinc-200">802-585-5563</span>.</p>
+          <p>If you have questions about this Privacy Policy, please contact us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span> or by phone at <span className="text-zinc-200"></span>.</p>
         </LegalSection>
       </LegalModal>
 
@@ -2134,7 +2134,7 @@ export function LandingPage({ services, addonOverrides = {}, nextSlot = null }: 
         </LegalSection>
 
         <LegalSection title="9. Contact Us">
-          <p>Questions about these terms? Reach us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span> or <span className="text-zinc-200">802-585-5563</span>.</p>
+          <p>Questions about these terms? Reach us at <span className="text-zinc-200">contact@ariseandshinedetailing.com</span> or <span className="text-zinc-200"></span>.</p>
         </LegalSection>
       </LegalModal>
 

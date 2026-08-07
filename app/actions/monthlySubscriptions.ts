@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { signInviteToken, signScheduleToken, verifyScheduleToken } from "@/lib/monthlyToken";
 import { getPlanById, MONTHLY_PLANS, type MonthlyPlanId } from "@/lib/monthlyPlans";
 import { checkSlotConflict, timeToMins, to12h, type BookingSlot } from "@/lib/availability";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getMonthlyPlanInviteHtml } from "@/emails/MonthlyPlanInvite";
 import { getMonthlyPlanConfirmationHtml } from "@/emails/MonthlyPlanConfirmation";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
@@ -47,7 +47,7 @@ export async function sendMonthlyPlanInvite(profileId: string): Promise<{ ok: bo
   const link  = `${SITE}/onboard/monthly?token=${token}`;
   const firstName = profile.first_name || "there";
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const { error } = await resend.emails.send({
     from: FROM,
     to: profile.email,
@@ -351,7 +351,7 @@ async function sendSubscriptionConfirmationEmails(params: {
   vehicleMake: string;
   vehicleModel: string;
 }) {
-  const resend    = new Resend(process.env.RESEND_API_KEY);
+  const resend    = createResend();
   const firstName = params.customerName.trim().split(/\s+/)[0] || "there";
 
   await Promise.allSettled([
@@ -393,7 +393,7 @@ async function sendFirstMonthScheduleReminder(
     const token         = await signScheduleToken(subscriptionId, monthStr);
     const scheduleLink  = `${SITE}/schedule/monthly?token=${token}`;
     const firstName     = customerName.trim().split(/\s+/)[0] || "there";
-    const resend        = new Resend(process.env.RESEND_API_KEY);
+    const resend        = createResend();
 
     await resend.emails.send({
       from:    FROM,
@@ -729,7 +729,7 @@ export async function submitSchedulePick(params: {
 
   // Send confirmation email to customer
   if (sub.customer_email) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = createResend();
     const firstName = (sub.customer_name ?? "there").trim().split(/\s+/)[0];
     const dateFormatted = new Date(params.date + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric",

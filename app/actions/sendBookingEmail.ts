@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getBookingConfirmationHtml, type BookingConfirmationDetails } from "@/emails/BookingConfirmation";
 import { getBookerAccountInviteHtml } from "@/emails/BookerAccountInvite";
 
@@ -33,7 +33,7 @@ export async function sendBookingEmail(params: SendBookingEmailParams): Promise<
   }
 
   try {
-    const resend = new Resend(key);
+    const resend = createResend();
     const html = getBookingConfirmationHtml({
       ...bookingDetails,
       totalPrice,
@@ -100,7 +100,7 @@ export async function sendBookerAccountInviteEmail(params: {
   const signUpUrl = `${siteOrigin()}/auth/sign-up?email=${encodeURIComponent(customerEmail.toLowerCase())}&redirect=${encodeURIComponent("/#services")}`;
 
   try {
-    const resend = new Resend(key);
+    const resend = createResend();
     const html = getBookerAccountInviteHtml({
       customerName: params.customerName || "there",
       signUpUrl,

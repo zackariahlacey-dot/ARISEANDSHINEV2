@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getEmailLayoutHtml } from "@/emails/Layout";
 
 export async function sendReengagementEmails({ testOnly }: { testOnly: boolean }) {
@@ -52,7 +52,7 @@ export async function sendReengagementEmails({ testOnly }: { testOnly: boolean }
     return { success: false, error: profErr.message };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const from = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
   let sent = 0;
   let skipped = 0;
@@ -77,7 +77,7 @@ export async function sendReengagementEmails({ testOnly }: { testOnly: boolean }
   return { success: true, sent, skipped, msg: `Sent to ${sent} customers.` };
 }
 
-async function sendSingleReengagement(resend: Resend, from: string, to: string, firstName: string) {
+async function sendSingleReengagement(resend: ReturnType<typeof createResend>, from: string, to: string, firstName: string) {
   const bodyHtml = `
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 16px;">
       <tr><td align="center">

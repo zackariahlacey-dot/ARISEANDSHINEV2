@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getAdminNewUserAlertHtml } from "@/emails/AdminNewUserAlert";
 
 /** Must match verified sender domain (ariseandshinedetailing.com) in Resend dashboard */
@@ -23,7 +23,7 @@ export async function sendAdminNewUserAlert(name: string, email: string): Promis
   }
 
   try {
-    const resend = new Resend(key);
+    const resend = createResend();
     const html = getAdminNewUserAlertHtml({ name: name.trim(), email: email.trim() });
     const subject = `✨ New Lead: ${name.trim()} just signed up!`;
 

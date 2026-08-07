@@ -25,10 +25,10 @@ export default async function OnboardMonthlyPage({ searchParams }: Props) {
             This link has expired or isn&apos;t valid. Please contact us and we&apos;ll send a fresh invite.
           </p>
           <a
-            href="tel:8025855563"
+            href="#"
             className="inline-block mt-2 bg-[#D4AF37] text-black font-black text-sm uppercase tracking-wider px-6 py-3 rounded-xl"
           >
-            Call 802-585-5563
+            Call 
           </a>
         </div>
       </div>

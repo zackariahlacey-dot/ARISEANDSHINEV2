@@ -7,7 +7,7 @@
 const BUSINESS = {
   name: "Arise And Shine Detailing",
   url: "https://www.ariseandshinedetailing.com",
-  telephone: "+18025855563",
+  telephone: "",
   image: "https://www.ariseandshinedetailing.com/aasbanner.png",
 };
 

@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 import { sendBookingEmails } from "@/lib/email";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import Stripe from "stripe";
 import { getTravelFee } from "@/lib/travelFee";
 import { to24h } from "./bookDetailing";
@@ -207,7 +207,7 @@ export async function createAdminBooking(
     }
 
     if (payload.email?.trim() && invoiceUrl) {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resend = createResend();
       const from = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
       const html = `
 <!DOCTYPE html>

@@ -171,7 +171,7 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
               Track
             </button>
             <div className="w-px h-4 bg-white/10 mx-0.5" />
-            <a href="tel:8025855563" aria-label="Call us"
+            <a href="#" aria-label="Call us"
               className="flex items-center justify-center w-8 h-8 rounded-full text-zinc-500 hover:text-[#D4AF37] transition-colors">
               <Phone className="w-3.5 h-3.5" />
             </a>
@@ -242,7 +242,7 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
                 <span className="text-[11px] font-semibold">Sign In</span>
               </Link>
             )}
-            <a href="tel:8025855563" aria-label="Call"
+            <a href="#" aria-label="Call"
               className="flex items-center justify-center w-9 h-9 rounded-full bg-zinc-900/80 border border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-zinc-950 transition-colors">
               <Phone className="w-4 h-4" />
             </a>
@@ -429,10 +429,10 @@ export function SiteHeader({ onBookNow, trackOpen: trackOpenProp, onTrackOpenCha
             className="btn-primary-gold-shimmer w-full flex items-center justify-center bg-zinc-900 border border-[#D4AF37]/50 text-[#D4AF37] font-semibold py-3.5 rounded-xl text-[13px] hover:text-black transition-all duration-500 overflow-hidden">
             <span className="relative z-[1]">Book Your Detail</span>
           </button>
-          <a href="tel:8025855563" onClick={closeMobile}
+          <a href="#" onClick={closeMobile}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/[0.06] text-zinc-400 hover:text-white hover:border-white/[0.12] text-[13px] font-medium transition-all duration-200">
             <Phone className="w-3.5 h-3.5 text-[#D4AF37]/60" />
-            802-585-5563
+            
           </a>
         </div>
       </div>

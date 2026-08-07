@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logError } from "@/app/actions/logError";
 
@@ -58,7 +58,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
       const key = process.env.RESEND_API_KEY;
       if (key) {
         try {
-          const resend = new Resend(key);
+          const resend = createResend();
           const fromAddr = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
           const firstName = customerName?.split(" ")[0] || "there";
           const vehicleStr = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(" ");
@@ -110,7 +110,7 @@ export async function sendStripePaymentLink(bookingId: string, booking: {
           </tr>
           <tr>
             <td style="padding:20px 32px;text-align:center;border-top:1px solid #27272a;">
-              <p style="font-size:11px;color:#52525b;margin:0;">Questions? Call <a href="tel:8025855563" style="color:#d4af37;text-decoration:none;">802-585-5563</a> or reply to this email.</p>
+              <p style="font-size:11px;color:#52525b;margin:0;">Questions? Call <a href="#" style="color:#d4af37;text-decoration:none;"></a> or reply to this email.</p>
               <p style="font-size:11px;color:#52525b;margin:4px 0 0;">&copy; 2026 Arise And Shine Detailing. All rights reserved.</p>
             </td>
           </tr>

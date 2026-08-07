@@ -19,7 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const FROM = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
     contractorActivity: (contractorActivity ?? []) as any[],
   });
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   try {
     const { error } = await resend.emails.send({
       from: FROM,

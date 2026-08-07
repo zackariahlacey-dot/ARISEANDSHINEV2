@@ -302,7 +302,7 @@ export function MaintenanceBookingModal({
                 ) : days.length === 0 ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4 text-center">
                     <p className="text-sm text-amber-300 font-bold">No open days right now</p>
-                    <p className="text-xs text-amber-200/80 mt-1">Give us a call at 802-585-5563 and we'll find a time.</p>
+                    <p className="text-xs text-amber-200/80 mt-1">Give us a call at  and we'll find a time.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -430,7 +430,7 @@ export function MaintenanceBookingModal({
                               type="tel"
                               value={customerPhone}
                               onChange={(e) => setCustomerPhone(e.target.value)}
-                              placeholder="(802) 585-5563"
+                              placeholder=""
                               autoComplete="tel"
                               inputMode="tel"
                               className="w-full bg-zinc-950/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/40"

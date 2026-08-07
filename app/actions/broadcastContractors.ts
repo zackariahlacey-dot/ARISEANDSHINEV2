@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -83,7 +83,7 @@ export async function broadcastToContractors(args: {
   const preview = await previewBroadcastRecipients(args.target);
   if (preview.count === 0) return { ok: true, sent: 0, failed: 0, error: "No contractors match the chosen target." };
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   let sent = 0;
   let failed = 0;
 

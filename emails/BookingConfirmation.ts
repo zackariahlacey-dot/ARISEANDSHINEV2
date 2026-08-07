@@ -218,7 +218,7 @@ function getDisplayServiceName(serviceName: string, type: ServiceType): string {
 // ── Shared pieces ─────────────────────────────────────────────────────────────
 
 const BUSINESS_EMAIL = "contact@ariseandshinedetailing.com";
-const PHONE = "802-585-5563";
+const PHONE = "";
 
 function detailRow(label: string, value: string, isLast = false): string {
   return `

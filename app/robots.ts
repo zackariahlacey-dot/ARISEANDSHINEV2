@@ -5,19 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: [
-          "/protected",
-          "/admin",
-          "/auth",
-          "/api",
-          "/dashboard",
-          "/my-detail",
-          "/onboard",
-          "/schedule",
-        ],
+        disallow: "/",
       },
     ],
-    sitemap: "https://www.ariseandshinedetailing.com/sitemap.xml",
   };
 }

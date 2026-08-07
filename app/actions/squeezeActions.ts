@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingEmail } from "@/app/actions/sendBookingEmail";
 import { logError } from "@/app/actions/logError";
@@ -15,8 +15,8 @@ const REPLY_TO    = "contact@ariseandshinedetailing.com";
  * treat both as failures and retry with linear backoff.
  */
 async function sendEmailWithRetry(
-  resend: Resend,
-  payload: Parameters<Resend["emails"]["send"]>[0],
+  resend: ReturnType<typeof createResend>,
+  payload: Parameters<ReturnType<typeof createResend>["emails"]["send"]>[0],
   attempts = 2,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   let lastErr = "unknown error";
@@ -98,7 +98,7 @@ export async function createSqueezeRequest(input: {
     return { success: true }; // request is still in DB; surface in admin UI
   }
 
-  const resend = new Resend(resendKey);
+  const resend = createResend();
 
   const urgencyLabel: Record<string, string> = {
     today:      "TODAY 🔴",
@@ -199,7 +199,7 @@ export async function createSqueezeRequest(input: {
         </p>
         <p style="color:#444;line-height:1.6;margin:0 0 20px">
           In the meantime, feel free to call or text directly at
-          <a href="tel:8025855563" style="color:#D4AF37;font-weight:600">802-585-5563</a>.
+          <a href="#" style="color:#D4AF37;font-weight:600"></a>.
         </p>
         <p style="color:#999;font-size:13px;margin:0">— Zack<br/>Arise And Shine Detailing</p>
       </div>
@@ -406,7 +406,7 @@ export async function scheduleSqueezeRequest(
   // 8. Send admin alert (retry on failure, log to error_logs if it never lands)
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
-    const resend = new Resend(resendKey);
+    const resend = createResend();
     const formattedDate = new Date(input.date + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric",
     });

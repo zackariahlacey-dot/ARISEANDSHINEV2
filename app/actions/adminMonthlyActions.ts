@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { signScheduleToken } from "@/lib/monthlyToken";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
 import { getMonthlyAppointmentConfirmationHtml } from "@/emails/MonthlyAppointmentConfirmation";
@@ -198,7 +198,7 @@ export async function sendManualScheduleReminder(
   const scheduleLink = `${SITE}/schedule/monthly?token=${token}`;
   const firstName    = (sub.customer_name ?? "there").split(" ")[0];
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const { error } = await resend.emails.send({
     from:    FROM,
     to:      sub.customer_email,
@@ -325,7 +325,7 @@ export async function adminSetSchedulePick(params: {
 
   // Notify customer — fire-and-forget
   if (sub.customer_email) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = createResend();
     const firstName = (sub.customer_name ?? "there").trim().split(/\s+/)[0];
     const dateFormatted = new Date(params.date + "T12:00:00").toLocaleDateString("en-US", {
       weekday: "long", month: "long", day: "numeric",

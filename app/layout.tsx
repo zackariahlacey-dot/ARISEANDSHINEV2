@@ -34,23 +34,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.ariseandshinedetailing.com"),
   title: {
-    default: "Mobile Auto Detailing in Burlington & Williston, VT | Arise And Shine Detailing",
+    default: "Arise And Shine Detailing",
     template: "%s | Arise And Shine Detailing",
   },
-  description:
-    "Vermont's #1 mobile detailing service — we come to you in Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County. Auto, boat, and RV detailing.",
-  keywords: [
-    "mobile detailing Vermont",
-    "mobile auto detailing Burlington VT",
-    "car detailing Williston VT",
-    "mobile car detailing South Burlington",
-    "boat detailing Vermont",
-    "RV detailing Vermont",
-    "auto detailing Chittenden County",
-    "mobile detailing Essex VT",
-    "paint correction Vermont",
-    "interior detailing Vermont",
-  ],
+  description: "Arise And Shine Detailing is no longer offering services.",
+  robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -61,24 +49,6 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.ico",
-    apple: "/aasbanner.png",
-  },
-  openGraph: {
-    title: "Mobile Auto Detailing in Burlington & Williston, VT | Arise And Shine Detailing",
-    description:
-      "Vermont's #1 mobile detailing service — we come to you in Burlington, Williston, South Burlington, Shelburne, Essex, and all of Chittenden County.",
-    type: "website",
-    url: "https://www.ariseandshinedetailing.com",
-    siteName: "Arise And Shine Detailing",
-    images: [{ url: "/aasbanner.png", width: 1200, height: 630, alt: "Arise And Shine Detailing Mobile Detailing" }],
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Mobile Auto Detailing in Burlington & Williston, VT | Arise And Shine Detailing",
-    description:
-      "Vermont's #1 mobile detailing service — we come to you anywhere in Chittenden County.",
-    images: ["/aasbanner.png"],
   },
 };
 
@@ -96,73 +66,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "LocalBusiness",
-              "@id": "https://www.ariseandshinedetailing.com",
-              name: "Arise And Shine Detailing",
-              description: "Vermont's premier mobile auto, boat, and RV detailing service. Fully self-contained — we come to you anywhere in Vermont.",
-              url: "https://www.ariseandshinedetailing.com",
-              telephone: "+18025855563",
-              email: "contact@ariseandshinedetailing.com",
-              image: "https://www.ariseandshinedetailing.com/aasbanner.png",
-              logo: "https://www.ariseandshinedetailing.com/aasbanner.png",
-              priceRange: "$$",
-              currenciesAccepted: "USD",
-              paymentAccepted: "Cash, Credit Card",
-              address: {
-                "@type": "PostalAddress",
-                addressLocality: "Williston",
-                addressRegion: "VT",
-                postalCode: "05495",
-                addressCountry: "US",
-              },
-              geo: {
-                "@type": "GeoCoordinates",
-                latitude: 44.4273,
-                longitude: -73.0601,
-              },
-              areaServed: [
-                { "@type": "City", name: "Burlington, VT" },
-                { "@type": "City", name: "Williston, VT" },
-                { "@type": "City", name: "South Burlington, VT" },
-                { "@type": "City", name: "Shelburne, VT" },
-                { "@type": "City", name: "Essex, VT" },
-                { "@type": "City", name: "Essex Junction, VT" },
-                { "@type": "City", name: "Colchester, VT" },
-                { "@type": "City", name: "Winooski, VT" },
-                { "@type": "City", name: "Milton, VT" },
-                { "@type": "City", name: "Hinesburg, VT" },
-                { "@type": "State", name: "Vermont" },
-              ],
-              hasOfferCatalog: {
-                "@type": "OfferCatalog",
-                name: "Detailing Services",
-                itemListElement: [
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Interior Detailing" } },
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Exterior Detailing" } },
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Interior + Exterior" } },
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Boat Detailing" } },
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "RV Detailing" } },
-                  { "@type": "Offer", itemOffered: { "@type": "Service", name: "Paint Correction" } },
-                ],
-              },
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: "5.0",
-                reviewCount: 10,
-                bestRating: "5",
-                worstRating: "1",
-              },
-              sameAs: [
-                "https://g.page/r/Cd76zEF6l465EAI/review",
-              ],
-            }),
-          }}
-        />
         <PWARegistration />
         <PWALaunchRedirect />
         {/* Meta Pixel — ad tracking + conversions. Loaded afterInteractive so

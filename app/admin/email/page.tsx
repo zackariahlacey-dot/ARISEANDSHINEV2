@@ -261,7 +261,7 @@ export default function EmailPage() {
           </p>
         </div>
         {/* ─────────────────────────────────────────────────────────────────── */}
-        
+
         {/* CLIENT SELECTOR */}
         <div className="space-y-1.5 relative z-20">
           <label className="text-[8px] font-black uppercase tracking-widest text-zinc-600 ml-1">Recipient</label>

@@ -391,8 +391,8 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
             >
               <span className="relative z-[1]">Book Your RV Detail</span>
             </button>
-            <a href="tel:8025855563" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
-              <Phone size={15} />Call 802-585-5563
+            <a href="#" className="flex items-center justify-center gap-2 text-zinc-400 hover:text-[#D4AF37] font-medium transition-colors text-sm min-h-[44px]">
+              <Phone size={15} />Call 
             </a>
           </div>
         </div>
@@ -482,7 +482,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
             <span className="text-lg shrink-0">💡</span>
             <p className="text-xs text-zinc-500 leading-relaxed">
               <strong className="text-zinc-300">Not sure which package you need?</strong> Give us a call at{" "}
-              <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a> and
+              <a href="#" className="text-[#D4AF37] hover:underline"></a> and
               we'll help you pick the right service for your rig and budget.
             </p>
           </div>
@@ -649,7 +649,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
       <div className="px-4 sm:px-6 lg:px-8 pb-6 max-w-2xl mx-auto">
         <p className="text-[11px] text-zinc-500 text-center leading-relaxed">
           Rigs over 45 ft may require a surcharge —{" "}
-          <a href="tel:8025855563" className="text-[#D4AF37]/80 hover:text-[#D4AF37]">call us first</a>.
+          <a href="#" className="text-[#D4AF37]/80 hover:text-[#D4AF37]">call us first</a>.
           {" "}Final price confirmed before any work begins.
         </p>
       </div>
@@ -687,7 +687,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
           </div>
           <p className="text-center text-[11px] text-zinc-600 mt-6 leading-relaxed">
             Outside Chittenden County? We travel for any rig 30 ft+. Call{" "}
-            <a href="tel:8025855563" className="text-[#D4AF37] hover:underline">802-585-5563</a> for travel quote.
+            <a href="#" className="text-[#D4AF37] hover:underline"></a> for travel quote.
           </p>
         </div>
       </motion.section>
@@ -757,7 +757,7 @@ export function RVDetailingPage({ services }: { services: Service[] }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-zinc-100 mb-1">Payment received — booking needs attention</p>
               <p className="text-xs text-zinc-400 leading-relaxed">{stripeRecoveryError}</p>
-              <a href="tel:8025855563" className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline">Call or text us →</a>
+              <a href="#" className="inline-block mt-2 text-xs font-bold text-[#D4AF37] hover:underline">Call or text us →</a>
             </div>
             <button type="button" onClick={() => setStripeRecoveryError(null)} className="text-zinc-600 hover:text-zinc-300 shrink-0">
               <X size={16} />

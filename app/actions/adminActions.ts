@@ -1153,11 +1153,8 @@ export async function sendCustomEmailAction(
   subject: string,
   bodyText: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { Resend } = await import("resend");
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return { success: false, error: "RESEND_API_KEY not set" };
-
-  const resend = new Resend(key);
+  const { createResend } = await import("@/lib/mailer");
+  const resend = createResend();
   const fromAddr = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 
   // Wrap plain text in a simple branded HTML template

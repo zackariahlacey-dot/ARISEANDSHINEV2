@@ -71,7 +71,7 @@ export default async function PaySuccessPage({ params }: { params: Promise<{ boo
           <p className="text-xs text-zinc-600">Questions?</p>
           <div className="flex gap-3 justify-center">
             <a
-              href="tel:8025855563"
+              href="#"
               className="px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-300 text-xs font-black uppercase tracking-wider hover:bg-white/[0.07] transition-all active:scale-95"
             >
               Call Us

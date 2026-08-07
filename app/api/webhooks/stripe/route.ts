@@ -14,6 +14,7 @@ import { checkAvailability } from "@/app/actions/bookDetailing";
 import { VEHICLE_SIZE_MAP } from "@/lib/constants";
 import { getDurationMins, getAdditionalVehiclesDuration } from "@/lib/availability";
 import { logError } from "@/app/actions/logError";
+import { createResend } from "@/lib/mailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
@@ -98,15 +99,14 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
         if (sub?.customer_email) {
           // Notify subscriber (fire-and-forget)
-          const { Resend } = await import("resend");
-          const resend = new Resend(process.env.RESEND_API_KEY);
+          const resend = createResend();
           const firstName = (sub.customer_name ?? "there").split(" ")[0];
           const FROM_ADDR = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
           resend.emails.send({
             from:    FROM_ADDR,
             to:      sub.customer_email,
             subject: "Action needed: monthly plan payment failed — Arise And Shine Detailing",
-            html: `<p>Hi ${firstName},</p><p>We weren't able to process your monthly detail plan payment. Please update your payment method to keep your plan active.</p><p>Reply to this email or call 802-585-5563 and we'll get it sorted.</p><p>— Arise And Shine Detailing</p>`,
+            html: `<p>Hi ${firstName},</p><p>We weren't able to process your monthly detail plan payment. Please update your payment method to keep your plan active.</p><p>Reply to this email or call  and we'll get it sorted.</p><p>— Arise And Shine Detailing</p>`,
             replyTo: "contact@ariseandshinedetailing.com",
           }).catch(err => console.error("[webhooks/stripe] payment_failed email error:", err));
         }

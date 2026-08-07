@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 
 export type PlanType = "interior_only" | "exterior_only" | "full_detail";
 export type PlanFrequency = "weekly" | "biweekly" | "monthly";
@@ -157,7 +157,7 @@ async function sendPlanRequestEmails(p: {
 }) {
   const key = process.env.RESEND_API_KEY;
   if (!key?.trim()) return;
-  const resend = new Resend(key);
+  const resend = createResend();
 
   const details = `<table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:14px;color:#e4e4e7;">
     <tr><td style="padding:6px 0;color:#71717a;width:140px">Plan</td><td style="padding:6px 0;font-weight:700;color:#D4AF37">${p.planLabel}</td></tr>
@@ -238,7 +238,7 @@ export async function saveSchedulePreference(params: {
 async function sendScheduleConfirmationEmail(pr: PlanRequest) {
   const key = process.env.RESEND_API_KEY;
   if (!key?.trim() || !pr.customer_email) return;
-  const resend = new Resend(key);
+  const resend = createResend();
 
   const planLabel = PLAN_LABELS[pr.plan_type] + (pr.ultimate_upgrade ? " — Ultimate" : "");
   const firstName = pr.customer_name.split(" ")[0];
@@ -307,7 +307,7 @@ export async function adminSendMonthlyReminder(
   const key = process.env.RESEND_API_KEY;
   if (!key?.trim()) return { ok: false, error: "Email not configured" };
 
-  const resend = new Resend(key);
+  const resend = createResend();
   const planLabel = PLAN_LABELS[pr.plan_type] + (pr.ultimate_upgrade ? " — Ultimate" : "");
   const firstName = pr.customer_name.split(" ")[0];
   const month = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -372,7 +372,7 @@ export async function adminRespondToPlanRequest(
 async function sendResponseEmail(pr: PlanRequest, decision: "approved" | "declined", adminNotes: string) {
   const key = process.env.RESEND_API_KEY;
   if (!key?.trim()) return;
-  const resend = new Resend(key);
+  const resend = createResend();
 
   const planLabel  = PLAN_LABELS[pr.plan_type] + (pr.ultimate_upgrade ? " — Ultimate" : "");
   const firstName  = pr.customer_name.split(" ")[0];

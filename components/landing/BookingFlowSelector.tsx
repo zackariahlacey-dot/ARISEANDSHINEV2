@@ -119,8 +119,8 @@ export function BookingFlowSelector({ isOpen, onClose, onSqueeze }: BookingFlowS
                 )}
                 <p className="text-center text-[11px] text-zinc-600">
                   Questions?{" "}
-                  <a href="tel:8025855563" className="text-zinc-400 hover:text-white transition-colors">
-                    Call 802-585-5563
+                  <a href="#" className="text-zinc-400 hover:text-white transition-colors">
+                    Call 
                   </a>
                 </p>
               </div>

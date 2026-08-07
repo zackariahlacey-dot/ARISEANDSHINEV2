@@ -116,7 +116,7 @@ export function getMonthlyPlanInviteHtml(firstName: string, inviteLink: string):
 
           <tr><td align="center" style="padding:12px 48px 32px;">
             <p style="margin:0;font-size:11px;color:#3f3f46;line-height:1.6;text-align:center;">
-              This invite link is valid for 7 days. Questions? Reply to this email or call 802-585-5563.
+              This invite link is valid for 7 days. Questions? Reply to this email or call .
             </p>
           </td></tr>
 
@@ -128,7 +128,7 @@ export function getMonthlyPlanInviteHtml(firstName: string, inviteLink: string):
             <p style="margin:0 0 12px;font-size:11px;color:#3f3f46;letter-spacing:0.1em;text-transform:uppercase;">Premium Mobile Detailing &middot; Vermont</p>
             <table border="0" cellspacing="0" cellpadding="0" align="center" role="presentation">
               <tr>
-                <td style="padding:0 8px;"><a href="tel:8025855563" style="font-size:11px;color:#52525b;text-decoration:none;">802-585-5563</a></td>
+                <td style="padding:0 8px;"><a href="#" style="font-size:11px;color:#52525b;text-decoration:none;"></a></td>
                 <td style="color:#3f3f46;font-size:11px;">&middot;</td>
                 <td style="padding:0 8px;"><a href="https://www.ariseandshinedetailing.com" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinedetailing.com</a></td>
               </tr>

@@ -103,7 +103,7 @@ function buildTownSchema(town: ReturnType<typeof getTownBySlug>) {
         "@id":   `${url}#business`,
         name:    "Arise And Shine Detailing",
         url:     "https://www.ariseandshinedetailing.com",
-        telephone: "+18025855563",
+        telephone: "",
         email:     "contact@ariseandshinedetailing.com",
         image:     "https://www.ariseandshinedetailing.com/aasbanner.png",
         priceRange: "$$",
@@ -211,11 +211,11 @@ export default async function TownPage({ params }: { params: Promise<{ city: str
                 Book Your Detail
                 <ChevronRight size={14} />
               </Link>
-              <a href="tel:8025855563"
+              <a href="#"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-zinc-900 border border-white/[0.08] text-zinc-200 font-semibold text-sm hover:border-[#D4AF37]/40 hover:text-white transition-all"
               >
                 <Phone size={14} className="text-[#D4AF37]" />
-                802-585-5563
+                
               </a>
             </div>
           </header>
@@ -306,11 +306,11 @@ export default async function TownPage({ params }: { params: Promise<{ city: str
               >
                 Book Online
               </Link>
-              <a href="tel:8025855563"
+              <a href="#"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-zinc-900 border border-white/[0.08] text-zinc-200 font-semibold text-sm hover:border-[#D4AF37]/40 hover:text-white transition-all"
               >
                 <Phone size={14} className="text-[#D4AF37]" />
-                Call 802-585-5563
+                Call 
               </a>
             </div>
           </section>

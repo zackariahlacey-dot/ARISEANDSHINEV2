@@ -10,11 +10,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { signScheduleToken } from "@/lib/monthlyToken";
 import { getMonthlyScheduleReminderHtml } from "@/emails/MonthlyScheduleReminder";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = createResend();
 const FROM   = process.env.EMAIL_FROM ?? "Arise And Shine Detailing <bookings@ariseandshinedetailing.com>";
 const SITE   = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ariseandshinedetailing.com").replace(/\/$/, "");
 

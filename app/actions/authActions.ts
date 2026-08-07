@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOtpEmailHtml } from "@/emails/OtpEmail";
 import { sendAdminNewUserAlert } from "./sendAdminNewUserAlert";
@@ -64,7 +64,7 @@ export async function sendOtpAction(email: string) {
   }
 
   // 2. Send via Resend
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
   const html = getOtpEmailHtml({ otpCode });
 
   const { error: emailError } = await resend.emails.send({

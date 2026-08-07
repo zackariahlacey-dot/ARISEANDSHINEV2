@@ -99,7 +99,7 @@ export function getMonthlyScheduleReminderHtml(
             <p style="margin:0 0 12px;font-size:11px;color:#3f3f46;letter-spacing:0.1em;text-transform:uppercase;">Premium Mobile Detailing &middot; Vermont</p>
             <table border="0" cellspacing="0" cellpadding="0" align="center" role="presentation">
               <tr>
-                <td style="padding:0 8px;"><a href="tel:8025855563" style="font-size:11px;color:#52525b;text-decoration:none;">802-585-5563</a></td>
+                <td style="padding:0 8px;"><a href="#" style="font-size:11px;color:#52525b;text-decoration:none;"></a></td>
                 <td style="color:#3f3f46;font-size:11px;">&middot;</td>
                 <td style="padding:0 8px;"><a href="https://www.ariseandshinedetailing.com" style="font-size:11px;color:#52525b;text-decoration:none;">ariseandshinedetailing.com</a></td>
               </tr>

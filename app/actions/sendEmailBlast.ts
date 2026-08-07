@@ -1,6 +1,6 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Must match verified sender domain (ariseandshinedetailing.com) in Resend dashboard */
@@ -140,7 +140,7 @@ export async function sendEmailBlast(payload: BlastPayload): Promise<BlastResult
     return { success: false, error: "Email body is required." };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = createResend();
 
   // ── Test mode: send only to admin (with sample personalization) ───────────
   if (payload.testOnly) {

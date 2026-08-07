@@ -176,7 +176,7 @@ export function getReviewRequestHtml(
             <table border="0" cellspacing="0" cellpadding="0" align="center" role="presentation">
               <tr>
                 <td style="padding:0 10px;">
-                  <a href="tel:8025855563" style="font-size:11px;color:#52525b;text-decoration:none;">802-585-5563</a>
+                  <a href="#" style="font-size:11px;color:#52525b;text-decoration:none;"></a>
                 </td>
                 <td style="color:#3f3f46;font-size:11px;">&middot;</td>
                 <td style="padding:0 10px;">

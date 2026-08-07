@@ -1,38 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "next build",
-  "crons": [
-    {
-      "path": "/api/cron/review-emails",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/cron/reminders",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/monthly-schedule-emails",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/cron/winback",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/customer-rating-emails",
-      "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/admin-daily-digest",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/cross-sell-to-exterior",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/recurring-bookings",
-      "schedule": "0 8 * * *"
-    }
-  ]
+  "crons": []
 }

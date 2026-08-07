@@ -1,9 +1,9 @@
 "use server";
 
-import { Resend } from "resend";
+import { createResend } from "@/lib/mailer";
 import { getReviewRequestHtml } from "@/emails/ReviewRequest";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = createResend();
 
 export async function sendTestReviewEmail(): Promise<{ success: boolean; error?: string }> {
   try {

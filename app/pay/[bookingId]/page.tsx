@@ -25,7 +25,7 @@ export default async function PayPage({ params }: { params: Promise<{ bookingId:
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
         <div className="text-center space-y-3">
           <p className="text-zinc-400 font-bold">This booking has been cancelled.</p>
-          <p className="text-zinc-600 text-sm">If you have questions, call us at 802-585-5563.</p>
+          <p className="text-zinc-600 text-sm">If you have questions, call us at .</p>
         </div>
       </div>
     );
